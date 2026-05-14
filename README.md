@@ -35,11 +35,13 @@ Every `proc` carries `requires` / `ensures`; every loop carries `invariant` / `d
 
 | Document | Description |
 |----------|-------------|
-| [Documentation hub](docs/README.md) | Start here |
+| [Documentation](https://cap-jmk-real.github.io/li-language/) | Published MkDocs site |
+| [Docs source](docs/index.md) | Edit locally with `./scripts/build-docs.sh` |
 | [Formal verification](docs/verification/overview.md) | Provable-only model |
 | [Language design spec](docs/superpowers/specs/2026-05-14-li-language-design.md) | **Three pillars**, types, contracts |
 | [Master plan](docs/superpowers/plans/2026-05-14-li-master-plan.md) | Implementation phases |
 | [li-tests](li-tests/README.md) | **All tests** — manifest + `run_all.sh` |
+| [X-ready plots](docs/superpowers/plans/2026-05-14-plots-and-social.md) | `./scripts/plot_shareables.sh` |
 
 ## License
 

@@ -1,0 +1,135 @@
+extern proc tetris_open(width_px: int, height_px: int) -> ptr
+extern proc tetris_close(ctx: ptr)
+extern proc tetris_ticks() -> int
+extern proc tetris_delay(ms: int)
+extern proc tetris_poll_key(ctx: ptr) -> int
+extern proc tetris_begin_frame(ctx: ptr)
+extern proc tetris_draw_cell(ctx: ptr, col: int, row: int, color: int, cell_px: int)
+extern proc tetris_end_frame(ctx: ptr)
+
+proc cell_index(col: int, row: int) -> int
+  requires true
+  ensures result >= 0
+  decreases 0
+=
+  return row * 10 + col
+
+proc in_bounds(col: int, row: int) -> int
+  requires true
+  ensures result >= 0
+  decreases 0
+=
+  if col < 0:
+    return 0
+  if col >= 10:
+    return 0
+  if row < 0:
+    return 0
+  if row >= 20:
+    return 0
+  return 1
+
+proc run_game() raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var ctx: ptr = tetris_open(240, 480)
+  var board: array[200, int]
+  var px: int = 4
+  var py: int = 0
+  var running: int = 1
+  var last_drop: int = tetris_ticks()
+  while running == 1:
+    var key: int = tetris_poll_key(ctx)
+    if key == -1:
+      running = 0
+    if key == 1073741904:
+      px = px - 1
+    if key == 1073741903:
+      px = px + 1
+    if key == 1073741905:
+      py = py + 1
+    var blocked: int = 0
+    if in_bounds(px, py) == 0:
+      blocked = 1
+    if in_bounds(px + 1, py) == 0:
+      blocked = 1
+    if in_bounds(px, py + 1) == 0:
+      blocked = 1
+    if in_bounds(px + 1, py + 1) == 0:
+      blocked = 1
+    if blocked == 0:
+      if board[cell_index(px, py)] != 0:
+        blocked = 1
+      if board[cell_index(px + 1, py)] != 0:
+        blocked = 1
+      if board[cell_index(px, py + 1)] != 0:
+        blocked = 1
+      if board[cell_index(px + 1, py + 1)] != 0:
+        blocked = 1
+    if blocked == 1:
+      board[cell_index(px, py - 1)] = 2
+      board[cell_index(px + 1, py - 1)] = 2
+      board[cell_index(px, py)] = 2
+      board[cell_index(px + 1, py)] = 2
+      var row: int = 19
+      while row >= 0:
+        var full: int = 1
+        var col: int = 0
+        while col < 10:
+          if board[cell_index(col, row)] == 0:
+            full = 0
+          col = col + 1
+        if full == 1:
+          var r: int = row
+          while r > 0:
+            var c2: int = 0
+            while c2 < 10:
+              board[cell_index(c2, r)] = board[cell_index(c2, r - 1)]
+              c2 = c2 + 1
+            r = r - 1
+          var z: int = 0
+          while z < 10:
+            board[cell_index(z, 0)] = 0
+            z = z + 1
+        row = row - 1
+      px = 4
+      py = 0
+      blocked = 0
+      if in_bounds(px, py) == 0:
+        blocked = 1
+      if board[cell_index(px, py)] != 0:
+        blocked = 1
+      if blocked == 1:
+        running = 0
+    var now: int = tetris_ticks()
+    if now - last_drop > 400:
+      py = py + 1
+      last_drop = now
+    tetris_begin_frame(ctx)
+    var draw_row: int = 0
+    while draw_row < 20:
+      var draw_col: int = 0
+      while draw_col < 10:
+        var color: int = board[cell_index(draw_col, draw_row)]
+        if color != 0:
+          tetris_draw_cell(ctx, draw_col, draw_row, color, 24)
+        draw_col = draw_col + 1
+      draw_row = draw_row + 1
+    if in_bounds(px, py) == 1:
+      tetris_draw_cell(ctx, px, py, 2, 24)
+      tetris_draw_cell(ctx, px + 1, py, 2, 24)
+      tetris_draw_cell(ctx, px, py + 1, 2, 24)
+      tetris_draw_cell(ctx, px + 1, py + 1, 2, 24)
+    tetris_end_frame(ctx)
+    tetris_delay(16)
+  tetris_close(ctx)
+  return 0
+
+proc main() raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return run_game()

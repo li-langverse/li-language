@@ -1,0 +1,9 @@
+type Sized = Protocol
+
+proc main() -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  var s: Sized = 0
+  return 0

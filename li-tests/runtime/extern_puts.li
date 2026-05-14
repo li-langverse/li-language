@@ -1,0 +1,9 @@
+extern proc puts(s: str) -> int
+
+proc main() raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  puts("li extern ok")
+  return 0

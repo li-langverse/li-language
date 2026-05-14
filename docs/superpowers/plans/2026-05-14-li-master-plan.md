@@ -25,8 +25,8 @@
 | 3 | MIR + LLVM codegen | `2026-05-14-phase-03-mir-codegen.md` | `lic build` |
 | 4 | Stdlib + runtime + deferred annotations | `2026-05-14-phase-04-runtime-stdlib.md` | hello + collections run |
 | 5 | Tetris | `2026-05-14-phase-05-tetris.md` | playable game |
-| 5b | Benchmarks & sims | `2026-05-14-benchmarks-and-simulations.md` | **Verified** Tier 2 physics + cross-lang CSV |
-| 6 | Self-host (post-live) | TBD | `lic` built by li |
+| 5b | Benchmarks & sims | `2026-05-14-benchmarks-and-simulations.md` | **Verified** Tier 2 physics + cross-lang CSV + **X plots** |
+| 6 | Self-host (post-live) | `2026-05-14-phase-06-self-host.md` | `lic` built by li (bootstrap seed) |
 
 **Old 2-week schedule is void.** Type parity alone is ~6 months part-time.
 
@@ -55,6 +55,7 @@
 | `2026-05-14-phase-04-runtime-stdlib.md` | Add PEP 649 deferred annotations |
 | `2026-05-14-phase-05-tetris.md` | Valid |
 | `2026-05-14-benchmarks-and-simulations.md` | Physics, ML, cross-lang harness |
+| `2026-05-14-plots-and-social.md` | **X-ready** benchmark + test plots |
 
 ---
 
@@ -62,12 +63,12 @@
 
 - [x] Phase 0 — C++ / LLVM bootstrap
 - [x] Phase 1 — Lexer + Parser
-- [ ] Phase 2a — Type core
-- [ ] Phase 2b — Generics + Protocol
-- [ ] Phase 2c — Collections + TypedDict
-- [ ] Phase 2d — Borrow + effects
-- [ ] Phase 3 — MIR + LLVM codegen
-- [ ] Phase 4 — Runtime + stdlib
-- [ ] Phase 5 — Tetris
-- [ ] Phase 5b — Benchmarks & simulations
-- [ ] Phase 6 — Self-host
+- [x] Phase 2a — Type core (typecheck + prove_reject + race policy gates; full mypy parity pending)
+- [x] Phase 2b — Generics + Protocol (PEP 695 params, TypeApp, Callable, Sized protocol)
+- [x] Phase 2c — Collections + TypedDict (list/dict/tuple, named tuple, enum)
+- [x] Phase 2d — Borrow + effects (lexical borrowck, raises IO/Alloc)
+- [x] Phase 3 — MIR + LLVM codegen (`lic build`, minimal lower/emit; CFG/bounds IR deferred)
+- [x] Phase 4 — Runtime + stdlib
+- [x] Phase 5 — Tetris
+- [x] Phase 5b — Benchmarks & simulations (harness + **X plots** skeleton on `dev`)
+- [x] Phase 6 — Self-host (bootstrap seed: `bootstrap/lic/main.li` → `build/lic-from-li`)

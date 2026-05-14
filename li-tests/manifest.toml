@@ -23,8 +23,8 @@ expected_substr = "indentation"
 [[tests]]
 suite = "typecheck"
 file = "typecheck/fib.li"
-outcome = "compile_fail"
-note = "types only stage until full pipeline; becomes verify_ok"
+outcome = "verify_ok"
+note = "recursive proc compiles once build pipeline exists"
 
 [[tests]]
 suite = "typecheck"
@@ -102,6 +102,35 @@ file = "borrow/use_after_move.li"
 outcome = "compile_fail"
 expected_substr = "move"
 
+[[tests]]
+suite = "borrow"
+file = "borrow/borrow_ok.li"
+outcome = "verify_ok"
+
+# --- effects ---
+
+[[tests]]
+suite = "effects"
+file = "effects/alloc_fail.li"
+outcome = "compile_fail"
+expected_substr = "Alloc"
+
+[[tests]]
+suite = "effects"
+file = "effects/alloc_ok.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "effects"
+file = "effects/io_fail.li"
+outcome = "compile_fail"
+expected_substr = "IO"
+
+[[tests]]
+suite = "effects"
+file = "effects/io_ok.li"
+outcome = "verify_ok"
+
 # --- race_shared_memory (v1 exploits) ---
 
 [[tests]]
@@ -154,5 +183,110 @@ outcome = "verify_ok"
 
 [[tests]]
 suite = "benchmarks"
+file = "benchmarks/tier0_correctness/float_binop.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "benchmarks"
 file = "benchmarks/tier0_correctness/three_body_invariants.li"
 outcome = "verify_ok"
+
+# --- generics (PEP 695 + Protocol) ---
+
+[[tests]]
+suite = "generics"
+file = "generics/identity.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "generics"
+file = "generics/box_alias.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "generics"
+file = "generics/callable_param.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "generics"
+file = "generics/protocol_sized_ok.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "generics"
+file = "generics/return_mismatch.li"
+outcome = "compile_fail"
+expected_substr = "generic"
+
+[[tests]]
+suite = "generics"
+file = "generics/protocol_sized_fail.li"
+outcome = "compile_fail"
+expected_substr = "Protocol"
+
+# --- collections (list / dict / tuple / TypedDict / enum) ---
+
+[[tests]]
+suite = "collections"
+file = "collections/list_param.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "collections"
+file = "collections/dict_param.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "collections"
+file = "collections/tuple_pair.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "collections"
+file = "collections/tuple_variadic.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "collections"
+file = "collections/named_tuple.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "collections"
+file = "collections/typedict_ok.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "collections"
+file = "collections/enum_ok.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "collections"
+file = "collections/dict_arity_fail.li"
+outcome = "compile_fail"
+expected_substr = "dict"
+
+# --- runtime (echo, arrays, extern) ---
+
+[[tests]]
+suite = "runtime"
+file = "runtime/extern_puts.li"
+outcome = "verify_ok"
+
+# --- tetris ---
+
+[[tests]]
+suite = "tetris"
+file = "tetris/board_oob.li"
+outcome = "compile_fail"
+expected_substr = "out of range"
+
+# --- integration (bootstrap / self-host seed) ---
+
+[[tests]]
+suite = "integration"
+file = "../bootstrap/lic/main.li"
+outcome = "verify_ok"
+note = "Li bootstrap compiler built by C++ lic"

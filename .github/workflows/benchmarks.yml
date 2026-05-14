@@ -1,0 +1,27 @@
+name: Benchmarks
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"
+
+jobs:
+  tier1-smoke:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install LLVM 18 and build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build clang-18 llvm-18-dev zlib1g-dev libzstd-dev python3
+
+      - name: Build and tier-1 bench smoke
+        env:
+          LLVM_DIR: /usr/lib/llvm-18/lib/cmake/llvm
+          CC: clang-18
+          CXX: clang++-18
+        run: |
+          chmod +x scripts/ci.sh scripts/ci-bench.sh scripts/build.sh
+          ./scripts/ci.sh
+          ./scripts/ci-bench.sh

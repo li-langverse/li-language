@@ -215,6 +215,29 @@ Report **single-thread** and **multi-thread** columns separately.
 
 ---
 
+## Shareable plots (X / social)
+
+Plan: `docs/superpowers/plans/2026-05-14-plots-and-social.md`
+
+```bash
+./scripts/plot_shareables.sh
+# → benchmarks/results/share/*.png
+```
+
+| Output | Purpose |
+|--------|---------|
+| `bench_speed_tier2.png` | Cross-language bar chart |
+| `speedup_vs_cpp.png` | Li vs C++ ratio |
+| `test_suite_pass_rate.png` | Conformance suite health |
+| `test_suite_matrix.png` | pass/fail/skip heatmap |
+| `ci_summary_card.png` | Single-image CI snapshot for X |
+
+Plots use **16:9 dark theme**, Li branding, retina DPI. Regenerate after every benchmark sweep or before posting.
+
+Harness: `benchmarks/harness/plot.py`, `li-tests/harness/plot_suites.py`
+
+---
+
 ## Phase alignment
 
 | When | Benchmarks unlocked |
@@ -237,6 +260,7 @@ New phase **5b — Benchmarks & physics sims** after Tetris, before self-host:
 | `three_body` + `md_lennard_jones` correctness invariants pass |
 | Published `results/latest.csv` vs C++/Rust/Julia/Python on one reference machine |
 | At least one Tier 3 `mlp_forward` row before calling ML “started” |
+| **`./scripts/plot_shareables.sh`** emits ≥4 share PNGs (see plots plan) |
 
 Self-host remains **Phase 6** after language is live and benchmarks exist to catch regressions.
 

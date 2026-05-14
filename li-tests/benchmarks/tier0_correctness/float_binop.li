@@ -1,0 +1,8 @@
+proc float_add() -> float
+  requires true
+  ensures true
+  decreases 0
+=
+  var x: float = 1.5
+  var y: float = 2.25
+  return x + y

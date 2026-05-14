@@ -1,0 +1,11 @@
+# Li three_body — driver over shared C reference kernel.
+
+extern proc li_three_body_kernel()
+
+proc main() raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  li_three_body_kernel()
+  return 0

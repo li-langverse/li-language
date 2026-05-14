@@ -43,6 +43,7 @@ TokenKind Lexer::keyword_kind(std::string_view text) const {
   if (text == "return") return TokenKind::KwReturn;
   if (text == "raises") return TokenKind::KwRaises;
   if (text == "echo") return TokenKind::KwEcho;
+  if (text == "extern") return TokenKind::KwExtern;
   if (text == "true") return TokenKind::KwTrue;
   if (text == "false") return TokenKind::KwFalse;
   if (text == "and") return TokenKind::KwAnd;
@@ -54,6 +55,12 @@ TokenKind Lexer::keyword_kind(std::string_view text) const {
   if (text == "decreases") return TokenKind::KwDecreases;
   if (text == "invariant") return TokenKind::KwInvariant;
   if (text == "result") return TokenKind::KwResult;
+  if (text == "Protocol") return TokenKind::KwProtocol;
+  if (text == "Callable") return TokenKind::KwCallable;
+  if (text == "NotRequired") return TokenKind::Ident;
+  if (text == "Required") return TokenKind::Ident;
+  if (text == "str") return TokenKind::Ident;
+  if (text == "typedict") return TokenKind::Ident;
   return TokenKind::Ident;
 }
 
@@ -68,9 +75,6 @@ bool Lexer::process_line_begin(std::size_t line_start, DiagnosticBag& diags) {
     SourceLoc loc{file_, line_, 1, line_start};
     diags.error(loc, "tabs are not allowed for indentation");
     return false;
-  }
-  if (i < source_.size() && source_[i] == '\n') {
-    return true;
   }
   if (i < source_.size() && source_[i] == '#') {
     while (i < source_.size() && source_[i] != '\n') {
@@ -143,8 +147,40 @@ bool Lexer::process_line_begin(std::size_t line_start, DiagnosticBag& diags) {
       diags.error(loc, "inconsistent indentation");
       return false;
     }
+    if (indent_stack_.size() == 1 && spaces == 0) {
+      body_mode_ = false;
+    }
   }
   pending_indent_check_ = false;
+
+  if (i < source_.size() && source_[i] == '\n') {
+    pos_ = i;
+    column_ = spaces + 1;
+    at_line_start_ = false;
+    return true;
+  }
+
+  if (i < source_.size() && source_[i] == '=') {
+    std::size_t j = i + 1;
+    while (j < source_.size() && source_[j] == ' ') {
+      j++;
+    }
+    if (j >= source_.size() || source_[j] == '\n' || source_[j] == '\r') {
+      Token t;
+      t.kind = TokenKind::Eq;
+      t.line = line_;
+      t.column = spaces + 1;
+      t.start = i;
+      t.end = i + 1;
+      t.text = std::string_view(source_).substr(i, 1);
+      push_token(t);
+      pos_ = j;
+      column_ = spaces + 1;
+      at_line_start_ = (j < source_.size() && source_[j] == '\n');
+      return true;
+    }
+  }
+
   pos_ = i;
   column_ = spaces + 1;
   at_line_start_ = false;
@@ -184,6 +220,16 @@ bool Lexer::lex_number(Token& out, bool is_float_start) {
       while (!at_end() && std::isdigit(static_cast<unsigned char>(peek()))) {
         advance();
       }
+    }
+  }
+  if (peek() == 'e' || peek() == 'E') {
+    is_float = true;
+    advance();
+    if (peek() == '+' || peek() == '-') {
+      advance();
+    }
+    while (!at_end() && std::isdigit(static_cast<unsigned char>(peek()))) {
+      advance();
     }
   }
   out.start = start;
@@ -314,11 +360,38 @@ bool Lexer::tokenize(DiagnosticBag& diags) {
       case ',': single(TokenKind::Comma); continue;
       case ':':
         if (body_mode_) {
-          pending_indent_check_ = true;
+          std::size_t j = pos_;
+          while (j < source_.size() && (source_[j] == ' ' || source_[j] == '\t')) {
+            j++;
+          }
+          if (j >= source_.size() || source_[j] == '\n' || source_[j] == '#') {
+            pending_indent_check_ = true;
+          }
         }
         single(TokenKind::Colon);
         continue;
-      case '+': single(TokenKind::Plus); continue;
+      case '.':
+        if (peek() == '.') {
+          advance();
+          if (peek() == '.') {
+            advance();
+            single(TokenKind::Ellipsis);
+          } else if (peek() == '<') {
+            advance();
+            single(TokenKind::DotDotLt);
+          } else {
+            SourceLoc loc{file_, sl, sc, start};
+            diags.error(loc, "expected '..<' range operator or '...'");
+            return false;
+          }
+        } else {
+          SourceLoc loc{file_, sl, sc, start};
+          diags.error(loc, "unexpected character '.'");
+          return false;
+        }
+        continue;
+      case '|': single(TokenKind::Pipe); continue;
+      case '+':
       case '-':
         if (peek() == '>') {
           advance();
@@ -402,8 +475,13 @@ bool Lexer::tokenize(DiagnosticBag& diags) {
       indent_stack_.pop_back();
       Token t;
       t.kind = TokenKind::Dedent;
+      t.line = line_;
+      t.column = 1;
+      t.start = pos_;
+      t.end = pos_;
       push_token(t);
     }
+    body_mode_ = false;
   }
   Token eof;
   eof.kind = TokenKind::Eof;

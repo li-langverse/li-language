@@ -1,0 +1,6 @@
+proc bad[T](x: T) -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  return x

@@ -4,7 +4,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(cd "$ROOT/.." && pwd)"
-LIC="${LIC:-$REPO/build/lic}"
+LIC="${LIC:-$REPO/build/compiler/lic/lic}"
 FILTER="${1:-all}"
 CI="${CI:-false}"
 

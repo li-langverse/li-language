@@ -1,0 +1,105 @@
+# Li documentation site — https://cap-jmk-real.github.io/li-language/
+
+site_name: Li
+site_description: Prove it. Write it easily. Run it fast.
+site_url: https://cap-jmk-real.github.io/li-language/
+repo_url: https://github.com/cap-jmk-real/li-language
+repo_name: cap-jmk-real/li-language
+edit_uri: edit/dev/docs/
+
+theme:
+  name: material
+  logo: assets/li-mark.svg
+  favicon: assets/li-mark.svg
+  palette:
+    - scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Light mode
+    - scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Dark mode
+  font:
+    text: Inter
+    code: JetBrains Mono
+  features:
+    - navigation.instant
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - toc.follow
+
+plugins:
+  - search
+  - minify:
+      minify_html: true
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+extra_css:
+  - stylesheets/extra.css
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/cap-jmk-real/li-language
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Guides:
+      - Architecture: architecture/overview.md
+      - Verification: verification/overview.md
+      - Benchmarks: benchmarks.md
+      - Contributing docs: contributing/documentation.md
+  - Reference:
+      - Language design: superpowers/specs/2026-05-14-li-language-design.md
+      - Trusted axioms: semantics/README.md
+  - Project:
+      - Master plan: superpowers/plans/2026-05-14-li-master-plan.md
+      - Benchmarks plan: superpowers/plans/2026-05-14-benchmarks-and-simulations.md
+      - Plots & social: superpowers/plans/2026-05-14-plots-and-social.md
+      - Phase plans:
+          - Phase 0 — Bootstrap: superpowers/plans/2026-05-14-phase-00-bootstrap.md
+          - Phase 1 — Lexer/Parser: superpowers/plans/2026-05-14-phase-01-lexer-parser.md
+          - Phase 2 — Typechecker: superpowers/plans/2026-05-14-phase-02-typechecker.md
+          - Phase 2a — Types core: superpowers/plans/2026-05-14-phase-02a-types-core.md
+          - Phase 3 — MIR/Codegen: superpowers/plans/2026-05-14-phase-03-mir-codegen.md
+          - Phase 4 — Runtime: superpowers/plans/2026-05-14-phase-04-runtime-stdlib.md
+          - Phase 5 — Tetris: superpowers/plans/2026-05-14-phase-05-tetris.md
+          - Phase 6 — Self-host: superpowers/plans/2026-05-14-phase-06-self-host.md

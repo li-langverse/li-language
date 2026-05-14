@@ -1,8 +1,28 @@
 /build/
+.venv-plot/
+.venv-docs/
+site/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+
+# Benchmark / plot artifacts (regenerated locally)
+benchmarks/results/**/*.csv
+benchmarks/results/share/*.png
+benchmarks/results/md_lennard_jones/energy_*.csv
+build/bench/
+
 compile_commands.json
 .cache/
 .DS_Store
+
+# Native build products
 *.o
 *.a
 *.so
 *.dylib
+examples/tetris/tetris
+build/lic-from-li
+benchmarks/tier2_physics/**/target/

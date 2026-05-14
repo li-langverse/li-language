@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <string_view>
 
@@ -27,6 +28,7 @@ enum class TokenKind {
   KwReturn,
   KwRaises,
   KwEcho,
+  KwExtern,
   KwTrue,
   KwFalse,
   KwAnd,
@@ -38,6 +40,8 @@ enum class TokenKind {
   KwDecreases,
   KwInvariant,
   KwResult,
+  KwProtocol,
+  KwCallable,
   LParen,
   RParen,
   LBracket,
@@ -58,6 +62,9 @@ enum class TokenKind {
   Gt,
   EqEq,
   Ne,
+  DotDotLt,
+  Pipe,
+  Ellipsis,
 };
 
 struct Token {

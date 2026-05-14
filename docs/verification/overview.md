@@ -48,5 +48,5 @@ Tier 2 physics must **`lic build`** with full proofs (energy/momentum `ensures`)
 
 ## Related
 
-- [Architecture overview](architecture/overview.md)  
+- [Architecture overview](../architecture/overview.md)  
 - [Benchmarks plan](../superpowers/plans/2026-05-14-benchmarks-and-simulations.md)  

@@ -1,0 +1,6 @@
+proc hom(t: tuple[int, ...]) -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return 0

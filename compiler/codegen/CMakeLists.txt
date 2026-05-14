@@ -1,4 +1,4 @@
-add_library(li_codegen STATIC codegen.cpp smoke_llvm.cpp)
+add_library(li_codegen STATIC codegen.cpp smoke_llvm.cpp emit.cpp compile.cpp)
 target_include_directories(li_codegen PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(li_codegen PUBLIC li_mir)
 llvm_map_components_to_libnames(llvm_libs core support)

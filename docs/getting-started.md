@@ -20,11 +20,12 @@ You will need:
 - A C++17 compiler (Clang recommended)
 - Python 3.10+ (benchmark harness only)
 
-On macOS, LLVM is typically installed with Homebrew:
+On macOS, LLVM 18 is typically installed with Homebrew:
 
 ```bash
 brew install llvm@18 cmake ninja
-export LLVM_DIR="$(brew --prefix llvm@18)"
+export LLVM_DIR="$(brew --prefix llvm@18)/lib/cmake/llvm"
+export CC=clang CXX=clang++   # Xcode libc++; do not use brew's clang++ for lic
 ```
 
 ## Repository layout
@@ -80,3 +81,12 @@ After Phase 5:
 ## Contributing documentation
 
 See [Documentation style](contributing/documentation.md) before adding or rewriting docs.
+
+Preview the site locally:
+
+```bash
+./scripts/build-docs.sh --strict
+python3 -m http.server -d site 8000
+```
+
+Published at [cap-jmk-real.github.io/li-language](https://cap-jmk-real.github.io/li-language/) on merge to `main`.

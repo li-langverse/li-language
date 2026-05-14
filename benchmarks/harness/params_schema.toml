@@ -1,0 +1,17 @@
+# Documented keys for benchmarks/<name>/params.toml
+
+[three_body]
+N = "int, number of bodies"
+steps = "int, integration steps"
+dt = "float, timestep"
+G = "float, gravitational constant"
+softening = "float, Plummer softening"
+seed = "int, RNG seed"
+
+[md_lennard_jones]
+N = "int, particle count"
+steps = "int, MD steps"
+dt = "float, timestep (LJ units)"
+rc = "float, cutoff radius"
+box_length = "float, periodic box side"
+seed = "int, RNG seed"

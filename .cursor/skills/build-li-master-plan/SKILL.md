@@ -72,8 +72,9 @@ Report: what was done, exact error, what the user must provide (e.g. `brew insta
 | 4 | `docs/superpowers/plans/2026-05-14-phase-04-runtime-stdlib.md` |
 | 5 | `docs/superpowers/plans/2026-05-14-phase-05-tetris.md` |
 | 5b | `docs/superpowers/plans/2026-05-14-benchmarks-and-simulations.md` |
+| 6 | `docs/superpowers/plans/2026-05-14-phase-06-self-host.md` |
 
-Plans for 2a–2c, 2e, 2f, 6 may be **TBD** — draft a short plan file before implementing.
+- Phase 5b: `./scripts/plot_shareables.sh` for X-ready PNGs (`docs/superpowers/plans/2026-05-14-plots-and-social.md`)
 
 ## Commits
 

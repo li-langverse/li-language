@@ -1,0 +1,9 @@
+type Box[T] = array[8, T]
+
+proc use_box() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var xs: Box[int]
+  return 0

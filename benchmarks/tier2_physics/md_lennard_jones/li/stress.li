@@ -1,0 +1,9 @@
+extern proc li_md_stress_cli_all() -> int
+
+proc main() raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  li_md_stress_cli_all()
+  return 0

@@ -1,0 +1,10 @@
+type Sized = Protocol
+
+proc main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var buf: array[4, int]
+  var s: Sized = buf
+  return 0

@@ -1,0 +1,7 @@
+proc ok(b: var array[4, int]) -> unit
+  requires true
+  ensures true
+  decreases 0
+=
+  borrow mut x = b
+  x[0] = 1

@@ -28,6 +28,9 @@ Plan: `docs/superpowers/plans/2026-05-14-benchmarks-and-simulations.md`
 - CSV columns: `benchmark, lang, threads, metric, value, unit, cpu_model, flags`
 - Label BLAS/NumPy/PyTorch columns explicitly — never compare naive Python to SIMD li without labeling
 - Regression: investigate if li > 1.2× C++ on Tier 1–2 on the same machine
+- **Social:** run `./scripts/plot_shareables.sh` before posting benchmark or CI results to X
+
+Plot spec: `docs/superpowers/plans/2026-05-14-plots-and-social.md`
 
 ## Reference impls
 
