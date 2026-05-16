@@ -90,8 +90,10 @@ export LI_REPO_ROOT="$ROOT"
 "$ROOT/li-tests/tooling/contracts_verify_lean.sh"
 
 li_phase "lic JSON diagnostics (Vision-LLM)"
-chmod +x "$ROOT/li-tests/tooling/diagnose_json_smoke.sh" "$ROOT/scripts/lic-fix-suggest.sh"
+chmod +x "$ROOT/li-tests/tooling/diagnose_json_smoke.sh" \
+  "$ROOT/li-tests/tooling/error_codes_smoke.sh" "$ROOT/scripts/lic-fix-suggest.sh"
 "$ROOT/li-tests/tooling/diagnose_json_smoke.sh"
+"$ROOT/li-tests/tooling/error_codes_smoke.sh"
 
 li_phase "8-sync toolchain"
 chmod +x "$ROOT/scripts/check-li-toolchain.sh"

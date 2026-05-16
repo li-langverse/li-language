@@ -49,7 +49,8 @@ chmod +x "$ROOT/scripts/check-doc-provability-claims.sh" \
   "$ROOT/li-tests/tooling/contracts_discharge_corpus.sh" \
   "$ROOT/li-tests/tooling/contracts_verify_lean.sh" \
   "$ROOT/li-tests/tooling/mir_vc_witness.sh" \
-  "$ROOT/li-tests/tooling/diagnose_json_smoke.sh"
+  "$ROOT/li-tests/tooling/diagnose_json_smoke.sh" \
+  "$ROOT/li-tests/tooling/error_codes_smoke.sh"
 "$ROOT/scripts/check-doc-provability-claims.sh"
 "$ROOT/scripts/check-li-toolchain.sh"
 "$ROOT/li-tests/tooling/li_new_package_smoke.sh"

@@ -1,0 +1,7 @@
+def main() -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  break
+  return 0

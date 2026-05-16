@@ -20,7 +20,8 @@ Landscape: `docs/benchmarks/competitive-landscape.md`
 2. **Run or refresh benches** — `python3 benchmarks/harness/bench.py --tier 12` (or tier relevant); update `benchmarks/results/latest.csv`.
 3. **Label honesty** — `shared_c_kernel` vs `pure_li` per `benchmarks/results/README.md`; never claim parity on stub kernels.
 4. **No perf claims without evidence** — cite CSV rows + flags; no “faster than Rust” without a reproduced column on the same machine.
-5. **Provability first** — `parallel for` / OpenMP only with discharged Lean contracts; competitor SIMD shortcuts are not license to skip proof.
+5. **Provability first (strict by default)** — `parallel for` / OpenMP only with discharged Lean contracts; competitor SIMD shortcuts are **not** license to skip proof or disable gates for speed. There is **no optional provability** — see `docs/ecosystem/strict-by-default.md`.
+6. **Perf claims require benches** — cannot disable proof/security gates to win a competitive column; document **N/A** or run tier-appropriate benches.
 
 ## Competitive review cadence
 

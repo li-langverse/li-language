@@ -8,7 +8,7 @@ BAD="$ROOT/li-tests/typecheck/bad_array_index.li"
 out="$("$LIC" check --format=json "$BAD" 2>/dev/null || true)"
 echo "$out" | grep -q '"ok":false'
 echo "$out" | grep -q '"schema":"diagnostic-v1"'
-echo "$out" | grep -q '"code":"type.index"'
+echo "$out" | grep -q '"code":"E0201"'
 echo "$out" | grep -q 'bad_array_index.li'
 
 diag="$("$LIC" diagnose "$BAD" 2>/dev/null || true)"

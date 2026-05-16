@@ -1,0 +1,8 @@
+error MyErr: "something went wrong"
+
+def main() -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  return 0

@@ -609,6 +609,37 @@ file = "cve_patterns/historic_goto_fail.li"
 outcome = "compile_fail"
 expected_substr = "goto is forbidden"
 
+# --- errors (catalog + user error decl) ---
+
+[[tests]]
+suite = "errors"
+file = "errors/parse_error_decl.li"
+outcome = "parse_ok"
+
+[[tests]]
+suite = "errors"
+file = "errors/missing_requires_coded.li"
+outcome = "compile_fail"
+expected_substr = "E0301"
+
+# --- control_flow (break / continue / for) ---
+
+[[tests]]
+suite = "control_flow"
+file = "control_flow/break_while.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "control_flow"
+file = "control_flow/continue_for.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "control_flow"
+file = "control_flow/break_outside_loop.li"
+outcome = "compile_fail"
+expected_substr = "E0401"
+
 # --- hpc_competitive (registry gate; ./li-tests/run_all.sh hpc_competitive) ---
 
 # --- security (malformed inputs; run via ./li-tests/run_security.sh) ---

@@ -2,18 +2,6 @@
 
 namespace li {
 
-namespace {
-
-std::string cat(std::string_view a, std::string_view b) {
-  std::string out;
-  out.reserve(a.size() + b.size());
-  out.append(a);
-  out.append(b);
-  return out;
-}
-
-}  // namespace
-
 std::string_view error_code_string(ErrorCode code) {
   switch (code) {
     case ErrorCode::E0101:

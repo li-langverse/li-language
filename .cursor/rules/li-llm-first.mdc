@@ -9,14 +9,14 @@ globs:
 
 # Li LLM-first (token discipline)
 
-Provability pillar **#1** is unchanged. This rule applies when adding **syntax**, **docs**, or **agent-facing tooling**.
+Provability pillar **#1** is unchanged. **Strict by default:** LLM-first ergonomics must **not** reduce proof, security, or performance defaults — there is **no optional provability**. See `docs/ecosystem/strict-by-default.md`. This rule applies when adding **syntax**, **docs**, or **agent-facing tooling**.
 
 ## Before you add surface area
 
 1. **Token cost** — Will an agent read this 10× per session? Prefer tables, links, and manifests over repeated prose.
 2. **Structured output** — Prefer `lic check --format=json` / `lic diagnose` for automated fix loops; keep human ANSI as default.
 3. **Stable symbols** — Use grep-friendly names; avoid ambiguous abbreviations in public APIs.
-4. **No proof shortcuts** — Terse syntax must desugar to Core; never skip contracts in **shipped** `.li` because an agent could infer them.
+4. **No proof shortcuts** — Terse syntax must desugar to Core; never skip contracts in **shipped** `.li` because an agent could infer them; never suggest `--no-verify` or implicit gate-off.
 
 ## Docs
 

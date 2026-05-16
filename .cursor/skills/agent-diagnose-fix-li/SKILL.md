@@ -10,7 +10,7 @@ Use when an agent must fix Li source using machine-readable diagnostics and `li-
 
 ## Workflow
 
-1. **Read gates** — `AGENTS.md`, `.cursor/rules/li-ecosystem-gates.mdc` (provability wins).
+1. **Read gates** — [strict-by-default.md](../../../docs/ecosystem/strict-by-default.md), `AGENTS.md`, `.cursor/rules/li-strict-by-default.mdc` (fixes must **preserve** contracts; no optional provability).
 2. **Diagnose (JSON):**
    ```bash
    lic diagnose path/to/file.li

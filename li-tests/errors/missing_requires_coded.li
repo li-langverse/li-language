@@ -1,0 +1,4 @@
+proc no_spec(x: int) -> int
+  decreases 0
+=
+  return x + 1
