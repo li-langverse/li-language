@@ -135,7 +135,7 @@ Proof always comes first. Speed never skips the check.
 | See every test and security check | [Tests & audits](docs/testing/overview.md) |
 | Read the full design spec (technical) | [Language design spec](docs/superpowers/specs/2026-05-14-li-language-design.md) |
 
-Published docs site: [li-langverse.github.io/li-language](https://li-langverse.github.io/li-language/)
+Published docs site: [li-langverse.github.io/li-language](https://li-langverse.github.io/li-language/) — setup and mirrors: [live-documentation.md](docs/ecosystem/live-documentation.md)
 
 Create a new package: `./scripts/li-new-package <name> --kind library` — see [Creating packages](docs/guide/creating-packages.md).
 
