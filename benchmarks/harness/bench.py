@@ -100,8 +100,8 @@ TIER1_BENCHES: tuple[BenchSpec, ...] = (
 )
 
 # Gaming-physics roadmap (physics-only; Tier R = rendering out of scope):
-#   exists: md_lennard_jones, nbody, wave_1d/2d, heat_2d, advection_diffusion_2d, sph_dam_break_2d (stub)
-#   planned: euler_fluid_2d, combustion_passive, wind_field_bc, rigid_body, cloth, mls_mpm
+#   implemented: full tier2_physics/ suite below (+ shared C kernels)
+#   planned: mls_mpm, orbit_two_body, schrodinger_1d_barrier, fdtd_waveguide_2d
 #   Tier R: shadows, reflections BRDF, fire rendering
 TIER2_BENCHES: tuple[BenchSpec, ...] = (
     BenchSpec(
@@ -183,6 +183,46 @@ TIER2_BENCHES: tuple[BenchSpec, ...] = (
         "sph_dam_break_2d",
         "cpp/main.c",
         "common/sph_dam_core.c",
+        "li/main.li",
+    ),
+    BenchSpec(
+        "euler_fluid_2d",
+        2,
+        "euler_fluid_2d",
+        "cpp/main.c",
+        "common/euler2d_core.c",
+        "li/main.li",
+    ),
+    BenchSpec(
+        "combustion_passive",
+        2,
+        "combustion_passive",
+        "cpp/main.c",
+        "common/combust_core.c",
+        "li/main.li",
+    ),
+    BenchSpec(
+        "wind_field_bc",
+        2,
+        "wind_field_bc",
+        "cpp/main.c",
+        "common/windbc_core.c",
+        "li/main.li",
+    ),
+    BenchSpec(
+        "rigid_body_stack",
+        2,
+        "rigid_body_stack",
+        "cpp/main.c",
+        "common/rigid_stack_core.c",
+        "li/main.li",
+    ),
+    BenchSpec(
+        "cloth_swing",
+        2,
+        "cloth_swing",
+        "cpp/main.c",
+        "common/cloth_core.c",
         "li/main.li",
     ),
 )
@@ -340,7 +380,15 @@ def verify_checksum(spec: BenchSpec, build_dir: Path) -> None:
     cpp_time = time_command([str(native)], runs=1)
     li_time = time_command([str(li_bin)], runs=1)
     if spec.li_pure:
-        print(f"{spec.name} verify ok (pure Li): native checksum={native_out} li/native time={li_time:.4f}/{cpp_time:.4f}s")
+        if li_time < cpp_time * 0.45:
+            raise RuntimeError(
+                f"{spec.name}: pure Li too fast ({li_time:.4f}s vs native {cpp_time:.4f}s) — "
+                "hot loop likely DCE'd; use li_rt_sink_double(acc)"
+            )
+        print(
+            f"{spec.name} verify ok (pure Li): native checksum={native_out} "
+            f"li/native time={li_time:.4f}/{cpp_time:.4f}s"
+        )
         return
     if li_time < cpp_time * 0.45:
         raise RuntimeError(

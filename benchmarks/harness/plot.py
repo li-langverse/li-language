@@ -28,8 +28,16 @@ TIER2_PHYSICS = {
     "nbody_gravity",
     "harmonic_oscillator_chain",
     "wave_equation_1d",
+    "wave_equation_2d",
     "heat_equation_2d",
     "double_pendulum",
+    "advection_diffusion_2d",
+    "sph_dam_break_2d",
+    "euler_fluid_2d",
+    "combustion_passive",
+    "wind_field_bc",
+    "rigid_body_stack",
+    "cloth_swing",
 }
 
 sys.path.insert(0, str(HARNESS))

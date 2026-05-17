@@ -1,0 +1,6 @@
+width = 24
+height = 10
+steps = 35_000
+dt = 0.0008
+gravity = 9.81
+spring_k = 220.0

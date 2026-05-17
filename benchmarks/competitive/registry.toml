@@ -25,7 +25,14 @@ notes = "C++/Clang drivers under benchmarks/tier*/cpp; -O3 -march=native in harn
 id = "rust_ndarray_rayon"
 track = "bench_tier2"
 repo_url = "https://github.com/rust-lang/rust"
-compare = ["md_lennard_jones", "matmul_blocked", "simd_dot", "reduce_sum"]
+compare = [
+  "md_lennard_jones",
+  "matmul_blocked",
+  "simd_dot",
+  "reduce_sum",
+  "euler_fluid_2d",
+  "wind_field_bc",
+]
 csv_lang = "rust"
 kernel_honesty = "shared_c_kernel"
 last_reviewed = "2026-05-16"
@@ -35,7 +42,7 @@ notes = "Rust drivers link same C core as cpp via LI_EXTRA_C pattern in harness.
 id = "julia"
 track = "bench_tier2"
 repo_url = "https://github.com/JuliaLang/julia"
-compare = ["md_lennard_jones", "matmul_blocked", "three_body"]
+compare = ["md_lennard_jones", "matmul_blocked", "three_body", "combustion_passive"]
 csv_lang = "julia"
 kernel_honesty = "shared_c_kernel"
 last_reviewed = "2026-05-16"
@@ -45,7 +52,16 @@ notes = "Julia wrappers over shared C kernels; optional on CI (ci-bench skips if
 id = "li"
 track = "bench_tier2"
 repo_url = "https://github.com/li-langverse/lic"
-compare = ["md_lennard_jones", "horner_pure_li", "simd_dot", "three_body"]
+compare = [
+  "md_lennard_jones",
+  "horner_pure_li",
+  "simd_dot",
+  "three_body",
+  "euler_fluid_2d",
+  "combustion_passive",
+  "rigid_body_stack",
+  "cloth_swing",
+]
 csv_lang = "li"
 kernel_honesty = "mixed"
 last_reviewed = "2026-05-16"

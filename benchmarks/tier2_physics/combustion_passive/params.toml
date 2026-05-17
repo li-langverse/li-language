@@ -1,0 +1,7 @@
+nx = 128
+ny = 128
+steps = 18_000
+dx = 0.01
+dt = 0.00015
+diff = 0.08
+k_reaction = 2.5
