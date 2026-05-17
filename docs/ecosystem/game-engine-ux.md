@@ -2,7 +2,7 @@
 
 **Status:** v1 documentation + experimental smoke only — not std promotion.  
 **Research goal:** `game_engine_ux` (li-cursor-agents `config/goal-scaffolds/game_engine_ux.md`).  
-**Related:** [GAME_DEV.md](../physics/GAME_DEV.md), `li-tests/physics/game_runtime_smoke.li`.
+**Related:** `docs/physics/GAME_DEV.md` (when present on branch), `li-tests/physics/game_runtime_smoke.li`, `packages/li-std-physics-*`.
 
 ## North star
 
