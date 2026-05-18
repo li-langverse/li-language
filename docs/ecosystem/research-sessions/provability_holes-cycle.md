@@ -1,4 +1,73 @@
-# Proof-gap digest — session `cf909e52-f0da-4f26-ac10-ff3dbc81b320` (cycle 1)
+# Proof-gap digest — session `727418f0-c729-4136-9275-eaa220521da4` (cycle 1)
+
+**Agent:** `proof_gap_researcher` · **Goal:** `provability_holes` · **north_star_fit:** ecosystem · **PH-2e, PH-2f**  
+**Completed steps:** `read_register` (this cycle) · *queued:* `trusted_surface`, `contract_tier`, `synthesize_step`  
+**Repo:** `lic` (local: `/Users/julian/Documents/coding-projects/li`)  
+**Prior cycle:** `cf909e52-f0da-4f26-ac10-ff3dbc81b320` — full digest below retained for evidence continuity.
+
+---
+
+## Step: `read_register` — `docs/verification/provability-gaps.md` (2026-05-18)
+
+### Executive summary (read_register)
+
+- Register lists **9 Open** + **1 Deferred** G-* rows; all re-checked against `li/` sources this step.
+- **G-VERIFY-01** repro still holds: `lic build li-tests/proof_gaps/false_ensures_still_builds.li` → exit 0, binary emitted (`/tmp/li_gap_test_727418f0`).
+- **G-VERIFY-02** confirmed: `li-tests/run_all.sh:61-68` maps `verify_ok` and `compile_ok` to the same `lic build` path.
+- **G-SEM-01 / G-TRUST-01** confirmed: only `docs/semantics/trusted.lean` exists; `Core.lean` / `MIR.lean` still *planned* (`docs/semantics/README.md:10-11`).
+- **G-CONTRACT-01** confirmed: `typecheck.cpp:567-571` errors on missing clauses only, not discharge.
+- **G-BENCH-01** confirmed: `benchmarks/harness/verify.py:18-31` calls `lic build` only.
+- **G-REJECT-01** retest: `prove_reject` suite pass=5; `uses_sorry.li` fails parse (`expected '='`), not sorry ban.
+- **Tooling drift:** `plan-completion-audit.py` scans `**Partial**` / `**Missing**` only — register uses plain `Open`, so briefing scorecard shows zero G-* debt despite 9 open rows.
+- No `trusted.lean` edits; no new tests required for register read (existing `proof_gaps/` fixture sufficient).
+
+### Hypothesis outcomes (read_register)
+
+- `HYPOTHESIS: verified — All 9 Open register rows match current compiler behavior | evidence: file:line citations below + lic build repro`
+- `HYPOTHESIS: verified — G-VERIFY-01 repro fixture still compiles with false ensures | evidence: ./build/compiler/lic/lic build li-tests/proof_gaps/false_ensures_still_builds.li → exit=0`
+- `HYPOTHESIS: verified — plan-completion-audit ignores Open-status G-* rows | evidence: benchmarks/scripts/plan-completion-audit.py:23-24 vs provability-gaps.md:7-16`
+- `HYPOTHESIS: falsified — prove_reject rejects uses_sorry.li because sorry is banned | evidence: parse error at uses_sorry.li:5 (retest, unchanged)`
+- `HYPOTHESIS: deferred — G-CODEGEN-01 LLVM↔MIR preservation | evidence: register status Deferred; Core/MIR absent`
+
+### Register inventory (verified)
+
+| ID | Register claim | Evidence (file:line) | Repro command |
+|----|----------------|----------------------|---------------|
+| G-VERIFY-01 | No Lean in `lic build` | `compiler/lic/main.cpp:68-81` frontend+LLVM only | `lic build li-tests/proof_gaps/false_ensures_still_builds.li` → 0 |
+| G-VERIFY-02 | `verify_ok` ≡ `compile_ok` | `li-tests/run_all.sh:61-68` | compare branches (identical) |
+| G-SEM-01 | No Core/MIR | `docs/semantics/README.md:10-11` | `find docs/semantics -name Core.lean` → absent |
+| G-CONTRACT-01 | Presence-only contracts | `compiler/types/typecheck.cpp:567-571` | `lic build li-tests/contracts_verify/sqrt_contract.li` → 0 |
+| G-CONTRACT-02 | Loop metadata not checked | prior: `missing_decreases.li` parse fail | queued `contract_tier` step |
+| G-POLICY-01 | Pattern heuristics | `compiler/types/policy.cpp:22-60` | queued |
+| G-REJECT-01 | Wrong rejection reasons | `uses_sorry.li` parse | `./li-tests/run_all.sh prove_reject` pass=5 |
+| G-BENCH-01 | Bench verify = build | `benchmarks/harness/verify.py:18-31` | read source |
+| G-CODEGEN-01 | Preservation deferred | register + `overview.md:47` | deferred |
+| G-TRUST-01 | trusted only, no Core bridge | `docs/semantics/trusted.lean` exists | queued `trusted_surface` |
+
+### Commands run (read_register)
+
+```bash
+cd /Users/julian/Documents/coding-projects/li
+./build/compiler/lic/lic build li-tests/proof_gaps/false_ensures_still_builds.li -o /tmp/li_gap_test_727418f0  # exit=0
+./li-tests/run_all.sh prove_reject   # pass=5 fail=0
+```
+
+### Recommended issues/PRs (read_register)
+
+| Repo | Title | Labels |
+|------|-------|--------|
+| `lic` | `chore(audit): scan Open G-* rows in plan-completion-audit` | `pillar:provable`, `tooling` |
+| `lic` | `feat(verify): wire Lean gate (G-VERIFY-01)` | `pillar:provable`, `PH-2f` |
+
+### Deferred (read_register)
+
+- Contract tier deep-dive — next queue step `contract_tier`.
+- Trusted surface audit — next queue step `trusted_surface`.
+- Full cycle synthesis — `synthesize_step` after queue.
+
+---
+
+# Proof-gap digest — session `cf909e52-f0da-4f26-ac10-ff3dbc81b320` (cycle 1, prior)
 
 **Agent:** `proof_gap_researcher` · **Goal:** `provability_holes` · **north_star_fit:** ecosystem · **PH-2e, PH-2f**  
 **Completed steps:** `read_register-1`, `contract_tier-2`, `synthesize_step` (proof-gap digest)  
