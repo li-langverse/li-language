@@ -46,3 +46,7 @@ Full renderer, networking, asset pipeline, benchmark claims without a [benchmark
 
 - `li-tests` path or `./li-tests/run_all.sh physics` green.
 - Research session / handoff id `game_engine_ux` in PR body (Agent deliverable).
+
+## UI/UX quality (swarm)
+
+GUI surfaces (including Tetris/SDL spikes) are audited by **`gui_ui_tester`** / **`gui_ux_tester`** in [li-cursor-agents](https://github.com/li-langverse/li-cursor-agents). Findings use the **ui-ux-remediation** issue template and `implementation_queue` kinds `ui_remediation` / `ux_remediation`. See `.cursor/skills/ux-audit/SKILL.md`.

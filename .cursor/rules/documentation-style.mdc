@@ -34,6 +34,10 @@ Write for a skilled developer who is new to Li — not for a thesis committee.
 - Link to canonical spec sections instead of duplicating large tables
 - Date major spec revisions; mark **Status:** Planning | Active | Deprecated
 
+## UI/UX audit issues
+
+Doc changes that fix **ui-audit** or **ux-audit** findings should reference the GitHub issue and use labels `surface:docs`, `ui-audit` or `ux-audit`, `ready-for-implement`.
+
 ## Anti-patterns
 
 - Walls of identifiers without prose
