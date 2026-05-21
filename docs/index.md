@@ -62,6 +62,7 @@ See [Getting started](getting-started.md) for Linux prerequisites and repo layou
 | Lean gate & contracts | [Verification](verification/overview.md) |
 | Type system & numerics | [Language design spec](superpowers/specs/2026-05-14-li-language-design.md) |
 | Implementation order | [Master plan](superpowers/plans/2026-05-14-li-master-plan.md) |
+| Ecosystem algorithms & libraries | [Plan (canonical in `lic`)](ecosystem/algorithms-and-libraries-plan.md) |
 | Physics & perf harness | [Benchmarks](benchmarks.md) |
 | All tests | [li-tests on GitHub](https://github.com/cap-jmk-real/li-language/tree/dev/li-tests) |
 

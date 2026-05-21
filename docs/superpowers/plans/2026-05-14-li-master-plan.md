@@ -61,14 +61,18 @@
 
 ## Phase completion tracker
 
+> **Ecosystem scale-up:** Domain libraries and World Studio kernels follow [algorithms-and-libraries-plan.md](../../ecosystem/algorithms-and-libraries-plan.md) — **Wave A** (`2e`/`2f`) blocks large-scale implementation. Canonical tracker: [`lic` master plan](https://github.com/li-langverse/lic/blob/main/docs/superpowers/plans/2026-05-14-li-master-plan.md).
+
 - [x] Phase 0 — C++ / LLVM bootstrap
 - [x] Phase 1 — Lexer + Parser
 - [x] Phase 2a — Type core (typecheck + prove_reject + race policy gates; full mypy parity pending)
 - [x] Phase 2b — Generics + Protocol (PEP 695 params, TypeApp, Callable, Sized protocol)
 - [x] Phase 2c — Collections + TypedDict (list/dict/tuple, named tuple, enum)
 - [x] Phase 2d — Borrow + effects (lexical borrowck, raises IO/Alloc)
+- [ ] Phase 2e — Contracts + refinements — **not in this repo; see `lic`**
+- [ ] Phase 2f — Lean 4 verify — **not in this repo; see `lic` [provability-gaps](https://github.com/li-langverse/lic/blob/main/docs/verification/provability-gaps.md)**
 - [x] Phase 3 — MIR + LLVM codegen (`lic build`, minimal lower/emit; CFG/bounds IR deferred)
-- [x] Phase 4 — Runtime + stdlib
+- [x] Phase 4 — Runtime + stdlib (minimal in this tree)
 - [x] Phase 5 — Tetris
-- [x] Phase 5b — Benchmarks & simulations (harness + **X plots** skeleton on `dev`)
-- [x] Phase 6 — Self-host (bootstrap seed: `bootstrap/lic/main.li` → `build/lic-from-li`)
+- [x] Phase 5b — Benchmarks harness skeleton (full tier-2 + cross-lang on **`lic`**)
+- [x] Phase 6 — Self-host bootstrap seed (`bootstrap/lic/main.li`)
