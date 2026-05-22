@@ -8,6 +8,8 @@ This `li-language` repo is the compiler bootstrap tree. The **full vertical spec
 
 | Topic | Where |
 |-------|--------|
+| **Package gap register (gui, linalg, quats, graphics)** | [algorithms plan §7](https://github.com/li-langverse/lic/blob/main/docs/ecosystem/algorithms-and-libraries-plan.md#7-package-gap-register-what-to-add-vs-implement) |
+| **Fresh-machine agent handoff** | [algorithms plan §12](https://github.com/li-langverse/lic/blob/main/docs/ecosystem/algorithms-and-libraries-plan.md#12-fresh-machine-agent-handoff) |
 | Product vision (Studio + profiles) | [world-studio-vision.md](https://github.com/li-langverse/lic/blob/main/docs/game-dev/world-studio-vision.md) |
 | Algorithms schedule + Wave A–E gates | [algorithms-and-libraries-plan.md](https://github.com/li-langverse/lic/blob/main/docs/ecosystem/algorithms-and-libraries-plan.md) |
 | `lic` proof maturity (honest) | [provability-gaps.md](https://github.com/li-langverse/lic/blob/main/docs/verification/provability-gaps.md) |
