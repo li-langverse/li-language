@@ -1,3 +1,15 @@
+# Archived — use [`lic`](https://github.com/li-langverse/lic)
+
+> **This repository is archived.** Active language development, compiler (`lic`), tests (`li-tests`), master plan, and ecosystem docs live in **[`li-langverse/lic`](https://github.com/li-langverse/lic)**.
+>
+> - Clone: `git clone https://github.com/li-langverse/lic.git`
+> - Docs: [lic `docs/`](https://github.com/li-langverse/lic/tree/main/docs)
+> - Ecosystem overview: [roadmap `docs/ecosystem/overview.md`](https://github.com/li-langverse/roadmap/blob/main/docs/ecosystem/overview.md)
+>
+> Historical content below is retained for redirects and old links only. Do not open new PRs here except archive notices.
+
+---
+
 # Li
 
 **理** — principle, reason. Source files: `.li`. Compiler: `lic`.
@@ -35,7 +47,7 @@ Every `proc` carries `requires` / `ensures`; every loop carries `invariant` / `d
 
 | Document | Description |
 |----------|-------------|
-| [Documentation](https://cap-jmk-real.github.io/li-language/) | Published MkDocs site |
+| [Documentation](https://cap-jmk-real.github.io/li-language/) | Published MkDocs site (legacy; prefer lic docs) |
 | [Docs source](docs/index.md) | Edit locally with `./scripts/build-docs.sh` |
 | [Formal verification](docs/verification/overview.md) | Provable-only model |
 | [Language design spec](docs/superpowers/specs/2026-05-14-li-language-design.md) | **Three pillars**, types, contracts |
