@@ -1,3 +1,5 @@
+> **Archived:** This repository is deprecated. The canonical Li language specification, documentation, and `lic` compiler live in [**li-langverse/lic**](https://github.com/li-langverse/lic) ([language design spec](https://github.com/li-langverse/lic/blob/main/docs/superpowers/specs/2026-05-14-li-language-design.md)).
+
 # Li
 
 **理** — principle, reason. Source files: `.li`. Compiler: `lic`.
