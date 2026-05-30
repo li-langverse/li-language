@@ -1,0 +1,25 @@
+---
+description: Li package repo — single domain only, no compiler or dashboard code
+alwaysApply: true
+---
+
+# Repo boundaries (Li package)
+
+This repo is a **focused Li package** in the li-langverse org.
+
+## Owns
+
+- This repo's `.li` packages, contracts, tests, and README
+- Repo-specific scripts and CI
+
+## Never add here
+
+- Compiler / runtime core → **lic**
+- Benchmark dashboard or `catalog.toml` → **benchmarks**
+- Proof corpus UI → **proof-library**
+- Unrelated vertical domains (sim code in a httpd repo, etc.)
+
+## Cross-repo
+
+- Depend on **lic** via toolchain pin (`li-toolchain.toml`) or documented sibling path
+- Link to other repos in docs; do not vendor their source trees
