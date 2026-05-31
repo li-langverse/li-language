@@ -1,10 +1,10 @@
-# Li
+﻿# Li
 
-**理** — *reason, principle.*
+**ç†** â€” *reason, principle.*
 
 Li is a language for people who want their programs to be **correct before they are fast**, and **clear before they are clever**.
 
-You write ordinary-looking code. Before anything runs, Li checks that your promises about the program hold — like a careful reviewer who never gets tired. When that check passes, you get a real program that can use many CPU cores and vector math **without** bolting on extra libraries for parallelism or speed.
+You write ordinary-looking code. Before anything runs, Li checks that your promises about the program hold â€” like a careful reviewer who never gets tired. When that check passes, you get a real program that can use many CPU cores and vector math **without** bolting on extra libraries for parallelism or speed.
 
 ---
 
@@ -30,7 +30,7 @@ Build and run (after [installing the tools](docs/guide/getting-started-tools.md)
 ./hello
 ```
 
-Every Li program includes small **promises** (`requires`, `ensures`, `decreases`). They are not comments — they are what Li uses to know your program makes sense.
+Every Li program includes small **promises** (`requires`, `ensures`, `decreases`). They are not comments â€” they are what Li uses to know your program makes sense.
 
 ---
 
@@ -58,7 +58,7 @@ Li insists that loops say how they finish (`decreases`) so endless loops cannot 
 
 ## Fast math on many lanes (vectors)
 
-Li can work on **several numbers at once** — useful for science and graphics-style workloads:
+Li can work on **several numbers at once** â€” useful for science and graphics-style workloads:
 
 ```nim
 proc main() -> int
@@ -78,7 +78,7 @@ proc main() -> int
   return 0
 ```
 
-You do **not** need NumPy, a special C extension, or a separate vector library for this — it is part of the language.
+You do **not** need NumPy, a special C extension, or a separate vector library for this â€” it is part of the language.
 
 More examples: [Vector and parallel guide](docs/guide/fast-math-and-parallelism.md).
 
@@ -107,7 +107,7 @@ proc main() -> int
   return 0
 ```
 
-If two threads would write the same slot, **the build stops** — you fix it before running, not after a mysterious crash.
+If two threads would write the same slot, **the build stops** â€” you fix it before running, not after a mysterious crash.
 
 ---
 
@@ -116,7 +116,7 @@ If two threads would write the same slot, **the build stops** — you fix it bef
 | Idea | In plain words |
 |------|----------------|
 | **Prove it** | Wrong programs are rejected at build time, not discovered in production. |
-| **Write it easily** | Familiar, readable syntax — closer to Nim and Python than to assembly. |
+| **Write it easily** | Familiar, readable syntax â€” closer to Nim and Python than to assembly. |
 | **Run it fast** | After proof, the same code becomes native speed with vectors and multiple cores. |
 
 Proof always comes first. Speed never skips the check.
@@ -125,22 +125,22 @@ Proof always comes first. Speed never skips the check.
 
 ## Learn more
 
-| I want to… | Start here |
+| I want toâ€¦ | Start here |
 |------------|------------|
 | Install tools and build Li | [Getting started (tools)](docs/guide/getting-started-tools.md) |
 | See more copy-paste examples | [Examples gallery](docs/guide/examples-gallery.md) |
 | Learn the whole language | [Language handbook](docs/language/overview.md) |
 | Understand the build steps | [How `lic build` works](docs/compiler/build-pipeline.md) |
-| Understand why this is “mathematically provable” | [Why Li is provable](docs/compiler/why-provable.md) |
+| Understand why this is â€œmathematically provableâ€ | [Why Li is provable](docs/compiler/why-provable.md) |
 | See every test and security check | [Tests & audits](docs/testing/overview.md) |
 | Read the full design spec (technical) | [Language design spec](docs/superpowers/specs/2026-05-14-li-language-design.md) |
 
 Published docs site: [li-langverse.github.io/li-language](https://li-langverse.github.io/li-language/)
 
-Create a new package: `./scripts/li-new-package <name> --kind library` — see [Creating packages](docs/guide/creating-packages.md).
+Create a new package: `./scripts/li-new-package <name> --kind library` â€” see [Creating packages](docs/guide/creating-packages.md).
 
 ---
 
 ## License
 
-MIT OR Apache-2.0 — use Li in open or closed projects under either license.
+MIT OR GPL-3.0-or-later â€” use Li in open or closed projects under either license.
