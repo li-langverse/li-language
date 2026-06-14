@@ -3,4 +3,4 @@ proc talk() -> unit
   ensures true
   decreases 0
 =
-  echo 0
+  print(0)
