@@ -1,4 +1,4 @@
-proc leak() -> Any
+def leak() -> Any
   requires true
   ensures true
   decreases 0

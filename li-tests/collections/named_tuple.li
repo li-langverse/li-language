@@ -1,4 +1,4 @@
-proc dist(p: tuple[x: float, y: float]) -> float
+def dist(p: tuple[x: float, y: float]) -> float
   requires true
   ensures result == 0.0
   decreases 0

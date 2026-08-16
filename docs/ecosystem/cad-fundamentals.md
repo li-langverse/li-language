@@ -32,7 +32,7 @@ v1 does **not** implement a kernel. Proposed names for a future package (illustr
 type Vec3 = object
   x, y, z: float
 
-proc vec3_add(a, b: Vec3) -> Vec3
+def vec3_add(a, b: Vec3) -> Vec3
   requires true
   ensures true   # component-wise; refine with finiteness when float proofs land
   decreases 0

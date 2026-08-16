@@ -1,7 +1,7 @@
 # EXPLOIT: parallel for without disjointness / independence proof.
 # MUST NOT compile — expected: missing parallelism proof obligation.
 
-proc no_disjoint_proof() -> unit
+def no_disjoint_proof() -> unit
   requires true
   ensures true
   decreases 0

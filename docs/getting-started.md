@@ -6,7 +6,7 @@ This page helps you orient in the Li repository. Phase 0 bootstrap is live — b
 
 Li is a **compiled** language for scientific computing where **only provable programs build**. Mandatory contracts + Lean 4; trusted IO only in `docs/semantics/trusted.lean`.
 
-- **Syntax:** Nim-like (`proc`, indentation, `type` / `object` / `enum`)
+- **Syntax:** Nim-like (`def`, indentation, `type` / `object` / `enum`)
 - **Types:** Static, aligned with **Python 3.14** `typing`
 - **Backend:** **LLVM 18** only
 - **Compiler (v0):** **C++17** — self-host in Li comes later (Phase 6)

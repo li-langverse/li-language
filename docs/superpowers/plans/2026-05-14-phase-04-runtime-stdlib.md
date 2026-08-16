@@ -4,7 +4,7 @@
 
 **Goal:** Provide builtins (`echo`), fixed arrays, `extern` FFI to C, and panic runtime so real programs link.
 
-**Architecture:** Compiler intrinsics lower to `li_rt` or libc; `extern proc` declares C symbols.
+**Architecture:** Compiler intrinsics lower to `li_rt` or libc; `extern def` declares C symbols.
 
 **Depends on:** Phase 3  
 **Blocks:** Phase 5
@@ -44,16 +44,16 @@
 
 ---
 
-### Task 4: `extern proc` FFI
+### Task 4: `extern def` FFI
 
 **Files:**
 - Modify: parser, typechecker, codegen
 
 ```nim
-extern proc SDL_Init(flags: uint) -> int
+extern def SDL_Init(flags: uint) -> int
 ```
 
-- [ ] Parse `extern proc` at module level
+- [ ] Parse `extern def` at module level
 - [ ] Codegen as LLVM `declare` with C calling convention
 
 ---
@@ -81,4 +81,4 @@ extern proc SDL_Init(flags: uint) -> int
 ### Phase 4 exit gate
 
 - [ ] hello + arrays examples build and run
-- [ ] `extern proc` to `puts` from libc works in tiny test
+- [ ] `extern def` to `puts` from libc works in tiny test

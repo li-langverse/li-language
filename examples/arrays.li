@@ -1,4 +1,4 @@
-proc main() -> int
+def main() -> int
   requires true
   ensures result == 42
   decreases 0

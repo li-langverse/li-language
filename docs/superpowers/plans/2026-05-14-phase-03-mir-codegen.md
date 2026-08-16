@@ -72,14 +72,14 @@ inst   ::= assign dest, operand
 - Create: `examples/hello.li`
 
 ```nim
-proc main() raises IO =
+def main() raises IO =
   echo "hello li"
 ```
 
 - [ ] Deferred until Phase 4 provides `echo` — for Phase 3 use:
 
 ```nim
-proc main() -> int =
+def main() -> int =
   return 0
 ```
 
@@ -98,6 +98,6 @@ proc main() -> int =
 
 ### Phase 3 exit gate
 
-- [ ] Native binary from minimal proc
+- [ ] Native binary from minimal def
 - [ ] `-O2` flag forwarded to clang in `--release`
 - [ ] Bounds check calls present in IR for dynamic index

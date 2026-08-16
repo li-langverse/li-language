@@ -22,7 +22,7 @@ Tradeoff rule: **provability always wins.** Syntax sugar and `-O3` never skip Le
 ## Required on every compiling unit
 
 - Types + refinements (no `Any`)  
-- `requires` / `ensures` on every `proc`  
+- `requires` / `ensures` on every `def`  
 - `invariant` + `decreases` on every loop  
 - Borrow/memory safety  
 - Parallel: proved disjointness  

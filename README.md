@@ -33,7 +33,7 @@ lic build module.li   # types + memory + contracts + Lean → binary or REJECT
 lic check module.li   # IDE only — not a certificate
 ```
 
-Every `proc` carries `requires` / `ensures`; every loop carries `invariant` / `decreases`. No `Any`, `unsafe`, or `sorry`.
+Every `def` carries `requires` / `ensures`; every loop carries `invariant` / `decreases`. No `Any`, `unsafe`, or `sorry`.
 
 ## Why Li
 

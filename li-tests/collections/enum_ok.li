@@ -3,7 +3,7 @@ type Color = enum
   Green
   Blue
 
-proc pick(c: Color) -> int
+def pick(c: Color) -> int
   requires true
   ensures result == 0
   decreases 0

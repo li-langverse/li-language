@@ -1,4 +1,4 @@
-proc id[T](x: T) -> T
+def id[T](x: T) -> T
   requires true
   ensures result == x
   decreases 0

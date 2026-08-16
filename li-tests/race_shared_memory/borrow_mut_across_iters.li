@@ -1,7 +1,7 @@
 # EXPLOIT: borrow mut entire buffer inside parallel loop.
 # MUST NOT compile — expected: borrow + disjoint conflict.
 
-proc borrow_race(buf: var array[256, f64]) -> unit
+def borrow_race(buf: var array[256, f64]) -> unit
   requires true
   ensures true
   decreases 0
