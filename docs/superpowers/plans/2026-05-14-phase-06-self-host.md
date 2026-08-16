@@ -4,7 +4,7 @@
 
 **Goal:** Ship a **bootstrap** `lic` binary compiled from Li source (`bootstrap/lic/main.li`) by the C++ host. Full compiler rewrite in Li is out of scope for v1; this phase proves the build/run loop and CLI argv bridge.
 
-**Architecture:** C++ `lic` remains the production compiler. Li bootstrap binary is a minimal CLI (`--version`, `smoke`) using `li_rt_argc` / `li_rt_argv` and libc `strcmp`. Parameterless `proc main()` lowers to `li_user_main` with a C `main(argc, argv)` wrapper that calls `li_rt_set_args` before user code.
+**Architecture:** C++ `lic` remains the production compiler. Li bootstrap binary is a minimal CLI (`--version`, `smoke`) using `li_rt_argc` / `li_rt_argv` and libc `strcmp`. Parameterless `def main()` lowers to `li_user_main` with a C `main(argc, argv)` wrapper that calls `li_rt_set_args` before user code.
 
 **Depends on:** Phase 5  
 **Blocks:** Future full self-host (parser/types/codegen in Li)

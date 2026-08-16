@@ -117,7 +117,7 @@ cd /Users/julian/Documents/coding-projects/li
 | Item | Location | Notes |
 |------|----------|-------|
 | IO monad + frame/event axioms | `docs/semantics/trusted.lean:8-18` | Minimal; RFC-governed per spec |
-| `extern proc` skips body check | `typecheck.cpp:549-551` | Trusted boundary; must align with `trusted.lean` listings |
+| `extern def` skips body check | `typecheck.cpp:549-551` | Trusted boundary; must align with `trusted.lean` listings |
 | Planned alloc laws | Spec `2026-05-14-li-language-design.md:555,717` | Not in current `trusted.lean` |
 
 **Session rule:** No `trusted.lean` edits (human-approved issues only).

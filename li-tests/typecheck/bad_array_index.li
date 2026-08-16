@@ -1,6 +1,6 @@
 type Board = array[20, array[10, int]]
 
-proc oob(board: Board) -> int
+def oob(board: Board) -> int
   requires true
   ensures true
   decreases 0

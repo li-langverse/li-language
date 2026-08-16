@@ -1,6 +1,6 @@
 # Single-step MD energy check vs reference constant (placeholder).
 
-proc lj_energy_step() -> f64
+def lj_energy_step() -> f64
   requires true
   ensures abs(result - (-1.234567)) < 1e-6
   decreases 0

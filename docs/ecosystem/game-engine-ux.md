@@ -6,7 +6,7 @@
 
 ## North star
 
-Easy Li APIs for interactive loops and AI agent hooks; no `unsafe`; contracts on every public `proc`.
+Easy Li APIs for interactive loops and AI agent hooks; no `unsafe`; contracts on every public `def`.
 
 ## Package placement (v1)
 
@@ -23,12 +23,12 @@ Do **not** create a new official org repo without roadmap `PKG-*` approval.
 | System | Takeaway for Li |
 |--------|-----------------|
 | **Godot** | Scene tree + signals; favor small composable nodes over monolithic engine loop |
-| **Bevy** | ECS + explicit systems; map to proved `proc` steps and disjoint parallel writes |
+| **Bevy** | ECS + explicit systems; map to proved `def` steps and disjoint parallel writes |
 | **Unity DOTS** | Data-oriented batches; align with SIMD / `parallel for` only after disjoint proof |
 
 ## Proof gate (binding)
 
-- Every new `proc`: `requires` / `ensures` / `decreases` as applicable.
+- Every new `def`: `requires` / `ensures` / `decreases` as applicable.
 - No `sorry`, no bare `cast`, no new `trusted.lean` axioms in agent PRs.
 - Game loop / IO drivers remain trusted boundary per [verification overview](../verification/overview.md).
 

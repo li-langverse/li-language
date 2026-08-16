@@ -1,4 +1,4 @@
-proc bad() -> int
+def bad() -> int
   requires true
   ensures true
   decreases 0

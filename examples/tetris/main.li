@@ -1,20 +1,20 @@
-extern proc tetris_open(width_px: int, height_px: int) -> ptr
-extern proc tetris_close(ctx: ptr)
-extern proc tetris_ticks() -> int
-extern proc tetris_delay(ms: int)
-extern proc tetris_poll_key(ctx: ptr) -> int
-extern proc tetris_begin_frame(ctx: ptr)
-extern proc tetris_draw_cell(ctx: ptr, col: int, row: int, color: int, cell_px: int)
-extern proc tetris_end_frame(ctx: ptr)
+extern def tetris_open(width_px: int, height_px: int) -> ptr
+extern def tetris_close(ctx: ptr)
+extern def tetris_ticks() -> int
+extern def tetris_delay(ms: int)
+extern def tetris_poll_key(ctx: ptr) -> int
+extern def tetris_begin_frame(ctx: ptr)
+extern def tetris_draw_cell(ctx: ptr, col: int, row: int, color: int, cell_px: int)
+extern def tetris_end_frame(ctx: ptr)
 
-proc cell_index(col: int, row: int) -> int
+def cell_index(col: int, row: int) -> int
   requires true
   ensures result >= 0
   decreases 0
 =
   return row * 10 + col
 
-proc in_bounds(col: int, row: int) -> int
+def in_bounds(col: int, row: int) -> int
   requires true
   ensures result >= 0
   decreases 0
@@ -29,7 +29,7 @@ proc in_bounds(col: int, row: int) -> int
     return 0
   return 1
 
-proc run_game() raises IO -> int
+def run_game() raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -127,7 +127,7 @@ proc run_game() raises IO -> int
   tetris_close(ctx)
   return 0
 
-proc main() raises IO -> int
+def main() raises IO -> int
   requires true
   ensures result == 0
   decreases 0

@@ -1,4 +1,4 @@
-proc fib(n: int) -> int
+def fib(n: int) -> int
   requires n >= 0
   ensures result >= 0
   decreases n

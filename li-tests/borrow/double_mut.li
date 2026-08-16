@@ -1,4 +1,4 @@
-proc double_mut(b: var array[4, int]) -> unit
+def double_mut(b: var array[4, int]) -> unit
   requires true
   ensures true
   decreases 0

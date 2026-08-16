@@ -1,7 +1,7 @@
 # EXPLOIT: overlapping par_slice ranges on same buffer.
 # MUST NOT compile — expected: disjoint refinement failure.
 
-proc overlap_slices() -> unit
+def overlap_slices() -> unit
   requires true
   ensures true
   decreases 0

@@ -10,7 +10,7 @@ const char* token_kind_name(TokenKind kind) {
     case TokenKind::Dedent: return "Dedent";
     case TokenKind::Ident: return "Ident";
     case TokenKind::IntLit: return "IntLit";
-    case TokenKind::KwProc: return "proc";
+    case TokenKind::KwProc: return "def";
     case TokenKind::KwRequires: return "requires";
     case TokenKind::KwEnsures: return "ensures";
     case TokenKind::KwDecreases: return "decreases";

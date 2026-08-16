@@ -1,4 +1,4 @@
-proc float_add() -> float
+def float_add() -> float
   requires true
   ensures true
   decreases 0

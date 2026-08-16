@@ -1,4 +1,4 @@
-proc talk() -> unit
+def talk() -> unit
   requires true
   ensures true
   decreases 0
