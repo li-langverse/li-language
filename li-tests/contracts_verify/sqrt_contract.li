@@ -1,4 +1,4 @@
-proc sqrt_pos(x: float) -> float
+def sqrt_pos(x: float) -> float
   requires x >= 0.0
   ensures result >= 0.0
   ensures abs(result * result - x) < 1e-12

@@ -1,11 +1,11 @@
 # Li bootstrap compiler — Phase 6 self-host seed
 # Built by the C++ host:  lic build bootstrap/lic/main.li -o lic-from-li
 
-extern proc li_rt_argc() -> int
-extern proc li_rt_argv(i: int) -> ptr
-extern proc strcmp(a: ptr, b: ptr) -> int
+extern def li_rt_argc() -> int
+extern def li_rt_argv(i: int) -> ptr
+extern def strcmp(a: ptr, b: ptr) -> int
 
-proc print_version() raises IO -> int
+def print_version() raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -13,7 +13,7 @@ proc print_version() raises IO -> int
   echo "lic 0.2.0-bootstrap (compiled with Li)"
   return 0
 
-proc print_usage() raises IO -> int
+def print_usage() raises IO -> int
   requires true
   ensures result == 1
   decreases 0
@@ -21,7 +21,7 @@ proc print_usage() raises IO -> int
   echo "usage: lic --version | lic smoke"
   return 1
 
-proc dispatch() raises IO -> int
+def dispatch() raises IO -> int
   requires true
   ensures result >= 0
   decreases 0
@@ -35,7 +35,7 @@ proc dispatch() raises IO -> int
     return 0
   return print_usage()
 
-proc main() raises IO -> int
+def main() raises IO -> int
   requires true
   ensures result >= 0
   decreases 0

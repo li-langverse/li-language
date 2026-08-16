@@ -649,7 +649,7 @@ TypeAlias Parser::parse_type_alias() {
     alias.alias_kind = AliasKind::Enum;
     i++;
     skip_newlines();
-    while (at(TokenKind::Ident) && cur().text != "proc" && cur().text != "type") {
+    while (at(TokenKind::Ident) && cur().text != "def" && cur().text != "type") {
       alias.enum_variants.push_back(std::string(cur().text));
       i++;
       skip_newlines();

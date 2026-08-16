@@ -31,7 +31,7 @@ lic build module.li   # types + memory + contracts + Lean → binary or REJECT
 lic check module.li   # IDE only — not a certificate
 ```
 
-Every `proc` carries `requires` / `ensures`; every loop carries `invariant` / `decreases`.
+Every `def` carries `requires` / `ensures`; every loop carries `invariant` / `decreases`.
 Forbidden: `Any`, `unsafe`, `sorry`, bare `cast`, unproved `parallel for`.
 
 ## Three pillars (strict priority)

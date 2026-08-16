@@ -44,7 +44,7 @@ The **only** unproved surface is `docs/semantics/trusted.lean` (minimal `IO` + a
 Every compiling module must have:
 
 - [ ] Python 3.14 typing (no `Any`) + refinements where values carry predicates  
-- [ ] `requires` / `ensures` on every `proc`  
+- [ ] `requires` / `ensures` on every `def`  
 - [ ] `invariant` + `decreases` on every loop (`while`, `parallel for`)  
 - [ ] Memory safety via borrow rules (no UB in accepted programs)  
 - [ ] All proof obligations **discharged in Lean 4** (Coq-grade kernel, not SMT-only)  
@@ -62,9 +62,9 @@ Every compiling module must have:
 | **Pillar 3 — Fast execution** | LLVM 18, SIMD, `parallel for` v1; no release binary without Pillar 1 |
 | **Provable-only** | No compile without discharged Lean proofs; reject partial or untotal user code |
 | Python 3.14 type baseline | All relevant PEP constructs **except `Any`** and gradual escapes |
-| Nim-like syntax | Indentation, `proc`, `type`, `object`, `enum`, `import` |
-| **Mandatory contracts** | Every `proc` has specs; loops need `invariant` + `decreases` |
-| **Totality** | Non-terminating `proc` rejected unless effect is explicitly axiomatized (e.g. `IO` driver) |
+| Nim-like syntax | Indentation, `def`, `type`, `object`, `enum`, `import` |
+| **Mandatory contracts** | Every `def` has specs; loops need `invariant` + `decreases` |
+| **Totality** | Non-terminating `def` rejected unless effect is explicitly axiomatized (e.g. `IO` driver) |
 | **Lean 4 gate** | `lic build` ≡ typecheck + borrow + VC gen + Lean kernel OK |
 | Refinement types | Index bounds, positivity, shapes — proof-carrying where needed |
 | Open source | Apache-2.0/MIT; trusted axioms in `docs/semantics/trusted.lean` |
@@ -166,7 +166,7 @@ type Vec[T] = object
   data: ptr T
   len: int
 
-proc map[T, U](xs: list[T], f: proc(x: T) -> U) -> list[U] = ...
+def map[T, U](xs: list[T], f: def(x: T) -> U) -> list[U] = ...
 ```
 
 - `TypeVar`, `TypeVarTuple`, `ParamSpec`, `Concatenate`, `Unpack` — all supported in checker
@@ -180,7 +180,7 @@ Nominal: `object` inheritance still primary for li `object`/`enum`.
 
 ### Callable
 
-`Callable[[A, B], R]` and `proc(a: A, b: B) -> R` interchangeable in annotations.
+`Callable[[A, B], R]` and `def(a: A, b: B) -> R` interchangeable in annotations.
 
 `ParamSpec` for decorators: `Concatenate[Lock, P]` patterns.
 
@@ -305,10 +305,10 @@ type Vec4f = simd[f32, 4]
 type Vec8f = simd[f32, 8]
 type Vec4i = simd[i32, 4]
 
-proc add(a, b: Vec4f) -> Vec4f =
+def add(a, b: Vec4f) -> Vec4f =
   return a + b   # elementwise; lowers to LLVM vector add
 
-proc dot(a, b: Vec4f) -> f32 =
+def dot(a, b: Vec4f) -> f32 =
   return horizontal_sum(a * b)
 ```
 
@@ -352,7 +352,7 @@ Requires: hardware feature detection, explicit conversion rules (`f32` ↔ `bf16
 | `tensor[Shape, T]` | Shape in the type — e.g. `tensor[(3, 3), f64]` vs `tensor[(3,), f64]`; dimension errors at compile time |
 | `array[N, T]` (v1) | Fixed rank-1/2 stack arrays; Tetris boards, small grids |
 | GPU buffers `device[T]` / `host[T]` | Separate address spaces; copy semantics explicit |
-| Kernel `gpu proc` | Entry points for CUDA / Metal / Vulkan compute (one backend chosen first) |
+| Kernel `gpu def` | Entry points for CUDA / Metal / Vulkan compute (one backend chosen first) |
 
 Depends on Phase 1 numerics (including SIMD) and a stable MIR → LLVM path (or secondary GPU IR).
 
@@ -479,8 +479,8 @@ Structural dict type for APIs — compile-time field checking, lowered to `dict[
 
 ```nim
 type Hash = trait
-  proc hash(self: Self) -> u64
-  proc eq(self: Self, other: Self) -> bool
+  def hash(self: Self) -> u64
+  def eq(self: Self, other: Self) -> bool
 ```
 
 `dict`/`set` keys must implement `Hash` (nominal `object`/`enum` derive automatically; newtypes opt in).
@@ -634,7 +634,7 @@ Inner loop: `simd`; outer loop: `parallel for`. Standard li HPC idiom — both r
 
 ### GPU (not v1)
 
-`gpu proc` and `devicebuffer` remain **Phase 4+**. v1 competes on **multi-core CPU + SIMD** vs C++/Rust/Julia.
+`gpu def` and `devicebuffer` remain **Phase 4+**. v1 competes on **multi-core CPU + SIMD** vs C++/Rust/Julia.
 
 ### Benchmarks (v1)
 
@@ -691,10 +691,10 @@ Li combines **Python 3.14 types (minus `Any`)**, **mandatory Hoare contracts**, 
 |-------------|-------------------|
 | Well-typed (Python 3.14 subset) | Type error |
 | Borrow / memory safe | Borrow error |
-| `requires` / `ensures` on every `proc` | Spec error |
+| `requires` / `ensures` on every `def` | Spec error |
 | `invariant` + `decreases` on every loop | Totality error |
 | All VCs discharged in Lean 4 | **Compile rejected** |
-| `extern proc` | Must carry full contract; body trusted and listed in `trusted.lean` |
+| `extern def` | Must carry full contract; body trusted and listed in `trusted.lean` |
 
 ### What is forbidden in source
 
@@ -705,7 +705,7 @@ Li combines **Python 3.14 types (minus `Any`)**, **mandatory Hoare contracts**, 
 | `sorry`, `admit`, `assume` in user code | **Rejected** |
 | Bare `cast[T](e)` | **Rejected** — use `cast[T](e, proof)` |
 | `while` without `decreases` | **Rejected** |
-| `proc` without specs | **Rejected** |
+| `def` without specs | **Rejected** |
 | Unchecked overflow | **Rejected** |
 | Dynamic index without proof or refinement | **Rejected** |
 
@@ -719,17 +719,17 @@ The **only** unproved code is the minimal **trusted runtime** axiomatized in `do
 
 **All user `.li` modules** — including Tetris logic and physics kernels — must prove. The game **step function** is proved; the OS loop calls it via trusted `IO`.
 
-### Contract syntax (mandatory on every `proc`)
+### Contract syntax (mandatory on every `def`)
 
 ```nim
-proc sqrt(x: float) -> float
+def sqrt(x: float) -> float
   requires x >= 0.0
   ensures result >= 0.0
   ensures abs(result * result - x) < 1e-12
   decreases 0
 =
 
-proc verlet_step(
+def verlet_step(
     pos: var tensor[(N, 3), f64],
     vel: var tensor[(N, 3), f64],
     dt: f64
@@ -753,7 +753,7 @@ proc verlet_step(
 | `requires` | **Mandatory** precondition |
 | `ensures` | **Mandatory** postcondition (`result`, `old(e)`) |
 | `invariant` | **Mandatory** on every `while` |
-| `decreases` | **Mandatory** on every `proc` and `while` |
+| `decreases` | **Mandatory** on every `def` and `while` |
 | `assert` | Local VC — must close |
 | `axiom` | **Only** in `docs/semantics/trusted.lean`, never user modules |
 
@@ -763,7 +763,7 @@ proc verlet_step(
 type PosInt = {x: int | x > 0}
 type Index20 = {i: int | 0 <= i and i < 20}
 
-proc row(board: Board, i: Index20) -> array[10, Cell]
+def row(board: Board, i: Index20) -> array[10, Cell]
   ensures true
   decreases 0
 =

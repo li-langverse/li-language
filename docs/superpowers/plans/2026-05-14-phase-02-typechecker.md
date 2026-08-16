@@ -22,13 +22,13 @@
 | `Option[T]` | no null |
 | `enum Name` | user enums |
 | `object Name` | product types |
-| `proc(Args) -> Ret` | effect `!raises` set on decl |
+| `def(Args) -> Ret` | effect `!raises` set on decl |
 
 **Rules:**
 - Literal `42` → `int`; suffix `42u` → `uint`
 - `+` on two `int` → `int`; int + float → error
 - Index `a[i]` requires `i: int` and bounds proof for literal `i`
-- `while` body requires `raises Loop` or `raises IO` on enclosing proc
+- `while` body requires `raises Loop` or `raises IO` on enclosing def
 - `echo` requires `raises IO`
 
 ---

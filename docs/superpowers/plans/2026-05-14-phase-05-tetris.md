@@ -64,7 +64,7 @@ Board type errors (wrong row/col in indexing) must fail at **compile time** when
 - Create: `examples/tetris/game.li`
 - Create: `examples/tetris/main.li`
 
-- [ ] `proc run() raises IO`
+- [ ] `def run() raises IO`
 - [ ] Gravity tick every N frames
 - [ ] Line clear: scan row, shift down
 - [ ] Game over when spawn blocked

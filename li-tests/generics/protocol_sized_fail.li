@@ -1,6 +1,6 @@
 type Sized = Protocol
 
-proc main() -> int
+def main() -> int
   requires true
   ensures true
   decreases 0

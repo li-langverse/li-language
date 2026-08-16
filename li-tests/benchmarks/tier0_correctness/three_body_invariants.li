@@ -1,6 +1,6 @@
 # Momentum invariant sketch — must verify when physics std exists.
 
-proc com_stationary() -> unit
+def com_stationary() -> unit
   requires true
   ensures total_momentum() == 0.0
   decreases 0

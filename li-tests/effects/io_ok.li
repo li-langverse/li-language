@@ -1,4 +1,4 @@
-proc talk() raises IO -> unit
+def talk() raises IO -> unit
   requires true
   ensures true
   decreases 0

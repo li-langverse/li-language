@@ -1,4 +1,4 @@
-proc mix(x: int, y: float) -> float
+def mix(x: int, y: float) -> float
   requires true
   ensures true
   decreases 0
