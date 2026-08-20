@@ -1,5 +1,5 @@
 # P-float: real sqrt call; abs(error) postcondition stays open until Float lemmas land.
-extern proc li_rt_sqrt(x: float) -> float
+extern def li_rt_sqrt(x: float) -> float
   requires true
   ensures true
   decreases 0

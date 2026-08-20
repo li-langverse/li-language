@@ -1,58 +1,58 @@
 # M2 scale oracle — TLS1.3 terminate, HTTP/2, WebSocket route, queue, circuit breaker, webhooks.
 import http
 
-extern proc li_rt_httpd_tls_enabled() -> int
+extern def li_rt_httpd_tls_enabled() -> int
   requires true
   ensures 0 <= result
   ensures result <= 1
 
-extern proc li_rt_httpd_m2_enabled() -> int
+extern def li_rt_httpd_m2_enabled() -> int
   requires true
   ensures 0 <= result
   ensures result <= 1
 
-extern proc li_rt_httpd_m2_tls_terminate() -> int
+extern def li_rt_httpd_m2_tls_terminate() -> int
   requires true
   ensures 0 <= result
   ensures result <= 1
 
-extern proc li_rt_httpd_m2_http2_enabled() -> int
+extern def li_rt_httpd_m2_http2_enabled() -> int
   requires true
   ensures 0 <= result
   ensures result <= 1
 
-extern proc li_rt_httpd_m2_http2_max_streams() -> int
+extern def li_rt_httpd_m2_http2_max_streams() -> int
   requires true
   ensures 0 <= result
 
-extern proc li_rt_httpd_m2_queue_max_depth() -> int
+extern def li_rt_httpd_m2_queue_max_depth() -> int
   requires true
   ensures 0 <= result
 
-extern proc li_rt_httpd_m2_queue_retry_after_sec() -> int
+extern def li_rt_httpd_m2_queue_retry_after_sec() -> int
   requires true
   ensures 0 <= result
 
-extern proc li_rt_httpd_m2_cb_error_threshold() -> int
+extern def li_rt_httpd_m2_cb_error_threshold() -> int
   requires true
   ensures 0 <= result
 
-extern proc li_rt_httpd_m2_webhook_allow_count() -> int
+extern def li_rt_httpd_m2_webhook_allow_count() -> int
   requires true
   ensures 0 <= result
 
-extern proc li_rt_httpd_route_requires_websocket(route_id: int) -> int
+extern def li_rt_httpd_route_requires_websocket(route_id: int) -> int
   requires 0 <= route_id
   requires route_id <= 64
   ensures 0 <= result
   ensures result <= 1
 
-extern proc li_rt_httpd_m2_webhook_url_allowed(url: str) -> int
+extern def li_rt_httpd_m2_webhook_url_allowed(url: str) -> int
   requires true
   ensures 0 <= result
   ensures result <= 1
 
-extern proc li_rt_httpd_m2_selftest() -> int
+extern def li_rt_httpd_m2_selftest() -> int
   requires true
   ensures -6 <= result
   ensures result <= 0

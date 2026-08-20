@@ -1,4 +1,4 @@
-extern proc li_double_pendulum_kernel()
+extern def li_double_pendulum_kernel()
   requires true
   ensures true
 

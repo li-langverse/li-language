@@ -1,6 +1,6 @@
 # Li monorepo workspace — Phase-H httpd + numerics; validated by scripts/check-pkg-workspace.py
 [workspace]
-members = ["li-sim", "li-sim-scientific", "li-sim-automotive", "li-sim-robotics",
+members = ["li-aimd", "li-nanoreactor", "li-chem", "li-sim", "li-sim-scientific", "li-sim-automotive", "li-sim-robotics",
   "li-sim-additive", "li-sim-drug-design",
   "li-acme", "li-bytes", "li-core", "li-crypto", "li-demo", "li-http", "li-log",
   "li-math", "li-math-numerics", "li-net", "li-net-httpd", "li-physics-aero",
@@ -8,6 +8,6 @@ members = ["li-sim", "li-sim-scientific", "li-sim-automotive", "li-sim-robotics"
   "li-physics-hep", "li-physics-particles", "li-physics-quantum",
   "li-physics-relativity", "li-physics-rigid", "li-physics-runtime",
   "li-physics-weather", "li-prob", "li-rng", "li-schema", "li-scene", "li-tls",
-  "li-ui", "li-gui", "lig", "li-render", "li-studio", "li-world",
+  "li-ui", "li-gui", "lig", "li-lig-present", "li-render", "li-studio", "li-world",
 ]
 resolver = "path"

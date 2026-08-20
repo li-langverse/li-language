@@ -5,18 +5,18 @@ Li programs are made of **procedures** (`def`). Each function states what it nee
 ## Minimal program
 
 ```nim
-def main() -> int
+def main() raises IO -> int
   requires true
   ensures result == 0
   decreases 0
 =
-  echo "Hello from Li"
+  print("Hello from Li")
   return 0
 ```
 
 | Line | Meaning |
 |------|---------|
-| `def main() -> int` | Entry function; returns an integer exit code |
+| `def main() raises IO -> int` | Entry function; prints, so it declares `raises IO`, and returns an integer exit code |
 | `requires true` | Precondition (here: always allowed to run) |
 | `ensures result == 0` | Postcondition: return value is 0 |
 | `decreases 0` | This procedure does not loop — trivially finishes |
@@ -41,27 +41,27 @@ Li uses these promises during **`lic build`**. If Li cannot see that your promis
 
 ## Printing text
 
-`echo` works on integers and strings (when the runtime supports them):
+`print` works on integers and strings (when the runtime supports them):
 
 ```nim
-def main() -> int
+def main() raises IO -> int
   requires true
   ensures result == 0
   decreases 0
 =
-  echo 42
+  print(42)
   return 0
 ```
 
 ## Calling other procedures
 
 ```nim
-def greet() -> int
+def greet() raises IO -> int
   requires true
   ensures result == 0
   decreases 0
 =
-  echo "Hi"
+  print("Hi")
   return 0
 
 def main() -> int

@@ -1,6 +1,6 @@
 # CWE-676: dangerous C function at extern seam — missing requires/ensures.
 
-extern proc strcpy(dst: ptr, src: ptr) -> ptr
+extern def strcpy(dst: ptr, src: ptr) -> ptr
 
 def main() -> int
   requires true

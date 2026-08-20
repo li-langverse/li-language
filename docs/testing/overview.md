@@ -87,8 +87,8 @@ Positive control: `good_disjoint_parallel.li` **must build**.
 
 | File | Attack |
 |------|--------|
-| `reserved_def_parallel.li` | `decorator def parallel` |
-| `typosquat_paralell.li` | Segment `paralell` near `parallel` |
+| `reserved_def_parallel.li` | `decorator def parallel` (legacy definition form) |
+| `typosquat_paralell.li` | `@my_paralell` — decorator name segment `paralell` near `parallel` (W0403 warning, still compiles) |
 | `single_segment_name.li` | `decorator def tiled` (one segment) |
 | `missing_disjoint_at_parallel.li` | `@parallel(threads=auto)` without `disjoint=` |
 

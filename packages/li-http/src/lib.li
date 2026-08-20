@@ -1,31 +1,31 @@
 
 import std.runtime.seam
 
-extern proc li_rt_str_eq(a: str, b: str) -> int
+extern def li_rt_str_eq(a: str, b: str) -> int
   requires true
   ensures 0 <= result
   ensures result <= 1
   decreases 0
 
-extern proc li_rt_path_exact(path: str, want: str) -> int
+extern def li_rt_path_exact(path: str, want: str) -> int
   requires true
   ensures 0 <= result
   ensures result <= 1
   decreases 0
 
-extern proc li_rt_path_prefix(path: str, prefix: str) -> int
+extern def li_rt_path_prefix(path: str, prefix: str) -> int
   requires true
   ensures 0 <= result
   ensures result <= 1
   decreases 0
 
-extern proc li_rt_str_prefix_is_get(s: var str) -> int
+extern def li_rt_str_prefix_is_get(s: var str) -> int
   requires true
   ensures 0 <= result
   ensures result <= 1
   decreases 0
 
-extern proc li_rt_http_parse_request_len_tag(buf: var str, max_header_block: int, max_body: int) -> int
+extern def li_rt_http_parse_request_len_tag(buf: var str, max_header_block: int, max_body: int) -> int
   requires 0 < max_header_block
   requires 0 < max_body
   ensures 0 <= result
@@ -87,7 +87,7 @@ def http_action_kind_for_route(route_id: int) -> int
     return http_route_action_proxy()
   return 0
 
-extern proc li_rt_match_route_fixture(method: str, path: str) -> int
+extern def li_rt_match_route_fixture(method: str, path: str) -> int
   requires true
   ensures 0 <= result
   ensures result <= 3
@@ -101,50 +101,50 @@ def match_route_fixture(method: str, path: str) raises IO, Alloc -> int
 =
   return li_rt_match_route_fixture(method, path)
 
-extern proc li_rt_httpd_load_config(path: str) -> int
+extern def li_rt_httpd_load_config(path: str) -> int
   requires true
   ensures -1 <= result
   ensures result <= 0
   decreases 0
 
-extern proc li_rt_httpd_match_route(method: str, path: str) -> int
+extern def li_rt_httpd_match_route(method: str, path: str) -> int
   requires true
   ensures 0 <= result
   ensures result <= 64
   decreases 0
 
-extern proc li_rt_httpd_route_action_kind(route_id: int) -> int
+extern def li_rt_httpd_route_action_kind(route_id: int) -> int
   requires 0 <= route_id
   requires route_id <= 64
   ensures 0 <= result
   ensures result <= 2
   decreases route_id
 
-extern proc li_rt_httpd_load_routing_fixture() -> int
+extern def li_rt_httpd_load_routing_fixture() -> int
   requires true
   ensures -1 <= result
   ensures result <= 0
   decreases 0
 
-extern proc li_rt_httpd_load_m15_agent_fixture() -> int
+extern def li_rt_httpd_load_m15_agent_fixture() -> int
   requires true
   ensures -1 <= result
   ensures result <= 0
   decreases 0
 
-extern proc li_rt_httpd_load_m15_leak_censor_fixture() -> int
+extern def li_rt_httpd_load_m15_leak_censor_fixture() -> int
   requires true
   ensures -1 <= result
   ensures result <= 0
   decreases 0
 
-extern proc li_rt_httpd_load_m15_tls_le_fixture() -> int
+extern def li_rt_httpd_load_m15_tls_le_fixture() -> int
   requires true
   ensures -1 <= result
   ensures result <= 0
   decreases 0
 
-extern proc li_rt_httpd_load_m15_tls_dev_fixture() -> int
+extern def li_rt_httpd_load_m15_tls_dev_fixture() -> int
   requires true
   ensures -1 <= result
   ensures result <= 0
@@ -215,7 +215,7 @@ def route_action_kind(route_id: int) raises IO, Alloc -> int
 =
   return li_rt_httpd_route_action_kind(route_id)
 
-extern proc li_rt_httpd_route_key_valid(key: str) -> int
+extern def li_rt_httpd_route_key_valid(key: str) -> int
   requires true
   ensures 0 <= result
   ensures result <= 1

@@ -8,25 +8,56 @@ You write ordinary-looking code. Before anything runs, Li checks that your promi
 
 ---
 
+## Install
+
+One command builds the compiler, installs it, and wires it onto your `PATH`:
+
+```bash
+./scripts/install.sh
+```
+
+That installs `lic` to `~/.local/bin/lic` and adds it to your shell profile (`~/.zshrc`, `~/.bashrc`, or `~/.config/fish/config.fish`). Open a new terminal and check it:
+
+```bash
+lic --version
+```
+
+Other destinations, or skip the PATH wiring:
+
+```bash
+LI_INSTALL_PREFIX=/usr/local ./scripts/install.sh   # -> /usr/local/bin/lic
+LI_NO_PROFILE=1 ./scripts/install.sh                 # leave your shell profile untouched
+```
+
+The standard CMake install path works too:
+
+```bash
+cmake --build build
+cmake --install build   # -> /usr/local/bin/lic (or set -DCMAKE_INSTALL_PREFIX)
+```
+
+The toolchain (C++ compiler, CMake, Ninja, LLVM 22) must be present once first — see [getting started](docs/guide/getting-started-tools.md).
+
+---
+
 ## Hello, Li
 
 Save this as `hello.li`:
 
 ```nim
-proc main() -> int
+def main() raises IO -> int
   requires true
   ensures result == 0
   decreases 0
 =
-  echo "Hello from Li"
+  print("Hello from Li")
   return 0
 ```
 
-Build and run (after [installing the tools](docs/guide/getting-started-tools.md) once; dev box: [devbox Li development](docs/guide/devbox-li-development.md)):
+Build and run (after [installing](docs/guide/getting-started-tools.md) once; dev box: [devbox Li development](docs/guide/devbox-li-development.md)):
 
 ```bash
-./scripts/build.sh
-./build/compiler/lic/lic build hello.li -o hello
+lic build hello.li -o hello
 ./hello
 ```
 
@@ -39,7 +70,7 @@ Every Li program includes small **promises** (`requires`, `ensures`, `decreases`
 Counting with a loop:
 
 ```nim
-proc main() -> int
+def main() -> int
   requires true
   ensures result == 0
   decreases 0
@@ -90,7 +121,7 @@ More examples: [Vector and parallel guide](docs/guide/fast-math-and-parallelism.
 Use all your CPU cores only when Li can see that threads will not fight over the same memory:
 
 ```nim
-proc main() -> int
+def main() -> int
   requires true
   ensures result == 0
   decreases 0

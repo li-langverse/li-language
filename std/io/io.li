@@ -14,6 +14,7 @@ def io_tag() -> int
 
 def file_open_read(path: Path) -> FileHandle
   requires true
+  ensures result.open == 0
   decreases 0
 =
   var f: FileHandle
@@ -22,6 +23,7 @@ def file_open_read(path: Path) -> FileHandle
 
 def file_close(handle: FileHandle) -> unit
   requires true
+  ensures true
   decreases 0
 =
   return
@@ -35,6 +37,7 @@ def file_read_all_stub() -> int
 
 def path_join(a: Path, b: Path) -> Path
   requires true
+  ensures result == a
   decreases 0
 =
   return a

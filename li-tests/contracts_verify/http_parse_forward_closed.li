@@ -1,5 +1,5 @@
 # Closed bounds on direct extern forward (2e/2f witness: callee ensures inheritance).
-extern proc li_rt_http_parse_request_len_tag(buf: var str, max_header_block: int, max_body: int) -> int
+extern def li_rt_http_parse_request_len_tag(buf: var str, max_header_block: int, max_body: int) -> int
   requires 0 < max_header_block
   requires 0 < max_body
   ensures 0 <= result

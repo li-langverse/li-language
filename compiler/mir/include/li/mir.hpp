@@ -82,6 +82,8 @@ struct MirArg {
   std::string str_value;
   /** Pass `ident` array alloca by address (CallProc array param). */
   bool is_array_ident = false;
+  /** Pass `ident` scalar slot by address (CallProc `var` object field param). */
+  bool is_var_ref = false;
 };
 
 struct MirParam {
@@ -96,6 +98,8 @@ struct MirParam {
   /** `array[M, array[K, float]]` param: rows in fixed_array_elems, cols here. */
   bool is_matrix = false;
   std::int64_t matrix_cols = 0;
+  /** `var` array param: passed by reference; callee writes propagate back. */
+  bool is_var = false;
 };
 
 struct MirInsn {
@@ -116,6 +120,8 @@ struct MirInsn {
   bool use_loaded_int = false;
   bool rhs_is_literal = true;
   std::int64_t rhs_int = 0;
+  /** StoreI64 from a string literal (bytes/str/StringView init): emit the global and store its ptr. */
+  bool rhs_is_string = false;
   bool lhs_is_literal = false;
   std::int64_t lhs_int = 0;
   bool is_i64 = false;

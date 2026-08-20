@@ -1,23 +1,23 @@
 
 # M1 logging — redaction contract + trusted file seam (li_rt_log.c).
 
-extern proc li_rt_log_redact_ok(in: str) -> int
+extern def li_rt_log_redact_ok(in: str) -> int
   requires true
   ensures -1 <= result
   ensures result <= 0
   decreases 0
 
-extern proc li_rt_log_set_dir(dir: str) raises IO
+extern def li_rt_log_set_dir(dir: str) raises IO
   requires true
   ensures true
   decreases 0
 
-extern proc li_rt_log_access_line(ts: str, method: str, path: str, status: int, bytes_out: int) raises IO
+extern def li_rt_log_access_line(ts: str, method: str, path: str, status: int, bytes_out: int) raises IO
   requires true
   ensures true
   decreases 0
 
-extern proc li_rt_log_reopen() -> int
+extern def li_rt_log_reopen() -> int
   requires true
   ensures -1 <= result
   ensures result <= 0

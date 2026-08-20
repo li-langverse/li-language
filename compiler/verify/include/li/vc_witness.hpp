@@ -20,6 +20,7 @@ bool contract_witnessed_trivial(const ProcDecl& proc, const Contract& c,
 bool mir_return_links_proc(const MirFn& fn, const ProcDecl& proc);
 bool witness_dot4_int_loop(const ProcDecl& proc, const Expr& ensures_rhs);
 bool witness_dot4_prelude_call(const Expr& ret, const Expr& ensures_rhs);
+bool witness_dot4_matmul(const Expr& ret, const Expr& ensures_rhs);
 bool witness_mat2_int_at2_spec(const ProcDecl& proc, const Expr& ensures_expr);
 bool witness_sqrt_open_bound_spec(const ProcDecl& proc, const Expr& ensures_expr);
 

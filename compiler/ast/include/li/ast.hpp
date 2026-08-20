@@ -53,7 +53,9 @@ struct Param {
 
 enum class ContractKind { Requires, Ensures, Decreases, Invariant, ProbEnsures };
 
-enum class BinOp { Add, Sub, Mul, Div, Mod, FloorDiv, Pow, MatMul, Le, Lt, Ge, Gt, Eq, Ne, And, Or };
+enum class BinOp {
+  Add, Sub, Mul, Div, Mod, FloorDiv, Pow, MatMul, Le, Lt, Ge, Gt, Eq, Ne, And, Or, Implies
+};
 
 struct Expr {
   enum class Kind {
@@ -192,11 +194,26 @@ struct TypeAlias {
   std::vector<ProcDecl> trait_methods;
 };
 
+/// A math axiom or theorem declared in Li source (proof-db layer).
+///
+/// `axiom`   — trusted declaration, no proof (tiny trusted base).
+/// `theorem`/`lemma` — a proposition that lic must discharge (Layer 2+);
+/// the proposition is a bool expression over `params`; `->` is implication.
+struct TheoremDecl {
+  Span span;
+  std::string name;
+  bool is_axiom = false;
+  bool is_lemma = false;
+  std::vector<Param> params;
+  std::unique_ptr<Expr> proposition;
+};
+
 struct Module {
   std::vector<ImportDecl> imports;
   std::vector<TypeAlias> types;
   std::vector<ErrorDecl> errors;
   std::vector<ProcDecl> procs;
+  std::vector<TheoremDecl> theorems;
 };
 
 std::string debug_expr(const Expr& e, int indent = 0);

@@ -1,0 +1,55 @@
+# Unit test — Module C: velocity-Verlet advance + kinetic energy + thermostat.
+# The loop bodies stay open (compile_open_ok), but every invariant the driver
+# relies on is asserted here so each module is verified on its own before the
+# modules are plugged together.
+import nanoreactor
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var px: array[8, float]
+  var py: array[8, float]
+  var pz: array[8, float]
+  var vx: array[8, float]
+  var vy: array[8, float]
+  var vz: array[8, float]
+  var fx: array[8, float]
+  var fy: array[8, float]
+  var fz: array[8, float]
+  var i: int = 0
+  while i < 8
+    px[i] = 0.0
+    py[i] = 0.0
+    pz[i] = 0.0
+    vx[i] = 0.0
+    vy[i] = 0.0
+    vz[i] = 0.0
+    fx[i] = 0.0
+    fy[i] = 0.0
+    fz[i] = 0.0
+    i = i + 1
+  # two atoms with opposite velocities
+  px[0] = 0.0
+  vx[0] = 1.0
+  px[1] = 1.0
+  vx[1] = -1.0
+  var ke0: float = nano_kinetic_energy(vx, vy, vz, 2)
+  if ke0 != 1.0:
+    return 1
+  var dt: float = 0.004
+  nano_vv_advance(px, py, pz, vx, vy, vz, fx, fy, fz, 2, dt)
+  # x advances by v*dt (zero force)
+  if px[0] != 0.004:
+    return 2
+  if px[1] != 0.996:
+    return 3
+  # thermostat rescale toward a hotter target raises KE
+  nano_thermostat_rescale(vx, vy, vz, 2, 4.0)
+  var ke1: float = nano_kinetic_energy(vx, vy, vz, 2)
+  if ke1 <= ke0:
+    return 4
+  if ke1 > 2.5:
+    return 5
+  return 0

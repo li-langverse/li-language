@@ -1,5 +1,5 @@
 
-extern proc li_rt_sqrt(x: float) raises IO -> float
+extern def li_rt_sqrt(x: float) raises IO -> float
   requires true
   ensures true
   decreases 0
@@ -49,22 +49,35 @@ def heat_step_explicit(
     u[i] = u[i] + alpha * dt * lap[i]
     i = i + 1
 
+def cloth_index_ok(ix: int) -> int
+  requires ix >= 0
+  requires ix < 4
+  ensures result >= 0
+  ensures result < 4
+  decreases 0
+=
+  return ix
+
 def cloth_pbd_distance(
     px: array[4, float], py: array[4, float],
     i: int, j: int, rest: float, stiffness: float) -> unit
+  requires i >= 0
+  requires i < 4
+  requires j >= 0
+  requires j < 4
   requires rest > 0.0
   requires stiffness >= 0.0
   requires stiffness <= 1.0
   ensures true
   decreases 0
 =
-  var dx: float = px[j] - px[i]
-  var dy: float = py[j] - py[i]
+  var dx: float = px[cloth_index_ok(j)] - px[cloth_index_ok(i)]
+  var dy: float = py[cloth_index_ok(j)] - py[cloth_index_ok(i)]
   var len: float = li_rt_sqrt(dx * dx + dy * dy)
   if len == 0.0:
     return
   var corr: float = stiffness * (len - rest) / len
-  px[i] = px[i] + 0.5 * corr * dx
-  py[i] = py[i] + 0.5 * corr * dy
-  px[j] = px[j] - 0.5 * corr * dx
-  py[j] = py[j] - 0.5 * corr * dy
+  px[cloth_index_ok(i)] = px[cloth_index_ok(i)] + 0.5 * corr * dx
+  py[cloth_index_ok(i)] = py[cloth_index_ok(i)] + 0.5 * corr * dy
+  px[cloth_index_ok(j)] = px[cloth_index_ok(j)] - 0.5 * corr * dx
+  py[cloth_index_ok(j)] = py[cloth_index_ok(j)] - 0.5 * corr * dy

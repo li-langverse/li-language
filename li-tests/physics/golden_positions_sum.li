@@ -1,6 +1,6 @@
 # Small golden: constant checksum 3.0 (three-body mini layout semantics).
 
-extern proc li_rt_volatile_sink_f64(v: float) -> unit
+extern def li_rt_volatile_sink_f64(v: float) -> unit
   requires true
   ensures true
 

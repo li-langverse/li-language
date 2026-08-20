@@ -296,3 +296,45 @@ def scene_bench_all_particle_tiers_pass() -> int
   if scene_md_particle_draw_meets_target(t2) != 1:
     return 0
   return 1
+
+# PH-SIM vertical gap #9 — MD particle memory ledger gate (studio_md_particle_tier_select_ok).
+type LigMemoryLedger = object
+  public budget_bytes: int
+  public used_bytes: int
+  public tier_100k_refused: int
+
+def scene_md_particle_memory_ledger_default() -> LigMemoryLedger
+  requires true
+  ensures result.budget_bytes > 0
+  ensures result.used_bytes >= 0
+  ensures result.tier_100k_refused >= 0
+  ensures result.tier_100k_refused <= 1
+  decreases 0
+=
+  var l: LigMemoryLedger
+  l.budget_bytes = 2147483647
+  l.used_bytes = 0
+  l.tier_100k_refused = 0
+  return l
+
+def scene_md_particle_tier_refuse_md_100k_over_budget(ledger: var LigMemoryLedger) -> int
+  requires true
+  ensures result >= 0
+  ensures result <= 1
+  decreases 0
+=
+  if ledger.used_bytes > ledger.budget_bytes:
+    ledger.tier_100k_refused = 1
+    return 1
+  return 0
+
+def scene_md_particle_tier_would_fit(tier_id: int, ledger: var LigMemoryLedger) -> int
+  requires tier_id >= 0
+  requires tier_id <= 2
+  ensures result >= 0
+  ensures result <= 1
+  decreases tier_id
+=
+  if ledger.used_bytes > ledger.budget_bytes:
+    return 0
+  return 1

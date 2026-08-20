@@ -1,12 +1,12 @@
 # T-PKG-lig-smoke-kernel — matmul pilot (standalone FFI)
 
-extern proc li_rt_lig_backend_select_auto() -> int
+extern def li_rt_lig_backend_select_auto() -> int
   requires true
   ensures 1 <= result
   ensures result <= 4
   decreases 0
 
-extern proc li_rt_lig_kernel_run(kernel_id: int, backend_id: int) -> int
+extern def li_rt_lig_kernel_run(kernel_id: int, backend_id: int) -> int
   requires kernel_id >= 1
   requires 1 <= backend_id
   requires backend_id <= 4
@@ -14,7 +14,7 @@ extern proc li_rt_lig_kernel_run(kernel_id: int, backend_id: int) -> int
   ensures result <= 4
   decreases kernel_id
 
-extern proc li_rt_lig_kernel_last_validity_ratio() -> float
+extern def li_rt_lig_kernel_last_validity_ratio() -> float
   requires true
   ensures 0.0 <= result
   ensures result <= 1.0

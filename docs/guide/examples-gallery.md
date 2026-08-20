@@ -10,7 +10,7 @@ def main() -> int
   ensures result == 0
   decreases 0
 =
-  echo "Hello from Li"
+  print("Hello from Li")
   return 0
 ```
 

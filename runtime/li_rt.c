@@ -22,6 +22,118 @@ void li_rt_print_int(int32_t value) { printf("%d\n", value); }
 
 void li_rt_print_str(const char* s) { puts(s); }
 
+/* Self-hosted lexer seam: emit one token as `kind<TAB>lexeme<NL>`, where the
+ * lexeme is the byte range text[start, end). Matches the C++ `lic lex` dump. */
+int32_t li_rt_emit_token(int32_t kind, const char* text, int32_t start, int32_t end) {
+  printf("%d\t", kind);
+  if (text != NULL && start >= 0 && end > start) {
+    fwrite(text + start, 1, (size_t)(end - start), stdout);
+  }
+  fputc('\n', stdout);
+  return 0;
+}
+
+/* Self-hosted AST dump primitives: stream one node line as `code field...`.
+ * The li bootstrap parser calls these in parse order; the C++ `lic ast`
+ * subcommand prints the same bytes from the C++ AST (check_li_ast_parity.sh). */
+int32_t li_rt_ast_int(int64_t v) {
+  printf("%lld", (long long)v);
+  return 0;
+}
+
+int32_t li_rt_ast_text(const char* text, int32_t start, int32_t end) {
+  if (text != NULL && start >= 0 && end > start) {
+    fwrite(text + start, 1, (size_t)(end - start), stdout);
+  }
+  return 0;
+}
+
+int32_t li_rt_ast_space(void) {
+  fputc(' ', stdout);
+  return 0;
+}
+
+/* Resolve a single-segment import (e.g. `vault_lib`) to a sibling file of the
+ * importer (e.g. <dir-of-file>/vault_lib.li), mirroring the first local
+ * candidate of import_resolve.cpp. Returns the file contents, or NULL when no
+ * candidate exists. The returned pointer is a static buffer reused on the next
+ * call, matching li_rt_read_file's single-buffer contract. */
+const char* li_rt_resolve_import(const char* file_path, const char* module) {
+  if (file_path == NULL || module == NULL) {
+    return NULL;
+  }
+  /* Directory of the importing file: strip everything from the last '/'. */
+  const char* slash = strrchr(file_path, '/');
+  const size_t dir_len = slash != NULL ? (size_t)(slash - file_path) : 0;
+  const size_t mlen = strlen(module);
+  static char buf[4096];
+  if (dir_len + 1 + mlen + 3 >= sizeof(buf)) {
+    return NULL;
+  }
+  size_t p = 0;
+  if (dir_len > 0) {
+    memcpy(buf, file_path, dir_len);
+    p = dir_len;
+  }
+  buf[p++] = '/';
+  memcpy(buf + p, module, mlen);
+  p += mlen;
+  memcpy(buf + p, ".li", 3);
+  p += 3;
+  if (p >= sizeof(buf)) {
+    return NULL;
+  }
+  buf[p] = '\0';
+  FILE* f = fopen(buf, "rb");
+  if (f == NULL) {
+    return NULL;
+  }
+  fseek(f, 0, SEEK_END);
+  const long sz = ftell(f);
+  fseek(f, 0, SEEK_SET);
+  static char content[1 << 20];
+  if (sz < 0 || (size_t)sz >= sizeof(content)) {
+    fclose(f);
+    return NULL;
+  }
+  const size_t got = fread(content, 1, (size_t)sz, f);
+  fclose(f);
+  content[got] = '\0';
+  return content;
+}
+
+/* Self-hosted typechecker diagnostic seam: emit one `error [CODE]` line for a
+ * numeric error code so the li `check` subcommand can be diffed against the
+ * C++ `lic check` diagnostics (scripts/check_li_check_parity.sh). Codes:
+ *   201=E0201 202=E0202 301=E0301 302=E0302 303=E0303 304=E0304
+ *   310=E0310 311=E0311 320=E0320 321=E0321 322=E0322 330=E0330
+ *   any other (900) -> lic.error
+ */
+int32_t li_rt_emit_err(int32_t code) {
+  switch (code) {
+    case 201: fputs("module:1:1: error [E0201]\n", stdout); break;
+    case 202: fputs("module:1:1: error [E0202]\n", stdout); break;
+    case 301: fputs("module:1:1: error [E0301]\n", stdout); break;
+    case 302: fputs("module:1:1: error [E0302]\n", stdout); break;
+    case 303: fputs("module:1:1: error [E0303]\n", stdout); break;
+    case 304: fputs("module:1:1: error [E0304]\n", stdout); break;
+    case 310: fputs("module:1:1: error [E0310]\n", stdout); break;
+    case 311: fputs("module:1:1: error [E0311]\n", stdout); break;
+    case 320: fputs("module:1:1: error [E0320]\n", stdout); break;
+    case 321: fputs("module:1:1: error [E0321]\n", stdout); break;
+    case 322: fputs("module:1:1: error [E0322]\n", stdout); break;
+    case 330: fputs("module:1:1: error [E0330]\n", stdout); break;
+    case 401: fputs("module:1:1: warning [W0401]\n", stdout); break;
+    default:  fputs("module:1:1: error [lic.error]\n", stdout); break;
+  }
+  return 0;
+}
+
+int32_t li_rt_ast_nl(void) {
+  fputc('\n', stdout);
+  return 0;
+}
+
 static int li_argc = 0;
 static char** li_argv = NULL;
 
@@ -296,6 +408,35 @@ int32_t li_rt_str_eq(const char* a, const char* b) {
     return 0;
   }
   return strcmp(a, b) == 0 ? 1 : 0;
+}
+
+const char* li_rt_read_file(const char* path) {
+  if (path == NULL) {
+    return NULL;
+  }
+  FILE* f = fopen(path, "rb");
+  if (f == NULL) {
+    return NULL;
+  }
+  if (fseek(f, 0, SEEK_END) != 0) {
+    fclose(f);
+    return NULL;
+  }
+  const long sz = ftell(f);
+  if (sz < 0) {
+    fclose(f);
+    return NULL;
+  }
+  rewind(f);
+  char* buf = (char*)malloc((size_t)sz + 1);
+  if (buf == NULL) {
+    fclose(f);
+    li_panic("li_rt_read_file: alloc failed");
+  }
+  const size_t got = fread(buf, 1, (size_t)sz, f);
+  fclose(f);
+  buf[got] = '\0';
+  return buf;
 }
 
 

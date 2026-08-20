@@ -50,6 +50,8 @@ std::string_view error_code_string(ErrorCode code) {
       return "E0503";
     case ErrorCode::E0504:
       return "E0504";
+    case ErrorCode::E0505:
+      return "E0505";
   }
   return "E0000";
 }

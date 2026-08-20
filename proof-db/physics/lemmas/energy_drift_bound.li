@@ -6,7 +6,7 @@ def lj_single_step_energy_reference() -> float
 =
   return -1.234567
 
-extern proc proof_db_relative_energy_drift(e0: float, e1: float, rel_tol: float) -> int
+extern def proof_db_relative_energy_drift(e0: float, e1: float, rel_tol: float) -> int
   requires e0 != 0.0
   requires rel_tol > 0.0
   ensures abs(e1 - e0) / abs(e0) <= rel_tol or result == 0

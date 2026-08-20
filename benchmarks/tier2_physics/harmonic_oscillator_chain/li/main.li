@@ -1,4 +1,4 @@
-extern proc li_harmonic_chain_kernel()
+extern def li_harmonic_chain_kernel()
   requires true
   ensures true
 

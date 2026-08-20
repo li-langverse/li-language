@@ -1,43 +1,43 @@
 # M3 optional oracle — L4 stream config + token-budget hooks (C runtime).
 import http
 
-extern proc li_rt_httpd_m3_enabled() -> int
+extern def li_rt_httpd_m3_enabled() -> int
   requires true
   ensures 0 <= result
   ensures result <= 1
 
-extern proc li_rt_httpd_m3_l4_enabled() -> int
+extern def li_rt_httpd_m3_l4_enabled() -> int
   requires true
   ensures 0 <= result
   ensures result <= 1
 
-extern proc li_rt_httpd_m3_l4_listen_port() -> int
+extern def li_rt_httpd_m3_l4_listen_port() -> int
   requires true
   ensures 0 <= result
 
-extern proc li_rt_httpd_m3_l4_upstream_port() -> int
+extern def li_rt_httpd_m3_l4_upstream_port() -> int
   requires true
   ensures 0 <= result
 
-extern proc li_rt_httpd_m3_l4_max_connections() -> int
+extern def li_rt_httpd_m3_l4_max_connections() -> int
   requires true
   ensures 0 <= result
 
-extern proc li_rt_httpd_m3_token_budget_enabled() -> int
+extern def li_rt_httpd_m3_token_budget_enabled() -> int
   requires true
   ensures 0 <= result
   ensures result <= 1
 
-extern proc li_rt_httpd_m3_token_budget_max() -> int
+extern def li_rt_httpd_m3_token_budget_max() -> int
   requires true
   ensures 0 <= result
 
-extern proc li_rt_httpd_m3_token_budget_check(header_val: str) -> int
+extern def li_rt_httpd_m3_token_budget_check(header_val: str) -> int
   requires true
   ensures -2 <= result
   ensures result <= 1
 
-extern proc li_rt_httpd_m3_selftest() -> int
+extern def li_rt_httpd_m3_selftest() -> int
   requires true
   ensures -5 <= result
   ensures result <= 0

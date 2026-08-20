@@ -19,6 +19,7 @@ def ui_tag() -> int
 
 def color_white() -> Color
   requires true
+  ensures result.r == 1.0 and result.g == 1.0 and result.b == 1.0 and result.a == 1.0
   decreases 0
 =
   var c: Color

@@ -4,7 +4,7 @@ import std.runtime.seam
 def hdr_end_at(buf: var ptr, start: var int, limit: var int) raises IO -> int
   requires 0 <= start
   requires start <= limit
-  ensures true
+  ensures result >= -1
   decreases limit - start
 =
   var i: int = start
@@ -19,7 +19,8 @@ def hdr_end_at(buf: var ptr, start: var int, limit: var int) raises IO -> int
 
 def buf_has_connection_close(buf: var ptr, hdr_end: var int) raises IO -> int
   requires 0 <= hdr_end
-  ensures true
+  ensures 0 <= result
+  ensures result <= 1
   decreases hdr_end
 =
   var i: int = 0
@@ -36,7 +37,7 @@ def buf_has_connection_close(buf: var ptr, hdr_end: var int) raises IO -> int
 
 def parse_get_path(buf: var ptr, req_len: var int) raises IO, Alloc -> ptr
   requires 4 <= req_len
-  ensures true
+  ensures result != 0
   decreases req_len
 =
   if net_byte_at_i(buf, 0) != 71:
@@ -54,7 +55,7 @@ def parse_get_path(buf: var ptr, req_len: var int) raises IO, Alloc -> ptr
 
 def filepath_for_request(root: var ptr, path: var ptr) raises Alloc, IO -> ptr
   requires true
-  ensures true
+  ensures result != 0
   decreases 0
 =
   var plen: int = bytes_len_i(path)
@@ -65,7 +66,7 @@ def filepath_for_request(root: var ptr, path: var ptr) raises Alloc, IO -> ptr
 
 def send_error(conn: var int, status: int, keep_alive: var int) raises Net, Alloc, IO -> int
   requires conn >= 0
-  ensures true
+  ensures result >= -1
   decreases 0
 =
   var body: ptr = net_buf_alloc(16)
@@ -86,7 +87,7 @@ def send_error(conn: var int, status: int, keep_alive: var int) raises Net, Allo
 
 def send_static_large_keep(conn: var int, file_fd: var int, sz: var int) raises Net, Alloc, IO -> int
   requires conn >= 0
-  ensures true
+  ensures result >= -1
   decreases 0
 =
   var body_len: int = sz
@@ -110,7 +111,7 @@ def send_static_large_keep(conn: var int, file_fd: var int, sz: var int) raises 
 
 def send_static_small_keep(conn: var int, file_fd: var int, sz: var int) raises Net, Alloc, IO -> int
   requires conn >= 0
-  ensures true
+  ensures result >= -1
   decreases 0
 =
   var body_len: int = sz
@@ -140,7 +141,7 @@ def send_static_small_keep(conn: var int, file_fd: var int, sz: var int) raises 
 
 def send_static_keep(conn: var int, filepath: var ptr) raises Net, Alloc, IO -> int
   requires conn >= 0
-  ensures true
+  ensures result >= -1
   decreases 0
 =
   var file_fd: int = net_open_readonly_i(filepath)
@@ -158,7 +159,7 @@ def send_static_keep(conn: var int, filepath: var ptr) raises Net, Alloc, IO -> 
 
 def send_static_large_close(conn: var int, file_fd: var int, sz: var int) raises Net, Alloc, IO -> int
   requires conn >= 0
-  ensures true
+  ensures result >= -1
   decreases 0
 =
   var body_len: int = sz
@@ -182,7 +183,7 @@ def send_static_large_close(conn: var int, file_fd: var int, sz: var int) raises
 
 def send_static_small_close(conn: var int, file_fd: var int, sz: var int) raises Net, Alloc, IO -> int
   requires conn >= 0
-  ensures true
+  ensures result >= -1
   decreases 0
 =
   var body_len: int = sz
@@ -212,7 +213,7 @@ def send_static_small_close(conn: var int, file_fd: var int, sz: var int) raises
 
 def send_static_close(conn: var int, filepath: var ptr) raises Net, Alloc, IO -> int
   requires conn >= 0
-  ensures true
+  ensures result >= -1
   decreases 0
 =
   var file_fd: int = net_open_readonly_i(filepath)
@@ -232,7 +233,8 @@ def serve_one_request(conn: var int, root: var ptr, buf: var ptr, slot: var int,
   requires conn >= 0
   requires 0 <= slot
   requires 0 < req_len
-  ensures true
+  ensures 0 <= result
+  ensures result <= 1
   decreases req_len
 =
   var hdr_end: int = hdr_end_at(buf, 0, req_len)
@@ -271,7 +273,7 @@ def serve_one_request(conn: var int, root: var ptr, buf: var ptr, slot: var int,
 def try_drain_slot(conn: var int, root: var ptr, slot: var int) raises Net, Alloc, IO -> int
   requires conn >= 0
   requires 0 <= slot
-  ensures true
+  ensures result >= -1
   decreases 0
 =
   var filled: int = net_buf_len(slot)
@@ -288,7 +290,7 @@ def try_drain_slot(conn: var int, root: var ptr, slot: var int) raises Net, Allo
 
 def conn_close(epfd: var int, conn: var int, slot: var int) raises Net, IO -> int
   requires true
-  ensures true
+  ensures result == 0
   decreases 0
 =
   if epfd > 0:
@@ -299,7 +301,7 @@ def conn_close(epfd: var int, conn: var int, slot: var int) raises Net, IO -> in
 
 def accept_batch(epfd: var int, listen_fd: var int) raises Net, Alloc, IO -> int
   requires epfd >= 0
-  ensures true
+  ensures result >= 0
   decreases 0
 =
   var accepted: int = 0
@@ -325,7 +327,7 @@ def accept_batch(epfd: var int, listen_fd: var int) raises Net, Alloc, IO -> int
 def handle_conn_io(epfd: var int, conn: var int, slot: var int, root: var ptr) raises Net, Alloc, IO -> int
   requires epfd >= 0
   requires 0 <= slot
-  ensures true
+  ensures result >= 0
   decreases 0
 =
   var cache_ok: int = httpd_cache_ready_i()
@@ -356,7 +358,7 @@ def handle_conn_io(epfd: var int, conn: var int, slot: var int, root: var ptr) r
 
 def httpd_epoll_serve(port: var int, root: var ptr) raises Net, Alloc, IO -> int
   requires 0 < port
-  ensures true
+  ensures result >= -1
   decreases 0
 =
   return httpd_epoll_serve_i(port, root)
@@ -364,7 +366,7 @@ def httpd_epoll_serve(port: var int, root: var ptr) raises Net, Alloc, IO -> int
 def handle_conn_blocking(conn: var int, slot: var int, root: var ptr) raises Net, Alloc, IO -> int
   requires conn >= 0
   requires 0 <= slot
-  ensures true
+  ensures result == 0
   decreases 0
 =
   var cache_ok: int = httpd_cache_ready_i()
@@ -393,7 +395,7 @@ def handle_conn_blocking(conn: var int, slot: var int, root: var ptr) raises Net
 
 def httpd_blocking_serve(port: var int, root: var ptr) raises Net, Alloc, IO -> int
   requires 0 < port
-  ensures true
+  ensures result == 0
   decreases 0
 =
   httpd_prepare_root_i(root)
@@ -413,7 +415,7 @@ def httpd_blocking_serve(port: var int, root: var ptr) raises Net, Alloc, IO -> 
 
 def httpd_serve_static_blocking(port: var int, root: var ptr) raises Net, Alloc, IO -> int
   requires 0 < port
-  ensures true
+  ensures result >= -1
   decreases 0
 =
   var epfd_probe: int = epoll_create1_i()
@@ -424,49 +426,49 @@ def httpd_serve_static_blocking(port: var int, root: var ptr) raises Net, Alloc,
 
 def httpd_serve_port_root(port: var int, root: var ptr) raises Net, Alloc, IO -> int
   requires 0 < port
-  ensures true
+  ensures result >= -1
   decreases 0
 =
   return httpd_serve_static_blocking(port, root)
 
 def proxy_phase_send_req() -> int
   requires true
-  ensures true
+  ensures result == 1
   decreases 0
 =
   return 1
 
 def proxy_phase_send_body() -> int
   requires true
-  ensures true
+  ensures result == 2
   decreases 0
 =
   return 2
 
 def proxy_phase_relay() -> int
   requires true
-  ensures true
+  ensures result == 3
   decreases 0
 =
   return 3
 
 def proxy_body_cl() -> int
   requires true
-  ensures true
+  ensures result == 1
   decreases 0
 =
   return 1
 
 def proxy_parse_cached() -> int
   requires true
-  ensures true
+  ensures result == 2
   decreases 0
 =
   return 2
 
 def proxy_parse_resp_cl(hdr: var ptr, hdr_len: int) raises IO -> int
   requires 0 <= hdr_len
-  ensures true
+  ensures result >= -1
   decreases hdr_len
 =
   var i: int = 0
@@ -498,7 +500,7 @@ def proxy_parse_resp_cl(hdr: var ptr, hdr_len: int) raises IO -> int
 
 def proxy_li_finish_err(epfd: var int, slot: var int) raises Net, Alloc, IO -> int
   requires epfd >= 0
-  ensures true
+  ensures result == -1
   decreases 0
 =
   httpd_li_proxy_finish_err_i(epfd, slot)
@@ -506,7 +508,7 @@ def proxy_li_finish_err(epfd: var int, slot: var int) raises Net, Alloc, IO -> i
 
 def proxy_li_pump_cl(epfd: var int, slot: var int) raises Net, Alloc, IO -> int
   requires epfd >= 0
-  ensures true
+  ensures result >= -1
   decreases 0
 =
   var up: int = httpd_li_proxy_up_fd_i(slot)
@@ -547,7 +549,7 @@ def proxy_li_pump_cl(epfd: var int, slot: var int) raises Net, Alloc, IO -> int
 
 def proxy_li_finish_resp_headers(epfd: var int, slot: var int) raises Net, Alloc, IO -> int
   requires epfd >= 0
-  ensures true
+  ensures result >= -1
   decreases 0
 =
   var acc: ptr = httpd_li_proxy_resp_hdr_acc_i(slot)
@@ -578,7 +580,7 @@ def proxy_li_finish_resp_headers(epfd: var int, slot: var int) raises Net, Alloc
 def proxy_li_feed_cached_hdr(epfd: var int, slot: var int, data: var ptr, n: var int) raises Net, Alloc, IO -> int
   requires epfd >= 0
   requires n >= 0
-  ensures true
+  ensures result >= -1
   decreases n
 =
   var need: int = httpd_li_proxy_cached_hdr_len_i()
@@ -607,7 +609,7 @@ def proxy_li_feed_cached_hdr(epfd: var int, slot: var int, data: var ptr, n: var
 
 def proxy_li_enter_relay(epfd: var int, slot: var int) raises Net, Alloc, IO -> int
   requires epfd >= 0
-  ensures true
+  ensures result == 0
   decreases 0
 =
   httpd_li_proxy_set_phase_i(slot, proxy_phase_relay())
@@ -623,7 +625,7 @@ def proxy_li_enter_relay(epfd: var int, slot: var int) raises Net, Alloc, IO -> 
 
 def proxy_li_on_up_recv_cached(epfd: var int, slot: var int, chunk: var ptr) raises Net, Alloc, IO -> int
   requires epfd >= 0
-  ensures true
+  ensures result >= -1
   decreases 0
 =
   var rc: int = proxy_li_feed_cached_hdr(epfd, slot, chunk, httpd_li_scratch_get_i())
@@ -632,7 +634,7 @@ def proxy_li_on_up_recv_cached(epfd: var int, slot: var int, chunk: var ptr) rai
 
 def proxy_li_on_up_recv_parse(epfd: var int, slot: var int, chunk: var ptr) raises Net, Alloc, IO -> int
   requires epfd >= 0
-  ensures true
+  ensures result >= -1
   decreases 0
 =
   var appended: int = httpd_li_proxy_append_resp_hdr_i(slot, chunk, httpd_li_scratch_get_i())
@@ -677,7 +679,7 @@ def proxy_li_on_up(epfd: var int, slot: var int, rev: int) raises Net, Alloc, IO
 
 def proxy_li_pump_send(epfd: var int, slot: var int) raises Net, Alloc, IO -> int
   requires epfd >= 0
-  ensures true
+  ensures result >= -1
   decreases 0
 =
   var sent: int = httpd_li_proxy_send_request_i(epfd, slot)
@@ -694,7 +696,7 @@ def proxy_li_pump_send(epfd: var int, slot: var int) raises Net, Alloc, IO -> in
 
 def proxy_li_on_client(epfd: var int, slot: var int) raises Net, Alloc, IO -> int
   requires epfd >= 0
-  ensures true
+  ensures result >= -1
   decreases 0
 =
   var phase: int = httpd_li_proxy_phase_i(slot)
@@ -704,7 +706,7 @@ def proxy_li_on_client(epfd: var int, slot: var int) raises Net, Alloc, IO -> in
 
 def proxy_li_start(epfd: var int, slot: var int, hdr_end: int, keep: int) raises Net, Alloc, IO -> int
   requires epfd >= 0
-  ensures true
+  ensures result >= -1
   decreases 0
 =
   var up: int = httpd_upstream_acquire_i()
@@ -724,7 +726,7 @@ def proxy_li_start(epfd: var int, slot: var int, hdr_end: int, keep: int) raises
 
 def proxy_accept_batch(epfd: var int, listen_fd: var int) raises Net, Alloc, IO -> int
   requires epfd >= 0
-  ensures true
+  ensures result >= 0
   decreases 0
 =
   var accepted: int = 0
@@ -756,7 +758,7 @@ def proxy_accept_batch(epfd: var int, listen_fd: var int) raises Net, Alloc, IO 
 def proxy_handle_client_in(epfd: var int, slot: var int) raises Net, Alloc, IO -> int
   requires epfd >= 0
   requires 0 <= slot
-  ensures true
+  ensures result >= -1
   decreases 0
 =
   if httpd_tls_slot_h2_i(slot) == 1:
@@ -808,7 +810,8 @@ def proxy_handle_client_in(epfd: var int, slot: var int) raises Net, Alloc, IO -
 
 def proxy_epoll_tag_is_up(tag_hi: int) -> int
   requires true
-  ensures true
+  ensures 0 <= result
+  ensures result <= 1
   decreases 0
 =
   if tag_hi == -1073741824:
@@ -817,7 +820,8 @@ def proxy_epoll_tag_is_up(tag_hi: int) -> int
 
 def proxy_epoll_tag_is_client(tag_hi: int) -> int
   requires true
-  ensures true
+  ensures 0 <= result
+  ensures result <= 1
   decreases 0
 =
   if tag_hi == -2147483648:
@@ -826,7 +830,7 @@ def proxy_epoll_tag_is_client(tag_hi: int) -> int
 
 def proxy_dispatch_hangup_loaded(epfd: var int) raises Net, Alloc, IO -> int
   requires epfd >= 0
-  ensures true
+  ensures result == 0
   decreases 0
 =
   if proxy_epoll_tag_is_up(net_events_loaded_hi_i()) == 1:
@@ -849,7 +853,7 @@ def proxy_dispatch_hangup_loaded(epfd: var int) raises Net, Alloc, IO -> int
 
 def proxy_dispatch_up_loaded(epfd: var int, slot_u: int, rev: int) raises Net, Alloc, IO -> int
   requires epfd >= 0
-  ensures true
+  ensures result == 0
   decreases 0
 =
   var eu1: int = epfd
@@ -865,7 +869,7 @@ def proxy_dispatch_up_loaded(epfd: var int, slot_u: int, rev: int) raises Net, A
 
 def proxy_dispatch_client_loaded(epfd: var int, slot_c: int, rev: int) raises Net, Alloc, IO -> int
   requires epfd >= 0
-  ensures true
+  ensures result == 0
   decreases 0
 =
   if httpd_li_proxy_active_i(slot_c) == 1:
@@ -891,7 +895,7 @@ def proxy_dispatch_client_loaded(epfd: var int, slot_c: int, rev: int) raises Ne
 def proxy_dispatch_one(epfd: var int, listen_fd: var int, events: var ptr, idx: int) raises Net, Alloc, IO -> int
   requires epfd >= 0
   requires idx >= 0
-  ensures true
+  ensures result >= 0
   decreases 0
 =
   net_events_tagged_load_i(events, idx)
@@ -908,7 +912,8 @@ def proxy_dispatch_one(epfd: var int, listen_fd: var int, events: var ptr, idx: 
 
 def httpd_upstream_proxy_epoll_loop(port: var int, root: var ptr) raises Net, Alloc, IO -> int
   requires 0 < port
-  ensures true
+  ensures 0 <= result
+  ensures result <= 1
   decreases 0
 =
   if httpd_proxy_configured_i() != 1:
@@ -957,7 +962,7 @@ def httpd_upstream_proxy_epoll_loop(port: var int, root: var ptr) raises Net, Al
 def nginx_proxy_epoll_serve(port: var int, root: var ptr, backend_port: var int) raises Net, Alloc, IO -> int
   requires 0 < port
   requires 0 < backend_port
-  ensures true
+  ensures result >= 0
   decreases 0
 =
   var all_paths: int = 1
@@ -969,7 +974,7 @@ def nginx_proxy_epoll_serve(port: var int, root: var ptr, backend_port: var int)
 def httpd_serve_port_root_proxy(port: var int, root: var ptr, backend_port: var int) raises Net, Alloc, IO -> int
   requires 0 < port
   requires 0 < backend_port
-  ensures true
+  ensures result >= -1
   decreases 0
 =
   if httpd_env_li_proxy_loop_i() == 1:
@@ -978,7 +983,8 @@ def httpd_serve_port_root_proxy(port: var int, root: var ptr, backend_port: var 
 
 def path_ends_with_conf(path: var ptr) raises IO -> int
   requires true
-  ensures true
+  ensures 0 <= result
+  ensures result <= 1
   decreases 0
 =
   var n: int = bytes_len_i(path)
@@ -998,7 +1004,8 @@ def path_ends_with_conf(path: var ptr) raises IO -> int
 
 def httpd_begin_worker_pool() raises Net, Alloc, IO -> int
   requires true
-  ensures true
+  ensures 0 <= result
+  ensures result <= 1
   decreases 0
 =
   var n: int = httpd_fork_workers_i()
@@ -1008,7 +1015,7 @@ def httpd_begin_worker_pool() raises Net, Alloc, IO -> int
 
 def httpd_run_from_runtime_config(path: var ptr) raises Net, Alloc, IO -> int
   requires true
-  ensures true
+  ensures result >= -1
   decreases 0
 =
   var ok: int = httpd_load_runtime_config_i(path)
@@ -1028,7 +1035,7 @@ def httpd_run_from_runtime_config(path: var ptr) raises Net, Alloc, IO -> int
 
 def httpd_run_from_argv() raises Net, Alloc, IO -> int
   requires true
-  ensures true
+  ensures result >= -1
   decreases 0
 =
   if li_rt_argc() == 2:
@@ -1057,7 +1064,7 @@ def httpd_run_from_argv() raises Net, Alloc, IO -> int
   return httpd_serve_port_root(p, r)
 
 # M1 composable surface (no second `main` — use packages/li-net-httpd/src/main.li for CLI).
-extern proc li_rt_httpd_serve_once(port: int) -> int
+extern def li_rt_httpd_serve_once(port: int) -> int
   requires 1024 <= port
   requires port <= 65535
   ensures true
@@ -1072,7 +1079,7 @@ def httpd_tag() -> int
 def httpd_serve_once(port: int) raises Net, Alloc, IO -> int
   requires 1024 <= port
   requires port <= 65535
-  ensures true
+  ensures result >= -1
   decreases 0
 =
   return li_rt_httpd_serve_once(port)

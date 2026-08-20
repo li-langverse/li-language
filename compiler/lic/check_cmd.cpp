@@ -117,11 +117,23 @@ int check_file(const char* path, const CheckCommandOptions& opts, DiagOutput out
     if (!cache_payload.empty() && cache_payload.back() != '\n') {
       std::cout << '\n';
     }
-  } else if (!ok) {
-    print_diagnostics(diags);
+  } else if (!diags.empty()) {
+    // Advisory mode: surface warnings/notes on success too (exit stays 0
+    // unless --deny-warnings escalated them), so `lic check` never hides a
+    // warning behind a green exit code.
+    std::ostringstream human_out;
+    render_diagnostics(diags, human_out);
+    cache_payload = human_out.str();
+    std::cout << cache_payload;
+    if (!cache_payload.empty() && cache_payload.back() != '\n') {
+      std::cout << '\n';
+    }
   }
 
-  if (use_cache) {
+  // Human-mode failures print diagnostics to stderr directly, so `cache_payload`
+  // is empty for them; caching would replay an empty (unhelpful) result on the
+  // next run. Only cache successes and JSON-mode results, which carry a payload.
+  if (use_cache && (exit_code == 0 || output == DiagOutput::Json)) {
     store_check_cache(opts.cache, key, exit_code, cache_payload, content_hash);
   }
   return exit_code;

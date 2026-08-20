@@ -13,6 +13,7 @@ li-sim-scientific = { path = "../li-sim-scientific" }
 li-scene = { path = "../li-scene" }
 li-physics-runtime = { path = "../li-physics-runtime" }
 lig = { path = "../lig" }
+li-lig-present = { path = "../li-lig-present" }
 
 [[bin]]
 name = "li-studio-demo"

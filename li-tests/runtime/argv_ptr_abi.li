@@ -1,9 +1,9 @@
-# Regression: extern proc -> ptr must lower to full-width (E0360 if truncated to i32).
-extern proc li_rt_argv_i(index: int) -> ptr
+# Regression: extern def -> ptr must lower to full-width (E0360 if truncated to i32).
+extern def li_rt_argv_i(index: int) -> ptr
   requires true
   ensures true
 
-extern proc li_rt_argc() -> int
+extern def li_rt_argc() -> int
   requires true
   ensures result >= 0
 

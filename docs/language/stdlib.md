@@ -1,6 +1,6 @@
 # Standard library and prelude
 
-The Li **prelude** is the set of builtin types and functions the compiler knows without an import (`int`, `list`, `dict`, `echo`, …).
+The Li **prelude** is the set of builtin types and functions the compiler knows without an import (`int`, `list`, `dict`, `print`, …).
 
 ## Sealed names (security)
 

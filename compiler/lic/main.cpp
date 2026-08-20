@@ -1,12 +1,18 @@
+#include "li/ast_dump.hpp"
 #include "li/check_cmd.hpp"
 #include "li/compile.hpp"
+#include "li/diagnostics.hpp"
+#include "li/lexer.hpp"
 #include "li/parser.hpp"
 #include "li/platform.hpp"
 #include "li/prelude.hpp"
 #include "li/smoke_llvm.hpp"
 #include "li/vc_emit.hpp"
 #include "li/mir.hpp"
+#include "li/mir_dump.hpp"
 #include "li/vc_summary.hpp"
+#include "li/vc_prove.hpp"
+#include "li/vc_li_prover.hpp"
 #include "li/vc_witness.hpp"
 #include "li/terminal.hpp"
 #include "li/error_codes.hpp"
@@ -15,6 +21,7 @@
 
 #include "li_rt.h"
 
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
@@ -32,6 +39,8 @@ int usage() {
   std::cerr << li::styled_accent("lic") << li::styled_dim(" — prove · write · run fast") << li::reset_style()
             << "\nusage:\n"
             << "  lic parse <file>       parse and validate syntax\n"
+            << "  lic ast <file>         canonical int-encoded AST dump (self-host parity)\n"
+            << "  lic mir <file>         canonical MIR dump of lower_to_mir() (self-host parity)\n"
             << "  lic check <file>|--workspace [li.toml] [--format=json] [--deny-warnings]\n"
             << "                       [--cache-dir=DIR] [--cache-max-mb=N] [--no-cache] [--jobs=N]\n"
             << "  lic diagnose <file>    agent-oriented JSON diagnostics\n"
@@ -182,6 +191,23 @@ bool frontend(const char* path, const std::string& source, li::Module& out,
   return li::run_frontend_check(path, source, out, diags);
 }
 
+// A theorem/lemma is discharged when EITHER engine closes it: the C++ native
+// engine (rewriting + linear integer arithmetic) or the self-hosted li prover
+// (the rewriting half, bootstrap/prover/main.li). It stays open only when both
+// leave it open — the li prover never runs LIA, so LIA-closed theorems must
+// not fail the build gate just because the li prover alone cannot close them.
+std::vector<std::string> open_in_both(const li::TheoremDischargeResult& cpp,
+                                      const li::LiProverResult& li) {
+  std::vector<std::string> out;
+  for (const auto& name : cpp.open_names) {
+    if (std::find(li.open_names.begin(), li.open_names.end(), name) !=
+        li.open_names.end()) {
+      out.push_back(name);
+    }
+  }
+  return out;
+}
+
 void warn_deprecated_proof_env() {
   if (std::getenv("LI_ALLOW_OPEN_VC") != nullptr) {
     std::cerr << "lic: warning — LI_ALLOW_OPEN_VC is ignored; use --allow-open-vc on the command line\n";
@@ -287,7 +313,7 @@ int count_open_autovc_goals() {
   return 0;
 }
 
-int verify_file(const char* path, bool run_lean, bool strict_lean) {
+int verify_file(const char* path, bool run_lean, bool strict_lean, const char* lic_exe) {
   const std::string source = read_file(path);
   li::Module module;
   li::DiagnosticBag diags;
@@ -303,6 +329,9 @@ int verify_file(const char* path, bool run_lean, bool strict_lean) {
   vc.mir_return_linked = witness.mir_return_linked;
   const std::size_t mir_parallel_disjoint = li::count_mir_parallel_disjoint_proven(mir);
   const std::size_t mir_vectorized_proc = li::count_mir_vectorized_proc(mir);
+  const li::TheoremDischargeResult theorem_result = li::discharge_theorems_natively(module);
+  const li::LiProverResult li_result = li::discharge_with_li_prover(module, lic_exe);
+  const std::vector<std::string> open_both = open_in_both(theorem_result, li_result);
   std::cout << "verify: procs=" << vc.proc_count << " mir_fns=" << vc.mir_fn_count
             << " requires=" << vc.requires_count << " ensures=" << vc.ensures_count
             << " prob_ensures=" << vc.prob_ensures_count
@@ -310,7 +339,28 @@ int verify_file(const char* path, bool run_lean, bool strict_lean) {
             << " witnessed_ensures=" << vc.ensures_witnessed
             << " mir_return_linked=" << vc.mir_return_linked
             << " mir_parallel_disjoint=" << mir_parallel_disjoint
-            << " mir_vectorized_proc=" << mir_vectorized_proc << '\n';
+            << " mir_vectorized_proc=" << mir_vectorized_proc
+            << " axioms=" << vc.axiom_count << " theorems=" << vc.theorem_count
+            << " lemmas=" << vc.lemma_count
+            << " theorems_proved=" << theorem_result.proved_count
+            << " theorems_li_proved=" << li_result.li_proved
+            << " theorems_open=" << open_both.size() << '\n';
+  if (!open_both.empty()) {
+    std::cerr << li::styled_warning("verify") << li::styled_dim(" — native discharge left open:")
+              << li::reset_style();
+    for (const auto& name : open_both) {
+      std::cerr << ' ' << name;
+    }
+    std::cerr << '\n';
+  }
+  if (li_result.li_proved > 0) {
+    std::cerr << li::styled_success("li-prover") << li::styled_dim(" closed ")
+              << li::reset_style() << li_result.li_proved << " proposition(s) in li:";
+    for (const auto& name : li_result.li_proved_names) {
+      std::cerr << ' ' << name;
+    }
+    std::cerr << '\n';
+  }
   if (li::terminal_color_enabled()) {
     std::cout << li::styled_success("verify") << li::styled_dim(" telemetry") << li::reset_style()
               << '\n';
@@ -324,6 +374,11 @@ int verify_file(const char* path, bool run_lean, bool strict_lean) {
                                std::to_string(vc.mir_return_linked));
     li::print_verify_telemetry(std::cout, "mir_vectorized_proc",
                                std::to_string(mir_vectorized_proc));
+    if (vc.axiom_count > 0 || vc.theorem_count > 0 || vc.lemma_count > 0) {
+      li::print_verify_telemetry(std::cout, "axioms", std::to_string(vc.axiom_count));
+      li::print_verify_telemetry(std::cout, "theorems", std::to_string(vc.theorem_count));
+      li::print_verify_telemetry(std::cout, "lemmas", std::to_string(vc.lemma_count));
+    }
   }
   if (vc.requires_count == 0 && vc.ensures_count == 0) {
     std::cerr << li::styled_warning("verify") << li::styled_dim(" — no procedure contracts (G-vc partial)")
@@ -343,7 +398,9 @@ int verify_file(const char* path, bool run_lean, bool strict_lean) {
     std::error_code fs_err;
     std::filesystem::create_directories(std::filesystem::path(vc_lean).parent_path(), fs_err);
     std::string vc_err;
-    (void)li::write_vcs_lean(module, vc_lean, &vc_err);
+    std::size_t native_closed = 0;
+    (void)li::write_vcs_lean(module, vc_lean, &vc_err, &native_closed);
+    std::cout << "verify: vcs_natively_closed=" << native_closed << '\n';
     const int open = count_open_autovc_goals();
     if (open >= 0) {
       std::cout << "verify: open_vc_goals=" << open << '\n';
@@ -413,6 +470,58 @@ int main(int argc, char** argv) {
     }
     return 0;
   }
+  if (cmd == "ast") {
+    // Self-host parity: canonical pre-order AST dump, one node per line.
+    // The li bootstrap parser (bootstrap/lic/main.li `ast`) emits the same
+    // stream; scripts/check_li_ast_parity.sh diffs the two.
+    if (argc < 3) {
+      return usage();
+    }
+    const std::string source = read_file(argv[2]);
+    auto result = li::parse_module(source, argv[2]);
+    if (!result.ok()) {
+      li::print_diagnostics(result.diagnostics);
+      return 1;
+    }
+    std::cout << li::dump_module_ast(*result.module, source);
+    return 0;
+  }
+  if (cmd == "mir") {
+    // Layer 5 self-host parity: canonical MIR dump of lower_to_mir() output.
+    // The li bootstrap backend (bootstrap/lic/main.li `mir <file>`) emits the
+    // same stream; scripts/check_li_mir_parity.sh diffs the two.
+    if (argc < 3) {
+      return usage();
+    }
+    const std::string source = read_file(argv[2]);
+    li::Module module;
+    li::DiagnosticBag diags;
+    if (!frontend(argv[2], source, module, diags)) {
+      li::print_diagnostics(diags);
+      return 1;
+    }
+    std::cout << li::dump_mir_module(li::lower_to_mir(module));
+    return 0;
+  }
+  if (cmd == "lex") {
+    // Dev/parity command: dump the token stream as `kind<TAB>lexeme`.
+    // The self-hosted lexer (bootstrap/lic/main.li) emits the same format so
+    // scripts/check_li_lexer_parity.sh can diff the two implementations.
+    if (argc < 3) {
+      return usage();
+    }
+    const std::string source = read_file(argv[2]);
+    li::Lexer lexer(source, argv[2]);
+    li::DiagnosticBag diags;
+    if (!lexer.tokenize(diags)) {
+      li::print_diagnostics(diags);
+      return 1;
+    }
+    for (const auto& t : lexer.tokens()) {
+      std::cout << static_cast<int>(t.kind) << '\t' << std::string(t.text) << '\n';
+    }
+    return 0;
+  }
   if (cmd == "check") {
     return li::lic_check_main(argc, argv, argv[0]);
   }
@@ -441,7 +550,7 @@ int main(int argc, char** argv) {
     }
     li::finalize_resource_options(li::resource_options());
     apply_resource_options_to_env();
-    return verify_file(argv[2], run_lean, strict_lean);
+    return verify_file(argv[2], run_lean, strict_lean, argv[0]);
   }
   if (cmd == "validate-httpd-config") {
     return validate_httpd_config_cmd(argc, argv);
@@ -526,8 +635,23 @@ int main(int argc, char** argv) {
     const std::string vc_lean = li::repo_build_path("generated/AutoVC.lean");
     std::error_code fs_err;
     std::filesystem::create_directories(std::filesystem::path(vc_lean).parent_path(), fs_err);
-    if (!li::write_vcs_lean(module, vc_lean, &err)) {
+    std::size_t native_closed = 0;
+    if (!li::write_vcs_lean(module, vc_lean, &err, &native_closed)) {
       std::cerr << "vc emit: " << err << '\n';
+    }
+    const li::TheoremDischargeResult theorem_result = li::discharge_theorems_natively(module);
+    const li::LiProverResult li_result = li::discharge_with_li_prover(module, argv[0]);
+    const std::vector<std::string> open_both = open_in_both(theorem_result, li_result);
+    if (!li::allow_open_vc() && !open_both.empty()) {
+      std::cerr << "lic build: " << open_both.size()
+                << " theorem/lemma proposition(s) not discharged natively:";
+      for (const auto& name : open_both) {
+        std::cerr << ' ' << name;
+      }
+      std::cerr << "\nhint: lic's native proof engine (rewriting in li + integer arithmetic) "
+                   "could not close these — simplify the proposition, strengthen it into an "
+                   "axiom, or pass --allow-open-vc only for documented dev/tests\n";
+      return 1;
     }
     if (!li::allow_open_vc()) {
       const int open = count_open_autovc_goals();

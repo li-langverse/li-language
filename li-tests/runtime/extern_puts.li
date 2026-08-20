@@ -1,4 +1,4 @@
-extern proc puts(s: str) -> int
+extern def puts(s: str) -> int
   requires true
   ensures true
 

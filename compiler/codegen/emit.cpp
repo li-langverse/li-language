@@ -37,6 +37,11 @@ llvm::Type* i64_ty(llvm::LLVMContext& ctx) {
   return llvm::Type::getInt64Ty(ctx);
 }
 
+bool is_cmp_binop(BinOp op) {
+  return op == BinOp::Lt || op == BinOp::Le || op == BinOp::Gt || op == BinOp::Ge ||
+         op == BinOp::Eq || op == BinOp::Ne;
+}
+
 llvm::Type* llvm_scalar(llvm::LLVMContext& ctx, bool is_float, bool is_i64, bool is_string = false) {
   if (is_string) {
     return i8_ptr(ctx);
@@ -59,6 +64,11 @@ llvm::Type* llvm_array_type(llvm::LLVMContext& ctx, const MirParam& p) {
 llvm::Type* llvm_type_for_mir_param(llvm::LLVMContext& ctx, const MirParam& p) {
   if (p.fixed_array_elems > 0) {
     return llvm_array_type(ctx, p);
+  }
+  if (p.is_var) {
+    // `var` object leaf param: passed by reference; the callee loads and
+    // stores through the incoming pointer so mutations propagate back.
+    return llvm::PointerType::getUnqual(llvm_scalar(ctx, p.is_float, p.is_i64, p.is_string));
   }
   return llvm_scalar(ctx, p.is_float, p.is_i64, p.is_string);
 }
@@ -101,8 +111,29 @@ llvm::Value* string_ptr(llvm::IRBuilder<>& builder, llvm::GlobalVariable* gv) {
   return builder.CreateInBoundsGEP(gv->getValueType(), gv, indices);
 }
 
+// CallInst::setFastMathFlags after CreateCall does not remove the inherited
+// `fast` flag on aggregate (struct/array) returns, which clang rejects
+// ("fast-math-flags specified for call without floating-point scalar or
+// vector return type"). Clear the builder flags before the call instead.
+llvm::CallInst* create_user_call(llvm::IRBuilder<>& builder, llvm::Function* callee,
+                                 llvm::ArrayRef<llvm::Value*> args) {
+  llvm::Type* ret_ty = callee->getReturnType();
+  const bool strip_fmf = ret_ty->isStructTy() || ret_ty->isArrayTy();
+  llvm::FastMathFlags saved;
+  if (strip_fmf) {
+    saved = builder.getFastMathFlags();
+    builder.setFastMathFlags(llvm::FastMathFlags());
+  }
+  llvm::CallInst* call = builder.CreateCall(callee, args);
+  if (strip_fmf) {
+    builder.setFastMathFlags(saved);
+  }
+  return call;
+}
+
 struct ArraySlot {
-  llvm::AllocaInst* alloca = nullptr;
+  llvm::Value* alloca = nullptr;  // base pointer (alloca, or a `var` by-ref arg)
+  llvm::Type* slot_ty = nullptr;  // pointee array type (opaque-pointer era)
   std::int64_t size = 0;
   std::int64_t cols = 0;
   bool is_float = false;
@@ -128,12 +159,28 @@ struct EmitCtx {
   std::map<std::string, llvm::AllocaInst*> ptr_locals;
   std::map<std::string, ArraySlot> arrays;
   std::map<std::string, llvm::AllocaInst*> simd_f64x4_locals;
+  /** `var` object leaf params: slot name -> incoming by-ref pointer.
+   *  Loads and stores on these names go straight through the pointer so
+   *  callee mutations propagate back to the caller's slots. */
+  std::map<std::string, llvm::Value*> var_ref_params;
+  /** Element (pointee) scalar type of each var-ref slot, by slot name. */
+  std::map<std::string, llvm::Type*> var_ref_elem_ty;
   std::unordered_map<std::string, llvm::BasicBlock*> labels;
   int str_counter = 0;
 
   llvm::Type* vec4_f64() const {
     return llvm::VectorType::get(llvm::Type::getDoubleTy(context),
                                  llvm::ElementCount::getFixed(4));
+  }
+
+  // Locals are alloca'd lazily at first use and cached by name, so a name
+  // declared in two sibling branches (e.g. `var i` under `if a:` and under
+  // `if b:`) would otherwise get one alloca in the first branch — an
+  // "Instruction does not dominate all uses!" verifier failure. Hoisting
+  // every alloca to the entry block makes it dominate the whole function.
+  llvm::AllocaInst* entry_alloca(llvm::Type* ty, const std::string& name) {
+    llvm::IRBuilder<> eb(&func->getEntryBlock(), func->getEntryBlock().begin());
+    return eb.CreateAlloca(ty, nullptr, name);
   }
 
   bool array_simd_enabled() const {
@@ -148,7 +195,7 @@ struct EmitCtx {
     if (it != simd_f64x4_locals.end()) {
       return it->second;
     }
-    llvm::AllocaInst* slot = builder->CreateAlloca(vec4_f64(), nullptr, name);
+    llvm::AllocaInst* slot = entry_alloca(vec4_f64(), name);
     simd_f64x4_locals[name] = slot;
     return slot;
   }
@@ -168,15 +215,14 @@ struct EmitCtx {
     return sum;
   }
 
-  llvm::Value* gather_array_f64x4(llvm::AllocaInst* alloca, unsigned start) {
+  llvm::Value* gather_array_f64x4(llvm::Value* base, llvm::Type* arr_ty, unsigned start) {
     llvm::Type* f64 = llvm::Type::getDoubleTy(context);
     llvm::Value* zero = llvm::ConstantInt::get(builder->getInt32Ty(), 0);
-    llvm::Type* arr_ty = alloca->getAllocatedType();
     llvm::Value* vec = llvm::UndefValue::get(vec4_f64());
     for (unsigned lane = 0; lane < 4; ++lane) {
       llvm::Value* idx = llvm::ConstantInt::get(i32_ty(context), start + lane);
       llvm::Value* gep_idx[] = {zero, idx};
-      llvm::Value* ptr = builder->CreateInBoundsGEP(arr_ty, alloca, gep_idx);
+      llvm::Value* ptr = builder->CreateInBoundsGEP(arr_ty, base, gep_idx);
       llvm::Value* scalar = builder->CreateLoad(f64, ptr);
       vec = builder->CreateInsertElement(
           vec, scalar, llvm::ConstantInt::get(i32_ty(context), lane));
@@ -288,27 +334,26 @@ struct EmitCtx {
     }
   }
 
-  void scatter_array_f64x4(llvm::AllocaInst* alloca, unsigned start, llvm::Value* vec) {
+  void scatter_array_f64x4(llvm::Value* base, llvm::Type* arr_ty, unsigned start, llvm::Value* vec) {
     llvm::Type* f64 = llvm::Type::getDoubleTy(context);
     llvm::Value* zero = llvm::ConstantInt::get(builder->getInt32Ty(), 0);
-    llvm::Type* arr_ty = alloca->getAllocatedType();
     for (unsigned lane = 0; lane < 4; ++lane) {
       llvm::Value* idx = llvm::ConstantInt::get(i32_ty(context), start + lane);
       llvm::Value* gep_idx[] = {zero, idx};
-      llvm::Value* ptr = builder->CreateInBoundsGEP(arr_ty, alloca, gep_idx);
+      llvm::Value* ptr = builder->CreateInBoundsGEP(arr_ty, base, gep_idx);
       llvm::Value* scalar = builder->CreateExtractElement(
           vec, llvm::ConstantInt::get(i32_ty(context), lane));
       builder->CreateStore(scalar, ptr);
     }
   }
 
+
   llvm::AllocaInst* ensure_int_local(const std::string& name) {
     auto it = int_locals.find(name);
     if (it != int_locals.end()) {
       return it->second;
     }
-    llvm::AllocaInst* slot =
-        builder->CreateAlloca(i32_ty(context), nullptr, name);
+    llvm::AllocaInst* slot = entry_alloca(i32_ty(context), name);
     int_locals[name] = slot;
     return slot;
   }
@@ -318,14 +363,24 @@ struct EmitCtx {
     if (it != float_locals.end()) {
       return it->second;
     }
-    llvm::AllocaInst* slot =
-        builder->CreateAlloca(llvm::Type::getDoubleTy(context), nullptr, name);
+    llvm::AllocaInst* slot = entry_alloca(llvm::Type::getDoubleTy(context), name);
     float_locals[name] = slot;
     return slot;
   }
 
-  llvm::Value* load_float(const std::string& name) {
-    return builder->CreateLoad(llvm::Type::getDoubleTy(context), ensure_float_local(name));
+  llvm::Value* load_as_f64(const std::string& name) {
+    if (auto it = var_ref_params.find(name); it != var_ref_params.end()) {
+      return load_ref_as_f64(name, it->second);
+    }
+    if (auto it = float_locals.find(name); it != float_locals.end()) {
+      return builder->CreateLoad(llvm::Type::getDoubleTy(context), it->second);
+    }
+    if (auto it64 = i64_locals.find(name); it64 != i64_locals.end()) {
+      return builder->CreateSIToFP(builder->CreateLoad(i64_ty(context), it64->second),
+                                   llvm::Type::getDoubleTy(context));
+    }
+    return builder->CreateSIToFP(builder->CreateLoad(i32_ty(context), ensure_int_local(name)),
+                                 llvm::Type::getDoubleTy(context));
   }
 
   llvm::AllocaInst* ensure_ptr_local(const std::string& name) {
@@ -333,13 +388,15 @@ struct EmitCtx {
     if (it != ptr_locals.end()) {
       return it->second;
     }
-    llvm::AllocaInst* slot =
-        builder->CreateAlloca(i8_ptr(context), nullptr, name);
+    llvm::AllocaInst* slot = entry_alloca(i8_ptr(context), name);
     ptr_locals[name] = slot;
     return slot;
   }
 
   llvm::Value* load_ptr(const std::string& name) {
+    if (auto it = var_ref_params.find(name); it != var_ref_params.end()) {
+      return builder->CreateLoad(i8_ptr(context), it->second);
+    }
     if (auto it = ptr_locals.find(name); it != ptr_locals.end()) {
       return builder->CreateLoad(i8_ptr(context), it->second);
     }
@@ -354,14 +411,67 @@ struct EmitCtx {
     auto it = i64_locals.find(name);
     if (it != i64_locals.end()) {
       return it->second;
-    }
-    llvm::AllocaInst* slot =
-        builder->CreateAlloca(i64_ty(context), nullptr, name);
+    }    llvm::AllocaInst* slot = entry_alloca(i64_ty(context), name);
     i64_locals[name] = slot;
     return slot;
   }
 
+  // Address of a slot by name. For `var` object refs this is the incoming
+  // pointer itself; for locals it is the alloca. Used by CallProc to pass
+  // by-ref args and by stores.
+  llvm::Value* slot_ptr(const std::string& name) {
+    if (auto it = var_ref_params.find(name); it != var_ref_params.end()) {
+      return it->second;
+    }
+    if (auto it = arrays.find(name); it != arrays.end()) {
+      return it->second.alloca;
+    }
+    if (auto it = float_locals.find(name); it != float_locals.end()) {
+      return it->second;
+    }
+    if (auto it = i64_locals.find(name); it != i64_locals.end()) {
+      return it->second;
+    }
+    if (auto it = ptr_locals.find(name); it != ptr_locals.end()) {
+      return it->second;
+    }
+    return ensure_int_local(name);
+  }
+
+  // Loads a var-ref slot as a double (float context).
+  llvm::Value* load_ref_as_f64(const std::string& name, llvm::Value* ptr) {
+    llvm::Type* el = var_ref_elem_ty[name];
+    if (el->isDoubleTy()) {
+      return builder->CreateLoad(llvm::Type::getDoubleTy(context), ptr);
+    }
+    if (el->isIntegerTy(64)) {
+      return builder->CreateSIToFP(builder->CreateLoad(i64_ty(context), ptr),
+                                   llvm::Type::getDoubleTy(context));
+    }
+    return builder->CreateSIToFP(builder->CreateLoad(i32_ty(context), ptr),
+                                 llvm::Type::getDoubleTy(context));
+  }
+
+  llvm::Value* load_float(const std::string& name) {
+    if (auto it = var_ref_params.find(name); it != var_ref_params.end()) {
+      return load_ref_as_f64(name, it->second);
+    }
+    return builder->CreateLoad(llvm::Type::getDoubleTy(context), ensure_float_local(name));
+  }
+
   llvm::Value* load_int(const std::string& name) {
+    if (auto it = var_ref_params.find(name); it != var_ref_params.end()) {
+      llvm::Type* el = var_ref_elem_ty[name];
+      if (el->isDoubleTy()) {
+        return builder->CreateFPToSI(
+            builder->CreateLoad(llvm::Type::getDoubleTy(context), it->second), i32_ty(context));
+      }
+      if (el->isIntegerTy(64)) {
+        return builder->CreateTrunc(
+            builder->CreateLoad(i64_ty(context), it->second), i32_ty(context));
+      }
+      return builder->CreateLoad(i32_ty(context), it->second);
+    }
     if (auto it = float_locals.find(name); it != float_locals.end()) {
       return builder->CreateFPToSI(
           builder->CreateLoad(llvm::Type::getDoubleTy(context), it->second), i32_ty(context));
@@ -374,10 +484,54 @@ struct EmitCtx {
   }
 
   llvm::Value* load_i64(const std::string& name) {
+    if (auto it = var_ref_params.find(name); it != var_ref_params.end()) {
+      llvm::Type* el = var_ref_elem_ty[name];
+      if (el->isIntegerTy(64)) {
+        return builder->CreateLoad(i64_ty(context), it->second);
+      }
+      if (el->isDoubleTy()) {
+        return builder->CreateFPToSI(
+            builder->CreateLoad(llvm::Type::getDoubleTy(context), it->second), i64_ty(context));
+      }
+      return builder->CreateSExt(
+          builder->CreateLoad(i32_ty(context), it->second), i64_ty(context));
+    }
     if (auto it = i64_locals.find(name); it != i64_locals.end()) {
       return builder->CreateLoad(i64_ty(context), it->second);
     }
     return builder->CreateSExt(load_int(name), i64_ty(context));
+  }
+
+  // Store `val` into the slot named `name`, going through the by-ref pointer
+  // when the slot is a `var` object leaf param (converting to the element
+  // type as needed).
+  void store_to_slot(const std::string& name, llvm::Value* val) {
+    if (auto it = var_ref_params.find(name); it != var_ref_params.end()) {
+      llvm::Type* el = var_ref_elem_ty[name];
+      llvm::Value* v = val;
+      if (el->isDoubleTy() && v->getType()->isIntegerTy(32)) {
+        v = builder->CreateSIToFP(v, el);
+      } else if (el->isDoubleTy() && v->getType()->isIntegerTy(64)) {
+        v = builder->CreateSIToFP(v, el);
+      } else if (el->isIntegerTy(64) && v->getType()->isIntegerTy(32)) {
+        v = builder->CreateSExt(v, el);
+      } else if (el->isIntegerTy(64) && v->getType()->isPointerTy()) {
+        v = builder->CreatePtrToInt(v, el);
+      } else if (el->isPointerTy() && v->getType()->isIntegerTy(64)) {
+        v = builder->CreateIntToPtr(v, el);
+      } else if (el->isIntegerTy(32) && v->getType()->isIntegerTy(64)) {
+        v = builder->CreateTrunc(v, el);
+      }
+      builder->CreateStore(v, it->second);
+      return;
+    }
+    if (auto it = arrays.find(name); it != arrays.end()) {
+      // Callers store into array slots via element stores; a whole-array store
+      // only occurs for the copy paths which target ArrayAlloc slots.
+      builder->CreateStore(val, it->second.alloca);
+      return;
+    }
+    builder->CreateStore(val, ensure_int_local(name));
   }
 
   llvm::BasicBlock* block_for(const std::string& label) {
@@ -461,6 +615,18 @@ struct EmitCtx {
             llvm::Intrinsic::getOrInsertDeclaration(module, llvm::Intrinsic::pow, {f64});
         return builder->CreateCall(pow_fn, {lhs, rhs});
       }
+      case BinOp::Lt:
+        return builder->CreateZExt(builder->CreateFCmpOLT(lhs, rhs), i32_ty(context));
+      case BinOp::Le:
+        return builder->CreateZExt(builder->CreateFCmpOLE(lhs, rhs), i32_ty(context));
+      case BinOp::Gt:
+        return builder->CreateZExt(builder->CreateFCmpOGT(lhs, rhs), i32_ty(context));
+      case BinOp::Ge:
+        return builder->CreateZExt(builder->CreateFCmpOGE(lhs, rhs), i32_ty(context));
+      case BinOp::Eq:
+        return builder->CreateZExt(builder->CreateFCmpOEQ(lhs, rhs), i32_ty(context));
+      case BinOp::Ne:
+        return builder->CreateZExt(builder->CreateFCmpONE(lhs, rhs), i32_ty(context));
       default:
         return lhs;
     }
@@ -483,7 +649,7 @@ struct EmitCtx {
       }
     }
     if (auto a_it = arrays.find(arg.ident); a_it != arrays.end()) {
-      llvm::Type* arr_ty = a_it->second.alloca->getAllocatedType();
+      llvm::Type* arr_ty = a_it->second.slot_ty;
       return builder->CreateLoad(arr_ty, a_it->second.alloca);
     }
     if (float_locals.find(arg.ident) != float_locals.end()) {
@@ -510,7 +676,12 @@ struct EmitCtx {
         return true;
       }
       case MirOp::Jump:
-        builder->CreateBr(block_for(ins.label));
+        // The preceding block may already terminate (e.g. an `if` branch that
+        // ends in `return`); an unconditional jump there is dead code.
+        if (builder->GetInsertBlock() != nullptr &&
+            builder->GetInsertBlock()->getTerminator() == nullptr) {
+          builder->CreateBr(block_for(ins.label));
+        }
         return false;
       case MirOp::BranchIfZero: {
         llvm::Value* cond = load_int(ins.ident);
@@ -528,6 +699,9 @@ struct EmitCtx {
           builder->CreateRetVoid();
         } else if (returns_object && ret_ty->isStructTy()) {
           builder->CreateRet(llvm::ConstantAggregateZero::get(ret_ty));
+        } else if (ret_ty->isPointerTy()) {
+          builder->CreateRet(llvm::ConstantPointerNull::get(
+              llvm::dyn_cast<llvm::PointerType>(ret_ty)));
         } else {
           builder->CreateRet(returns_float ? llvm::ConstantFP::get(ret_ty, 0.0)
                                            : llvm::ConstantInt::get(ret_ty, 0));
@@ -568,7 +742,7 @@ struct EmitCtx {
           if (leaf.fixed_array_elems > 0) {
             auto a_it = arrays.find(full);
             if (a_it != arrays.end()) {
-              llvm::Type* arr_ty = a_it->second.alloca->getAllocatedType();
+              llvm::Type* arr_ty = a_it->second.slot_ty;
               v = builder->CreateLoad(arr_ty, a_it->second.alloca);
             }
           } else {
@@ -603,14 +777,28 @@ struct EmitCtx {
       case MirOp::StoreInt: {
         llvm::Value* val = ins.rhs_is_literal ? int32_val(*builder, context, ins.rhs_int)
                                               : load_int(ins.rhs_ident);
-        builder->CreateStore(val, ensure_int_local(ins.ident));
+        if (var_ref_params.find(ins.ident) != var_ref_params.end()) {
+          store_to_slot(ins.ident, val);
+        } else {
+          builder->CreateStore(val, ensure_int_local(ins.ident));
+        }
         return true;
       }
       case MirOp::StoreI64: {
-        llvm::Value* val = ins.rhs_is_literal
-                               ? llvm::ConstantInt::get(i64_ty(context), ins.rhs_int)
-                               : load_i64(ins.rhs_ident);
-        builder->CreateStore(val, ensure_i64_local(ins.ident));
+        llvm::Value* val = nullptr;
+        if (ins.rhs_is_string) {
+          llvm::GlobalVariable* gv = emit_string_global(module, ins.str_value, str_counter);
+          val = builder->CreatePtrToInt(string_ptr(*builder, gv), i64_ty(context));
+        } else {
+          val = ins.rhs_is_literal
+                    ? llvm::ConstantInt::get(i64_ty(context), ins.rhs_int)
+                    : load_i64(ins.rhs_ident);
+        }
+        if (var_ref_params.find(ins.ident) != var_ref_params.end()) {
+          store_to_slot(ins.ident, val);
+        } else {
+          builder->CreateStore(val, ensure_i64_local(ins.ident));
+        }
         return true;
       }
       case MirOp::StoreFloat: {
@@ -618,7 +806,11 @@ struct EmitCtx {
                                ? llvm::ConstantFP::get(llvm::Type::getDoubleTy(context),
                                                        ins.float_value)
                                : load_float(ins.rhs_ident);
-        builder->CreateStore(val, ensure_float_local(ins.ident));
+        if (var_ref_params.find(ins.ident) != var_ref_params.end()) {
+          store_to_slot(ins.ident, val);
+        } else {
+          builder->CreateStore(val, ensure_float_local(ins.ident));
+        }
         return true;
       }
       case MirOp::BinOpInt: {
@@ -675,10 +867,14 @@ struct EmitCtx {
         return true;
       }
       case MirOp::BinOpFloat: {
-        llvm::Value* lhs = load_float(ins.lhs_ident);
-        llvm::Value* rhs = load_float(ins.rhs_ident);
+        llvm::Value* lhs = load_as_f64(ins.lhs_ident);
+        llvm::Value* rhs = load_as_f64(ins.rhs_ident);
         llvm::Value* result = emit_fbinop(ins.bin_op, lhs, rhs);
-        builder->CreateStore(result, ensure_float_local(ins.ident));
+        if (is_cmp_binop(ins.bin_op)) {
+          builder->CreateStore(result, ensure_int_local(ins.ident));
+        } else {
+          builder->CreateStore(result, ensure_float_local(ins.ident));
+        }
         return true;
       }
       case MirOp::EchoInt: {
@@ -710,7 +906,7 @@ struct EmitCtx {
           }
           args.push_back(val);
         }
-        llvm::CallInst* call = builder->CreateCall(callee, args);
+        llvm::CallInst* call = create_user_call(*builder, callee, args);
         if (!ins.ident.empty()) {
           if (ins.is_i64) {
             llvm::Value* wide = call;
@@ -738,13 +934,28 @@ struct EmitCtx {
           llvm::Type* want =
               ai < callee->arg_size() ? callee->getArg(ai)->getType() : nullptr;
           const bool i8_ptr_param = want && want == i8_ptr(context);
-          llvm::Value* val = mir_arg_value(ins.args[ai], i8_ptr_param);
+          llvm::Value* val;
+          if (ins.args[ai].is_var_ref && !ins.args[ai].is_array_ident) {
+            // `var` object leaf param: pass the address of the slot so the
+            // callee's writes land in the caller's slots directly.
+            val = slot_ptr(ins.args[ai].ident);
+          } else {
+            val = mir_arg_value(ins.args[ai], i8_ptr_param);
+          }
           if (i8_ptr_param && val->getType() == i64_ty(context)) {
             val = builder->CreateIntToPtr(val, i8_ptr(context));
           }
           if (want != nullptr && val->getType() != want) {
-            if (ins.args[ai].is_array_ident && want->isPointerTy()) {
+            if (ins.args[ai].is_var_ref && want->isPointerTy()) {
               val = builder->CreatePointerCast(val, want);
+            } else if (ins.args[ai].is_array_ident && want->isPointerTy()) {
+              val = builder->CreatePointerCast(val, want);
+            } else if (want->isIntegerTy(64) && val->getType()->isPointerTy()) {
+              // pointer-width user-fn param (str/bytes/ptr): the ABI passes
+              // pointers as i64, so string-literal globals must be narrowed.
+              val = builder->CreatePtrToInt(val, want);
+            } else if (want->isPointerTy() && val->getType()->isIntegerTy(64)) {
+              val = builder->CreateIntToPtr(val, want);
             } else if (want->isDoubleTy() && val->getType()->isIntegerTy(32)) {
               val = builder->CreateSIToFP(val, want);
             } else if (want->isIntegerTy(32) && val->getType()->isDoubleTy()) {
@@ -756,7 +967,7 @@ struct EmitCtx {
           }
           args.push_back(val);
         }
-        llvm::CallInst* call = builder->CreateCall(callee, args);
+        llvm::CallInst* call = create_user_call(*builder, callee, args);
         if (callee->getReturnType()->isVoidTy()) {
           return true;
         }
@@ -770,7 +981,7 @@ struct EmitCtx {
             llvm::Type* want = st->getElementType(i);
             if (leaf.fixed_array_elems > 0) {
               auto a_it = arrays.find(full);
-              if (a_it != arrays.end() && elt->getType() == a_it->second.alloca->getAllocatedType()) {
+              if (a_it != arrays.end() && elt->getType() == a_it->second.slot_ty) {
                 builder->CreateStore(elt, a_it->second.alloca);
               }
               continue;
@@ -873,15 +1084,15 @@ struct EmitCtx {
               llvm::ArrayType::get(f64, static_cast<unsigned>(ins.rhs_int));
           llvm::ArrayType* mat_ty =
               llvm::ArrayType::get(row_ty, static_cast<unsigned>(ins.int_value));
-          slot = builder->CreateAlloca(mat_ty, nullptr, ins.ident);
-          arrays[ins.ident] = ArraySlot{slot, ins.int_value, ins.rhs_int, true, true};
+          slot = entry_alloca(mat_ty, ins.ident);
+          arrays[ins.ident] = ArraySlot{slot, mat_ty, ins.int_value, ins.rhs_int, true, true};
         } else {
           llvm::Type* elem_ty = ins.array_is_float ? llvm::Type::getDoubleTy(context)
                                                    : i32_ty(context);
           llvm::ArrayType* arr_ty =
               llvm::ArrayType::get(elem_ty, static_cast<unsigned>(ins.int_value));
-          slot = builder->CreateAlloca(arr_ty, nullptr, ins.ident);
-          arrays[ins.ident] = ArraySlot{slot, ins.int_value, 0, ins.array_is_float, false};
+          slot = entry_alloca(arr_ty, ins.ident);
+          arrays[ins.ident] = ArraySlot{slot, arr_ty, ins.int_value, 0, ins.array_is_float, false};
         }
         return true;
       }
@@ -897,7 +1108,7 @@ struct EmitCtx {
         llvm::Value* zero = llvm::ConstantInt::get(builder->getInt32Ty(), 0);
         llvm::Value* gep_indices[] = {zero, idx};
         llvm::Value* ptr = builder->CreateInBoundsGEP(
-            it->second.alloca->getAllocatedType(), it->second.alloca, gep_indices);
+            it->second.slot_ty, it->second.alloca, gep_indices);
         if (it->second.is_float || ins.op == MirOp::ArrayStoreFloat) {
           llvm::Value* val =
               ins.rhs_is_literal
@@ -922,7 +1133,7 @@ struct EmitCtx {
         llvm::Value* zero = llvm::ConstantInt::get(builder->getInt32Ty(), 0);
         llvm::Value* gep_indices[] = {zero, idx};
         llvm::Value* ptr = builder->CreateInBoundsGEP(
-            it->second.alloca->getAllocatedType(), it->second.alloca, gep_indices);
+            it->second.slot_ty, it->second.alloca, gep_indices);
         if (it->second.is_float) {
           llvm::Value* loaded = builder->CreateLoad(llvm::Type::getDoubleTy(context), ptr);
           if (!ins.lhs_ident.empty()) {
@@ -952,7 +1163,7 @@ struct EmitCtx {
           llvm::Value* zero = llvm::ConstantInt::get(builder->getInt32Ty(), 0);
           llvm::Value* gep_idx[] = {zero, idx};
           llvm::Value* ap = builder->CreateInBoundsGEP(
-              a_it->second.alloca->getAllocatedType(), a_it->second.alloca, gep_idx);
+              a_it->second.slot_ty, a_it->second.alloca, gep_idx);
           llvm::Value* y = builder->CreateLoad(f64, ap);
           if (fp_numerically_stable) {
             llvm::Value* y_adj = builder->CreateFSub(y, c_comp);
@@ -978,7 +1189,7 @@ struct EmitCtx {
           llvm::Value* zero = llvm::ConstantInt::get(builder->getInt32Ty(), 0);
           llvm::Value* gep_idx[] = {zero, idx};
           llvm::Value* ap = builder->CreateInBoundsGEP(
-              a_it->second.alloca->getAllocatedType(), a_it->second.alloca, gep_idx);
+              a_it->second.slot_ty, a_it->second.alloca, gep_idx);
           llvm::Value* av = builder->CreateLoad(i32_ty(context), ap);
           acc = builder->CreateAdd(acc, av);
         }
@@ -998,35 +1209,35 @@ struct EmitCtx {
                              !ins.array_broadcast_lhs_len1 && !ins.array_broadcast_rhs_len1;
         const unsigned simd_end = simd_ok ? (n / 4) * 4 : 0;
         for (unsigned i = 0; i < simd_end; i += 4) {
-          llvm::Value* av = gather_array_f64x4(a_it->second.alloca, i);
-          llvm::Value* bv = gather_array_f64x4(b_it->second.alloca, i);
+          llvm::Value* av = gather_array_f64x4(a_it->second.alloca, a_it->second.slot_ty, i);
+          llvm::Value* bv = gather_array_f64x4(b_it->second.alloca, b_it->second.slot_ty, i);
           llvm::Value* rv = emit_fbinop(ins.bin_op, av, bv);
-          scatter_array_f64x4(d_it->second.alloca, i, rv);
+          scatter_array_f64x4(d_it->second.alloca, d_it->second.slot_ty, i, rv);
         }
         llvm::Value* zero = llvm::ConstantInt::get(builder->getInt32Ty(), 0);
         llvm::Value* b_broadcast = nullptr;
         if (ins.array_broadcast_rhs_len1) {
           llvm::Value* gep0[] = {zero, zero};
           llvm::Value* bp0 = builder->CreateInBoundsGEP(
-              b_it->second.alloca->getAllocatedType(), b_it->second.alloca, gep0);
+              b_it->second.slot_ty, b_it->second.alloca, gep0);
           b_broadcast = builder->CreateLoad(f64, bp0);
         }
         llvm::Value* a_broadcast = nullptr;
         if (ins.array_broadcast_lhs_len1) {
           llvm::Value* gep0[] = {zero, zero};
           llvm::Value* ap0 = builder->CreateInBoundsGEP(
-              a_it->second.alloca->getAllocatedType(), a_it->second.alloca, gep0);
+              a_it->second.slot_ty, a_it->second.alloca, gep0);
           a_broadcast = builder->CreateLoad(f64, ap0);
         }
         for (unsigned i = simd_end; i < n; ++i) {
           llvm::Value* idx = llvm::ConstantInt::get(i32_ty(context), i);
           llvm::Value* gep_idx[] = {zero, idx};
           llvm::Value* ap = builder->CreateInBoundsGEP(
-              a_it->second.alloca->getAllocatedType(), a_it->second.alloca, gep_idx);
+              a_it->second.slot_ty, a_it->second.alloca, gep_idx);
           llvm::Value* bp = builder->CreateInBoundsGEP(
-              b_it->second.alloca->getAllocatedType(), b_it->second.alloca, gep_idx);
+              b_it->second.slot_ty, b_it->second.alloca, gep_idx);
           llvm::Value* dp = builder->CreateInBoundsGEP(
-              d_it->second.alloca->getAllocatedType(), d_it->second.alloca, gep_idx);
+              d_it->second.slot_ty, d_it->second.alloca, gep_idx);
           llvm::Value* av =
               ins.array_broadcast_lhs_len1 ? a_broadcast : builder->CreateLoad(f64, ap);
           llvm::Value* bv =
@@ -1049,25 +1260,25 @@ struct EmitCtx {
         if (ins.array_broadcast_rhs_len1) {
           llvm::Value* gep0[] = {zero, zero};
           llvm::Value* bp0 = builder->CreateInBoundsGEP(
-              b_it->second.alloca->getAllocatedType(), b_it->second.alloca, gep0);
+              b_it->second.slot_ty, b_it->second.alloca, gep0);
           b_broadcast = builder->CreateLoad(i32_ty(context), bp0);
         }
         llvm::Value* a_broadcast = nullptr;
         if (ins.array_broadcast_lhs_len1) {
           llvm::Value* gep0[] = {zero, zero};
           llvm::Value* ap0 = builder->CreateInBoundsGEP(
-              a_it->second.alloca->getAllocatedType(), a_it->second.alloca, gep0);
+              a_it->second.slot_ty, a_it->second.alloca, gep0);
           a_broadcast = builder->CreateLoad(i32_ty(context), ap0);
         }
         for (unsigned i = 0; i < n; ++i) {
           llvm::Value* idx = llvm::ConstantInt::get(i32_ty(context), i);
           llvm::Value* gep_idx[] = {zero, idx};
           llvm::Value* ap = builder->CreateInBoundsGEP(
-              a_it->second.alloca->getAllocatedType(), a_it->second.alloca, gep_idx);
+              a_it->second.slot_ty, a_it->second.alloca, gep_idx);
           llvm::Value* bp = builder->CreateInBoundsGEP(
-              b_it->second.alloca->getAllocatedType(), b_it->second.alloca, gep_idx);
+              b_it->second.slot_ty, b_it->second.alloca, gep_idx);
           llvm::Value* dp = builder->CreateInBoundsGEP(
-              d_it->second.alloca->getAllocatedType(), d_it->second.alloca, gep_idx);
+              d_it->second.slot_ty, d_it->second.alloca, gep_idx);
           llvm::Value* av = ins.array_broadcast_lhs_len1
                                 ? a_broadcast
                                 : builder->CreateLoad(i32_ty(context), ap);
@@ -1095,9 +1306,9 @@ struct EmitCtx {
           llvm::Value* idx = llvm::ConstantInt::get(i32_ty(context), i);
           llvm::Value* gep_idx[] = {zero, idx};
           llvm::Value* ap = builder->CreateInBoundsGEP(
-              a_it->second.alloca->getAllocatedType(), a_it->second.alloca, gep_idx);
+              a_it->second.slot_ty, a_it->second.alloca, gep_idx);
           llvm::Value* dp = builder->CreateInBoundsGEP(
-              d_it->second.alloca->getAllocatedType(), d_it->second.alloca, gep_idx);
+              d_it->second.slot_ty, d_it->second.alloca, gep_idx);
           llvm::Value* av = builder->CreateLoad(f64, ap);
           llvm::Value* rv = builder->CreateFMul(av, scale_v);
           builder->CreateStore(rv, dp);
@@ -1120,9 +1331,9 @@ struct EmitCtx {
           llvm::Value* idx = llvm::ConstantInt::get(i32_ty(context), i);
           llvm::Value* gep_idx[] = {zero, idx};
           llvm::Value* xp = builder->CreateInBoundsGEP(
-              x_it->second.alloca->getAllocatedType(), x_it->second.alloca, gep_idx);
+              x_it->second.slot_ty, x_it->second.alloca, gep_idx);
           llvm::Value* yp = builder->CreateInBoundsGEP(
-              y_it->second.alloca->getAllocatedType(), y_it->second.alloca, gep_idx);
+              y_it->second.slot_ty, y_it->second.alloca, gep_idx);
           llvm::Value* xv = builder->CreateLoad(f64, xp);
           llvm::Value* yv = builder->CreateLoad(f64, yp);
           llvm::Value* rv = builder->CreateFAdd(builder->CreateFMul(xv, scale_v), yv);
@@ -1145,7 +1356,7 @@ struct EmitCtx {
         llvm::Value* zero = llvm::ConstantInt::get(builder->getInt32Ty(), 0);
         llvm::Value* gep_idx[] = {zero, row, col};
         llvm::Value* ptr = builder->CreateInBoundsGEP(
-            it->second.alloca->getAllocatedType(), it->second.alloca, gep_idx);
+            it->second.slot_ty, it->second.alloca, gep_idx);
         llvm::Value* loaded = builder->CreateLoad(f64, ptr);
         if (!ins.lhs_ident.empty()) {
           builder->CreateStore(loaded, ensure_float_local(ins.lhs_ident));
@@ -1171,7 +1382,7 @@ struct EmitCtx {
         llvm::Value* zero = llvm::ConstantInt::get(builder->getInt32Ty(), 0);
         llvm::Value* gep_idx[] = {zero, row, col};
         llvm::Value* ptr = builder->CreateInBoundsGEP(
-            it->second.alloca->getAllocatedType(), it->second.alloca, gep_idx);
+            it->second.slot_ty, it->second.alloca, gep_idx);
         builder->CreateStore(val, ptr);
         return true;
       }
@@ -1189,11 +1400,15 @@ struct EmitCtx {
         const bool use_loops = m > kUnrollMax || k > kUnrollMax || n > kUnrollMax ||
                                static_cast<std::uint64_t>(m) * k * n > 4096;
         if (use_loops) {
-          emit_matmul2d_ijk_loops(c_it->second.alloca, a_it->second.alloca, b_it->second.alloca,
-                                  m, k, n);
+          // Matmul is float-matrix only and never by-ref, so the slots are
+          // real allocas (safe to narrow from the generic Value base).
+          emit_matmul2d_ijk_loops(static_cast<llvm::AllocaInst*>(c_it->second.alloca),
+                                  static_cast<llvm::AllocaInst*>(a_it->second.alloca),
+                                  static_cast<llvm::AllocaInst*>(b_it->second.alloca), m, k, n);
         } else {
-          emit_matmul2d_ijk_unrolled(c_it->second.alloca, a_it->second.alloca,
-                                     b_it->second.alloca, m, k, n);
+          emit_matmul2d_ijk_unrolled(static_cast<llvm::AllocaInst*>(c_it->second.alloca),
+                                     static_cast<llvm::AllocaInst*>(a_it->second.alloca),
+                                     static_cast<llvm::AllocaInst*>(b_it->second.alloca), m, k, n);
         }
         return true;
       }
@@ -1211,8 +1426,8 @@ struct EmitCtx {
           llvm::Value* v_acc =
               builder->CreateVectorSplat(4, llvm::ConstantFP::get(f64, 0.0));
           for (unsigned i = 0; i < simd_end; i += 4) {
-            llvm::Value* av = gather_array_f64x4(a_it->second.alloca, i);
-            llvm::Value* bv = gather_array_f64x4(b_it->second.alloca, i);
+            llvm::Value* av = gather_array_f64x4(a_it->second.alloca, a_it->second.slot_ty, i);
+            llvm::Value* bv = gather_array_f64x4(b_it->second.alloca, b_it->second.slot_ty, i);
             v_acc = builder->CreateFAdd(v_acc, builder->CreateFMul(av, bv));
           }
           acc = horiz_sum_f64x4(v_acc);
@@ -1222,9 +1437,9 @@ struct EmitCtx {
           llvm::Value* idx = llvm::ConstantInt::get(i32_ty(context), i);
           llvm::Value* gep_idx[] = {zero, idx};
           llvm::Value* ap = builder->CreateInBoundsGEP(
-              a_it->second.alloca->getAllocatedType(), a_it->second.alloca, gep_idx);
+              a_it->second.slot_ty, a_it->second.alloca, gep_idx);
           llvm::Value* bp = builder->CreateInBoundsGEP(
-              b_it->second.alloca->getAllocatedType(), b_it->second.alloca, gep_idx);
+              b_it->second.slot_ty, b_it->second.alloca, gep_idx);
           llvm::Value* av = builder->CreateLoad(f64, ap);
           llvm::Value* bv = builder->CreateLoad(f64, bp);
           acc = builder->CreateFAdd(acc, builder->CreateFMul(av, bv));
@@ -1556,9 +1771,16 @@ bool emit_llvm_ir(const MirModule& mir, const std::string& out_path, int runtime
         const auto& mp = fn.params[idx];
         if (mp.fixed_array_elems > 0) {
           llvm::Type* arr_ty = llvm_array_type(context, mp);
+          if (mp.is_var) {
+            // `var array` params are by-reference: callee writes propagate to
+            // the caller's array. The ABI already passes a pointer; use it
+            // directly as the slot base instead of copying in.
+            ctx.arrays[mp.name] = ArraySlot{&arg, arr_ty, mp.fixed_array_elems, mp.matrix_cols,
+                                            mp.is_float, mp.is_matrix};
+          } else {
           llvm::AllocaInst* ap = builder.CreateAlloca(arr_ty, nullptr, mp.name);
-          ctx.arrays[mp.name] = ArraySlot{ap, mp.fixed_array_elems, mp.matrix_cols, mp.is_float,
-                                          mp.is_matrix};
+          ctx.arrays[mp.name] = ArraySlot{ap, arr_ty, mp.fixed_array_elems, mp.matrix_cols,
+                                          mp.is_float, mp.is_matrix};
           llvm::Type* elem = llvm_scalar(context, mp.is_float, mp.is_i64, mp.is_string);
           llvm::Value* zero = llvm::ConstantInt::get(builder.getInt32Ty(), 0);
           if (mp.is_matrix && mp.matrix_cols > 0) {
@@ -1586,6 +1808,13 @@ bool emit_llvm_ir(const MirModule& mir, const std::string& out_path, int runtime
               builder.CreateStore(v, to_p);
             }
           }
+          }
+        } else if (mp.is_var) {
+          // `var` object leaf param: keep the incoming pointer; loads and
+          // stores on this slot go through it so mutations propagate back.
+          ctx.var_ref_params[mp.name] = &arg;
+          ctx.var_ref_elem_ty[mp.name] =
+              llvm_scalar(context, mp.is_float, mp.is_i64, mp.is_string);
         } else if (mp.is_string) {
           builder.CreateStore(&arg, ctx.ensure_ptr_local(mp.name));
         } else if (is_par_fn || mp.is_i64) {

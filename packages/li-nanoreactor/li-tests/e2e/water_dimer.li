@@ -1,0 +1,30 @@
+# E2E — full nanoreactor driver on the water-dimer sample system.
+# The driver loop stays open (compile_open_ok); the runtime asserts verify the
+# integrated result shape for a common sample system before the reactor is
+# used as a building block elsewhere.
+import nanoreactor
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var s: NanoSystem = nano_system_water_dimer()
+  if s.n != 6:
+    return 1
+  var r: NanoRunResult = nano_run_cycles(s, 4)
+  if r.ok != 1:
+    return 2
+  if r.steps != 32:
+    return 3
+  if r.events < 0:
+    return 4
+  if r.checksum <= 0.0:
+    return 5
+  if r.energy_drift < 0.0:
+    return 6
+  if r.final_bonds < 0:
+    return 7
+  if r.final_ke < 0.0:
+    return 8
+  return 0

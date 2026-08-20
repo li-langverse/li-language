@@ -1,22 +1,54 @@
-extern proc tetris_open(width_px: int, height_px: int) -> ptr
-extern proc tetris_close(ctx: ptr)
-extern proc tetris_ticks() -> int
-extern proc tetris_delay(ms: int)
-extern proc tetris_poll_key(ctx: ptr) -> int
-extern proc tetris_begin_frame(ctx: ptr)
-extern proc tetris_draw_cell(ctx: ptr, col: int, row: int, color: int, cell_px: int)
-extern proc tetris_end_frame(ctx: ptr)
+extern def tetris_open(width_px: int, height_px: int) -> ptr
+  requires width_px > 0 and height_px > 0
+  ensures true
+  decreases 0
+
+extern def tetris_close(ctx: ptr)
+  requires true
+  ensures true
+  decreases 0
+
+extern def tetris_ticks() -> int
+  requires true
+  ensures result >= 0
+  decreases 0
+
+extern def tetris_delay(ms: int)
+  requires ms >= 0
+  ensures true
+  decreases 0
+
+extern def tetris_poll_key(ctx: ptr) -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def tetris_begin_frame(ctx: ptr)
+  requires true
+  ensures true
+  decreases 0
+
+extern def tetris_draw_cell(ctx: ptr, col: int, row: int, color: int, cell_px: int)
+  requires true
+  ensures true
+  decreases 0
+
+extern def tetris_end_frame(ctx: ptr)
+  requires true
+  ensures true
+  decreases 0
 
 def cell_index(col: int, row: int) -> int
   requires true
-  ensures result >= 0
+  ensures result == row * 10 + col
+  ensures result >= 0 and result < 200
   decreases 0
 =
   return row * 10 + col
 
 def in_bounds(col: int, row: int) -> int
   requires true
-  ensures result >= 0
+  ensures result >= 0 and result <= 1
   decreases 0
 =
   if col < 0:

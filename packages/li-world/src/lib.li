@@ -7,12 +7,12 @@ type WorldSnapshot = object
   public tick: int
   public entity_count: int
 
-extern proc li_rt_world_format_version() -> int
+extern def li_rt_world_format_version() -> int
   requires true
   ensures result >= 1
   decreases 0
 
-extern proc li_rt_world_serialize_slot(name_slot: int, tick: int, entity_count: int) -> str
+extern def li_rt_world_serialize_slot(name_slot: int, tick: int, entity_count: int) -> str
   requires name_slot >= 0
   requires name_slot <= 1
   requires tick >= 0
@@ -20,35 +20,35 @@ extern proc li_rt_world_serialize_slot(name_slot: int, tick: int, entity_count: 
   ensures true
   decreases tick
 
-extern proc li_rt_world_parse_line(line: str) -> int
+extern def li_rt_world_parse_line(line: str) -> int
   requires true
   ensures 0 <= result
   ensures result <= 1
   decreases 0
 
-extern proc li_rt_world_parsed_name_slot() -> int
+extern def li_rt_world_parsed_name_slot() -> int
   requires true
   ensures 0 <= result
   ensures result <= 1
   decreases 0
 
-extern proc li_rt_world_parsed_tick() -> int
+extern def li_rt_world_parsed_tick() -> int
   requires true
   ensures result >= 0
   decreases 0
 
-extern proc li_rt_world_parsed_entity_count() -> int
+extern def li_rt_world_parsed_entity_count() -> int
   requires true
   ensures result >= 0
   decreases 0
 
-extern proc li_rt_world_snapshot_eq_fields(an: int, at: int, ae: int, bn: int, bt: int, be: int) -> int
+extern def li_rt_world_snapshot_eq_fields(an: int, at: int, ae: int, bn: int, bt: int, be: int) -> int
   requires true
   ensures 0 <= result
   ensures result <= 1
   decreases at
 
-extern proc li_rt_world_roundtrip_fields(name_slot: int, tick: int, entity_count: int) -> int
+extern def li_rt_world_roundtrip_fields(name_slot: int, tick: int, entity_count: int) -> int
   requires name_slot >= 0
   requires name_slot <= 1
   requires tick >= 0

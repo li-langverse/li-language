@@ -82,6 +82,7 @@ Report: what was done, exact error, what the user must provide (e.g. `brew insta
 | 6 | `docs/superpowers/plans/2026-05-14-phase-06-self-host.md` |
 
 - Phase 5b: `./scripts/plot_shareables.sh` for X-ready PNGs (`docs/superpowers/plans/2026-05-14-plots-and-social.md`)
+- Phase 6 self-host: use **upgrade-li-from-cpp** — prototype/benchmark heavy changes in the C++ host first, then port to `bootstrap/lic/main.li` once they pass tests and benchmark well
 
 ## Commits
 
@@ -104,3 +105,4 @@ No crates.io or Rust ecosystem checks — Li is not Rust.
 - Subagent parallelism: use **dispatching-parallel-agents** when phase tasks are independent (e.g. lexer + diagnostics stubs).
 - Long sessions: use **executing-plans** discipline (todos, verify each step).
 - After a phase gate: optionally use **finishing-a-development-branch** before merge/PR.
+- Phase 6 self-host changes: use **upgrade-li-from-cpp** (C++-first → port-to-Li discipline) and `scripts/check_li_parity.sh` for the full front-end parity gate in one command.

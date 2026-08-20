@@ -12,9 +12,23 @@ void li_panic(const char* msg);
 void li_bounds_fail(void);
 void li_rt_print_int(int32_t value);
 void li_rt_print_str(const char* s);
+/* Emit one lexer token as `kind<TAB>text[start,end)<NL>` (self-hosted lexer). */
+int32_t li_rt_emit_token(int32_t kind, const char* text, int32_t start, int32_t end);
+/* Self-hosted AST dump primitives: stream one node line as `code field...`.
+ * Used by bootstrap/lic/main.li `ast` to match the C++ `lic ast` dump. */
+int32_t li_rt_ast_int(int64_t v);
+int32_t li_rt_ast_text(const char* text, int32_t start, int32_t end);
+int32_t li_rt_ast_space(void);
+int32_t li_rt_ast_nl(void);
+/* Self-hosted typechecker diagnostic seam: emit one `error [CODE]` line. */
+int32_t li_rt_emit_err(int32_t code);
+const char* li_rt_resolve_import(const char* file_path, const char* module);
 void li_rt_set_args(int argc, char** argv);
 int li_rt_argc(void);
 const char* li_rt_argv(int index);
+/* Whole-file read into a NUL-terminated malloc buffer (NULL on failure).
+ * Self-hosted compiler seam: the Li lexer reads source through this. */
+const char* li_rt_read_file(const char* path);
 void li_parallel_for_i64(long long start, long long end, void (*body)(long long), int team_size);
 void li_omp_parallel_for_i64(long long start, long long end, void (*body)(long long));
 int32_t li_rt_floor_div_i32(int32_t a, int32_t b);

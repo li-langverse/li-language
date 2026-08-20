@@ -101,6 +101,22 @@ struct BorrowCtx {
 
   bool param_is_var(const TypeExpr& ty) { return ty.is_var; }
 
+  // Scalars (int/float/i64/bool/…) are copied by value in the ABI, so passing
+  // one to a non-`var` param does not move the caller's binding. Only array and
+  // object params carry ownership; `var` params are by-reference either way.
+  bool scalar_param_type(const TypeExpr& ty) {
+    if (ty.kind == TypeKind::Refinement) {
+      return ty.refinement_base ? scalar_param_type(*ty.refinement_base) : false;
+    }
+    if (ty.kind == TypeKind::Named) {
+      return ty.name == "int" || ty.name == "float" || ty.name == "i64" ||
+             ty.name == "int64" || ty.name == "bool" || ty.name == "f32" ||
+             ty.name == "f64" || ty.name == "u32" || ty.name == "u64" ||
+             ty.name == "unit";
+    }
+    return false;
+  }
+
   void check_call_moves(const Expr& call) {
     const auto it = procs.find(call.ident);
     if (it == procs.end()) {
@@ -111,7 +127,7 @@ struct BorrowCtx {
       if (!call.args[n] || call.args[n]->kind != Expr::Kind::Ident) {
         continue;
       }
-      if (param_is_var(callee.params[n].type)) {
+      if (param_is_var(callee.params[n].type) || scalar_param_type(callee.params[n].type)) {
         continue;
       }
       const std::string& name = call.args[n]->ident;
@@ -235,18 +251,18 @@ bool type_mentions_heap(const TypeExpr& te) {
   return false;
 }
 
-bool stmt_mentions_echo(const Stmt& s) {
+bool stmt_mentions_print(const Stmt& s) {
   if (s.expr) {
-    if (s.expr->kind == Expr::Kind::Call && s.expr->ident == "echo") {
+    if (s.expr->kind == Expr::Kind::Call && s.expr->ident == "print") {
       return true;
     }
-    if (s.expr->kind == Expr::Kind::Ident && s.expr->ident == "echo") {
+    if (s.expr->kind == Expr::Kind::Ident && s.expr->ident == "print") {
       return true;
     }
   }
   if (s.kind == Stmt::Kind::If) {
     for (const auto& inner : s.then_body) {
-      if (stmt_mentions_echo(inner)) {
+      if (stmt_mentions_print(inner)) {
         return true;
       }
     }
@@ -254,9 +270,9 @@ bool stmt_mentions_echo(const Stmt& s) {
   return false;
 }
 
-bool proc_mentions_echo(const ProcDecl& p) {
+bool proc_mentions_print(const ProcDecl& p) {
   for (const auto& s : p.body) {
-    if (stmt_mentions_echo(s)) {
+    if (stmt_mentions_print(s)) {
       return true;
     }
   }
@@ -411,7 +427,7 @@ bool extern_call_skips_io_effect(const std::string& callee) {
 bool proc_mentions_extern_call(const ProcDecl& p,
                                const std::map<std::string, const ProcDecl*>& proc_map) {
   for (const auto& s : p.body) {
-    if (s.expr && s.expr->kind == Expr::Kind::Call && s.expr->ident != "echo") {
+    if (s.expr && s.expr->kind == Expr::Kind::Call && s.expr->ident != "print") {
       const auto it = proc_map.find(s.expr->ident);
       if (it != proc_map.end() && it->second->is_extern &&
           !extern_call_skips_io_effect(s.expr->ident)) {
@@ -432,8 +448,8 @@ void effects_check_module(const Module& module, DiagnosticBag& diags) {
       continue;
     }
     const SourceLoc loc{ "module", 1, 1, proc.span.start };
-    if (proc_mentions_echo(proc) && !has_effect(proc.raises, "IO")) {
-      diags.error(loc, "proc calls echo but does not declare raises IO");
+    if (proc_mentions_print(proc) && !has_effect(proc.raises, "IO")) {
+      diags.error(loc, "proc calls print but does not declare raises IO");
     }
     if (proc_mentions_extern_call(proc, proc_map) && !has_effect(proc.raises, "IO")) {
       diags.error(loc, "proc calls extern but does not declare raises IO");

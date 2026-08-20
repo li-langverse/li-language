@@ -1,4 +1,4 @@
-extern proc net_ping() raises Net -> int
+extern def net_ping() raises Net -> int
   requires true
   ensures true
 def calls_net_without_effect() raises IO -> int

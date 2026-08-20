@@ -1,5 +1,5 @@
 
-extern proc li_rt_sqrt(x: float) raises IO -> float
+extern def li_rt_sqrt(x: float) raises IO -> float
   requires true
   ensures true
   decreases 0

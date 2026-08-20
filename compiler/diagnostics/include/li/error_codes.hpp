@@ -31,6 +31,7 @@ enum class ErrorCode {
   E0502,
   E0503,
   E0504,
+  E0505,
 };
 
 enum class WarningCode {

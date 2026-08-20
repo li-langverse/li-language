@@ -22,6 +22,15 @@
 #include <sys/wait.h>
 #include <time.h>
 
+/* Platform-dead code marker: helpers reachable only on Linux paths (epoll /
+ * splice / proxy loop) are intentionally unreferenced on macOS; annotate so
+ * the -Werror hygiene gate stays green on both platforms. */
+#if defined(__GNUC__) || defined(__clang__)
+#define LI_RT_NET_UNUSED __attribute__((unused))
+#else
+#define LI_RT_NET_UNUSED
+#endif
+
 #ifdef __linux__
 #define HTTPD_EPOLL_CLIENT_TAG UINT64_C(0x8000000000000000)
 #define HTTPD_EPOLL_UP_TAG UINT64_C(0xc000000000000000)
@@ -61,11 +70,11 @@ static int epoll_ctl(int epfd, int op, int fd, struct epoll_event* event) {
   (void)event;
   return 0;
 }
-static int epoll_create1(int flags) {
+static LI_RT_NET_UNUSED int epoll_create1(int flags) {
   (void)flags;
   return -1;
 }
-static int epoll_wait(int epfd, struct epoll_event* events, int maxevents, int timeout) {
+static LI_RT_NET_UNUSED int epoll_wait(int epfd, struct epoll_event* events, int maxevents, int timeout) {
   (void)epfd;
   (void)events;
   (void)maxevents;
@@ -292,7 +301,7 @@ static int g_lb_rr = 0;
 static int g_lb_mode = 0; /* 0=round_robin, 1=least_conn */
 static int32_t g_config_listen_port = 0;
 static int32_t g_config_workers = 1; /* 0 = auto (CPU count); overridden by LI_HTTPD_WORKERS */
-static int g_httpd_workers_forked = 0;
+static LI_RT_NET_UNUSED int g_httpd_workers_forked = 0;
 static int g_httpd_epfd = -1;
 static int g_li_proxy_mode = 0;
 #ifdef __linux__
@@ -355,7 +364,9 @@ static void net_fail(const char* msg) {
   li_panic("Net effect failed");
 }
 
-static const char* ptr_i(intptr_t p) { return (const char*)p; }
+/* Non-const so it feeds memcpy/read/snprintf/recv without -Werror qualifier
+ * discards; const callers convert freely. */
+static char* ptr_i(intptr_t p) { return (char*)p; }
 static intptr_t iptr(const char* p) { return (intptr_t)p; }
 
 static char* li_rt_strdup_buf(const char* src, size_t n) {
@@ -626,7 +637,11 @@ const char* bytes_append(const char* a, const char* b) {
   }
   out[la + lb] = '\0';
   if (a && la > 0) {
-    free((void*)a);
+    /* `a` is a const-view of an owned malloc'd buffer (the runtime hands out
+     * li strings as const char*); the const is an API convention, not a
+     * qualifier on the storage, so free it via the integer round-trip that
+     * keeps -Wcast-qual clean. */
+    free((char*)(uintptr_t)a);
   }
   return out;
 }
@@ -1277,7 +1292,7 @@ static int parse_request_line_c(const char* buf, int hdr_end, httpd_req_info_t* 
   return 0;
 }
 
-static int parse_get_path_c(const char* buf, int hdr_end, char* out, int out_cap) {
+static LI_RT_NET_UNUSED int parse_get_path_c(const char* buf, int hdr_end, char* out, int out_cap) {
   httpd_req_info_t info;
   if (parse_request_line_c(buf, hdr_end, &info) != 0) {
     return -1;
@@ -2116,7 +2131,7 @@ static void upstream_pool_release(int32_t port, int fd, int reuse) {
   close(fd);
 }
 
-static int httpd_fd_readable(int fd) {
+static LI_RT_NET_UNUSED int httpd_fd_readable(int fd) {
   if (fd < 0) {
     return 0;
   }
@@ -2213,7 +2228,7 @@ static int parse_resp_content_length(const char* hdr, int hdr_len, int* out_keep
   return cl;
 }
 
-static ssize_t read_blocking(int fd, void* buf, size_t n) {
+static LI_RT_NET_UNUSED ssize_t read_blocking(int fd, void* buf, size_t n) {
   char* p = (char*)buf;
   size_t off = 0;
   while (off < n) {
@@ -2764,7 +2779,7 @@ static int httpd_proxy_relay_response(int conn, int up) {
   return 0;
 }
 
-static int32_t httpd_proxy_forward(int32_t conn, int32_t slot, int hdr_end, const httpd_req_info_t* req) {
+static LI_RT_NET_UNUSED int32_t httpd_proxy_forward(int32_t conn, int32_t slot, int hdr_end, const httpd_req_info_t* req) {
   int32_t peer_port = httpd_lb_pick_port_for_request(g_slots[slot].buf, hdr_end);
   if (peer_port <= 0) {
     return -1;
@@ -3155,6 +3170,7 @@ static int32_t httpd_slot_find_by_up_fd(int up_fd) {
 }
 
 static void httpd_proxy_clear(int epfd, int32_t slot) {
+  (void)epfd;
   if (slot < 0 || slot >= HTTPD_MAX_CONN) {
     return;
   }
@@ -3296,7 +3312,7 @@ static ssize_t httpd_send_nb(int fd, const char* data, size_t total, size_t* off
   return httpd_send_nb_flags(fd, data, total, off, 0);
 }
 
-static ssize_t httpd_recv_nb(int fd, char* dst, size_t cap, size_t* got) {
+static LI_RT_NET_UNUSED ssize_t httpd_recv_nb(int fd, char* dst, size_t cap, size_t* got) {
   if (*got >= cap) {
     return 1;
   }
@@ -4509,7 +4525,7 @@ static int httpd_proxy_check_stream_policy(int epfd, int32_t slot, int hdr_end, 
   return 0;
 }
 
-static int httpd_proxy_start_async(int epfd, int32_t conn, int32_t slot, int hdr_end, const httpd_req_info_t* req,
+static LI_RT_NET_UNUSED int httpd_proxy_start_async(int epfd, int32_t conn, int32_t slot, int hdr_end, const httpd_req_info_t* req,
                                    int keep) {
   (void)conn;
   int32_t peer_port = httpd_lb_pick_port_for_request(g_slots[slot].buf, hdr_end);
@@ -4677,7 +4693,7 @@ static void httpd_serve_conn_epoll(int epfd, int32_t slot) {
   }
 }
 
-static void httpd_dispatch_epoll_event(int epfd, int listen_fd, struct epoll_event* ev) {
+static LI_RT_NET_UNUSED void httpd_dispatch_epoll_event(int epfd, int listen_fd, struct epoll_event* ev) {
   int fd = ev->data.fd;
   uint64_t eu = ev->data.u64;
   if ((eu & HTTPD_EPOLL_UP_TAG) == HTTPD_EPOLL_UP_TAG) {
@@ -5607,6 +5623,14 @@ int32_t epoll_wait_tagged_spin_i(int32_t epfd, intptr_t events, int32_t max_even
   (void)epfd;
   (void)events;
   (void)max_events;
+  return -1;
+}
+int32_t epoll_wait_tagged_timeout_ms_i(int32_t epfd, intptr_t events, int32_t max_events,
+                                        int32_t timeout_ms) {
+  (void)epfd;
+  (void)events;
+  (void)max_events;
+  (void)timeout_ms;
   return -1;
 }
 int32_t httpd_epoll_register_up_i(int32_t epfd, int32_t up_fd, int32_t slot) {

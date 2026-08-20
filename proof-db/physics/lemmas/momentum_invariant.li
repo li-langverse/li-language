@@ -1,5 +1,8 @@
 # LEM-PHYS-002 | li-tests: three_body_invariants.li
-extern proc total_momentum() -> float
+extern def total_momentum() -> float
+  requires true
+  ensures true
+  decreases 0
 
 def com_stationary() -> unit
   requires true
@@ -14,4 +17,5 @@ def main() -> int
   decreases 0
 =
   return 0
+
 

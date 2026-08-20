@@ -1,30 +1,30 @@
 # M1.5 TLS auto oracle — TOML load + runtime TLS profile selftest (C).
 import http
 
-extern proc li_rt_httpd_tls_enabled() -> int
+extern def li_rt_httpd_tls_enabled() -> int
   requires true
   ensures 0 <= result
   ensures result <= 1
 
-extern proc li_rt_httpd_tls_mode() -> int
+extern def li_rt_httpd_tls_mode() -> int
   requires true
   ensures 0 <= result
   ensures result <= 3
 
-extern proc li_rt_httpd_tls_le_domain_count() -> int
+extern def li_rt_httpd_tls_le_domain_count() -> int
   requires true
   ensures 0 <= result
 
-extern proc li_rt_httpd_tls_renew_before_days() -> int
+extern def li_rt_httpd_tls_renew_before_days() -> int
   requires true
   ensures 0 <= result
 
-extern proc li_rt_httpd_tls_self_signed_dev() -> int
+extern def li_rt_httpd_tls_self_signed_dev() -> int
   requires true
   ensures 0 <= result
   ensures result <= 1
 
-extern proc li_rt_httpd_tls_selftest() -> int
+extern def li_rt_httpd_tls_selftest() -> int
   requires true
   ensures -3 <= result
   ensures result <= 0

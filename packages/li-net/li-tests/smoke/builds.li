@@ -1,4 +1,4 @@
-extern proc tcp_listen(port: int) raises Net -> int
+extern def tcp_listen(port: int) raises Net -> int
   requires 0 < port
   ensures true
   decreases 0

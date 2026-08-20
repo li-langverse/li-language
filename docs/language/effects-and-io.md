@@ -19,7 +19,7 @@ def main() raises IO -> int
   ensures result == 0
   decreases 0
 =
-  echo "hello"
+  print("hello")
   return 0
 ```
 

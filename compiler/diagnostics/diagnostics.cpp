@@ -234,6 +234,31 @@ void print_diagnostics(const DiagnosticBag& bag) {
   }
 }
 
+void render_diagnostics(const DiagnosticBag& bag, std::ostream& out) {
+  if (bag.empty()) {
+    return;
+  }
+  print_lic_banner(out);
+  for (const auto& d : bag.items()) {
+    const std::string code = effective_code(d);
+    std::string label;
+    if (d.severity == DiagnosticSeverity::Error) {
+      label = styled_error_label();
+    } else if (d.severity == DiagnosticSeverity::Warning) {
+      label = styled_warning("warning");
+    } else {
+      label = styled_note_label();
+    }
+    out << styled_dim(d.loc.file) << ':' << styled_accent(std::to_string(d.loc.line))
+        << ':' << styled_accent(std::to_string(d.loc.column)) << ": " << label << " ["
+        << styled_accent(code) << "]: " << d.message
+        << reset_style() << '\n';
+    if (d.hint && !d.hint->empty()) {
+      out << "  " << styled_dim("hint:") << ' ' << *d.hint << reset_style() << '\n';
+    }
+  }
+}
+
 void print_diagnostics_json(const DiagnosticBag& bag, std::ostream& out,
                             std::string_view command) {
   out << "{\"version\":1,\"schema\":\"diagnostic-v1\",\"tool\":\"lic\",\"command\":"

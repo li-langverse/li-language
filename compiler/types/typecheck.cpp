@@ -163,6 +163,89 @@ std::string mangle_method_name(const std::string& type_name, const std::string& 
   return type_name + "_" + method;
 }
 
+// ---- index-helper bounds (G-index-helper) ----
+// An array index may be a call to a helper proc whose `ensures` clauses bound
+// the result to [0, array_size): e.g. `ensures result >= 0 and result < 200`.
+// The caller trusts the helper's contract; the helper's own ensures VC must
+// discharge separately (native engine / Lean).
+
+bool ensure_cmp_lower_bounds_result(const Expr& e) {
+  if (e.kind != Expr::Kind::BinOp || !e.lhs || !e.rhs) {
+    return false;
+  }
+  const bool lhs_result = e.lhs->kind == Expr::Kind::Ident && e.lhs->ident == "result";
+  const bool rhs_result = e.rhs->kind == Expr::Kind::Ident && e.rhs->ident == "result";
+  if (e.bin_op == BinOp::Ge && lhs_result && e.rhs->kind == Expr::Kind::IntLit &&
+      e.rhs->int_value >= 0) {
+    return true;  // result >= L, L >= 0
+  }
+  if (e.bin_op == BinOp::Le && rhs_result && e.lhs->kind == Expr::Kind::IntLit &&
+      e.lhs->int_value >= 0) {
+    return true;  // L <= result, L >= 0
+  }
+  if (e.bin_op == BinOp::Gt && lhs_result && e.rhs->kind == Expr::Kind::IntLit &&
+      e.rhs->int_value >= -1) {
+    return true;  // result > L, L >= -1
+  }
+  if (e.bin_op == BinOp::Lt && rhs_result && e.lhs->kind == Expr::Kind::IntLit &&
+      e.lhs->int_value >= -1) {
+    return true;  // L < result, L >= -1
+  }
+  return false;
+}
+
+bool ensure_cmp_upper_bounds_result(const Expr& e, const std::int64_t size) {
+  if (e.kind != Expr::Kind::BinOp || !e.lhs || !e.rhs) {
+    return false;
+  }
+  const bool lhs_result = e.lhs->kind == Expr::Kind::Ident && e.lhs->ident == "result";
+  const bool rhs_result = e.rhs->kind == Expr::Kind::Ident && e.rhs->ident == "result";
+  if (e.bin_op == BinOp::Lt && lhs_result && e.rhs->kind == Expr::Kind::IntLit &&
+      e.rhs->int_value <= size) {
+    return true;  // result < U, U <= size
+  }
+  if (e.bin_op == BinOp::Le && lhs_result && e.rhs->kind == Expr::Kind::IntLit &&
+      e.rhs->int_value < size) {
+    return true;  // result <= U, U < size
+  }
+  if (e.bin_op == BinOp::Gt && rhs_result && e.lhs->kind == Expr::Kind::IntLit &&
+      e.lhs->int_value <= size) {
+    return true;  // U > result, U <= size
+  }
+  if (e.bin_op == BinOp::Ge && rhs_result && e.lhs->kind == Expr::Kind::IntLit &&
+      e.lhs->int_value < size) {
+    return true;  // U >= result, U < size
+  }
+  return false;
+}
+
+void collect_ensure_index_bounds(const Expr& e, const std::int64_t size, bool* lower_ok,
+                                 bool* upper_ok) {
+  if (e.kind == Expr::Kind::BinOp && e.bin_op == BinOp::And && e.lhs && e.rhs) {
+    collect_ensure_index_bounds(*e.lhs, size, lower_ok, upper_ok);
+    collect_ensure_index_bounds(*e.rhs, size, lower_ok, upper_ok);
+    return;
+  }
+  if (ensure_cmp_lower_bounds_result(e)) {
+    *lower_ok = true;
+  }
+  if (ensure_cmp_upper_bounds_result(e, size)) {
+    *upper_ok = true;
+  }
+}
+
+bool callee_ensures_index_bounds(const ProcDecl& callee, const std::int64_t size) {
+  bool lower_ok = false;
+  bool upper_ok = false;
+  for (const auto& c : callee.contracts) {
+    if (c.kind != ContractKind::Ensures || !c.expr) {
+      continue;
+    }
+    collect_ensure_index_bounds(*c.expr, size, &lower_ok, &upper_ok);
+  }
+  return lower_ok && upper_ok;
+}
+
 struct AliasEntry {
   AliasKind alias_kind = AliasKind::Type;
   std::vector<std::string> type_params;
@@ -181,6 +264,7 @@ struct Ctx {
   std::map<std::string, const ProcDecl*> procs;
   std::map<std::string, TyPtr> locals;
   std::map<std::string, std::int64_t> const_int_locals;
+  std::map<std::string, double> const_float_locals;
   std::set<std::string> assum_nonneg_ints;
   std::map<std::string, TyPtr> type_vars;
   std::set<std::string> refined_index_params;
@@ -217,7 +301,9 @@ struct Ctx {
     };
   }
 
-  ProofFacts proof_facts() const { return ProofFacts{const_int_locals, assum_nonneg_ints}; }
+  ProofFacts proof_facts() const {
+    return ProofFacts{const_int_locals, assum_nonneg_ints, &const_float_locals};
+  }
 
   void report_refinement_violation(const Span& span, const ResolvedRefinement& refinement,
                                    const Expr& value) {
@@ -956,14 +1042,14 @@ struct Ctx {
           (void)type_of(*e.args[0]);
           return make_float();
         }
-        if (e.ident == "echo") {
+        if (e.ident == "print") {
           if (e.args.size() != 1) {
-            diags.error(loc(e.span), "echo expects one argument");
+            diags.error(loc(e.span), "print expects one argument");
             return make_int();
           }
           const TyPtr arg_ty = type_of(*e.args[0]);
           if (arg_ty->kind != TyKind::Int && arg_ty->kind != TyKind::Str) {
-            diags.error(loc(e.span), "echo expects int or str");
+            diags.error(loc(e.span), "print expects int or str");
           }
           return make_int();
         }
@@ -1198,6 +1284,18 @@ struct Ctx {
             diags.error(loc(e.span),
                         "array index must be constant or refinement-typed index");
           }
+        } else if (e.index->kind == Expr::Kind::Call) {
+          // Index helper: `arr[helper(args)]` is safe when the helper's
+          // `ensures` bound the result to [0, array_size) (e.g.
+          // `ensures result >= 0 and result < 200`). The caller trusts the
+          // helper contract; the helper's own ensures VC discharges separately.
+          const auto pit = procs.find(e.index->ident);
+          if (pit == procs.end() ||
+              !callee_ensures_index_bounds(*pit->second, base->array_size)) {
+            diags.error(loc(e.span),
+                        "array index must be constant, refinement-typed, or a call to a "
+                        "helper that ensures the index is in bounds");
+          }
         } else {
           diags.error(loc(e.span),
                       "array index must be constant or refinement-typed index");
@@ -1208,15 +1306,52 @@ struct Ctx {
     return make_int();
   }
 
-  void record_const_int_binding(const std::string& name, const Expr& init) {
+  void record_const_binding(const std::string& name, const Expr& init) {
     if (init.kind == Expr::Kind::IntLit) {
       const_int_locals[name] = init.int_value;
+      return;
+    }
+    if (init.kind == Expr::Kind::FloatLit) {
+      const_float_locals[name] = init.float_value;
       return;
     }
     if (init.kind == Expr::Kind::Ident) {
       const auto it = const_int_locals.find(init.ident);
       if (it != const_int_locals.end()) {
         const_int_locals[name] = it->second;
+      }
+      const auto ft = const_float_locals.find(init.ident);
+      if (ft != const_float_locals.end()) {
+        const_float_locals[name] = ft->second;
+      }
+      return;
+    }
+    if (init.kind == Expr::Kind::Call) {
+      try_fold_call_to_const(name, init, const_int_locals, const_float_locals,
+                             [this](const std::string& n) -> const ProcDecl* {
+                               const auto it = procs.find(n);
+                               return it == procs.end() ? nullptr : it->second;
+                             });
+    }
+  }
+
+  // Record const array-element stores (`a[i] = c`, `a[i][j] = c`) and object
+  // fields (`o.f = c`) for float and int, mirroring the verify-side collector.
+  void record_const_lhs_facts(const Expr& lhs, const Expr& rhs) {
+    if (const auto key = array_index_const_key(lhs)) {
+      if (rhs.kind == Expr::Kind::IntLit) {
+        const_int_locals[*key] = rhs.int_value;
+      } else if (rhs.kind == Expr::Kind::FloatLit) {
+        const_float_locals[*key] = rhs.float_value;
+      }
+      return;
+    }
+    if (lhs.kind == Expr::Kind::FieldAccess) {
+      const auto key = object_field_const_key(lhs);
+      if (key && rhs.kind == Expr::Kind::IntLit) {
+        const_int_locals[*key] = rhs.int_value;
+      } else if (key && rhs.kind == Expr::Kind::FloatLit) {
+        const_float_locals[*key] = rhs.float_value;
       }
     }
   }
@@ -1262,7 +1397,7 @@ struct Ctx {
     if (call.kind != Expr::Kind::Call) {
       return;
     }
-    if (call.ident == "echo" || call.ident == "sum" || call.ident == "dot" ||
+    if (call.ident == "print" || call.ident == "sum" || call.ident == "dot" ||
         call.ident == "norm" || call.ident == "axpy" ||
         call.ident == "disjoint_elem" || call.ident == "disjoint_row" ||
         call.ident == "disjoint_slice" || call.ident == "row_ok" ||
@@ -1332,7 +1467,7 @@ struct Ctx {
           }
         }
         check_value_matches_refinement(s.var_type, *s.init, s.span);
-        record_const_int_binding(s.var_name, *s.init);
+        record_const_binding(s.var_name, *s.init);
       }
       locals[s.var_name] = declared;
       return;
@@ -1394,6 +1529,22 @@ struct Ctx {
         type_of(*s.cond);
         note_nonneg_assumption_from_cond(*s.cond, assum_nonneg_ints);
       }
+      // Unroll simple counter loops so `a[i] = 1.0` records per-element const
+      // stores for downstream requires checks (mirrors the verify collector).
+      std::string loop_i;
+      std::int64_t loop_s = 0;
+      std::int64_t loop_e = 0;
+      if (simple_counter_loop(s, const_int_locals, &loop_i, &loop_s, &loop_e)) {
+        for (std::int64_t k = loop_s; k < loop_e; ++k) {
+          for (const auto& body_st : s.while_body) {
+            if (body_st.kind == Stmt::Kind::Assign && body_st.init && body_st.expr) {
+              const auto lhs = subst_ident_lit(*body_st.init, loop_i, k);
+              const auto rhs = subst_ident_lit(*body_st.expr, loop_i, k);
+              record_const_lhs_facts(*lhs, *rhs);
+            }
+          }
+        }
+      }
       for (const auto& inner : s.while_body) {
         check_stmt(inner);
       }
@@ -1453,14 +1604,9 @@ struct Ctx {
     }
     if (s.kind == Stmt::Kind::Assign && s.init && s.expr) {
       type_of(*s.expr);
+      record_const_lhs_facts(*s.init, *s.expr);
       if (s.init->kind == Expr::Kind::Ident) {
-        record_const_int_binding(s.init->ident, *s.expr);
-      }
-      if (s.init->kind == Expr::Kind::FieldAccess) {
-        const auto key = object_field_const_key(*s.init);
-        if (key && s.expr->kind == Expr::Kind::IntLit) {
-          const_int_locals[*key] = s.expr->int_value;
-        }
+        record_const_binding(s.init->ident, *s.expr);
       }
       return;
     }
@@ -1567,7 +1713,7 @@ struct Ctx {
           "`ensures true` is not allowed when the procedure returns a value — the postcondition "
           "must relate `result` to the computation.",
           "Use `ensures result == <expr>` when the return is an expression, or a property such as "
-          "`ensures result >= 0.0`. Opaque `extern proc` may still use `ensures true`.");
+          "`ensures result >= 0.0`. Opaque `extern def` may still use `ensures true`.");
       return;
     }
   }
@@ -1588,12 +1734,12 @@ struct Ctx {
     if (p.is_extern) {
       if (!has_requires) {
         diag_error(diags, loc(p.span), ErrorCode::E0301,
-                   "Every `extern proc` must declare what must be true before it runs (`requires`).",
+                   "Every `extern def` must declare what must be true before it runs (`requires`).",
                    "Add a `requires` clause on the line above `=`.");
       }
       if (!has_ensures) {
         diag_error(diags, loc(p.span), ErrorCode::E0302,
-                   "Every `extern proc` must declare what it guarantees on exit (`ensures`).",
+                   "Every `extern def` must declare what it guarantees on exit (`ensures`).",
                    "Add an `ensures` clause (often `ensures true` for opaque runtime calls).");
       }
       in_async = prev_async;
@@ -1616,6 +1762,7 @@ struct Ctx {
     check_override_method(p);
     locals.clear();
     const_int_locals.clear();
+    const_float_locals.clear();
     assum_nonneg_ints.clear();
     type_vars.clear();
     refined_index_params.clear();
@@ -1640,6 +1787,35 @@ struct Ctx {
     current_ret_ty.reset();
     in_async = prev_async;
   }
+
+  /// A theorem/lemma/axiom proposition is a bool expression over its params.
+  /// Layer 1 checks the proposition is well-typed; proof discharge is Layer 2.
+  void check_theorem(const TheoremDecl& t) {
+    locals.clear();
+    const_int_locals.clear();
+    const_float_locals.clear();
+    type_vars.clear();
+    for (const auto& param : t.params) {
+      const TyPtr pt = resolve_type_expr(param.type);
+      locals[param.name] = pt;
+    }
+    if (!t.proposition) {
+      diag_error(diags, loc(t.span), ErrorCode::E0505,
+                 "A `" + std::string(t.is_axiom ? "axiom" : (t.is_lemma ? "lemma" : "theorem")) +
+                     "` must declare a proposition after ':'.",
+                 "Write e.g. `theorem add_comm(a: float, b: float) : a + b == b + a`.");
+      return;
+    }
+    const TyPtr prop_ty = type_of(*t.proposition);
+    if (prop_ty->kind != TyKind::Bool) {
+      diag_error(diags, loc(t.proposition->span), ErrorCode::E0505,
+                 "The proposition of `" + t.name +
+                     "` is not a bool expression — theorems must state a proposition that can "
+                     "be proved.",
+                 "Use comparisons, `and`/`or`/`not`, equality, and `->` for implication; the "
+                 "whole proposition must typecheck as bool.");
+    }
+  }
 };
 
 }  // namespace
@@ -1647,7 +1823,7 @@ struct Ctx {
 TypecheckResult typecheck_module(const Module& module) {
   TypecheckResult result;
   DiagnosticBag& diags = result.diagnostics;
-  Ctx ctx{{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, 0, false, std::nullopt, diags, "module"};
+  Ctx ctx{{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, 0, false, std::nullopt, diags, "module"};
   for (const auto& proc : module.procs) {
     ctx.procs[proc.name] = &proc;
   }
@@ -1667,6 +1843,9 @@ TypecheckResult typecheck_module(const Module& module) {
   }
   for (const auto& proc : module.procs) {
     ctx.check_proc(proc);
+  }
+  for (const auto& thm : module.theorems) {
+    ctx.check_theorem(thm);
   }
   borrow_check_module(module, result.diagnostics);
   effects_check_module(module, result.diagnostics);

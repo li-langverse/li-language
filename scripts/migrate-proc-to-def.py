@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One-shot: rewrite Li sources from proc to def (keeps extern proc)."""
+"""One-shot: rewrite Li sources from proc to def (extern proc becomes extern def)."""
 from __future__ import annotations
 
 import re
@@ -8,12 +8,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SKIP = {"build", ".git", "node_modules"}
+# Negative syntax tests intentionally keep `proc` / `extern proc`; the compiler suite
+# asserts they are rejected, so the migrator must never touch them.
+SKIP_DIRS = {"li-tests"}
 
 
 def migrate_line(line: str) -> str:
-    if "extern proc" in line:
-        return line
     line = re.sub(r"\basync proc\b", "async def", line)
+    line = re.sub(r"\bextern proc\b", "extern def", line)
     if re.match(r"^(\s*)proc\b", line):
         return re.sub(r"^(\s*)proc\b", r"\1def", line, count=1)
     return line
@@ -33,6 +35,8 @@ def main() -> int:
     changed = 0
     for path in ROOT.rglob("*.li"):
         if any(part in SKIP for part in path.parts):
+            continue
+        if any(part in SKIP_DIRS for part in path.parts):
             continue
         if migrate_file(path):
             changed += 1

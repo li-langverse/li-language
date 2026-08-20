@@ -46,6 +46,10 @@ class DiagnosticBag {
 
 void print_diagnostics(const DiagnosticBag& bag);
 
+/// Render diagnostics (banner + items) to a stream instead of stderr. Used by
+/// `lic check` to surface advisory warnings/notes on success and cache them.
+void render_diagnostics(const DiagnosticBag& bag, std::ostream& out);
+
 void print_diagnostics_json(const DiagnosticBag& bag, std::ostream& out,
                             std::string_view command = "check");
 

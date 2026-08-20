@@ -33,7 +33,7 @@ bool is_prelude_type_name(const std::string_view name) {
 }
 
 bool is_prelude_proc_name(const std::string_view name) {
-  return in_set(name, {"echo", "sum", "dot", "norm", "axpy", "disjoint_elem", "disjoint_row",
+  return in_set(name, {"print", "sum", "dot", "norm", "axpy", "disjoint_elem", "disjoint_row",
                        "disjoint_slice", "row_ok", nullptr});
 }
 
@@ -70,6 +70,13 @@ void check_duplicate_definitions(const Module& module, const std::string& file,
       report(proc.span, "duplicate_definition: " + proc.name);
     }
     seen_procs.insert(proc.name);
+  }
+  // Theorems/axioms/lemmas share the top-level symbol space with procs.
+  for (const auto& thm : module.theorems) {
+    if (seen_procs.count(thm.name)) {
+      report(thm.span, "duplicate_definition: " + thm.name);
+    }
+    seen_procs.insert(thm.name);
   }
 }
 

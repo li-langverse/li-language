@@ -91,9 +91,9 @@ grid[i] = value
 
 Index assignment on arrays requires valid indices.
 
-## `echo` and expressions
+## `print` and expressions
 
-`echo` is a built-in for simple output. General expressions include arithmetic, calls, and indexing.
+`print` is a built-in for simple output. General expressions include arithmetic, calls, and indexing.
 
 ## `cast` with proof
 

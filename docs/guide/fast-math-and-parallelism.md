@@ -25,6 +25,23 @@ You do **not** install NumPy, OpenMP bindings, or a thread library yourself — 
 
 Tier 1 benchmarks use this style — see `benchmarks/tier1_micro/simd_dot/li/main.li` and `matmul_naive/li/main.li` (no `__li_simd_*` in user sources).
 
+### Closed dot certificate
+
+The fixed-size float dot is a finished certificate: `li-tests/contracts_verify/linalg_dot4_float_closed.li` proves all three forms with no open proof obligations —
+
+```li
+def dot4_float(x: array[4, float], y: array[4, float]) -> float
+  requires true
+  ensures result == x[0] * y[0] + x[1] * y[1] + x[2] * y[2] + x[3] * y[3]
+  decreases 0
+=
+  return x @ y
+```
+
+1. **Closed form** — `return x @ y` is witnessed equal to the expanded sum.
+2. **Handwritten loop** — `acc = acc + x[i] * y[i]` with `while i < 4` is witnessed equal to the same sum (any parameter/accumulator/index names).
+3. **Concrete value** — filling `a` with `1.0` and `b` with `2.0`, then `s = dot4_float(a, b)`, folds to `s == 8.0`: the counter loop is unrolled so `a[i] = 1.0` stores are tracked per element, and the callee `ensures` is constant-folded at the call site.
+
 ---
 
 ## Parallel loops

@@ -33,6 +33,9 @@ TokenKind Lexer::keyword_kind(std::string_view text) const {
   if (text == "proc") return TokenKind::KwProc;
   if (text == "def") return TokenKind::KwDef;
   if (text == "type") return TokenKind::KwType;
+  if (text == "axiom") return TokenKind::KwAxiom;
+  if (text == "theorem") return TokenKind::KwTheorem;
+  if (text == "lemma") return TokenKind::KwLemma;
   if (text == "private") return TokenKind::KwPrivate;
   if (text == "public") return TokenKind::KwPublic;
   if (text == "import") return TokenKind::KwImport;
@@ -50,7 +53,6 @@ TokenKind Lexer::keyword_kind(std::string_view text) const {
   if (text == "error") return TokenKind::KwError;
   if (text == "return") return TokenKind::KwReturn;
   if (text == "raises") return TokenKind::KwRaises;
-  if (text == "echo") return TokenKind::KwEcho;
   if (text == "extern") return TokenKind::KwExtern;
   if (text == "async") return TokenKind::KwAsync;
   if (text == "await") return TokenKind::KwAwait;

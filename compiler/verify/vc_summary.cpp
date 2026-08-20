@@ -48,6 +48,15 @@ VcSummary summarize_vcs(const Module& module) {
     count_contracts(proc.contracts, out);
     walk_stmts(proc.body, out);
   }
+  for (const auto& thm : module.theorems) {
+    if (thm.is_axiom) {
+      ++out.axiom_count;
+    } else if (thm.is_lemma) {
+      ++out.lemma_count;
+    } else {
+      ++out.theorem_count;
+    }
+  }
   return out;
 }
 

@@ -481,7 +481,9 @@ bool resolve_imports(Module& out, const std::string& file_path, DiagnosticBag& d
       continue;
     }
   }
-  return diags.empty();
+  // Warnings from earlier frontend passes (e.g. policy W0403) must not fail
+  // import resolution — only errors do.
+  return !diags.has_errors();
 }
 
 }  // namespace li

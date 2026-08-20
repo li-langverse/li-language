@@ -1,6 +1,6 @@
 # Li three_body — driver over shared C reference kernel.
 
-extern proc li_three_body_kernel()
+extern def li_three_body_kernel()
   requires true
   ensures true
 

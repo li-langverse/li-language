@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Fail if any .li file uses bare proc (extern proc and decorator def are allowed).
+# Fail if any .li file uses proc (def-only Li; trusted FFI is extern def in seam.li).
 set -euo pipefail
 
 ROOT="${1:-.}"
 
-# Negative compile tests intentionally contain bare `proc`; compiler suite covers them.
+# Negative compile tests intentionally contain bare `proc` / `extern proc`; compiler suite covers them.
 should_skip() {
   case "$1" in
     *"/li-tests/"*) return 0 ;;
@@ -33,6 +33,9 @@ scan_file() {
     elif [[ "$line" =~ async[[:space:]]+proc[[:space:]] ]]; then
       echo "check-li-def-syntax: ${f}:${n}: $line (use async def)"
       bad=1
+    elif [[ "$line" =~ ^[[:space:]]*extern[[:space:]]+proc[[:space:]] ]]; then
+      echo "check-li-def-syntax: ${f}:${n}: $line (use extern def)"
+      bad=1
     fi
   done < <(grep -n '' "$f" 2>/dev/null || true)
 }
@@ -50,6 +53,12 @@ if command -v rg >/dev/null 2>&1; then
     echo "check-li-def-syntax: $hit (use async def)"
     bad=1
   done < <(rg -n '\basync proc\b' --glob '*.li' "$ROOT" 2>/dev/null || true)
+  while IFS= read -r hit; do
+    [[ -z "$hit" ]] && continue
+    should_skip "$(file_path_from_rg_hit "$hit")" && continue
+    echo "check-li-def-syntax: $hit (use extern def)"
+    bad=1
+  done < <(rg -n '^[[:space:]]*extern[[:space:]]+proc\b' --glob '*.li' "$ROOT" 2>/dev/null || true)
 else
   while IFS= read -r -d '' f; do
     should_skip "$f" && continue
@@ -58,7 +67,7 @@ else
 fi
 
 if [[ "$bad" -ne 0 ]]; then
-  echo "check-li-def-syntax: use 'def' for Li procedures; only 'extern proc' may use proc" >&2
+  echo "check-li-def-syntax: use 'def' for Li procedures; trusted FFI is 'extern def'" >&2
   exit 1
 fi
 

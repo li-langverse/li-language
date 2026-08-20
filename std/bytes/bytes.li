@@ -10,29 +10,29 @@ type Reader = object
 type Writer = object
   public len: int
 
-extern proc bytes_len(b: var bytes) raises Alloc, IO -> int
+extern def bytes_len(b: var bytes) raises Alloc, IO -> int
   requires true
   ensures 0 <= result
   decreases 0
 
-extern proc bytes_slice(b: var bytes, off: int, n: int) raises Alloc, IO -> StringView
+extern def bytes_slice(b: var bytes, off: int, n: int) raises Alloc, IO -> StringView
   requires 0 <= off
   requires 0 <= n
   ensures stringview_len(result) == n
   decreases 0
 
-extern proc bytes_append(a: var bytes, b: var bytes) raises Alloc, IO -> bytes
+extern def bytes_append(a: var bytes, b: var bytes) raises Alloc, IO -> bytes
   requires true
   ensures bytes_len(result) >= 0
   decreases 0
 
-extern proc bytes_byte_at(b: var bytes, off: int) raises IO -> int
+extern def bytes_byte_at(b: var bytes, off: int) raises IO -> int
   requires 0 <= off
   ensures 0 <= result
   ensures result <= 255
   decreases 0
 
-extern proc bytes_push_byte(buf: var bytes, byte: int) raises Alloc, IO -> bytes
+extern def bytes_push_byte(buf: var bytes, byte: int) raises Alloc, IO -> bytes
   requires 0 <= byte
   requires byte <= 255
   ensures bytes_len(result) >= bytes_len(buf)

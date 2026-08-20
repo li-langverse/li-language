@@ -1,4 +1,4 @@
-extern proc li_md_stress_cli_all() -> int
+extern def li_md_stress_cli_all() -> int
   requires true
   ensures true
 

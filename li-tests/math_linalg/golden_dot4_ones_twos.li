@@ -1,6 +1,6 @@
 # Small golden: dot([1,1,1,1], [2,2,2,2]) == 8.0 (spec in reference.py / li-math).
 
-extern proc li_rt_volatile_sink_f64(v: float) -> unit
+extern def li_rt_volatile_sink_f64(v: float) -> unit
   requires true
   ensures true
 

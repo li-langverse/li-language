@@ -3,6 +3,7 @@
 #include "li/ast.hpp"
 #include "li/call_requires.hpp"
 #include "li/numeric_types.hpp"
+#include "li/vc_prove.hpp"
 #include "li/vc_summary.hpp"
 #include "li/vc_witness.hpp"
 
@@ -219,6 +220,19 @@ std::optional<std::string> expr_to_lean(const Expr& e, const VcCtx& ctx) {
       if (!e.lhs || !e.rhs) {
         return std::nullopt;
       }
+      // For `-> unit` procs the only result is `()`, so `result == <lit>` must
+      // emit a Unit literal rather than the int literal (Lean would fail to
+      // synthesize `OfNat Unit 0`). Unit is a subsingleton, so this stays a
+      // valid (open) obligation instead of a typeclass error.
+      if ((e.bin_op == BinOp::Eq || e.bin_op == BinOp::Ne) && ctx.proc &&
+          ctx.proc->ret_type && ctx.proc->ret_type->name == "unit" && ctx.in_ensures) {
+        if (e.lhs->kind == Expr::Kind::Ident && e.lhs->ident == "result") {
+          return "(result = ())";
+        }
+        if (e.rhs->kind == Expr::Kind::Ident && e.rhs->ident == "result") {
+          return "(() = result)";
+        }
+      }
       const auto l = expr_to_lean(*e.lhs, ctx);
       const auto r = expr_to_lean(*e.rhs, ctx);
       if (!l || !r) {
@@ -291,7 +305,8 @@ const Expr* ensures_rhs_eq_result(const Expr& e) {
 void emit_contract_def(std::ostream& out, const Module& module, const ProcDecl& proc,
                        const char* kind, std::size_t idx, const Contract& c,
                        const std::string& vc_suffix = "",
-                       const std::string* loop_iter = nullptr) {
+                       const std::string* loop_iter = nullptr,
+                       std::size_t* native_closed = nullptr) {
   const std::string sec = proc_section(proc.name) + vc_suffix;
   const std::string name = "vc_" + sec + '_' + kind + '_' + std::to_string(idx);
   const auto emit_formals = [&](bool include_result) {
@@ -346,7 +361,7 @@ void emit_contract_def(std::ostream& out, const Module& module, const ProcDecl& 
   ctx.in_ensures = (c.kind == ContractKind::Ensures);
 
   std::string prop = "True";
-  const CallerProofFacts caller_facts = collect_caller_proof_facts(proc);
+  const CallerProofFacts caller_facts = collect_caller_proof_facts(proc, &module);
   bool mat2_discharge_theorem = false;
   bool sqrt_discharge_theorem = false;
   if (c.kind == ContractKind::Ensures && c.expr) {
@@ -358,7 +373,15 @@ void emit_contract_def(std::ostream& out, const Module& module, const ProcDecl& 
   }
   const bool witnessed =
       contract_witnessed_trivial(proc, c, &module, &caller_facts);
-  if (witnessed && !mat2_discharge_theorem && !sqrt_discharge_theorem) {
+  bool natively_closed = false;
+  if (!witnessed && c.expr &&
+      discharge_prop_natively(*c.expr) == NativeDischarge::Proved) {
+    natively_closed = true;
+    if (native_closed != nullptr) {
+      ++*native_closed;
+    }
+  }
+  if ((witnessed || natively_closed) && !mat2_discharge_theorem && !sqrt_discharge_theorem) {
     prop = "True";
   } else if (mat2_discharge_theorem && c.kind == ContractKind::Ensures) {
     prop = "Li.Discharge.mat2_at2_float_spec";
@@ -383,7 +406,10 @@ void emit_contract_def(std::ostream& out, const Module& module, const ProcDecl& 
   const bool semantic_ensures =
       (mat2_discharge_theorem || sqrt_discharge_theorem) && c.kind == ContractKind::Ensures;
   out << "def " << name;
-  emit_formals(!semantic_ensures);
+  // The sqrt abs lemma's prop references `result` directly, so its def binds
+  // the return value even though it is discharged semantically (mat2 embeds
+  // the result inside the spec call instead and stays param-only).
+  emit_formals(!semantic_ensures || sqrt_discharge_theorem);
   out << " : Prop := " << prop << '\n';
 
   if (prop == "True" && witnessed && c.kind == ContractKind::Ensures) {
@@ -396,6 +422,8 @@ void emit_contract_def(std::ostream& out, const Module& module, const ProcDecl& 
       const Expr* rhs = ensures_rhs_eq_result(*c.expr);
       if (rhs != nullptr && witness_dot4_prelude_call(*ret, *rhs)) {
         out << "/-! Phase 2f: prelude dot() return witness -/\n";
+      } else if (rhs != nullptr && witness_dot4_matmul(*ret, *rhs)) {
+        out << "/-! Phase 2f: array `@` dot return witness -/\n";
       } else if (ctx.proc != nullptr &&
                  witness_dot4_int_loop(*ctx.proc, *rhs)) {
         out << "/-! Phase 2f: fixed-bound dot loop witness (4 iterations) -/\n";
@@ -417,16 +445,11 @@ void emit_contract_def(std::ostream& out, const Module& module, const ProcDecl& 
     }
     out << '\n';
   } else if (sqrt_discharge_theorem && c.kind == ContractKind::Ensures) {
-    const std::string req_name = "vc_" + sec + "_requires_0";
-    out << "theorem " << name << "_proved";
-    emit_formals(false);
-    out << " : " << name;
-    emit_args(false);
-    out << " (hreq : " << req_name;
-    for (const auto& p : proc.params) { out << ' ' << lean_ident(p.name); }
-    out << ") := Li.Discharge.sqrt_open_bound_spec_proved";
-    for (const auto& p : proc.params) { out << ' ' << lean_ident(p.name); }
-    out << " hreq\n";
+    // Intentional open VC: the abs float lemma needs Float lemmas that have
+    // not landed, so the ensures def stays an unproved obligation. Emitting a
+    // valid def (result bound above) keeps AutoVC buildable while
+    // check-autovc-open-goals.sh reports it as still open.
+    out << "/-! sqrt abs VC intentionally open (Float lemmas pending); def is valid Lean -/\n";
   } else if (prop == "True") {
     out << "theorem " << name << "_proved";
     emit_formals(true);
@@ -481,7 +504,7 @@ void append_call_site_vc_args(std::ostream& out, const ProcDecl& caller,
 void emit_requires_vcs_for_call(std::ostream& out, const Module& module, const ProcDecl& caller,
                                 const ProcDecl& callee, std::size_t call_idx,
                                 const std::vector<std::unique_ptr<Expr>>& args,
-                                const ProofFacts& facts) {
+                                const ProofFacts& facts, std::size_t* native_closed = nullptr) {
   std::vector<std::string> param_names;
   for (const auto& p : callee.params) {
     param_names.push_back(p.name);
@@ -495,12 +518,19 @@ void emit_requires_vcs_for_call(std::ostream& out, const Module& module, const P
                              std::to_string(call_idx) + '_' + proc_section(callee.name) +
                              "_requires_" + std::to_string(req_idx++);
     const auto sub = substitute_call_params(*rc.expr, param_names, args);
-    const auto folded = fold_const_int_locals(*sub, facts.const_int_locals);
+    const auto folded = fold_facts_expr(*sub, facts);
     std::string prop = "True";
     const bool witnessed =
         expr_statically_true(*folded) || folded_discharged_by_proof_facts(*folded, facts);
+    bool natively_closed = false;
+    if (!witnessed && discharge_prop_natively(*folded) == NativeDischarge::Proved) {
+      natively_closed = true;
+      if (native_closed != nullptr) {
+        ++*native_closed;
+      }
+    }
     VcCtx ctx;
-    if (witnessed) {
+    if (witnessed || natively_closed) {
       prop = "True";
     } else if (auto lean = expr_to_lean(*folded, ctx)) {
       prop = *lean;
@@ -511,13 +541,13 @@ void emit_requires_vcs_for_call(std::ostream& out, const Module& module, const P
           << call_idx << " -/\n";
     }
     std::set<std::string> ref_idents;
-    if (!witnessed) {
+    if (!witnessed && !natively_closed) {
       collect_idents_in_expr(*folded, ref_idents);
     }
     out << "def " << name;
     append_call_site_vc_formals(out, module, caller, ref_idents);
     out << " : Prop := " << prop << '\n';
-    if (witnessed) {
+    if (witnessed || natively_closed) {
       out << "theorem " << name << "_proved";
       append_call_site_vc_formals(out, module, caller, ref_idents);
       out << " : " << name;
@@ -527,8 +557,9 @@ void emit_requires_vcs_for_call(std::ostream& out, const Module& module, const P
   }
 }
 
-void emit_call_site_requires(std::ostream& out, const Module& module, const ProcDecl& caller) {
-  const CallerProofFacts caller_facts = collect_caller_proof_facts(caller);
+void emit_call_site_requires(std::ostream& out, const Module& module, const ProcDecl& caller,
+                             std::size_t* native_closed = nullptr) {
+  const CallerProofFacts caller_facts = collect_caller_proof_facts(caller, &module);
   const ProofFacts facts = caller_facts.view();
   std::vector<const Expr*> calls;
   collect_calls_in_stmts(caller.body, calls);
@@ -566,8 +597,16 @@ void emit_call_site_requires(std::ostream& out, const Module& module, const Proc
       const bool witnessed =
           check_refinement_argument(*refinement, *call->args[p], facts) ==
               RequiresCheckResult::Satisfied;
-      const auto folded = fold_const_int_locals(*sub, facts.const_int_locals);
+      const auto folded = fold_facts_expr(*sub, facts);
       out << "/-! P-refine folded: " << expr_to_user_string(*folded) << " -/\n";
+      bool natively_closed = false;
+      if (!witnessed && discharge_prop_natively(*folded) == NativeDischarge::Proved) {
+        natively_closed = true;
+        if (native_closed != nullptr) {
+          ++*native_closed;
+        }
+      }
+      const bool closed = witnessed || natively_closed;
       VcCtx ctx;
       std::string prop = "True";
       bool refinement_discharge = false;
@@ -584,9 +623,15 @@ void emit_call_site_requires(std::ostream& out, const Module& module, const Proc
           }
         }
       }
-      if (lit_nonneg && witnessed) {
-        prop = "Li.Discharge.refinement_nonneg_spec " + std::to_string(*lit_nonneg);
-        refinement_discharge = true;
+      if (closed) {
+        // The obligation is discharged: emit a literal True goal (the old code
+        // left the unfolded predicate, so `:= trivial` was ill-typed in Lean).
+        if (lit_nonneg && witnessed) {
+          prop = "Li.Discharge.refinement_nonneg_spec " + std::to_string(*lit_nonneg);
+          refinement_discharge = true;
+        } else {
+          prop = "True";
+        }
       } else if (auto lean = expr_to_lean(*folded, ctx)) {
         prop = *lean;
       } else if (folded->kind == Expr::Kind::BinOp && folded->lhs && folded->rhs) {
@@ -603,11 +648,13 @@ void emit_call_site_requires(std::ostream& out, const Module& module, const Proc
             << "' at call " << call_idx << " -/\n";
       }
       std::set<std::string> ref_idents;
-      collect_idents_in_expr(*sub, ref_idents);
+      if (!closed) {
+        collect_idents_in_expr(*sub, ref_idents);
+      }
       out << "def " << name;
       append_call_site_vc_formals(out, module, caller, ref_idents);
       out << " : Prop := " << prop << '\n';
-      if (witnessed) {
+      if (closed) {
         out << "theorem " << name << "_proved";
         append_call_site_vc_formals(out, module, caller, ref_idents);
         out << " : " << name;
@@ -620,7 +667,8 @@ void emit_call_site_requires(std::ostream& out, const Module& module, const Proc
         }
       }
     }
-    emit_requires_vcs_for_call(out, module, caller, *callee, call_idx, call->args, facts);
+    emit_requires_vcs_for_call(out, module, caller, *callee, call_idx, call->args, facts,
+                               native_closed);
     ++call_idx;
   }
   std::vector<const Expr*> methods;
@@ -639,7 +687,8 @@ void emit_call_site_requires(std::ostream& out, const Module& module, const Proc
       continue;
     }
     const auto args = method_call_arg_list(*mc->base, mc->args);
-    emit_requires_vcs_for_call(out, module, caller, *callee, call_idx, args, facts);
+    emit_requires_vcs_for_call(out, module, caller, *callee, call_idx, args, facts,
+                               native_closed);
     ++call_idx;
   }
 }
@@ -647,7 +696,8 @@ void emit_call_site_requires(std::ostream& out, const Module& module, const Proc
 void walk_contracts(std::ostream& out, const Module& module, const ProcDecl& proc,
                     const std::vector<Contract>& contracts,
                     const std::string& vc_suffix = "",
-                    const std::string* loop_iter = nullptr) {
+                    const std::string* loop_iter = nullptr,
+                    std::size_t* native_closed = nullptr) {
   std::size_t req = 0;
   std::size_t ens = 0;
   std::size_t dec = 0;
@@ -655,19 +705,24 @@ void walk_contracts(std::ostream& out, const Module& module, const ProcDecl& pro
   for (const auto& c : contracts) {
     switch (c.kind) {
       case ContractKind::Requires:
-        emit_contract_def(out, module, proc, "requires", req++, c, vc_suffix, loop_iter);
+        emit_contract_def(out, module, proc, "requires", req++, c, vc_suffix, loop_iter,
+                          native_closed);
         break;
       case ContractKind::Ensures:
-        emit_contract_def(out, module, proc, "ensures", ens++, c, vc_suffix, loop_iter);
+        emit_contract_def(out, module, proc, "ensures", ens++, c, vc_suffix, loop_iter,
+                          native_closed);
         break;
       case ContractKind::Decreases:
-        emit_contract_def(out, module, proc, "decreases", dec++, c, vc_suffix, loop_iter);
+        emit_contract_def(out, module, proc, "decreases", dec++, c, vc_suffix, loop_iter,
+                          native_closed);
         break;
       case ContractKind::Invariant:
-        emit_contract_def(out, module, proc, "invariant", inv++, c, vc_suffix, loop_iter);
+        emit_contract_def(out, module, proc, "invariant", inv++, c, vc_suffix, loop_iter,
+                          native_closed);
         break;
       case ContractKind::ProbEnsures:
-        emit_contract_def(out, module, proc, "prob_ensures", ens++, c, vc_suffix, loop_iter);
+        emit_contract_def(out, module, proc, "prob_ensures", ens++, c, vc_suffix, loop_iter,
+                          native_closed);
         break;
     }
   }
@@ -675,7 +730,8 @@ void walk_contracts(std::ostream& out, const Module& module, const ProcDecl& pro
 
 }  // namespace
 
-bool write_vcs_lean(const Module& module, const std::string& path, std::string* err) {
+bool write_vcs_lean(const Module& module, const std::string& path, std::string* err,
+                    std::size_t* native_closed) {
   std::ofstream out(path);
   if (!out) {
     if (err) {
@@ -690,16 +746,16 @@ bool write_vcs_lean(const Module& module, const std::string& path, std::string* 
       continue;
     }
     out << "namespace " << proc_section(proc.name) << "\n\n";
-    walk_contracts(out, module, proc, proc.contracts);
+    walk_contracts(out, module, proc, proc.contracts, "", nullptr, native_closed);
     std::size_t par_idx = 0;
     for (const auto& stmt : proc.body) {
       if (stmt.kind == Stmt::Kind::ParallelFor && !stmt.par_contracts.empty()) {
         const std::string suffix = "_par" + std::to_string(par_idx++);
         walk_contracts(out, module, proc, stmt.par_contracts, suffix,
-                       stmt.par_iter.empty() ? nullptr : &stmt.par_iter);
+                       stmt.par_iter.empty() ? nullptr : &stmt.par_iter, native_closed);
       }
     }
-    emit_call_site_requires(out, module, proc);
+    emit_call_site_requires(out, module, proc, native_closed);
     out << "\nend " << proc_section(proc.name) << "\n\n";
   }
   out << "end AutoVC\n";

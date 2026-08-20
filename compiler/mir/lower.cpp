@@ -371,6 +371,11 @@ bool is_arith_binop(BinOp op) {
          op == BinOp::Mod || op == BinOp::FloorDiv || op == BinOp::Pow;
 }
 
+bool is_cmp_binop(BinOp op) {
+  return op == BinOp::Lt || op == BinOp::Le || op == BinOp::Gt || op == BinOp::Ge ||
+         op == BinOp::Eq || op == BinOp::Ne;
+}
+
 bool try_emit_fma_float_assign(const Expr& e, const std::string& dest,
                                std::vector<MirInsn>& out) {
   if (e.kind != Expr::Kind::BinOp || e.bin_op != BinOp::Add || !e.lhs || !e.rhs) {
@@ -529,7 +534,41 @@ bool is_float_expr(const Expr& e, const std::unordered_set<std::string>& float_n
       return float_names.count(e.ident) > 0;
     case Expr::Kind::FieldAccess: {
       const std::string s = mir_field_slot_for_expr(e);
-      return !s.empty() && float_names.count(s) > 0;
+      if (!s.empty() && float_names.count(s) > 0) {
+        return true;
+      }
+      // Object array fields: `o.f[i]` reads a float element when the slot is
+      // registered as a float array.
+      std::int64_t n = 0;
+      return !s.empty() && float_array_slot_n(s, &n);
+    }
+    case Expr::Kind::Index: {
+      // `a[i]` reads a float element when `a` is a float array (or a float
+      // matrix). Nested indices (`m[i][j]`) resolve through the base.
+      if (!e.base) {
+        return false;
+      }
+      if (e.base->kind == Expr::Kind::Ident) {
+        std::int64_t n = 0;
+        if (float_array_slot_n(e.base->ident, &n)) {
+          return true;
+        }
+        if (g_arr_ctx && g_arr_ctx->matrix_names &&
+            g_arr_ctx->matrix_names->count(e.base->ident) > 0) {
+          return true;
+        }
+        return false;
+      }
+      if (e.base->kind == Expr::Kind::FieldAccess) {
+        const std::string s = mir_field_slot_for_expr(*e.base);
+        std::int64_t n = 0;
+        return !s.empty() && float_array_slot_n(s, &n);
+      }
+      if (e.base->kind == Expr::Kind::Index) {
+        // 2D float matrix: the row `m[i]` is itself a float array.
+        return is_float_expr(*e.base, float_names);
+      }
+      return false;
     }
     case Expr::Kind::BinOp:
       if (!is_arith_binop(e.bin_op)) {
@@ -854,7 +893,7 @@ std::string mir_field_slot_for_expr(const Expr& e) {
 
 void append_mir_params_for_object_type(const Module& module, const TypeExpr& te,
                                        const std::string& path_prefix,
-                                       std::vector<MirParam>& out_params) {
+                                       std::vector<MirParam>& out_params, bool is_var) {
   const TypeAlias* ta = object_alias_for_named_type(module, te);
   if (!ta) {
     return;
@@ -865,7 +904,7 @@ void append_mir_params_for_object_type(const Module& module, const TypeExpr& te,
     }
     const std::string sub = path_prefix + "_" + fld.name;
     if (object_alias_for_named_type(module, *fld.type)) {
-      append_mir_params_for_object_type(module, *fld.type, sub, out_params);
+      append_mir_params_for_object_type(module, *fld.type, sub, out_params, is_var);
     } else {
       const TypeExpr* ut = unwrap_refinement_type(fld.type.get());
       if (!ut) {
@@ -881,6 +920,7 @@ void append_mir_params_for_object_type(const Module& module, const TypeExpr& te,
             mp.name = sub;
             mp.is_float = iflt;
             mp.fixed_array_elems = ut->array_size;
+            mp.is_var = is_var;
             out_params.push_back(std::move(mp));
           }
         }
@@ -894,6 +934,7 @@ void append_mir_params_for_object_type(const Module& module, const TypeExpr& te,
       mp.is_float = is_float_type_name(ut->name);
       mp.is_string = mir_ptr_param_type_name(ut->name);
       mp.is_i64 = is_i64_type_name(ut->name) || is_string_type_name(ut->name);
+      mp.is_var = is_var;
       out_params.push_back(std::move(mp));
     }
   });
@@ -901,7 +942,7 @@ void append_mir_params_for_object_type(const Module& module, const TypeExpr& te,
 
 void push_mir_args_for_object_value_r(const Module& module, const TypeExpr& te,
                                       const std::string& path_prefix,
-                                      std::vector<MirArg>& args_out) {
+                                      std::vector<MirArg>& args_out, bool is_var) {
   const TypeAlias* ta = object_alias_for_named_type(module, te);
   if (!ta) {
     return;
@@ -912,10 +953,11 @@ void push_mir_args_for_object_value_r(const Module& module, const TypeExpr& te,
     }
     const std::string sub = path_prefix + "_" + fld.name;
     if (object_alias_for_named_type(module, *fld.type)) {
-      push_mir_args_for_object_value_r(module, *fld.type, sub, args_out);
+      push_mir_args_for_object_value_r(module, *fld.type, sub, args_out, is_var);
     } else {
       MirArg ma;
       ma.ident = sub;
+      ma.is_var_ref = is_var;
       const TypeExpr* ut = unwrap_refinement_type(fld.type.get());
       if (ut && ut->kind == TypeKind::Array && ut->array_size > 0) {
         ma.is_array_ident = true;
@@ -926,11 +968,45 @@ void push_mir_args_for_object_value_r(const Module& module, const TypeExpr& te,
 }
 
 void push_mir_args_for_object_value(const Module& module, const TypeExpr& param_ty,
-                                    const Expr& arg, std::vector<MirArg>& args_out) {
-  if (arg.kind != Expr::Kind::Ident) {
+                                    const Expr& arg, std::vector<MirArg>& args_out,
+                                    bool is_var, std::vector<MirInsn>& out,
+                                    std::unordered_set<std::string>& float_names,
+                                    std::unordered_set<std::string>& simd_names,
+                                    std::unordered_set<std::string>& i64_locals) {
+  if (arg.kind == Expr::Kind::Ident) {
+    push_mir_args_for_object_value_r(module, param_ty, std::string("__li_o_") + arg.ident, args_out,
+                                     is_var);
     return;
   }
-  push_mir_args_for_object_value_r(module, param_ty, std::string("__li_o_") + arg.ident, args_out);
+  if (arg.kind == Expr::Kind::FieldAccess) {
+    // FieldAccess on an object (e.g. `layout.viewport`): the caller's slots are
+    // named `__li_o_<root>_<f1>_<f2>...`, so push those leaf slots directly.
+    // Previously this fell through and the arg was silently dropped, under-
+    // pushing the flattened by-value args (0 of N pushed).
+    const std::string slot = mir_field_slot_for_expr(arg);
+    if (!slot.empty()) {
+      push_mir_args_for_object_value_r(module, param_ty, slot, args_out, is_var);
+      return;
+    }
+    // Root isn't an Ident (e.g. `foo().viewport`): lower the whole expr first.
+    const std::string dest = lower_expr_to(arg, module, out, float_names, simd_names, i64_locals);
+    if (!dest.empty()) {
+      push_mir_args_for_object_value_r(module, param_ty, dest, args_out, is_var);
+    }
+    return;
+  }
+  if (arg.kind == Expr::Kind::Call || arg.kind == Expr::Kind::MethodCall) {
+    // A call (or method call) returning an object: lower it into its own
+    // `__li_o___cr<N>_<field>` slots first, then push those leaf slots as the
+    // flattened by-value args. Previously the arg was silently dropped, so the
+    // call site under-pushed (e.g. 26 of 32 args for layout+selection).
+    const std::string dest =
+        lower_expr_to(arg, module, out, float_names, simd_names, i64_locals);
+    if (!dest.empty()) {
+      push_mir_args_for_object_value_r(module, param_ty, dest, args_out, is_var);
+    }
+    return;
+  }
 }
 
 std::string object_root_ident(const Expr& e) {
@@ -960,8 +1036,8 @@ bool first_param_is_var_object(const Module& module, const ProcDecl& callee, con
 
 void push_mir_args_for_object_prefix(const Module& module, const TypeExpr& param_ty,
                                      const std::string& slot_prefix,
-                                     std::vector<MirArg>& args_out) {
-  push_mir_args_for_object_value_r(module, param_ty, slot_prefix, args_out);
+                                     std::vector<MirArg>& args_out, bool is_var) {
+  push_mir_args_for_object_value_r(module, param_ty, slot_prefix, args_out, is_var);
 }
 
 std::string lower_callproc_with_optional_inout(
@@ -999,9 +1075,10 @@ std::string lower_callproc_with_optional_inout(
     }
     if (object_alias_for_named_type(module, fp.type)) {
       if (inout && ai == 0) {
-        push_mir_args_for_object_prefix(module, fp.type, wb_prefix, ins.args);
+        push_mir_args_for_object_prefix(module, fp.type, wb_prefix, ins.args, true);
       } else {
-        push_mir_args_for_object_value(module, fp.type, *arg, ins.args);
+        push_mir_args_for_object_value(module, fp.type, *arg, ins.args, fp.type.is_var, out,
+                                       float_names, simd_names, i64_locals);
       }
       continue;
     }
@@ -1043,7 +1120,8 @@ std::string lower_callproc_with_optional_inout(
     ins.ret_is_float = true;
     float_names.insert(dest);
   } else if (!callee_ret_obj && callee.ret_type &&
-             is_i64_type_name(callee.ret_type->name)) {
+             (is_i64_type_name(callee.ret_type->name) ||
+              mir_ptr_param_type_name(callee.ret_type->name))) {
     ins.ret_is_i64 = true;
     i64_locals.insert(dest);
   }
@@ -1059,6 +1137,18 @@ void seed_float_params(const MirFn& fn, std::unordered_set<std::string>& float_n
   for (const auto& p : fn.params) {
     if (p.is_float && p.fixed_array_elems == 0) {
       float_names.insert(p.name);
+    }
+  }
+}
+
+void seed_float_array_params(const MirFn& fn) {
+  for (const auto& p : fn.params) {
+    // 1D float arrays only — 2D matrices live in matrix_names and are lowered
+    // through the dedicated matmul/matrix-index paths.
+    if (p.is_float && p.fixed_array_elems > 0 && !p.is_matrix && g_arr_ctx &&
+        g_arr_ctx->float_array_names) {
+      g_arr_ctx->float_array_names->insert(p.name);
+      g_arr_ctx->float_array_sizes[p.name] = p.fixed_array_elems;
     }
   }
 }
@@ -1184,7 +1274,10 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
       }
       const std::string dest = fresh_temp();
       MirInsn ins;
-      const bool flt = is_float_expr(e, float_names);
+      const bool cmp = is_cmp_binop(e.bin_op);
+      const bool flt = is_float_expr(e, float_names) ||
+                       (cmp && (is_float_expr(*e.lhs, float_names) ||
+                                is_float_expr(*e.rhs, float_names)));
       ins.op = flt ? MirOp::BinOpFloat : MirOp::BinOpInt;
       ins.ident = dest;
       ins.rhs_is_literal = false;
@@ -1212,7 +1305,7 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
       }
       ins.bin_op = e.bin_op;
       out.push_back(std::move(ins));
-      if (flt) {
+      if (flt && !cmp) {
         float_names.insert(dest);
       }
       return dest;
@@ -1486,10 +1579,21 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
           } else if (e.index->kind == Expr::Kind::Ident) {
             load.index_is_literal = false;
             load.index_ident = e.index->ident;
+          } else {
+            // General index expression (`a[n[0]]`, `a[helper(x)]`): lower it to
+            // an int temp so emit's ArrayLoadInt reads the right slot.
+            load.index_is_literal = false;
+            load.index_ident = lower_expr_to(*e.index, module, out, float_names,
+                                             simd_names, i64_locals);
           }
           const std::string dest = fresh_temp();
           load.lhs_ident = dest;
           out.push_back(std::move(load));
+          // Float array elements (including rows of float matrices) yield
+          // float temps so downstream BinOp lowering keeps float semantics.
+          if (is_float_expr(e, float_names)) {
+            float_names.insert(dest);
+          }
           return dest;
         }
       }
@@ -1500,7 +1604,10 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
   }
 }
 
-void lower_echo_arg(const Expr& arg, std::vector<MirInsn>& out) {
+void lower_print_arg(const Expr& arg, const Module& module, std::vector<MirInsn>& out,
+                     std::unordered_set<std::string>& float_names,
+                     std::unordered_set<std::string>& simd_names,
+                     std::unordered_set<std::string>& i64_locals) {
   MirInsn ins;
   if (arg.kind == Expr::Kind::IntLit) {
     ins.op = MirOp::EchoInt;
@@ -1511,6 +1618,13 @@ void lower_echo_arg(const Expr& arg, std::vector<MirInsn>& out) {
   } else if (arg.kind == Expr::Kind::StringLit) {
     ins.op = MirOp::EchoString;
     ins.str_value = arg.str_value;
+  } else {
+    // General expression (call, binop, ...): lower it to a temp and echo the
+    // temp so `print(f(x))` and `print(a + b)` work like any other argument.
+    const std::string tmp =
+        lower_expr_to(arg, module, out, float_names, simd_names, i64_locals);
+    ins.op = MirOp::EchoInt;
+    ins.ident = tmp;
   }
   out.push_back(std::move(ins));
 }
@@ -1683,16 +1797,21 @@ void lower_stmt(const Stmt& stmt, LowerCtx& ctx, bool returns_float, std::vector
             (void)lower_expr_to(*stmt.init, module, out, float_names, simd_names, i64_locals);
           }
         }
-      } else if (is_i64_type_name(stmt.var_type.name)) {
+      } else if (is_i64_type_name(stmt.var_type.name) ||
+                 mir_ptr_param_type_name(stmt.var_type.name)) {
         MirInsn ins;
         ins.op = MirOp::LocalAllocI64;
         ins.ident = stmt.var_name;
         out.push_back(std::move(ins));
+        i64_locals.insert(stmt.var_name);
         if (stmt.init) {
           MirInsn store;
           store.op = MirOp::StoreI64;
           store.ident = stmt.var_name;
-          if (stmt.init->kind == Expr::Kind::IntLit) {
+          if (stmt.init->kind == Expr::Kind::StringLit) {
+            store.rhs_is_string = true;
+            store.str_value = stmt.init->str_value;
+          } else if (stmt.init->kind == Expr::Kind::IntLit) {
             store.rhs_is_literal = true;
             store.rhs_int = stmt.init->int_value;
           } else if (stmt.init->kind == Expr::Kind::Ident) {
@@ -1828,6 +1947,13 @@ void lower_stmt(const Stmt& stmt, LowerCtx& ctx, bool returns_float, std::vector
           } else if (stmt.init->index && stmt.init->index->kind == Expr::Kind::Ident) {
             ins.index_is_literal = false;
             ins.index_ident = stmt.init->index->ident;
+          } else if (stmt.init->index) {
+            // General index expression (`a[n[0]] = v`): lower it to an int temp
+            // so emit's ArrayStoreInt writes the right slot.
+            ins.index_is_literal = false;
+            ins.index_ident =
+                lower_expr_to(*stmt.init->index, module, out, float_names, simd_names,
+                              i64_locals);
           }
           if (fa && stmt.expr->kind == Expr::Kind::FloatLit) {
             ins.rhs_is_literal = true;
@@ -2225,9 +2351,10 @@ void lower_stmt(const Stmt& stmt, LowerCtx& ctx, bool returns_float, std::vector
     case Stmt::Kind::Expr:
       if (stmt.expr &&
           (stmt.expr->kind == Expr::Kind::Call || stmt.expr->kind == Expr::Kind::MethodCall)) {
-        if (stmt.expr->kind == Expr::Kind::Call && stmt.expr->ident == "echo" &&
+        if (stmt.expr->kind == Expr::Kind::Call && stmt.expr->ident == "print" &&
             !stmt.expr->args.empty()) {
-          lower_echo_arg(*stmt.expr->args[0], out);
+          lower_print_arg(*stmt.expr->args[0], module, out, float_names, simd_names,
+                          i64_locals);
         } else if (stmt.expr->kind == Expr::Kind::Call && stmt.expr->ident == "axpy" &&
                    stmt.expr->args.size() == 3 && stmt.expr->args[1]->kind == Expr::Kind::Ident &&
                    stmt.expr->args[2]->kind == Expr::Kind::Ident) {
@@ -2310,7 +2437,7 @@ MirModule lower_to_mir(const Module& module) {
     for (const auto& p : proc.params) {
       if (object_alias_for_named_type(module, p.type)) {
         append_mir_params_for_object_type(module, p.type, std::string("__li_o_") + p.name,
-                                          fn.params);
+                                          fn.params, p.type.is_var);
       } else {
         MirParam mp;
         mp.name = p.name;
@@ -2328,6 +2455,7 @@ MirModule lower_to_mir(const Module& module) {
             if (el && el->kind == TypeKind::Named) {
               mp.fixed_array_elems = ut->array_size;
               mp.is_float = is_float_type_name(el->name);
+              mp.is_var = p.type.is_var;
             }
           }
         } else {
@@ -2360,6 +2488,7 @@ MirModule lower_to_mir(const Module& module) {
       g_arr_ctx = &arr_ctx;
       g_mir_module = &mir;
       seed_float_params(fn, float_names);
+      seed_float_array_params(fn);
       seed_i64_params(fn, i64_locals);
       std::vector<LoopLabels> loop_stack;
       std::unordered_map<std::string, double> const_floats;

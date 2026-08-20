@@ -1,0 +1,1638 @@
+{
+  "schema": "li-tests-agent-manifest-v1",
+  "source": "li-tests/manifest.toml",
+  "count": 279,
+  "suites": [
+    {
+      "name": "advisory",
+      "count": 3
+    },
+    {
+      "name": "async",
+      "count": 3
+    },
+    {
+      "name": "benchmarks",
+      "count": 3
+    },
+    {
+      "name": "borrow",
+      "count": 3
+    },
+    {
+      "name": "bytes",
+      "count": 1
+    },
+    {
+      "name": "codegen",
+      "count": 1
+    },
+    {
+      "name": "collections",
+      "count": 8
+    },
+    {
+      "name": "compile_ok",
+      "count": 2
+    },
+    {
+      "name": "composable",
+      "count": 16
+    },
+    {
+      "name": "contracts_verify",
+      "count": 32
+    },
+    {
+      "name": "cve_patterns",
+      "count": 8
+    },
+    {
+      "name": "decorator_exploits",
+      "count": 4
+    },
+    {
+      "name": "decorators",
+      "count": 9
+    },
+    {
+      "name": "effects",
+      "count": 12
+    },
+    {
+      "name": "encapsulation",
+      "count": 26
+    },
+    {
+      "name": "generics",
+      "count": 8
+    },
+    {
+      "name": "httpd",
+      "count": 7
+    },
+    {
+      "name": "index_helpers",
+      "count": 1
+    },
+    {
+      "name": "integration",
+      "count": 1
+    },
+    {
+      "name": "lexer_parser",
+      "count": 7
+    },
+    {
+      "name": "log",
+      "count": 1
+    },
+    {
+      "name": "math_linalg",
+      "count": 26
+    },
+    {
+      "name": "math_syntax",
+      "count": 4
+    },
+    {
+      "name": "modules",
+      "count": 5
+    },
+    {
+      "name": "nanoreactor",
+      "count": 7
+    },
+    {
+      "name": "net_trusted",
+      "count": 2
+    },
+    {
+      "name": "parallel_codegen",
+      "count": 2
+    },
+    {
+      "name": "physics",
+      "count": 3
+    },
+    {
+      "name": "proof_db_math",
+      "count": 3
+    },
+    {
+      "name": "proof_db_physics",
+      "count": 2
+    },
+    {
+      "name": "prove_reject",
+      "count": 7
+    },
+    {
+      "name": "race_shared_memory",
+      "count": 9
+    },
+    {
+      "name": "routing",
+      "count": 2
+    },
+    {
+      "name": "runtime",
+      "count": 4
+    },
+    {
+      "name": "simd",
+      "count": 2
+    },
+    {
+      "name": "smoke",
+      "count": 5
+    },
+    {
+      "name": "std_contracts",
+      "count": 3
+    },
+    {
+      "name": "stdlib_coverage",
+      "count": 1
+    },
+    {
+      "name": "stdlib_seal",
+      "count": 6
+    },
+    {
+      "name": "tetris",
+      "count": 2
+    },
+    {
+      "name": "tier2_physics",
+      "count": 20
+    },
+    {
+      "name": "typecheck",
+      "count": 8
+    }
+  ],
+  "tests": [
+    {
+      "suite": "lexer_parser",
+      "file": "lexer_parser/fib.li",
+      "outcome": "parse_ok"
+    },
+    {
+      "suite": "lexer_parser",
+      "file": "lexer_parser/invalid_indent.li",
+      "outcome": "parse_fail",
+      "expected_substr": "indentation"
+    },
+    {
+      "suite": "lexer_parser",
+      "file": "lexer_parser/decorators_parse.li",
+      "outcome": "parse_ok"
+    },
+    {
+      "suite": "lexer_parser",
+      "file": "lexer_parser/async_await_parse.li",
+      "outcome": "parse_ok"
+    },
+    {
+      "suite": "lexer_parser",
+      "file": "lexer_parser/plus_minus_binop.li",
+      "outcome": "parse_ok"
+    },
+    {
+      "suite": "lexer_parser",
+      "file": "lexer_parser/theorems_parse.li",
+      "outcome": "parse_ok"
+    },
+    {
+      "suite": "lexer_parser",
+      "file": "lexer_parser/theorems_bad_prop.li",
+      "outcome": "check_fail",
+      "expected_substr": "E0505"
+    },
+    {
+      "suite": "proof_db_math",
+      "file": "../proof-db/math/axioms/peano_order.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "proof_db_math",
+      "file": "../proof-db/math/axioms/reals_field.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "proof_db_math",
+      "file": "../proof-db/math/lemmas/ring_discharge.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "prove_reject",
+      "file": "prove_reject/theorem_open.li",
+      "outcome": "verify_fail",
+      "expected_substr": "not discharged natively"
+    },
+    {
+      "suite": "proof_db_physics",
+      "file": "../proof-db/physics/axioms/conservation.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "proof_db_physics",
+      "file": "../proof-db/physics/lemmas/momentum_invariant.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "tier2_physics",
+      "file": "../benchmarks/tier2_physics/advection_diffusion_2d/li/main.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "tier2_physics",
+      "file": "../benchmarks/tier2_physics/cloth_swing/li/main.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "tier2_physics",
+      "file": "../benchmarks/tier2_physics/combustion_passive/li/main.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "tier2_physics",
+      "file": "../benchmarks/tier2_physics/double_pendulum/li/main.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "tier2_physics",
+      "file": "../benchmarks/tier2_physics/euler_fluid_2d/li/main.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "tier2_physics",
+      "file": "../benchmarks/tier2_physics/fdtd_waveguide_2d/li/main.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "tier2_physics",
+      "file": "../benchmarks/tier2_physics/harmonic_oscillator_chain/li/main.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "tier2_physics",
+      "file": "../benchmarks/tier2_physics/heat_equation_2d/li/main.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "tier2_physics",
+      "file": "../benchmarks/tier2_physics/md_lennard_jones/li/main.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "tier2_physics",
+      "file": "../benchmarks/tier2_physics/nbody_gravity/li/main.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "tier2_physics",
+      "file": "../benchmarks/tier2_physics/orbit_two_body/li/main.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "tier2_physics",
+      "file": "../benchmarks/tier2_physics/ragdoll_chain/li/main.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "tier2_physics",
+      "file": "../benchmarks/tier2_physics/rigid_body_stack/li/main.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "tier2_physics",
+      "file": "../benchmarks/tier2_physics/schrodinger_1d_barrier/li/main.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "tier2_physics",
+      "file": "../benchmarks/tier2_physics/sph_dam_break_2d/li/main.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "tier2_physics",
+      "file": "../benchmarks/tier2_physics/three_body/li/main.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "tier2_physics",
+      "file": "../benchmarks/tier2_physics/three_body_pure/li/main.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "tier2_physics",
+      "file": "../benchmarks/tier2_physics/wave_equation_1d/li/main.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "tier2_physics",
+      "file": "../benchmarks/tier2_physics/wave_equation_2d/li/main.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "tier2_physics",
+      "file": "../benchmarks/tier2_physics/wind_field_bc/li/main.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "std_contracts",
+      "file": "../std/io/io.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "std_contracts",
+      "file": "../std/csv/csv.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "std_contracts",
+      "file": "../std/ui/ui.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "decorators",
+      "file": "decorators/cpu_only_ok.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "decorators",
+      "file": "decorators/parallel_with_disjoint.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "decorators",
+      "file": "decorators/parallel_def_disjoint_inherit.li",
+      "outcome": "compile_ok"
+    },
+    {
+      "suite": "decorators",
+      "file": "decorators/vectorized_dot_ok.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "decorators",
+      "file": "decorators/vectorized_dot_proc_ok.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "decorators",
+      "file": "decorators/no_vectorize_dot_ok.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "decorators",
+      "file": "decorators/vectorized_for_parse_ok.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "decorators",
+      "file": "decorators/vectorized_for_scope_ok.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "decorators",
+      "file": "decorators/vectorized_lanes8_fail.li",
+      "outcome": "compile_fail",
+      "expected_substr": "lanes=4"
+    },
+    {
+      "suite": "decorator_exploits",
+      "file": "decorator_exploits/reserved_def_parallel.li",
+      "outcome": "compile_fail"
+    },
+    {
+      "suite": "decorator_exploits",
+      "file": "decorator_exploits/typosquat_paralell.li",
+      "outcome": "check_ok",
+      "expected_substr": "W0403"
+    },
+    {
+      "suite": "decorator_exploits",
+      "file": "decorator_exploits/single_segment_name.li",
+      "outcome": "compile_fail"
+    },
+    {
+      "suite": "decorator_exploits",
+      "file": "decorator_exploits/missing_disjoint_at_parallel.li",
+      "outcome": "compile_fail"
+    },
+    {
+      "suite": "advisory",
+      "file": "advisory/check_ok.li",
+      "outcome": "check_ok"
+    },
+    {
+      "suite": "advisory",
+      "file": "advisory/check_deny_warn.li",
+      "outcome": "check_deny_warn"
+    },
+    {
+      "suite": "advisory",
+      "file": "advisory/deny/check_fail.li",
+      "outcome": "check_fail"
+    },
+    {
+      "suite": "typecheck",
+      "file": "typecheck/fib.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "typecheck",
+      "file": "typecheck/bad_array_index.li",
+      "outcome": "compile_fail",
+      "expected_substr": "out of range"
+    },
+    {
+      "suite": "typecheck",
+      "file": "typecheck/bad_numeric_mix.li",
+      "outcome": "compile_fail",
+      "expected_substr": "float"
+    },
+    {
+      "suite": "typecheck",
+      "file": "typecheck/bad_int_float_add.li",
+      "outcome": "compile_fail",
+      "expected_substr": "int"
+    },
+    {
+      "suite": "typecheck",
+      "file": "typecheck/scalar_width_ok.li",
+      "outcome": "compile_ok"
+    },
+    {
+      "suite": "typecheck",
+      "file": "typecheck/scalar_width_mix_fail.li",
+      "outcome": "compile_fail",
+      "expected_substr": "integer widths"
+    },
+    {
+      "suite": "typecheck",
+      "file": "typecheck/literal_suffix_ok.li",
+      "outcome": "compile_ok"
+    },
+    {
+      "suite": "typecheck",
+      "file": "typecheck/binary_literal_ok.li",
+      "outcome": "compile_ok"
+    },
+    {
+      "suite": "compile_ok",
+      "file": "compile_ok/int_ne_literal.li",
+      "outcome": "compile_ok"
+    },
+    {
+      "suite": "compile_ok",
+      "file": "compile_ok/volatile_sink_no_io.li",
+      "outcome": "compile_ok"
+    },
+    {
+      "suite": "prove_reject",
+      "file": "prove_reject/uses_any.li",
+      "outcome": "compile_fail",
+      "expected_substr": "Any"
+    },
+    {
+      "suite": "prove_reject",
+      "file": "prove_reject/uses_sorry.li",
+      "outcome": "compile_fail",
+      "expected_substr": "sorry"
+    },
+    {
+      "suite": "prove_reject",
+      "file": "prove_reject/missing_contracts.li",
+      "outcome": "compile_fail",
+      "expected_substr": "requires"
+    },
+    {
+      "suite": "prove_reject",
+      "file": "prove_reject/missing_decreases.li",
+      "outcome": "compile_fail",
+      "expected_substr": "decreases"
+    },
+    {
+      "suite": "prove_reject",
+      "file": "prove_reject/bare_cast.li",
+      "outcome": "compile_fail",
+      "expected_substr": "cast"
+    },
+    {
+      "suite": "prove_reject",
+      "file": "prove_reject/weak_ensures_true.li",
+      "outcome": "compile_fail",
+      "expected_substr": "ensures true"
+    },
+    {
+      "suite": "contracts_verify",
+      "file": "contracts_verify/sqrt_contract.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "contracts_verify",
+      "file": "contracts_verify/sqrt_open_bound.li",
+      "outcome": "compile_open_ok"
+    },
+    {
+      "suite": "contracts_verify",
+      "file": "contracts_verify/index_refinement.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "contracts_verify",
+      "file": "contracts_verify/bounds_refinement_release_ok.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "contracts_verify",
+      "file": "contracts_verify/discharge_trivial.li",
+      "outcome": "prove_lean_ok"
+    },
+    {
+      "suite": "contracts_verify",
+      "file": "contracts_verify/http_parse_forward_closed.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "contracts_verify",
+      "file": "contracts_verify/discharge_const.li",
+      "outcome": "prove_lean_ok"
+    },
+    {
+      "suite": "contracts_verify",
+      "file": "contracts_verify/caller_requires_ok.li",
+      "outcome": "prove_lean_ok"
+    },
+    {
+      "suite": "contracts_verify",
+      "file": "contracts_verify/caller_requires_local_ok.li",
+      "outcome": "prove_lean_ok"
+    },
+    {
+      "suite": "contracts_verify",
+      "file": "contracts_verify/caller_requires_fail.li",
+      "outcome": "compile_fail",
+      "expected_substr": "E0304"
+    },
+    {
+      "suite": "contracts_verify",
+      "file": "contracts_verify/method_call_requires_ok.li",
+      "outcome": "prove_lean_ok"
+    },
+    {
+      "suite": "contracts_verify",
+      "file": "contracts_verify/method_ensures_return_ok.li",
+      "outcome": "prove_lean_ok"
+    },
+    {
+      "suite": "contracts_verify",
+      "file": "contracts_verify/method_call_requires_fail.li",
+      "outcome": "compile_fail",
+      "expected_substr": "E0304"
+    },
+    {
+      "suite": "contracts_verify",
+      "file": "contracts_verify/refinement_call_ok.li",
+      "outcome": "prove_lean_ok"
+    },
+    {
+      "suite": "contracts_verify",
+      "file": "contracts_verify/refinement_inline_ok.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "contracts_verify",
+      "file": "contracts_verify/refinement_local_ok.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "contracts_verify",
+      "file": "contracts_verify/refinement_init_ok.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "contracts_verify",
+      "file": "contracts_verify/refinement_call_fail.li",
+      "outcome": "compile_fail",
+      "expected_substr": "E0305"
+    },
+    {
+      "suite": "contracts_verify",
+      "file": "contracts_verify/refinement_init_fail.li",
+      "outcome": "compile_fail",
+      "expected_substr": "E0305"
+    },
+    {
+      "suite": "contracts_verify",
+      "file": "contracts_verify/refinement_guard_ok.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "contracts_verify",
+      "file": "contracts_verify/extern_call_requires_ok.li",
+      "outcome": "prove_lean_ok"
+    },
+    {
+      "suite": "contracts_verify",
+      "file": "contracts_verify/linalg_dot4_int_closed.li",
+      "outcome": "prove_lean_ok"
+    },
+    {
+      "suite": "contracts_verify",
+      "file": "contracts_verify/linalg_sum4_int_closed.li",
+      "outcome": "prove_lean_ok"
+    },
+    {
+      "suite": "contracts_verify",
+      "file": "contracts_verify/linalg_mat2_entry00_int_closed.li",
+      "outcome": "prove_lean_ok"
+    },
+    {
+      "suite": "contracts_verify",
+      "file": "contracts_verify/linalg_dot4_int_loop_open.li",
+      "outcome": "prove_lean_ok"
+    },
+    {
+      "suite": "contracts_verify",
+      "file": "contracts_verify/linalg_norm4_int_closed.li",
+      "outcome": "prove_lean_ok"
+    },
+    {
+      "suite": "contracts_verify",
+      "file": "contracts_verify/linalg_axpy4_int_closed.li",
+      "outcome": "prove_lean_ok"
+    },
+    {
+      "suite": "contracts_verify",
+      "file": "contracts_verify/linalg_dot4_float_closed.li",
+      "outcome": "prove_lean_ok"
+    },
+    {
+      "suite": "contracts_verify",
+      "file": "contracts_verify/linalg_mat2_at2_float_closed.li",
+      "outcome": "prove_lean_ok"
+    },
+    {
+      "suite": "contracts_verify",
+      "file": "contracts_verify/linalg_mat2_callproc_float_closed.li",
+      "outcome": "prove_lean_ok"
+    },
+    {
+      "suite": "contracts_verify",
+      "file": "contracts_verify/linalg_mat2_float_value.li",
+      "outcome": "prove_lean_ok"
+    },
+    {
+      "suite": "contracts_verify",
+      "file": "contracts_verify/linalg_mat2_float_wrong_value.li",
+      "outcome": "compile_fail",
+      "expected_substr": "E0304"
+    },
+    {
+      "suite": "borrow",
+      "file": "borrow/double_mut.li",
+      "outcome": "compile_fail",
+      "expected_substr": "borrow"
+    },
+    {
+      "suite": "borrow",
+      "file": "borrow/use_after_move.li",
+      "outcome": "compile_fail",
+      "expected_substr": "move"
+    },
+    {
+      "suite": "borrow",
+      "file": "borrow/borrow_ok.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "effects",
+      "file": "effects/alloc_fail.li",
+      "outcome": "compile_fail",
+      "expected_substr": "Alloc"
+    },
+    {
+      "suite": "effects",
+      "file": "effects/alloc_ok.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "effects",
+      "file": "effects/io_fail.li",
+      "outcome": "compile_fail",
+      "expected_substr": "IO"
+    },
+    {
+      "suite": "effects",
+      "file": "effects/io_ok.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "race_shared_memory",
+      "file": "race_shared_memory/shared_mut_write.li",
+      "outcome": "compile_fail",
+      "expected_substr": "parallel for"
+    },
+    {
+      "suite": "race_shared_memory",
+      "file": "race_shared_memory/overlap_par_slice.li",
+      "outcome": "compile_fail",
+      "expected_substr": "disjoint"
+    },
+    {
+      "suite": "race_shared_memory",
+      "file": "race_shared_memory/missing_disjoint_clause.li",
+      "outcome": "compile_fail",
+      "expected_substr": "disjoint"
+    },
+    {
+      "suite": "race_shared_memory",
+      "file": "race_shared_memory/mut_capture_no_sync.li",
+      "outcome": "compile_fail",
+      "expected_substr": "Sync"
+    },
+    {
+      "suite": "race_shared_memory",
+      "file": "race_shared_memory/borrow_mut_across_iters.li",
+      "outcome": "compile_fail",
+      "expected_substr": "borrow"
+    },
+    {
+      "suite": "race_shared_memory",
+      "file": "race_shared_memory/false_disjoint_proof.li",
+      "outcome": "compile_fail",
+      "expected_substr": "disjoint_row"
+    },
+    {
+      "suite": "race_shared_memory",
+      "file": "race_shared_memory/false_disjoint_requires_true.li",
+      "outcome": "compile_fail",
+      "expected_substr": "bare"
+    },
+    {
+      "suite": "race_shared_memory",
+      "file": "race_shared_memory/false_disjoint_requires_bare_row.li",
+      "outcome": "compile_fail",
+      "expected_substr": "bare"
+    },
+    {
+      "suite": "race_shared_memory",
+      "file": "race_shared_memory/good_disjoint_parallel.li",
+      "outcome": "verify_ok",
+      "expected_substr": "disjoint_row"
+    },
+    {
+      "suite": "benchmarks",
+      "file": "benchmarks/tier0_correctness/md_energy_single_step.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "benchmarks",
+      "file": "benchmarks/tier0_correctness/float_binop.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "benchmarks",
+      "file": "benchmarks/tier0_correctness/three_body_invariants.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "generics",
+      "file": "generics/precision_real_alias.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "generics",
+      "file": "generics/precision_generic_fn.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "generics",
+      "file": "generics/identity.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "generics",
+      "file": "generics/box_alias.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "generics",
+      "file": "generics/callable_param.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "generics",
+      "file": "generics/protocol_sized_ok.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "generics",
+      "file": "generics/return_mismatch.li",
+      "outcome": "compile_fail",
+      "expected_substr": "generic"
+    },
+    {
+      "suite": "generics",
+      "file": "generics/protocol_sized_fail.li",
+      "outcome": "compile_fail",
+      "expected_substr": "Protocol"
+    },
+    {
+      "suite": "collections",
+      "file": "collections/list_param.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "collections",
+      "file": "collections/dict_param.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "collections",
+      "file": "collections/tuple_pair.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "collections",
+      "file": "collections/tuple_variadic.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "collections",
+      "file": "collections/named_tuple.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "collections",
+      "file": "collections/typedict_ok.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "collections",
+      "file": "collections/enum_ok.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "collections",
+      "file": "collections/dict_arity_fail.li",
+      "outcome": "compile_fail",
+      "expected_substr": "dict"
+    },
+    {
+      "suite": "runtime",
+      "file": "runtime/extern_puts.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "runtime",
+      "file": "runtime/bytes_len_slice_link.li",
+      "outcome": "compile_open_ok"
+    },
+    {
+      "suite": "bytes",
+      "file": "bytes/reader_writer_smoke.li",
+      "outcome": "compile_open_ok"
+    },
+    {
+      "suite": "runtime",
+      "file": "runtime/tcp_stub_link.li",
+      "outcome": "compile_open_ok"
+    },
+    {
+      "suite": "runtime",
+      "file": "runtime/argv_ptr_abi.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "index_helpers",
+      "file": "index_helpers/cell_index_refined.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "tetris",
+      "file": "tetris/board_oob.li",
+      "outcome": "compile_fail",
+      "expected_substr": "out of range"
+    },
+    {
+      "suite": "tetris",
+      "file": "../examples/tetris/main.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "integration",
+      "file": "../bootstrap/lic/main.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "parallel_codegen",
+      "file": "parallel_codegen/parallel_float_zero.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "parallel_codegen",
+      "file": "parallel_codegen/three_float_arrays_12.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "simd",
+      "file": "simd/simd_type_ok.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "simd",
+      "file": "simd/bad_lanes.li",
+      "outcome": "compile_fail",
+      "expected_substr": "lane"
+    },
+    {
+      "suite": "effects",
+      "file": "effects/net_ok.li",
+      "outcome": "compile_ok"
+    },
+    {
+      "suite": "effects",
+      "file": "effects/net_forward_ok.li",
+      "outcome": "compile_ok"
+    },
+    {
+      "suite": "effects",
+      "file": "effects/net_missing_raises.li",
+      "outcome": "compile_fail",
+      "expected_substr": "raises Net"
+    },
+    {
+      "suite": "net_trusted",
+      "file": "net_trusted/seam_policy_ok.li",
+      "outcome": "compile_open_ok"
+    },
+    {
+      "suite": "net_trusted",
+      "file": "net_trusted/seam_missing_net.li",
+      "outcome": "compile_fail",
+      "expected_substr": "raises Net"
+    },
+    {
+      "suite": "effects",
+      "file": "effects/async_missing_raises.li",
+      "outcome": "compile_fail",
+      "expected_substr": "raises Async"
+    },
+    {
+      "suite": "effects",
+      "file": "effects/async_ok.li",
+      "outcome": "compile_open_ok"
+    },
+    {
+      "suite": "async",
+      "file": "async/await_codegen_ok.li",
+      "outcome": "compile_open_ok"
+    },
+    {
+      "suite": "async",
+      "file": "async/reactor_selftest_link.li",
+      "outcome": "compile_open_ok"
+    },
+    {
+      "suite": "async",
+      "file": "async/tcp_echo_smoke.li",
+      "outcome": "compile_open_ok"
+    },
+    {
+      "suite": "effects",
+      "file": "effects/await_outside_async.li",
+      "outcome": "compile_fail",
+      "expected_substr": "async proc"
+    },
+    {
+      "suite": "effects",
+      "file": "effects/async_keyword_missing_raises.li",
+      "outcome": "compile_fail",
+      "expected_substr": "raises Async"
+    },
+    {
+      "suite": "effects",
+      "file": "effects/bytes_need_alloc.li",
+      "outcome": "compile_fail",
+      "expected_substr": "raises Alloc"
+    },
+    {
+      "suite": "composable",
+      "file": "composable/import_http_lib.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "composable",
+      "file": "composable/import_httpd_lib.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "composable",
+      "file": "composable/import_log_lib.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "log",
+      "file": "log/redact_bearer.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "composable",
+      "file": "composable/import_physics_relativity.li",
+      "outcome": "compile_open_ok"
+    },
+    {
+      "suite": "composable",
+      "file": "composable/import_physics_runtime.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "composable",
+      "file": "composable/import_sim_scientific_run.li",
+      "outcome": "compile_open_ok"
+    },
+    {
+      "suite": "composable",
+      "file": "composable/import_studio_sim_profile_bridge.li",
+      "outcome": "compile_open_ok"
+    },
+    {
+      "suite": "composable",
+      "file": "composable/import_studio_sim_step_stub.li",
+      "outcome": "compile_open_ok"
+    },
+    {
+      "suite": "composable",
+      "file": "composable/import_studio_sim_step_by_profile.li",
+      "outcome": "compile_open_ok"
+    },
+    {
+      "suite": "composable",
+      "file": "composable/import_ui_studio_shell.li",
+      "outcome": "compile_open_ok"
+    },
+    {
+      "suite": "composable",
+      "file": "composable/import_gui_viewport_panel_switch.li",
+      "outcome": "compile_open_ok"
+    },
+    {
+      "suite": "composable",
+      "file": "composable/import_gui_studio_keyboard.li",
+      "outcome": "compile_open_ok"
+    },
+    {
+      "suite": "composable",
+      "file": "composable/import_render_wgpu_fps.li",
+      "outcome": "compile_open_ok"
+    },
+    {
+      "suite": "composable",
+      "file": "composable/import_studio_compose.li",
+      "outcome": "compile_open_ok"
+    },
+    {
+      "suite": "composable",
+      "file": "composable/import_lig_kernel.li",
+      "outcome": "compile_open_ok"
+    },
+    {
+      "suite": "composable",
+      "file": "composable/import_lig_chem_backend.li",
+      "outcome": "compile_open_ok"
+    },
+    {
+      "suite": "smoke",
+      "file": "packages/lig/li-tests/smoke/kernel_matmul_parity.li",
+      "outcome": "compile_open_ok"
+    },
+    {
+      "suite": "smoke",
+      "file": "packages/li-aimd/li-tests/smoke/builds.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "smoke",
+      "file": "packages/li-aimd/li-tests/smoke/aimd_oracle_smoke.li",
+      "outcome": "compile_open_ok"
+    },
+    {
+      "suite": "smoke",
+      "file": "packages/li-aimd/li-tests/smoke/aimd_batch_smoke.li",
+      "outcome": "compile_open_ok"
+    },
+    {
+      "suite": "smoke",
+      "file": "packages/li-nanoreactor/li-tests/smoke/builds.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "nanoreactor",
+      "file": "packages/li-nanoreactor/li-tests/unit/box_cycle.li",
+      "outcome": "compile_open_ok"
+    },
+    {
+      "suite": "nanoreactor",
+      "file": "packages/li-nanoreactor/li-tests/unit/potential.li",
+      "outcome": "compile_open_ok"
+    },
+    {
+      "suite": "nanoreactor",
+      "file": "packages/li-nanoreactor/li-tests/unit/integrator.li",
+      "outcome": "compile_open_ok"
+    },
+    {
+      "suite": "nanoreactor",
+      "file": "packages/li-nanoreactor/li-tests/unit/reaction.li",
+      "outcome": "compile_open_ok"
+    },
+    {
+      "suite": "nanoreactor",
+      "file": "packages/li-nanoreactor/li-tests/e2e/water_dimer.li",
+      "outcome": "compile_open_ok"
+    },
+    {
+      "suite": "nanoreactor",
+      "file": "packages/li-nanoreactor/li-tests/e2e/methane.li",
+      "outcome": "compile_open_ok"
+    },
+    {
+      "suite": "nanoreactor",
+      "file": "packages/li-nanoreactor/li-tests/e2e/h2_o2.li",
+      "outcome": "compile_open_ok"
+    },
+    {
+      "suite": "httpd",
+      "file": "httpd/gate_placeholder.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "httpd",
+      "file": "httpd/reserved_wellknown_note.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "httpd",
+      "file": "httpd/parse_request_smoke.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "httpd",
+      "file": "httpd/route_key_valid.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "httpd",
+      "file": "httpd/serve_once_smoke.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "httpd",
+      "file": "httpd/serve_routed_once.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "httpd",
+      "file": "httpd/route_match_contract.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "routing",
+      "file": "routing/match_routes.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "routing",
+      "file": "routing/match_routes_toml.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "math_linalg",
+      "file": "math_linalg/array_dot_matmul.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "math_linalg",
+      "file": "math_linalg/dot_float_arrays.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "math_linalg",
+      "file": "math_linalg/elementwise_mul_float.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "math_linalg",
+      "file": "math_linalg/elementwise_mul_float10.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "math_linalg",
+      "file": "math_linalg/broadcast_len1_add_float4.li",
+      "outcome": "compile_ok"
+    },
+    {
+      "suite": "math_linalg",
+      "file": "math_linalg/broadcast_len1_mul_int4.li",
+      "outcome": "compile_ok"
+    },
+    {
+      "suite": "math_linalg",
+      "file": "math_linalg/broadcast_len1_pow_int4.li",
+      "outcome": "compile_ok"
+    },
+    {
+      "suite": "math_linalg",
+      "file": "math_linalg/broadcast_invalid_len2_vs_len4.li",
+      "outcome": "compile_fail",
+      "expected_substr": "length-1 broadcast"
+    },
+    {
+      "suite": "math_linalg",
+      "file": "math_linalg/sum_elementwise_product.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "math_linalg",
+      "file": "math_linalg/elementwise_len_mismatch.li",
+      "outcome": "compile_fail",
+      "expected_substr": "matching lengths"
+    },
+    {
+      "suite": "math_linalg",
+      "file": "math_linalg/array_dot_mismatch.li",
+      "outcome": "compile_fail",
+      "expected_substr": "matrix multiply"
+    },
+    {
+      "suite": "math_linalg",
+      "file": "math_linalg/matmul_2x3_ok.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "math_linalg",
+      "file": "math_linalg/matmul_dim_mismatch.li",
+      "outcome": "compile_fail",
+      "expected_substr": "inner dimension mismatch"
+    },
+    {
+      "suite": "math_linalg",
+      "file": "math_linalg/array_sum.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "math_linalg",
+      "file": "math_linalg/norm_float4.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "math_linalg",
+      "file": "math_linalg/norm_int4_sq.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "math_linalg",
+      "file": "math_linalg/vec3_ops.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "math_linalg",
+      "file": "math_linalg/elementwise_pow_float4.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "math_linalg",
+      "file": "math_linalg/scale_float4.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "math_linalg",
+      "file": "math_linalg/axpy_float4.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "math_linalg",
+      "file": "math_linalg/reductions/sum_float4.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "math_linalg",
+      "file": "math_linalg/reductions/dot_via_sum_product.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "math_linalg",
+      "file": "math_linalg/reductions/dot_len_mismatch.li",
+      "outcome": "compile_fail",
+      "expected_substr": "dot expects two matching array"
+    },
+    {
+      "suite": "math_linalg",
+      "file": "math_linalg/reductions/sum_non_array.li",
+      "outcome": "compile_fail",
+      "expected_substr": "sum expects a fixed array argument"
+    },
+    {
+      "suite": "physics",
+      "file": "physics/profile_defaults.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "physics",
+      "file": "physics/three_body_mini.li",
+      "outcome": "compile_ok"
+    },
+    {
+      "suite": "math_linalg",
+      "file": "math_linalg/golden_dot4_ones_twos.li",
+      "outcome": "compile_ok"
+    },
+    {
+      "suite": "math_linalg",
+      "file": "math_linalg/golden_tier1_dot8.li",
+      "outcome": "compile_ok"
+    },
+    {
+      "suite": "physics",
+      "file": "physics/golden_positions_sum.li",
+      "outcome": "compile_ok"
+    },
+    {
+      "suite": "math_syntax",
+      "file": "math_syntax/int_mod.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "math_syntax",
+      "file": "math_syntax/int_floordiv.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "math_syntax",
+      "file": "math_syntax/int_pow.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "math_syntax",
+      "file": "math_syntax/for_range_sum.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "stdlib_coverage",
+      "file": "stdlib_coverage/build_std_decorators.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "stdlib_seal",
+      "file": "stdlib_seal/ok_control.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "stdlib_seal",
+      "file": "stdlib_seal/shadow_print.li",
+      "outcome": "compile_fail"
+    },
+    {
+      "suite": "stdlib_seal",
+      "file": "stdlib_seal/shadow_list_type.li",
+      "outcome": "compile_fail"
+    },
+    {
+      "suite": "stdlib_seal",
+      "file": "stdlib_seal/duplicate_proc.li",
+      "outcome": "compile_fail"
+    },
+    {
+      "suite": "stdlib_seal",
+      "file": "stdlib_seal/shadow_std_symbol.li",
+      "outcome": "compile_fail"
+    },
+    {
+      "suite": "stdlib_seal",
+      "file": "stdlib_seal/shadow_print_via_import.li",
+      "outcome": "compile_fail"
+    },
+    {
+      "suite": "encapsulation",
+      "file": "encapsulation/def_syntax_ok.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "encapsulation",
+      "file": "encapsulation/def_multiline_params.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "encapsulation",
+      "file": "encapsulation/proc_syntax_rejected.li",
+      "outcome": "compile_fail",
+      "expected_substr": "use 'def' for Li procedures"
+    },
+    {
+      "suite": "encapsulation",
+      "file": "encapsulation/extern_proc_syntax_rejected.li",
+      "outcome": "compile_fail",
+      "expected_substr": "use 'extern def' for trusted FFI"
+    },
+    {
+      "suite": "encapsulation",
+      "file": "encapsulation/object_public_field.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "encapsulation",
+      "file": "objects/object_field_smoke.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "encapsulation",
+      "file": "objects/object_copy_init.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "encapsulation",
+      "file": "objects/object_return_call.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "encapsulation",
+      "file": "objects/object_whole_assign.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "encapsulation",
+      "file": "objects/object_array_field_copy.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "encapsulation",
+      "file": "objects/object_array_return_call.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "encapsulation",
+      "file": "objects/object_mixed_scalar_array_return.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "encapsulation",
+      "file": "objects/object_mixed_param_pass.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "encapsulation",
+      "file": "encapsulation/import_parse.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "encapsulation",
+      "file": "encapsulation/private_field_access.li",
+      "outcome": "compile_fail",
+      "expected_substr": "cannot access private field"
+    },
+    {
+      "suite": "encapsulation",
+      "file": "encapsulation/leak_imported_vault.li",
+      "outcome": "compile_fail",
+      "expected_substr": "cannot access private field"
+    },
+    {
+      "suite": "encapsulation",
+      "file": "encapsulation/def_method_call.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "encapsulation",
+      "file": "encapsulation/def_method_parse.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "encapsulation",
+      "file": "encapsulation/def_method_missing.li",
+      "outcome": "compile_fail",
+      "expected_substr": "No method"
+    },
+    {
+      "suite": "encapsulation",
+      "file": "encapsulation/private_method_use.li",
+      "outcome": "compile_fail",
+      "expected_substr": "vault_secret"
+    },
+    {
+      "suite": "encapsulation",
+      "file": "encapsulation/object_method_mutate.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "encapsulation",
+      "file": "encapsulation/inheritance_subtype.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "encapsulation",
+      "file": "encapsulation/inheritance_layout.li",
+      "outcome": "compile_fail",
+      "expected_substr": "incompatible with base layout"
+    },
+    {
+      "suite": "encapsulation",
+      "file": "encapsulation/override_mismatch.li",
+      "outcome": "compile_fail",
+      "expected_substr": "override return type mismatch"
+    },
+    {
+      "suite": "encapsulation",
+      "file": "encapsulation/trait_hash_impl.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "encapsulation",
+      "file": "encapsulation/trait_missing_impl.li",
+      "outcome": "compile_fail",
+      "expected_substr": "does not implement trait"
+    },
+    {
+      "suite": "modules",
+      "file": "modules/greeter/greeter.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "modules",
+      "file": "modules/import_std_decorators.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "modules",
+      "file": "modules/use_greeter.li",
+      "outcome": "verify_open_ok"
+    },
+    {
+      "suite": "modules",
+      "file": "modules/use_positive.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "modules",
+      "file": "modules/import_cycle_a.li",
+      "outcome": "compile_fail"
+    },
+    {
+      "suite": "cve_patterns",
+      "file": "cve_patterns/cwe787_oob_index.li",
+      "outcome": "compile_fail",
+      "expected_substr": "out of range"
+    },
+    {
+      "suite": "cve_patterns",
+      "file": "cve_patterns/cwe125_negative_index.li",
+      "outcome": "compile_fail",
+      "expected_substr": "out of range"
+    },
+    {
+      "suite": "cve_patterns",
+      "file": "cve_patterns/cwe120_stack_buffer_oob.li",
+      "outcome": "compile_fail",
+      "expected_substr": "out of range"
+    },
+    {
+      "suite": "cve_patterns",
+      "file": "cve_patterns/cwe787_dyn_index.li",
+      "outcome": "compile_fail",
+      "expected_substr": "array index must be constant"
+    },
+    {
+      "suite": "cve_patterns",
+      "file": "cve_patterns/cwe676_extern_no_contract.li",
+      "outcome": "compile_fail",
+      "expected_substr": "requires"
+    },
+    {
+      "suite": "cve_patterns",
+      "file": "cve_patterns/good_bounded_index.li",
+      "outcome": "verify_ok"
+    },
+    {
+      "suite": "cve_patterns",
+      "file": "cve_patterns/historic_ariane5_narrowing.li",
+      "outcome": "compile_fail",
+      "expected_substr": "bare cast"
+    },
+    {
+      "suite": "cve_patterns",
+      "file": "cve_patterns/historic_goto_fail.li",
+      "outcome": "compile_fail",
+      "expected_substr": "goto is forbidden"
+    },
+    {
+      "suite": "codegen",
+      "file": "codegen/fp_numerically_stable.li",
+      "outcome": "compile_ok"
+    }
+  ]
+}

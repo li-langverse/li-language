@@ -1,5 +1,7 @@
 #include "li/call_requires.hpp"
 
+#include "li/vc_prove.hpp"
+
 #include <optional>
 #include <sstream>
 
@@ -119,6 +121,13 @@ std::optional<std::int64_t> int_lit_value(const Expr& e) {
   return std::nullopt;
 }
 
+std::optional<double> float_lit_value(const Expr& e) {
+  if (e.kind == Expr::Kind::FloatLit) {
+    return e.float_value;
+  }
+  return std::nullopt;
+}
+
 bool compare_int_literals(BinOp op, std::int64_t lhs, std::int64_t rhs) {
   switch (op) {
     case BinOp::Eq:
@@ -136,6 +145,33 @@ bool compare_int_literals(BinOp op, std::int64_t lhs, std::int64_t rhs) {
     default:
       return false;
   }
+}
+
+bool compare_num_literals(BinOp op, double lhs, double rhs) {
+  switch (op) {
+    case BinOp::Eq:
+      return lhs == rhs;
+    case BinOp::Ne:
+      return lhs != rhs;
+    case BinOp::Lt:
+      return lhs < rhs;
+    case BinOp::Le:
+      return lhs <= rhs;
+    case BinOp::Gt:
+      return lhs > rhs;
+    case BinOp::Ge:
+      return lhs >= rhs;
+    default:
+      return false;
+  }
+}
+
+// A numeric literal (int or float) as a double, for `8.0 == 8`-style checks.
+std::optional<double> num_lit_value(const Expr& e) {
+  if (const auto iv = int_lit_value(e)) {
+    return static_cast<double>(*iv);
+  }
+  return float_lit_value(e);
 }
 
 }  // namespace
@@ -207,6 +243,24 @@ std::optional<std::string> object_field_const_key(const Expr& e) {
   return root->ident + "." + e.field_name;
 }
 
+std::optional<std::string> array_index_const_key(const Expr& e) {
+  // Canonical key for `a[0]` and nested `a[0][1]` (2D tiles): walk the
+  // index chain to the root ident, requiring every index to be a literal.
+  std::string key;
+  const Expr* cur = &e;
+  while (cur != nullptr && cur->kind == Expr::Kind::Index && cur->base && cur->index) {
+    if (cur->index->kind != Expr::Kind::IntLit) {
+      return std::nullopt;
+    }
+    key = "[" + std::to_string(cur->index->int_value) + "]" + key;
+    cur = cur->base.get();
+  }
+  if (cur == nullptr || cur->kind != Expr::Kind::Ident || key.empty()) {
+    return std::nullopt;
+  }
+  return cur->ident + key;
+}
+
 void note_object_field_const_assign(const Expr& lhs, const Expr& rhs,
                                     std::map<std::string, std::int64_t>& const_int_locals) {
   const auto key = object_field_const_key(lhs);
@@ -232,10 +286,41 @@ void note_object_field_const_assign(const Expr& lhs, const Expr& rhs,
   }
 }
 
+void note_array_index_const_assign(const Expr& lhs, const Expr& rhs,
+                                   std::map<std::string, std::int64_t>& const_int_locals) {
+  const auto key = array_index_const_key(lhs);
+  if (!key) {
+    return;
+  }
+  if (rhs.kind == Expr::Kind::IntLit) {
+    const_int_locals[*key] = rhs.int_value;
+    return;
+  }
+  if (rhs.kind == Expr::Kind::Ident) {
+    const auto it = const_int_locals.find(rhs.ident);
+    if (it != const_int_locals.end()) {
+      const_int_locals[*key] = it->second;
+    }
+  }
+}
+
 std::unique_ptr<Expr> fold_const_int_locals(
     const Expr& expr, const std::map<std::string, std::int64_t>& const_int_locals) {
   if (expr.kind == Expr::Kind::FieldAccess) {
     const auto key = object_field_const_key(expr);
+    if (key) {
+      const auto it = const_int_locals.find(*key);
+      if (it != const_int_locals.end()) {
+        auto lit = std::make_unique<Expr>();
+        lit->kind = Expr::Kind::IntLit;
+        lit->span = expr.span;
+        lit->int_value = it->second;
+        return lit;
+      }
+    }
+  }
+  if (expr.kind == Expr::Kind::Index) {
+    const auto key = array_index_const_key(expr);
     if (key) {
       const auto it = const_int_locals.find(*key);
       if (it != const_int_locals.end()) {
@@ -282,6 +367,96 @@ std::unique_ptr<Expr> fold_const_int_locals(
   return out;
 }
 
+std::unique_ptr<Expr> fold_const_locals(
+    const Expr& expr, const std::map<std::string, std::int64_t>& const_int_locals,
+    const std::map<std::string, double>& const_float_locals) {
+  auto fold_one = [&](const Expr& e) -> std::unique_ptr<Expr> {
+    // Fold a leaf: const ident, `a[0]` int/float array store, `o.f` field.
+    std::unique_ptr<Expr> lit;
+    auto mk_lit = [&](Expr::Kind kind, std::int64_t iv, double fv) {
+      lit = std::make_unique<Expr>();
+      lit->kind = kind;
+      lit->span = e.span;
+      lit->int_value = iv;
+      lit->float_value = fv;
+    };
+    if (e.kind == Expr::Kind::Ident) {
+      const auto it = const_int_locals.find(e.ident);
+      if (it != const_int_locals.end()) {
+        mk_lit(Expr::Kind::IntLit, it->second, 0.0);
+        return lit;
+      }
+      const auto ft = const_float_locals.find(e.ident);
+      if (ft != const_float_locals.end()) {
+        mk_lit(Expr::Kind::FloatLit, 0, ft->second);
+        return lit;
+      }
+      return clone_expr(e);
+    }
+    if (e.kind == Expr::Kind::Index || e.kind == Expr::Kind::FieldAccess) {
+      const auto key =
+          e.kind == Expr::Kind::Index ? array_index_const_key(e) : object_field_const_key(e);
+      if (key) {
+        const auto it = const_int_locals.find(*key);
+        if (it != const_int_locals.end()) {
+          mk_lit(Expr::Kind::IntLit, it->second, 0.0);
+          return lit;
+        }
+        const auto ft = const_float_locals.find(*key);
+        if (ft != const_float_locals.end()) {
+          mk_lit(Expr::Kind::FloatLit, 0, ft->second);
+          return lit;
+        }
+      }
+    }
+    return nullptr;
+  };
+  auto out = clone_expr(expr);
+  if (out->kind == Expr::Kind::Ident || out->kind == Expr::Kind::Index ||
+      out->kind == Expr::Kind::FieldAccess) {
+    if (auto lit = fold_one(*out)) {
+      return lit;
+    }
+  }
+  if (out->lhs) {
+    out->lhs = fold_const_locals(*out->lhs, const_int_locals, const_float_locals);
+  }
+  if (out->rhs) {
+    out->rhs = fold_const_locals(*out->rhs, const_int_locals, const_float_locals);
+  }
+  if (out->operand) {
+    out->operand = fold_const_locals(*out->operand, const_int_locals, const_float_locals);
+  }
+  if (out->base) {
+    out->base = fold_const_locals(*out->base, const_int_locals, const_float_locals);
+  }
+  if (out->index) {
+    out->index = fold_const_locals(*out->index, const_int_locals, const_float_locals);
+  }
+  for (auto& arg : out->args) {
+    if (arg) {
+      arg = fold_const_locals(*arg, const_int_locals, const_float_locals);
+    }
+  }
+  // Collapse the substituted literal arithmetic (e.g. `1.0 * 2.0 + ...`).
+  const FoldVal folded = fold_const(*out);
+  if (folded.ok) {
+    auto lit = std::make_unique<Expr>();
+    lit->kind = folded.is_float ? Expr::Kind::FloatLit : Expr::Kind::IntLit;
+    lit->span = out->span;
+    lit->int_value = folded.iv;
+    lit->float_value = folded.fv;
+    return lit;
+  }
+  return out;
+}
+
+std::unique_ptr<Expr> fold_facts_expr(const Expr& e, const ProofFacts& facts) {
+  static const std::map<std::string, double> kNoFloatFacts;
+  return fold_const_locals(e, facts.const_int_locals,
+                           facts.const_float_locals ? *facts.const_float_locals : kNoFloatFacts);
+}
+
 bool expr_statically_true(const Expr& e) {
   if (e.kind == Expr::Kind::Ident && e.ident == "true") {
     return true;
@@ -289,12 +464,12 @@ bool expr_statically_true(const Expr& e) {
   if (e.kind != Expr::Kind::BinOp || !e.lhs || !e.rhs) {
     return false;
   }
-  const auto li = int_lit_value(*e.lhs);
-  const auto ri = int_lit_value(*e.rhs);
+  const auto li = num_lit_value(*e.lhs);
+  const auto ri = num_lit_value(*e.rhs);
   if (!li || !ri) {
     return false;
   }
-  return compare_int_literals(e.bin_op, *li, *ri);
+  return compare_num_literals(e.bin_op, *li, *ri);
 }
 
 bool expr_statically_false(const Expr& e) {
@@ -304,12 +479,12 @@ bool expr_statically_false(const Expr& e) {
   if (e.kind != Expr::Kind::BinOp || !e.lhs || !e.rhs) {
     return false;
   }
-  const auto li = int_lit_value(*e.lhs);
-  const auto ri = int_lit_value(*e.rhs);
+  const auto li = num_lit_value(*e.lhs);
+  const auto ri = num_lit_value(*e.rhs);
   if (!li || !ri) {
     return false;
   }
-  return !compare_int_literals(e.bin_op, *li, *ri);
+  return !compare_num_literals(e.bin_op, *li, *ri);
 }
 
 std::string call_to_user_string(const Expr& call);
@@ -445,7 +620,7 @@ RequiresCheckResult check_requires_with_subst_args(
       continue;
     }
     const auto sub = substitute_call_params(*rc.expr, param_names, args);
-    const auto folded = fold_const_int_locals(*sub, facts.const_int_locals);
+    const auto folded = fold_facts_expr(*sub, facts);
     if (expr_statically_true(*folded) || folded_discharged_by_proof_facts(*folded, facts)) {
       continue;
     }
@@ -509,7 +684,7 @@ std::optional<RequiresViolationExplanation> explain_requires_violation_with_args
     }
     const std::string rule_text = expr_to_user_string(*rc.expr);
     const auto sub = substitute_call_params(*rc.expr, param_names, args);
-    const auto folded = fold_const_int_locals(*sub, facts.const_int_locals);
+    const auto folded = fold_facts_expr(*sub, facts);
     if (!expr_statically_false(*folded) || folded_discharged_by_proof_facts(*folded, facts)) {
       continue;
     }
@@ -602,7 +777,7 @@ RequiresCheckResult check_refinement_argument(const ResolvedRefinement& refineme
     return RequiresCheckResult::Unknown;
   }
   const auto sub = substitute_refinement_binding(*refinement.predicate, refinement.bind_var, arg);
-  const auto folded = fold_const_int_locals(*sub, facts.const_int_locals);
+  const auto folded = fold_facts_expr(*sub, facts);
   if (expr_statically_true(*folded) || folded_discharged_by_proof_facts(*folded, facts)) {
     return RequiresCheckResult::Satisfied;
   }
@@ -620,7 +795,7 @@ std::optional<RequiresViolationExplanation> explain_refinement_violation(
   const std::string value_text = expr_to_user_string(arg);
   const std::string rule_text = expr_to_user_string(*refinement.predicate);
   const auto sub = substitute_refinement_binding(*refinement.predicate, refinement.bind_var, arg);
-  const auto folded = fold_const_int_locals(*sub, facts.const_int_locals);
+  const auto folded = fold_facts_expr(*sub, facts);
   if (!expr_statically_false(*folded) || folded_discharged_by_proof_facts(*folded, facts)) {
     return std::nullopt;
   }
@@ -782,38 +957,300 @@ void collect_calls_in_stmts(const std::vector<Stmt>& stmts,
   }
 }
 
+std::unique_ptr<Expr> subst_ident_lit(const Expr& e, const std::string& from, std::int64_t to) {
+  auto out = clone_expr(e);
+  if (out->kind == Expr::Kind::Ident && out->ident == from) {
+    out->kind = Expr::Kind::IntLit;
+    out->int_value = to;
+    return out;
+  }
+  if (out->lhs) {
+    out->lhs = subst_ident_lit(*out->lhs, from, to);
+  }
+  if (out->rhs) {
+    out->rhs = subst_ident_lit(*out->rhs, from, to);
+  }
+  if (out->operand) {
+    out->operand = subst_ident_lit(*out->operand, from, to);
+  }
+  if (out->base) {
+    out->base = subst_ident_lit(*out->base, from, to);
+  }
+  if (out->index) {
+    out->index = subst_ident_lit(*out->index, from, to);
+  }
+  for (auto& arg : out->args) {
+    if (arg) {
+      arg = subst_ident_lit(*arg, from, to);
+    }
+  }
+  return out;
+}
+
+// `name = f(args)`: fold the callee's `ensures` conjuncts (`result == <expr>`
+// for scalars, `result[i][j] == <expr>` for array tiles) with the current
+// facts; each conjunct that collapses to a constant is recorded under the
+// corresponding key (`name`, `name[i][j]`). Returns true if any recorded.
+bool try_fold_call_to_const(const std::string& name, const Expr& call,
+                            std::map<std::string, std::int64_t>& const_int_locals,
+                            std::map<std::string, double>& const_float_locals,
+                            const std::function<const ProcDecl*(const std::string&)>& lookup) {
+  if (call.kind != Expr::Kind::Call) {
+    return false;
+  }
+  const ProcDecl* callee = lookup(call.ident);
+  if (callee == nullptr) {
+    return false;
+  }
+  std::vector<std::string> param_names;
+  for (const auto& p : callee->params) {
+    param_names.push_back(p.name);
+  }
+  const auto record = [&](const std::string& key, const Expr& body) {
+    const auto sub = substitute_call_params(body, param_names, call.args);
+    const auto folded = fold_const_locals(*sub, const_int_locals, const_float_locals);
+    const FoldVal fv = fold_const(*folded);
+    if (!fv.ok) {
+      return false;
+    }
+    if (fv.is_float) {
+      const_float_locals[key] = fv.fv;
+    } else {
+      const_int_locals[key] = fv.iv;
+    }
+    return true;
+  };
+  const auto ensures_conjunct = [&](const Expr& conjunct) -> bool {
+    if (conjunct.kind != Expr::Kind::BinOp || conjunct.bin_op != BinOp::Eq || !conjunct.lhs ||
+        !conjunct.rhs) {
+      return false;
+    }
+    const Expr* lhs = conjunct.lhs.get();
+    const Expr* rhs = conjunct.rhs.get();
+    if (lhs->kind == Expr::Kind::Ident && lhs->ident == "result") {
+      return record(name, *rhs);
+    }
+    if (rhs->kind == Expr::Kind::Ident && rhs->ident == "result") {
+      return record(name, *lhs);
+    }
+    // `result[i][j] == <expr>` — a tile element. The AST is nested
+    // Index(Index(result, i), j), so canonicalize through array_index_const_key
+    // and require the root ident to be `result`.
+    const Expr* res = lhs;
+    const Expr* body = rhs;
+    if (res->kind != Expr::Kind::Index) {
+      res = rhs;
+      body = lhs;
+    }
+    if (res->kind != Expr::Kind::Index) {
+      return false;
+    }
+    const auto key = array_index_const_key(*res);
+    if (!key || key->rfind("result", 0) != 0) {
+      return false;
+    }
+    // Replace the leading `result` with the assigned name.
+    std::string elem_key = name + key->substr(std::string("result").size());
+    return record(elem_key, *body);
+  };
+  bool any = false;
+  for (const auto& rc : callee->contracts) {
+    if (rc.kind != ContractKind::Ensures || !rc.expr) {
+      continue;
+    }
+    if (rc.expr->kind == Expr::Kind::BinOp && rc.expr->bin_op == BinOp::And && rc.expr->lhs &&
+        rc.expr->rhs) {
+      // Walk the whole `and` chain as conjuncts.
+      std::vector<const Expr*> conjuncts;
+      std::vector<const Expr*> stack{rc.expr.get()};
+      while (!stack.empty()) {
+        const Expr* e = stack.back();
+        stack.pop_back();
+        if (e->kind == Expr::Kind::BinOp && e->bin_op == BinOp::And && e->lhs && e->rhs) {
+          stack.push_back(e->rhs.get());
+          stack.push_back(e->lhs.get());
+        } else {
+          conjuncts.push_back(e);
+        }
+      }
+      for (const Expr* conj : conjuncts) {
+        if (ensures_conjunct(*conj)) {
+          any = true;
+        }
+      }
+    } else if (ensures_conjunct(*rc.expr)) {
+      any = true;
+    }
+  }
+  return any;
+}
+
+// Record const facts from one assignment: int and float locals, `a[i] = c`
+// array-element stores (int + float), `o.f = c` fields, and call-assignments
+// whose callee `ensures result == <expr>` folds to a constant.
+void note_assign_facts(const Expr& lhs, const Expr& rhs,
+                       std::map<std::string, std::int64_t>& const_int_locals,
+                       std::map<std::string, double>& const_float_locals,
+                       const Module* module) {
+  note_object_field_const_assign(lhs, rhs, const_int_locals);
+  note_array_index_const_assign(lhs, rhs, const_int_locals);
+  const auto arr_key = array_index_const_key(lhs);
+  if (arr_key) {
+    if (rhs.kind == Expr::Kind::FloatLit) {
+      const_float_locals[*arr_key] = rhs.float_value;
+    } else if (rhs.kind == Expr::Kind::Ident) {
+      const auto ft = const_float_locals.find(rhs.ident);
+      if (ft != const_float_locals.end()) {
+        const_float_locals[*arr_key] = ft->second;
+      }
+    }
+  }
+  const auto fld_key = object_field_const_key(lhs);
+  if (fld_key && rhs.kind == Expr::Kind::FloatLit) {
+    const_float_locals[*fld_key] = rhs.float_value;
+  }
+  if (lhs.kind != Expr::Kind::Ident) {
+    return;
+  }
+  const std::string& name = lhs.ident;
+  if (rhs.kind == Expr::Kind::IntLit) {
+    const_int_locals[name] = rhs.int_value;
+    return;
+  }
+  if (rhs.kind == Expr::Kind::FloatLit) {
+    const_float_locals[name] = rhs.float_value;
+    return;
+  }
+  if (rhs.kind == Expr::Kind::Ident) {
+    const auto it = const_int_locals.find(rhs.ident);
+    if (it != const_int_locals.end()) {
+      const_int_locals[name] = it->second;
+    }
+    const auto ft = const_float_locals.find(rhs.ident);
+    if (ft != const_float_locals.end()) {
+      const_float_locals[name] = ft->second;
+    }
+    return;
+  }
+  if (rhs.kind == Expr::Kind::Call && module != nullptr) {
+    try_fold_call_to_const(
+        name, rhs, const_int_locals, const_float_locals,
+        [module](const std::string& n) { return find_proc_by_name(*module, n); });
+  }
+}
+
+// Recognize `while i < N: ...; i = i + 1` loops whose counter starts at a
+// known constant, so `a[i] = 1.0` can be unrolled into concrete element
+// stores (`a[0] = 1.0`, ...). Conservative: no other writes to `i`, no
+// break/continue/return, and at most 64 iterations.
+bool simple_counter_loop(const Stmt& loop,
+                         const std::map<std::string, std::int64_t>& const_int_locals,
+                         std::string* idx, std::int64_t* start, std::int64_t* end) {
+  if (loop.kind != Stmt::Kind::While || !loop.cond) {
+    return false;
+  }
+  const Expr& cond = *loop.cond;
+  if (cond.kind != Expr::Kind::BinOp || cond.bin_op != BinOp::Lt || !cond.lhs || !cond.rhs) {
+    return false;
+  }
+  if (cond.lhs->kind != Expr::Kind::Ident || cond.rhs->kind != Expr::Kind::IntLit) {
+    return false;
+  }
+  const std::string& i = cond.lhs->ident;
+  const auto it = const_int_locals.find(i);
+  if (it == const_int_locals.end()) {
+    return false;
+  }
+  const std::int64_t n = cond.rhs->int_value;
+  const std::int64_t s = it->second;
+  if (n <= s || n - s > 64) {
+    return false;
+  }
+  bool inc = false;
+  for (const auto& st : loop.while_body) {
+    if (st.kind == Stmt::Kind::Break || st.kind == Stmt::Kind::Continue ||
+        st.kind == Stmt::Kind::Return) {
+      return false;
+    }
+    if (st.kind == Stmt::Kind::Assign && st.init && st.init->kind == Expr::Kind::Ident &&
+        st.init->ident == i) {
+      if (st.expr && st.expr->kind == Expr::Kind::BinOp && st.expr->bin_op == BinOp::Add &&
+          st.expr->lhs && st.expr->lhs->kind == Expr::Kind::Ident &&
+          st.expr->lhs->ident == i && st.expr->rhs && st.expr->rhs->kind == Expr::Kind::IntLit &&
+          st.expr->rhs->int_value == 1) {
+        inc = true;
+      } else {
+        return false;  // some other write to the counter
+      }
+    }
+  }
+  if (!inc) {
+    return false;
+  }
+  *idx = i;
+  *start = s;
+  *end = n;
+  return true;
+}
+
 void collect_const_facts_in_stmts(const std::vector<Stmt>& stmts,
-                                  std::map<std::string, std::int64_t>& const_int_locals) {
+                                  std::map<std::string, std::int64_t>& const_int_locals,
+                                  std::map<std::string, double>& const_float_locals,
+                                  const Module* module) {
   for (const auto& s : stmts) {
-    if (s.kind == Stmt::Kind::VarDecl && s.init && s.init->kind == Expr::Kind::IntLit) {
-      const_int_locals[s.var_name] = s.init->int_value;
+    if (s.kind == Stmt::Kind::VarDecl && s.init) {
+      if (s.init->kind == Expr::Kind::IntLit) {
+        const_int_locals[s.var_name] = s.init->int_value;
+      } else if (s.init->kind == Expr::Kind::FloatLit) {
+        const_float_locals[s.var_name] = s.init->float_value;
+      } else if (s.init->kind == Expr::Kind::Ident) {
+        const auto it = const_int_locals.find(s.init->ident);
+        if (it != const_int_locals.end()) {
+          const_int_locals[s.var_name] = it->second;
+        }
+        const auto ft = const_float_locals.find(s.init->ident);
+        if (ft != const_float_locals.end()) {
+          const_float_locals[s.var_name] = ft->second;
+        }
+      } else if (s.init->kind == Expr::Kind::Call && module != nullptr) {
+        try_fold_call_to_const(
+            s.var_name, *s.init, const_int_locals, const_float_locals,
+            [module](const std::string& n) { return find_proc_by_name(*module, n); });
+      }
     }
     if (s.kind == Stmt::Kind::Assign && s.init && s.expr) {
-      note_object_field_const_assign(*s.init, *s.expr, const_int_locals);
-      if (s.init->kind == Expr::Kind::Ident) {
-        if (s.expr->kind == Expr::Kind::IntLit) {
-          const_int_locals[s.init->ident] = s.expr->int_value;
-        } else if (s.expr->kind == Expr::Kind::Ident) {
-          const auto it = const_int_locals.find(s.expr->ident);
-          if (it != const_int_locals.end()) {
-            const_int_locals[s.init->ident] = it->second;
+      note_assign_facts(*s.init, *s.expr, const_int_locals, const_float_locals, module);
+    }
+    // Unroll simple counter loops so `a[i] = 1.0` records all element stores.
+    std::string loop_i;
+    std::int64_t loop_s = 0;
+    std::int64_t loop_e = 0;
+    if (s.kind == Stmt::Kind::While &&
+        simple_counter_loop(s, const_int_locals, &loop_i, &loop_s, &loop_e)) {
+      for (std::int64_t k = loop_s; k < loop_e; ++k) {
+        for (const auto& body_st : s.while_body) {
+          if (body_st.kind == Stmt::Kind::Assign && body_st.init && body_st.expr) {
+            const auto lhs = subst_ident_lit(*body_st.init, loop_i, k);
+            const auto rhs = subst_ident_lit(*body_st.expr, loop_i, k);
+            note_assign_facts(*lhs, *rhs, const_int_locals, const_float_locals, module);
           }
         }
       }
     }
-    collect_const_facts_in_stmts(s.then_body, const_int_locals);
+    collect_const_facts_in_stmts(s.then_body, const_int_locals, const_float_locals, module);
     if (s.else_body) {
-      collect_const_facts_in_stmts(*s.else_body, const_int_locals);
+      collect_const_facts_in_stmts(*s.else_body, const_int_locals, const_float_locals, module);
     }
-    collect_const_facts_in_stmts(s.while_body, const_int_locals);
-    collect_const_facts_in_stmts(s.for_body, const_int_locals);
-    collect_const_facts_in_stmts(s.par_body, const_int_locals);
+    collect_const_facts_in_stmts(s.while_body, const_int_locals, const_float_locals, module);
+    collect_const_facts_in_stmts(s.for_body, const_int_locals, const_float_locals, module);
+    collect_const_facts_in_stmts(s.par_body, const_int_locals, const_float_locals, module);
   }
 }
 
-CallerProofFacts collect_caller_proof_facts(const ProcDecl& caller) {
+CallerProofFacts collect_caller_proof_facts(const ProcDecl& caller, const Module* module) {
   CallerProofFacts facts;
-  collect_const_facts_in_stmts(caller.body, facts.const_int_locals);
+  collect_const_facts_in_stmts(caller.body, facts.const_int_locals, facts.const_float_locals,
+                               module);
   for (const auto& s : caller.body) {
     if (s.kind == Stmt::Kind::If && s.cond) {
       note_nonneg_assumption_from_cond(*s.cond, facts.assum_nonneg_ints);

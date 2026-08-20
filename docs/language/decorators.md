@@ -6,7 +6,7 @@ Li attaches **execution decorators** to `def` and to `for` / `while` loops with 
 
 ## Reserved names
 
-Names such as `parallel`, `vectorized`, `async`, `cpu`, and `gpu` are reserved for the standard library. User-defined decorators must use distinct names (minimum length enforced at compile time).
+Names such as `parallel`, `vectorized`, `async`, `cpu`, and `gpu` are reserved for the standard library. User-defined decorators must use distinct names (minimum length enforced at compile time). `lic check` also flags **typosquats**: a decorator name whose segment is close to a reserved name (e.g. `@my_paralell` vs `@parallel`) warns `W0403` by default, or errors `E0330` when `[check].typosquat = "deny"` is set in `li.toml`.
 
 ## Parallel loops
 

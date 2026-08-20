@@ -1,13 +1,13 @@
 
-extern proc li_rt_sqrt(x: float) raises IO -> float
+extern def li_rt_sqrt(x: float) raises IO -> float
   requires true
   ensures true
   decreases 0
-extern proc li_rt_sin(x: float) raises IO -> float
+extern def li_rt_sin(x: float) raises IO -> float
   requires true
   ensures true
   decreases 0
-extern proc li_rt_cos(x: float) raises IO -> float
+extern def li_rt_cos(x: float) raises IO -> float
   requires true
   ensures true
   decreases 0
@@ -20,9 +20,9 @@ def li_std_numerics_version() -> int
 
 # Semi-implicit Euler: v += a*dt; x += v*dt
 def euler_step_vec2(
-    px: array[3, float], py: array[3, float],
-    vx: array[3, float], vy: array[3, float],
-    fx: array[3, float], fy: array[3, float],
+    px: var array[3, float], py: var array[3, float],
+    vx: var array[3, float], vy: var array[3, float],
+    fx: var array[3, float], fy: var array[3, float],
     inv_mass: float, dt: float) -> unit
   requires dt > 0.0
   ensures true
@@ -38,9 +38,9 @@ def euler_step_vec2(
 
 # Velocity Verlet (kick-drift-kick) for 2D N-body style state
 def verlet_step_vec2(
-    px: array[3, float], py: array[3, float],
-    vx: array[3, float], vy: array[3, float],
-    fx: array[3, float], fy: array[3, float],
+    px: var array[3, float], py: var array[3, float],
+    vx: var array[3, float], vy: var array[3, float],
+    fx: var array[3, float], fy: var array[3, float],
     inv_mass: float, dt: float) -> unit
   requires dt > 0.0
   ensures true
@@ -105,8 +105,8 @@ def rk4_step_4(y: array[4, float], dydt: array[4, float], dt: float) -> unit
 
 # Conjugate gradient: one iteration (for Poisson / implicit steps)
 def cg_iteration(
-    x: array[8, float], r: array[8, float], p: array[8, float],
-    Ap: array[8, float], alpha: float, beta: float) -> unit
+    x: var array[8, float], r: var array[8, float], p: var array[8, float],
+    Ap: var array[8, float], alpha: float, beta: float) -> unit
   requires true
   ensures true
   decreases 0
@@ -123,8 +123,8 @@ def cg_iteration(
 
 # Three-body gravity forces (2D, N=3) — pure-Li reference matching tier2 bench
 def three_body_forces_2d(
-    px: array[3, float], py: array[3, float],
-    fx: array[3, float], fy: array[3, float],
+    px: var array[3, float], py: var array[3, float],
+    fx: var array[3, float], fy: var array[3, float],
     g: float, mass: float, soft: float) -> unit
   requires g > 0.0
   requires mass > 0.0
@@ -182,7 +182,7 @@ def three_body_energy_2d(
       j = j + 1
     i = i + 1
   return ke + pe
-def three_body_init_2d(px: array[3, float], py: array[3, float]) -> unit
+def three_body_init_2d(px: var array[3, float], py: var array[3, float]) -> unit
   requires true
   ensures true
   decreases 0
@@ -195,9 +195,9 @@ def three_body_init_2d(px: array[3, float], py: array[3, float]) -> unit
   px[2] = 0.8660254037844386 * r
   py[2] = -0.5 * r
 def three_body_step_mini(
-    px: array[3, float], py: array[3, float],
-    vx: array[3, float], vy: array[3, float],
-    fx: array[3, float], fy: array[3, float],
+    px: var array[3, float], py: var array[3, float],
+    vx: var array[3, float], vy: var array[3, float],
+    fx: var array[3, float], fy: var array[3, float],
     dt: float) -> unit
   requires dt > 0.0
   ensures true

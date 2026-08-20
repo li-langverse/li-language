@@ -2,34 +2,34 @@
 # Config via LI_REPO_ROOT fixture (CallProc string path ABI is not reliable for load_config).
 import http
 
-extern proc li_rt_httpd_parse_duration_sec(raw: str) -> int
+extern def li_rt_httpd_parse_duration_sec(raw: str) -> int
   requires true
   ensures -1 <= result
 
-extern proc li_rt_httpd_m15_stream_idle_sec() -> int
+extern def li_rt_httpd_m15_stream_idle_sec() -> int
   requires true
   ensures 0 <= result
 
-extern proc li_rt_httpd_m15_stream_max_sec() -> int
+extern def li_rt_httpd_m15_stream_max_sec() -> int
   requires true
   ensures 0 <= result
 
-extern proc li_rt_httpd_m15_concurrent_streams() -> int
+extern def li_rt_httpd_m15_concurrent_streams() -> int
   requires true
   ensures 0 <= result
 
-extern proc li_rt_httpd_route_requires_traceparent(route_id: int) -> int
+extern def li_rt_httpd_route_requires_traceparent(route_id: int) -> int
   requires 0 <= route_id
   requires route_id <= 64
   ensures 0 <= result
   ensures result <= 1
 
-extern proc li_rt_httpd_is_sse_content_type(ctype: str) -> int
+extern def li_rt_httpd_is_sse_content_type(ctype: str) -> int
   requires true
   ensures 0 <= result
   ensures result <= 1
 
-extern proc li_rt_httpd_traceparent_selftest() -> int
+extern def li_rt_httpd_traceparent_selftest() -> int
   requires true
   ensures -1 <= result
   ensures result <= 0

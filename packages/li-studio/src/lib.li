@@ -11,105 +11,105 @@ import lig.present
 # li-studio — compose dock + timeline + inspector + agent chrome (PH-UX-05/06/07).
 
 # PH-SIM / UX-05 — World Studio runtime profiles (world-studio-vision §5).
-extern proc li_rt_studio_profile_from_name(name: str) -> int
+extern def li_rt_studio_profile_from_name(name: str) -> int
   requires true
   ensures result >= 0
   decreases 0
 
-extern proc li_rt_studio_parse_toml_profile_line(line: str) -> int
+extern def li_rt_studio_parse_toml_profile_line(line: str) -> int
   requires true
   ensures result >= 0
   decreases 0
 
 # UX-08 — viewport error mock (no wgpu surface probe; native host wires later).
-extern proc li_rt_studio_viewport_error_kind() raises IO -> int
+extern def li_rt_studio_viewport_error_kind() raises IO -> int
   requires true
   ensures result >= 0
   decreases 0
 
-extern proc li_rt_studio_viewport_error_set_mock(kind: int) raises IO -> int
+extern def li_rt_studio_viewport_error_set_mock(kind: int) raises IO -> int
   requires kind >= 0
   ensures result >= 0
   decreases kind
 
-extern proc li_rt_studio_viewport_error_retry() raises IO -> int
+extern def li_rt_studio_viewport_error_retry() raises IO -> int
   requires true
   ensures result >= 0
   decreases 0
 
 # PH-HW WP3 — shell input + present host bridge (SDL/wgpu on aarch64-apple-darwin).
-extern proc li_rt_studio_shell_input_pointer_down() -> int
+extern def li_rt_studio_shell_input_pointer_down() -> int
   requires true
   ensures result >= 0
   ensures result <= 1
   decreases 0
 
-extern proc li_rt_studio_shell_input_pointer_x() -> float
+extern def li_rt_studio_shell_input_pointer_x() -> float
   requires true
   ensures true
   decreases 0
 
-extern proc li_rt_studio_shell_input_pointer_y() -> float
+extern def li_rt_studio_shell_input_pointer_y() -> float
   requires true
   ensures true
   decreases 0
 
-extern proc li_rt_studio_shell_input_key_escape() -> int
+extern def li_rt_studio_shell_input_key_escape() -> int
   requires true
   ensures result >= 0
   ensures result <= 1
   decreases 0
 
-extern proc li_rt_studio_shell_input_key_cmd_k() -> int
+extern def li_rt_studio_shell_input_key_cmd_k() -> int
   requires true
   ensures result >= 0
   ensures result <= 1
   decreases 0
 
-extern proc li_rt_studio_shell_input_key_digit() -> int
+extern def li_rt_studio_shell_input_key_digit() -> int
   requires true
   ensures result >= 0
   ensures result <= 5
   decreases 0
 
-extern proc li_rt_studio_host_present_tick(viewport_w: int, viewport_h: int) -> int
+extern def li_rt_studio_host_present_tick(viewport_w: int, viewport_h: int) -> int
   requires viewport_w >= 0
   requires viewport_h >= 0
   ensures result >= 0
   ensures result <= 1
   decreases viewport_w
 
-extern proc li_rt_studio_demo_profile_from_env() -> int
+extern def li_rt_studio_demo_profile_from_env() -> int
   requires true
   ensures result >= 0
   decreases 0
 
 
 # UX-02 — timeline playback mock.
-extern proc li_rt_studio_timeline_playing() -> int
+extern def li_rt_studio_timeline_playing() -> int
   requires true
   ensures result >= 0
   ensures result <= 1
   decreases 0
 
-extern proc li_rt_studio_timeline_toggle_play() -> int
+extern def li_rt_studio_timeline_toggle_play() -> int
   requires true
   ensures result >= 0
   ensures result <= 1
   decreases 0
 
-extern proc li_rt_studio_timeline_tick_frame() -> int
+extern def li_rt_studio_timeline_tick_frame() -> int
   requires true
   ensures result >= 0
   ensures result <= 1
   decreases 0
 
-extern proc li_rt_studio_timeline_reset_mock() -> int
+extern def li_rt_studio_timeline_reset_mock() -> int
   requires true
   ensures result == 0
   decreases 0
 
-extern proc li_rt_studio_timeline_playhead_pct() -> float
+extern def li_rt_studio_timeline_playhead_pct() -> float
   requires true
   ensures result >= 0.0
   ensures result <= 1.0
@@ -117,12 +117,12 @@ extern proc li_rt_studio_timeline_playhead_pct() -> float
 
 
 # PH-AGENT — MCP tool ID table (contracts only; lis server in AGENT-1).
-extern proc li_rt_studio_mcp_tool_from_name(name: str) raises IO, Alloc -> int
+extern def li_rt_studio_mcp_tool_from_name(name: str) raises IO, Alloc -> int
   requires true
   ensures result >= 0
   decreases 0
 
-extern proc li_rt_studio_mcp_tool_name(tool_id: int) raises IO, Alloc -> str
+extern def li_rt_studio_mcp_tool_name(tool_id: int) raises IO, Alloc -> str
   requires true
   ensures result != ""
   decreases tool_id
@@ -1875,7 +1875,6 @@ def studio_agent_context_visible(agent_context_label: int) -> int
 def studio_agent_context_for_shell(has_selection: int, task_state: int) -> int
   requires has_selection >= 0
   requires has_selection <= 1
-  requires scene_entity_count >= 0
   requires task_state >= studio_agent_task_idle()
   requires task_state <= studio_agent_task_done()
   ensures result >= studio_agent_context_none()
@@ -2057,7 +2056,7 @@ def studio_agent_tool_trace_rect_at(strip_x: float, strip_y: float, strip_w: flo
   var y: float = strip_y + (strip_h - h) / 2.0
   return rect_make(x, y, studio_agent_tool_trace_width_px(), h)
 
-def studio_compose_agent_invoke_fields(out: StudioAgentChromeCompose, layout: StudioShellLayout, task_state: int, tool_id: int) -> StudioAgentChromeCompose
+def studio_compose_agent_invoke_fields(out: StudioAgentChromeCompose, layout: var StudioShellLayout, task_state: int, tool_id: int) -> StudioAgentChromeCompose
   requires task_state >= studio_agent_task_idle()
   requires task_state <= studio_agent_task_done()
   ensures result.invoke_input_visible == studio_agent_invoke_input_visible(task_state)
@@ -2169,9 +2168,10 @@ def studio_compose_agent_chrome_with_tool(layout: StudioShellLayout, task_state:
   ensures result.tool_request.tool_id == tool_request.tool_id
   decreases task_state
 =
+  var lay_copy: StudioShellLayout = layout
   var out: StudioAgentChromeCompose = studio_compose_agent_chrome(layout, task_state, agent_context_label)
   out.tool_request = tool_request
-  return studio_compose_agent_invoke_fields(out, layout, task_state, tool_request.tool_id)
+  return studio_compose_agent_invoke_fields(out, lay_copy, task_state, tool_request.tool_id)
 
 def studio_compose_shell_profile(w: float, h: float, active_dock_slot: int, has_selection: int, active_profile: int) -> StudioShellCompose
   requires w > 0.0
@@ -2658,7 +2658,7 @@ def studio_shell_chrome_count_palette(has_selection: int, scene_entity_count: in
   return studio_paint_compose_panels_count(sel0) + 1 + studio_paint_topbar_profile_cmds() + studio_shell_viewport_cmds(scene0, viewport_error_kind) + studio_paint_agent_cmds(ts0, ctx0) + studio_paint_palette_cmds(pal0)
 
 
-def studio_paint_shell_chrome(frame: var PaintFrame, compose: StudioShellCompose) -> unit
+def studio_paint_shell_chrome(frame: var PaintFrame, compose: var StudioShellCompose) -> unit
   requires frame.cmd_count >= 0
   ensures frame.cmd_count == studio_shell_chrome_count_palette(compose.inspector.has_selection, compose.scene_entity_count, compose.agent.task_state, compose.palette.is_open, compose.agent.agent_context_label, compose.viewport_error.error_kind)
   decreases compose.agent.task_state

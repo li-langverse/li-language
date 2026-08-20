@@ -7,6 +7,8 @@
 
 | Layer | Command / script | Proves |
 |-------|------------------|--------|
+| **Li theorem layer (Layer 1)** | `lic check <axiom-file>` / `lic verify` | `axiom`/`theorem`/`lemma` declarations parse + typecheck natively; `verify` reports `axioms=`/`theorems=`/`lemmas=` |
+| **Native discharge (Layer 2)** | `lic verify` / `lic build` | `vc_prove` closes `theorem`/`lemma` propositions by rewriting (AC normalization, distributivity, identity rules) + order transitivity over assumed facts; `verify` reports `theorems_proved=`/`theorems_open=`; **build fails on non-discharged theorems** unless `--allow-open-vc` — see [2026-08-14-native-discharge-layer2.md](../release-notes/2026-08-14-native-discharge-layer2.md) |
 | **Static gate** | `lic build` (default on branch with 2f) | Parse, typecheck, borrow, emit MIR/LLVM; emit `AutoVC.lean`; **fail if open Prop goals** (`check-autovc-open-goals.sh`) |
 | **VC inventory** | `lic verify <file>` | Counts `requires`/`ensures`/witnesses — **not** Lean kernel |
 | **Lean discharge (real math)** | `li-tests/tooling/discharge_*_lean.sh`, `contracts_discharge_corpus.sh` | Regenerates AutoVC + **zero open goals**; optional `lake build` in `docs/semantics` |

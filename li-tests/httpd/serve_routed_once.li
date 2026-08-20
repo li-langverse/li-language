@@ -1,6 +1,6 @@
 import http
 
-extern proc li_rt_httpd_serve_routed_once(port: int) -> int
+extern def li_rt_httpd_serve_routed_once(port: int) -> int
   requires true
   ensures true
 

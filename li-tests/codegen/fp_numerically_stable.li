@@ -1,12 +1,12 @@
-extern proc li_rt_sqrt(x: float) -> float
+extern def li_rt_sqrt(x: float) -> float
   requires true
   ensures true
 
-extern proc li_rt_exp(x: float) -> float
+extern def li_rt_exp(x: float) -> float
   requires true
   ensures true
 
-extern proc li_rt_log(x: float) -> float
+extern def li_rt_log(x: float) -> float
   requires true
   ensures true
 

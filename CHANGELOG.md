@@ -6,7 +6,78 @@ All notable changes to Li are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Self-hosted parser (Layer 2 of the Li front end):** `bootstrap/lic/main.li` now parses Li in Li — full recursive-descent port of the C++ parser's grammar (module decls, decorators, visibility, type aliases incl. typedict/enum/trait/object, array/tuple/simd/Callable/refinement types, procs with contracts + raises, if/elif/else, while, for, parallel-for, borrow/discard, imports, error decls, theorems) — gated by `scripts/check_li_parser_parity.sh`: 20-file accept corpus (token-stream parity vs `lic lex`), 5-file reject corpus, and a full-repo sweep mode at **482/482 exact accept/reject parity** with the C++ parser; `parse <file>` subcommand re-dumps the consumed token stream and reports `parse ok` / `parse error`. New `CallProc` lowering coerces pointer-width args (`ptr→i64` / `i64→ptr`) so string literals can pass into user-defined helpers — [2026-08-18-self-hosted-parser.md](docs/release-notes/2026-08-18-self-hosted-parser.md).
+
+- **Runtime net `-Werror` hygiene gate:** `scripts/check-runtime-net-werror.sh` compiles `runtime/li_rt_net.c` with `-Werror -Wall -Wextra` in a dedicated CI phase (catches macOS `#else` stub regressions at compile time); `ptr_i` no longer drops `const`, and Linux-only dead statics are marked `LI_RT_NET_UNUSED` — [2026-08-18-self-hosted-parser.md](docs/release-notes/2026-08-18-self-hosted-parser.md).
+
+- **Interior-bounds ensures on unrolled physics kernels:** `diffuse_explicit` (`li-physics-weather`) and `poisson_jacobi_step` (`li-physics-em`) now ensure the unrolled kernel writes only interior cells 1..6 via `diffuse_step_cell`/`poisson_step_cell` constant-index helpers, all discharged by the native VC engine — [2026-08-18-self-hosted-parser.md](docs/release-notes/2026-08-18-self-hosted-parser.md).
+
+- **Nightly full standalone sweep:** `ci.sh` runs the 20-package standalone subset for fast CI and the full workspace-member sweep under `LI_NIGHTLY=1` (entrypoint `scripts/ci-nightly.sh`), so every member package is verified to install, build, and run outside the monorepo nightly — [2026-08-18-self-hosted-parser.md](docs/release-notes/2026-08-18-self-hosted-parser.md).
+
+- **Compiler ↔ package carve-out, enforced by CI:** the compiler (`compiler/`, `runtime/`, `bootstrap/`) and `std/` facades are now verified upstream-only — no `packages/` references in source or CMake, no package imports from `std/`, every package top-level with sibling-only `path = "../<name>"` deps — and every package is verified to install, build, and run standalone in a fresh tree with its transitive dependency closure (`scripts/check-compiler-isolation.sh`, `scripts/check-package-standalone.sh`, wired into `ci.sh`) — [2026-08-18-compiler-package-isolation.md](docs/release-notes/2026-08-18-compiler-package-isolation.md).
+
+- **`li-nanoreactor` package (standalone, installable):** ab initio nanoreactor as pure-Li modules — box/piston + thermal cycling (A), LJ + Morse pair potentials (B), velocity-Verlet integrator + thermostat (C), squared-distance bond/event detection (D), a reactor driver (E) plugging them together, and common sample systems (water dimer, methane, H2+O2 — F). Each module is unit-tested by itself (`li-tests/unit/`), then exercised end-to-end per sample system (`li-tests/e2e/`), with a runnable example (`examples/nanoreactor_run.li`) — [2026-08-17-nanoreactor-package.md](docs/release-notes/2026-08-17-nanoreactor-package.md).
+
 ### Fixed
+
+- **`lic check` now surfaces warnings on success:** human-mode `lic check` previously printed diagnostics only on failure, so advisory warnings (W0403 typosquat, W0401/W0402, N0401) were invisible behind a green exit code; it now renders warnings/notes on success too and caches them, while exit code stays 0 unless `--deny-warnings` — [2026-08-17-decorator-typosquat-modern.md](docs/release-notes/2026-08-17-decorator-typosquat-modern.md).
+
+- **`resolve_imports` no longer fails on warnings:** it returned `diags.empty()` instead of `!diags.has_errors()`, so any warning accumulated before import resolution (e.g. the policy W0403) made the frontend return false and every command exit 1 — [2026-08-17-decorator-typosquat-modern.md](docs/release-notes/2026-08-17-decorator-typosquat-modern.md).
+
+- **Float-array element arithmetic in codegen:** `a[0] * b[0]` on `array[N, float]` was lowered through int MIR (`fptosi` truncation) because `is_float_expr` did not recognize `Index` reads (or object array fields); user-defined float-returning calls with array params then returned uninitialized stack memory. `is_float_expr` now resolves array-element, object-array-field, and nested matrix index reads, float-array params are seeded, and a new runtime gate (`li-tests/tooling/check_float_array_codegen_runtime.sh`, wired into CI) asserts the real computed values — [2026-08-17-nanoreactor-package.md](docs/release-notes/2026-08-17-nanoreactor-package.md).
+
+### Changed
+
+- **`sqrt_open_bound.li` now emits valid Lean while staying open:** the sqrt `abs` lemma's AutoVC def binds `result` as a formal (fixing "Unknown identifier `result`") and no closing theorem is emitted, so the VC is still reported open (per `contracts_discharge_corpus.sh`) but `lake build AutoVC` compiles. Manifest outcome changed to `compile_open_ok`; contracts_verify is now **30/30** — [2026-08-17-float-certs-and-sqrt.md](docs/release-notes/2026-08-17-float-certs-and-sqrt.md).
+
+- **Float requires enforcement now matches ints (E0304):** the typechecker tracks float const locals, `a[i] = c` / `a[i][j] = c` stores, unrolls simple counter loops, and folds call-assignments (`s = dot4_float(a, b)`) through the callee `ensures`, so a wrong float call value fails at typecheck like ints instead of leaving an unchecked VC — [2026-08-17-float-certs-and-sqrt.md](docs/release-notes/2026-08-17-float-certs-and-sqrt.md).
+
+- **`if`/`elif`/`else` chains and `print(<expr>)` fixed:** the parser now parses `elif` chains (desugared to nested `if`s) and `else` blocks — the AST/MIR/typecheck/codegen already supported `else_body`, only the parser was missing it. Codegen drops dead `Jump`s after a terminating branch (fixes "Terminator found in the middle of a basic block!" for if/else and loops ending in `return`), and `print` lowers general expressions (calls, binops) to a temp so `print(f(x))` prints the value instead of nothing — [2026-08-17-self-hosted-lexer.md](docs/release-notes/2026-08-17-self-hosted-lexer.md).
+
+### Added
+
+- **Finished 2D float matmul value certificate** (`linalg_mat2_float_value.li`, `prove_lean_ok`): `C = mat2_mul(A, B)` on `array[2, array[2, float]]` tiles folds every cell to a constant (19/22/43/50) — nested `a[i][j]` element stores are canonicalized, and the callee `ensures` conjunction (`result[i][j] == …`) is constant-folded per cell at the call site. A negative guard (`linalg_mat2_float_wrong_value.li`, `compile_fail` E0304) proves the fold is real — [2026-08-17-float-certs-and-sqrt.md](docs/release-notes/2026-08-17-float-certs-and-sqrt.md).
+
+- **Finished float dot4 certificate:** the fixed-size dot now proves all three forms in `li-tests/contracts_verify/linalg_dot4_float_closed.li` with zero open obligations — `return x @ y` equals the expanded sum (new `@`-on-arrays witness), a handwritten `acc = acc + x[i] * y[i]` loop equals it too (loop witness generalized from hardcoded `a`/`b`/`acc`/`i` to any names), and `s = dot4_float(a, b)` with `a = 1.0`/`b = 2.0` folds to `s == 8.0` (counter loops are unrolled so `a[i] = 1.0` stores are tracked per element, float const locals + float array-element stores feed a new `fold_const_locals`, and call-assignments fold the callee `ensures` to a constant at the call site) — [2026-08-17-dot4-float-certificate.md](docs/release-notes/2026-08-17-dot4-float-certificate.md).
+
+- **Self-hosted lexer (Layer 2 of the Li front end):** `bootstrap/lic/main.li` now lexes Li in Li — full indentation state machine, comments, strings, int/float/binary literals (including C++ literal-suffix rules), keywords, and operators — with **492/492 exact token-stream parity** across the repo vs the C++ Lexer. New `lic lex <file>` token-dump command, runtime seams (`li_rt_read_file`, `li_rt_str_len/char_at/eq`, `bytes_slice_i`, `li_rt_emit_token`), and the `scripts/check_li_lexer_parity.sh` gate — [2026-08-17-self-hosted-lexer.md](docs/release-notes/2026-08-17-self-hosted-lexer.md).
+
+### Changed
+
+- **`extern def` canonical for FFI:** `extern proc` is rejected in favor of `extern def` (bare `proc` remains legacy). The parser now accepts `extern def`, the migrator converts `extern proc` → `extern def`, `check-li-def-syntax.sh` flags both, and a rejection test (`extern_proc_syntax_rejected`) guards the new rule — [2026-08-17-extern-def-ffi-float-cmp-aimd.md](docs/release-notes/2026-08-17-extern-def-ffi-float-cmp-aimd.md).
+
+- **`print` replaces the `echo` keyword:** the `echo <expr>` keyword statement is gone; output is now the `print(...)` builtin call (modern-Python style). `echo` is no longer reserved, the lexer/parser keyword and its MIR special-casing were removed, typecheck/prelude/borrowck/mir now key on `print`, and all `.li` sources + docs + the `stdlib_seal` shadow tests (`shadow_print*`) were migrated.
+
+### Added
+
+- **`var`-object in-out ABI write-back:** `var Reader`/`var RigidBody`-style object params are now passed by reference (pointer args + callee stores through them) instead of by value with lost mutations; `bytes/reader_writer_smoke.li` now exits 0 at runtime.
+
+- **Object-arg flattening at call sites:** `push_mir_args_for_object_value` no longer silently drops object-typed arguments that aren't bare idents — call-returned objects (`gui_viewport_selection_none()`) and field-access objects (`layout.viewport`) now flatten into the callee's expected leaf slots (was under-pushing 0/N or 26/32 args, which the LLVM verifier rejected).
+
+- **`ReturnVoid` emits `null` for pointer-returning procs:** `ret i0 0` (a `ConstantInt` on a pointer type) broke `str`-returning procs; pointer return types now return `ConstantPointerNull`.
+
+- **Borrowck no longer moves scalars on call:** non-`var` ident args of scalar type are copied by value in the ABI, so `double(a); double(a)` is legal; objects/arrays still move (E0311 unchanged) — `use_after_move.li` still passes.
+
+- **`const_float_locals` is cleared per proc:** float consts (e.g. `h = 18.0`) from one proc leaked into the next, folding unrelated `requires w > 0` call checks to `0 > 0` (E0304 false positives) across a whole module.
+
+- **`lig.present` package + composable suite closure:** new `li-lig-present` workspace package (`import_name = "lig.present"`) wrapping the runtime present surface; `li-studio` depends on it and reuses `physics.rigid` instead of redefining `RigidBody`. The composable suite went **16/16** (`import_studio_*`, `import_render_wgpu_fps`, `import_lig_kernel` now compile; the lig lib gained the kernel externs `li_rt_lig_kernel_run` / `li_rt_lig_kernel_last_validity_ratio` + `lig_kernel_matmul_f32` / `lig_kernel_run_auto` / `lig_validity_gate_pass`).
+
+- **`li-aimd` package (standalone, installable):** ab initio molecular dynamics — DFT-coupled MD energy-drift oracles, thermostatted integrators, grand-canonical charge-neutrality, and headless batch runners — as its own package with `[dependencies]` on `li-chem` and `li-sim` (not nested under either) and smokes registered in the monorepo manifest — [2026-08-17-extern-def-ffi-float-cmp-aimd.md](docs/release-notes/2026-08-17-extern-def-ffi-float-cmp-aimd.md).
+
+- **Li theorem layer (Layer 1):** `axiom` / `theorem` / `lemma` declarations in li — lexer/parser/AST (`TheoremDecl`), proposition typecheck (E0505), `lic verify` axiom/theorem/lemma counts; math axioms ported from `MathAxioms.lean` into `proof-db/math/axioms/*.li` (`peano_zero_not_succ`, `peano_succ_injective`, `order_trichotomy_nat`, `order_antisym`, `real_add_comm`, `real_add_assoc`, `real_mul_distrib`, `real_mul_one`) — [2026-08-14-li-theorem-layer.md](docs/release-notes/2026-08-14-li-theorem-layer.md).
+- **Native proof discharge (Layer 2):** `lic` now closes `theorem`/`lemma` propositions itself — rewriting engine in `compiler/verify/vc_prove.{hpp,cpp}` (AC normalization, distributivity, identity rules, boolean simplification, order transitivity over assumed facts); `lic verify` reports `theorems_proved=`/`theorems_open=`, and `lic build` fails on non-discharged theorems unless `--allow-open-vc`; `proof-db/math/lemmas/ring_discharge.li` (17 closed lemmas, 0 open); array-index helpers (`arr[helper(args)]` with bounds `ensures`) + literal-range witness unblock `examples/tetris/main.li`'s E0201s — [2026-08-14-native-discharge-layer2.md](docs/release-notes/2026-08-14-native-discharge-layer2.md).
+
+### Fixed
+
+- **Float comparison codegen:** runtime float comparisons (`<`, `<=`, `>`, `>=`, `==`, `!=`) were emitted as integer compares after `FPToSI` truncation (so `0.9 <= 0.8` was true); comparisons are now emitted as `FCmp` (with int operands widened via `SIToFP`) and produce a proper i32 0/1 result — [2026-08-17-extern-def-ffi-float-cmp-aimd.md](docs/release-notes/2026-08-17-extern-def-ffi-float-cmp-aimd.md).
+
+- **Native VC float constant folding:** the native discharge engine folded only bare literals, so `ensures result == 3.0` stayed open against `return 1.0 + 1.0 + 1.0`; `fold_const` now reduces `+ - * /` over numeric literals (exact int64, IEEE double for floats, overflow/div-by-zero left unfolded) and the witness layer uses `fold_numeric_equal` to close `result == <const>` — `physics/golden_positions_sum.li` now discharges strictly — [2026-08-17-extern-def-ffi-float-cmp-aimd.md](docs/release-notes/2026-08-17-extern-def-ffi-float-cmp-aimd.md).
+
+- **Constant array-element store witness:** `result == 7` stayed open against `return read_at(a, 6)`; the proof-fact collector now records `a[i] = c` stores and folds `a[c]` back, and the witness layer substitutes a callee's `ensures result == a[i]` to close the caller's `ensures result == <const>` — `contracts_verify/bounds_refinement_release_ok.li` now discharges (leaving only the intentional `sqrt_open_bound.li` Float-lemma gap) — [2026-08-17-extern-def-ffi-float-cmp-aimd.md](docs/release-notes/2026-08-17-extern-def-ffi-float-cmp-aimd.md).
+
+- **Missing-contract sweep:** all repo `.li` files pass the E0301/E0302 contract gate — tier-2 physics benchmarks, tetris demo externs, physics proof-db (`total_momentum`), and std stubs (`io`/`csv`/`ui`) now declare `requires`/`ensures` (plus `raises IO`/`raises Alloc` where effects require them) — [2026-08-14-missing-contracts-fix.md](docs/release-notes/2026-08-14-missing-contracts-fix.md).
 
 - **PH-UX vertical gap #1:** Studio UI bench registry and `bench-studio-viewport-perf.sh` reference `packages/lig` (`wgpu_smoke` hook) instead of removed `packages/li-gpu` — [2026-05-25-vertical-gap-bench-lig.md](docs/release-notes/2026-05-25-vertical-gap-bench-lig.md).
 

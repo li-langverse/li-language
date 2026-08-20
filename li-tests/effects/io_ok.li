@@ -1,6 +1,15 @@
+def answer() -> int
+  requires true
+  ensures result == 3
+  decreases 0
+=
+  return 3
+
 def talk() raises IO -> unit
   requires true
   ensures true
   decreases 0
 =
-  echo 0
+  print(0)
+  print(1 + 2)
+  print(answer())

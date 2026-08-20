@@ -61,7 +61,7 @@ Build with **CMake + Ninja**; one static library per stage so incremental rebuil
 `runtime/li_rt.c` provides:
 
 - `li_panic`, `li_bounds_fail` (see [bounds-release-path](../verification/bounds-release-path.md))
-- Helpers for `echo` / printing (Phase 4)
+- Helpers for `print` (Phase 4)
 - No GC — owned heap types (`list`, `dict`) call `raises Alloc`
 
 ## Standard library
@@ -75,6 +75,22 @@ Shipped as `.li` under `std/` after Phase 4. Benchmarks and Tetris link against 
 | `li-tests/` | Parse/type/prove/borrow/race/benchmark correctness — `run_all.sh` |
 | `examples/tetris/` | End-to-end UI + game logic |
 | `benchmarks/` | Physics correctness, then cross-lang perf |
+
+## Compiler ↔ package isolation (carve-out)
+
+The compiler is **upstream-only**: `compiler/`, `runtime/`, `bootstrap/`, and the `std/` facades never depend on, embed, or hardcode the downstream package tree (`packages/`). Packages are user code *compiled by* `lic`, never *linked into* it.
+
+- `compiler/` + `runtime/` are the only CMake targets; `scripts/build.sh` builds nothing else.
+- `std/` imports only `std.*`/`core`/`prelude` facades — never a package.
+- Every package is top-level `packages/<name>/li.toml` (no nesting), and each `[dependencies]` entry is a sibling `path = "../<name>"` — no absolute or compiler-internal paths.
+- A package like `li-aimd` is **installable standalone**: copying it plus its transitive dependency closure into a fresh tree must build and run with `lic` alone.
+
+Enforced by CI gates:
+
+| Gate | Enforces |
+|------|----------|
+| `scripts/check-compiler-isolation.sh` | No `packages/` refs in compiler/runtime/bootstrap source or CMake; no package imports from `std/`; packages top-level; deps are sibling paths only |
+| `scripts/check-aimd-standalone.sh` | `li-aimd` + transitive deps build and run in a fresh tree outside the monorepo |
 
 ## Self-hosting (Phase 6)
 

@@ -77,14 +77,14 @@ struct Parser {
   TypeAlias parse_type_alias();
   ErrorDecl parse_error_decl();
   ImportDecl parse_import();
+  TheoremDecl parse_theorem(bool is_axiom, bool is_lemma);
   bool accept_def_kw() {
     if (at(TokenKind::KwDef)) {
       i++;
       return true;
     }
     if (at(TokenKind::KwProc)) {
-      diags.error(loc(cur()),
-                  "use 'def' for Li procedures; 'proc' is only allowed after 'extern'");
+      diags.error(loc(cur()), "use 'def' for Li procedures; 'proc' is removed");
       i++;
       return false;
     }
@@ -110,7 +110,14 @@ struct Parser {
         skip_newlines();
       } else if (at(TokenKind::KwExtern)) {
         i++;
-        if (!expect(TokenKind::KwProc, "'proc'")) {
+        if (at(TokenKind::KwDef)) {
+          i++;
+        } else if (at(TokenKind::KwProc)) {
+          diags.error(loc(cur()),
+                      "use 'extern def' for trusted FFI; 'extern proc' is removed");
+          i++;
+        } else {
+          diags.error(loc(cur()), "expected 'def' after 'extern'");
           return false;
         }
         out.procs.push_back(parse_proc(true));
@@ -143,8 +150,7 @@ struct Parser {
         out.procs.push_back(parse_proc(false));
         skip_newlines();
       } else if (at(TokenKind::KwProc)) {
-        diags.error(loc(cur()),
-                    "use 'def' for Li procedures; 'proc' is only allowed after 'extern'");
+        diags.error(loc(cur()), "use 'def' for Li procedures; 'proc' is removed");
         i++;
         skip_newlines();
       } else if (at(TokenKind::KwType)) {
@@ -152,6 +158,12 @@ struct Parser {
         skip_newlines();
       } else if (at(TokenKind::KwError)) {
         out.errors.push_back(parse_error_decl());
+        skip_newlines();
+      } else if (at(TokenKind::KwAxiom) || at(TokenKind::KwTheorem) || at(TokenKind::KwLemma)) {
+        const Token kw = cur();
+        i++;
+        out.theorems.push_back(parse_theorem(kw.kind == TokenKind::KwAxiom,
+                                             kw.kind == TokenKind::KwLemma));
         skip_newlines();
       } else {
         diags.error(loc(cur()), "expected top-level declaration");
@@ -174,17 +186,6 @@ std::unique_ptr<Expr> Parser::parse_primary() {
     e->kind = Expr::Kind::Await;
     e->span = {t.start, inner->span.end};
     e->operand = std::move(inner);
-    return parse_postfix(std::move(e));
-  }
-  if (t.kind == TokenKind::KwEcho) {
-    i++;
-    auto e = std::make_unique<Expr>();
-    e->kind = Expr::Kind::Call;
-    e->span = {t.start, t.end};
-    e->ident = "echo";
-    if (auto arg = parse_primary()) {
-      e->args.push_back(std::move(arg));
-    }
     return parse_postfix(std::move(e));
   }
   if (t.kind == TokenKind::StringLit) {
@@ -332,6 +333,7 @@ std::unique_ptr<Expr> Parser::parse_postfix(std::unique_ptr<Expr> base) {
 
 int prec(TokenKind k) {
   switch (k) {
+    case TokenKind::Arrow: return 0;
     case TokenKind::KwOr: return 1;
     case TokenKind::KwAnd: return 2;
     case TokenKind::EqEq:
@@ -354,6 +356,7 @@ int prec(TokenKind k) {
 
 BinOp binop(TokenKind k) {
   switch (k) {
+    case TokenKind::Arrow: return BinOp::Implies;
     case TokenKind::Plus: return BinOp::Add;
     case TokenKind::Minus: return BinOp::Sub;
     case TokenKind::Star: return BinOp::Mul;
@@ -1066,6 +1069,34 @@ Stmt Parser::parse_stmt() {
     expect(TokenKind::Colon, "':'");
     skip_newlines();
     s.then_body = parse_block();
+    // `elif` chains desugar to nested `if`s; a trailing `else` closes the chain.
+    // The token after parse_block() is at the same indentation as the `if`.
+    Stmt* tail = &s;
+    for (;;) {
+      skip_newlines();
+      if (at(TokenKind::KwElif)) {
+        const Token et = cur();
+        Stmt nested;
+        nested.kind = Stmt::Kind::If;
+        nested.span = {et.start, et.end};
+        i++;
+        nested.cond = parse_expr();
+        expect(TokenKind::Colon, "':'");
+        skip_newlines();
+        nested.then_body = parse_block();
+        tail->else_body = std::vector<Stmt>{};
+        tail->else_body->push_back(std::move(nested));
+        tail = &tail->else_body->back();
+      } else if (at(TokenKind::KwElse)) {
+        i++;
+        expect(TokenKind::Colon, "':'");
+        skip_newlines();
+        tail->else_body = parse_block();
+        break;
+      } else {
+        break;
+      }
+    }
     return s;
   }
   const std::size_t save = i;
@@ -1268,6 +1299,33 @@ ImportDecl Parser::parse_import() {
   }
   imp.span = {start.start, tokens[i > 0 ? i - 1 : i].end};
   return imp;
+}
+
+TheoremDecl Parser::parse_theorem(bool is_axiom, bool is_lemma) {
+  TheoremDecl thm;
+  thm.is_axiom = is_axiom;
+  thm.is_lemma = is_lemma;
+  const Token name = cur();
+  thm.span = {name.start, name.end};
+  thm.name = std::string(name.text);
+  i++;
+  if (at(TokenKind::LParen)) {
+    i++;
+    skip_param_layout();
+    if (!at(TokenKind::RParen)) {
+      do {
+        thm.params.push_back(parse_param());
+        skip_param_layout();
+      } while (accept(TokenKind::Comma));
+    }
+    skip_param_layout();
+    expect(TokenKind::RParen, "')'");
+  }
+  skip_newlines();
+  expect(TokenKind::Colon, "':'");
+  thm.proposition = parse_contract_expr();
+  skip_newlines();
+  return thm;
 }
 
 ProcDecl Parser::parse_trait_method() {

@@ -21,7 +21,10 @@ bool write_vcs_json(const Module& module, const std::string& path, std::string* 
       << "  \"decreases\": " << vc.decreases_count << ",\n"
       << "  \"invariant\": " << vc.invariant_count << ",\n"
       << "  \"ensures_witnessed\": " << vc.ensures_witnessed << ",\n"
-      << "  \"mir_return_linked\": " << vc.mir_return_linked << "\n"
+      << "  \"mir_return_linked\": " << vc.mir_return_linked << ",\n"
+      << "  \"axioms\": " << vc.axiom_count << ",\n"
+      << "  \"theorems\": " << vc.theorem_count << ",\n"
+      << "  \"lemmas\": " << vc.lemma_count << "\n"
       << "}\n";
   return true;
 }

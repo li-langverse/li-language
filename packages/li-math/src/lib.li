@@ -1,22 +1,22 @@
 
-extern proc li_rt_sqrt(x: float) raises IO -> float
+extern def li_rt_sqrt(x: float) raises IO -> float
   requires x >= 0.0
   ensures result >= 0.0
   decreases 0
 
-extern proc li_rt_sin(x: float) raises IO -> float
+extern def li_rt_sin(x: float) raises IO -> float
   requires true
   ensures result >= -1.0
   ensures result <= 1.0
   decreases 0
 
-extern proc li_rt_cos(x: float) raises IO -> float
+extern def li_rt_cos(x: float) raises IO -> float
   requires true
   ensures result >= -1.0
   ensures result <= 1.0
   decreases 0
 
-extern proc li_rt_atan2(y: float, x: float) raises IO -> float
+extern def li_rt_atan2(y: float, x: float) raises IO -> float
   requires true
   ensures result >= -3.14159265
   ensures result <= 3.14159265

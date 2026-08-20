@@ -1,6 +1,33 @@
 # Getting started — tools
 
-You need a C++ compiler, CMake, Ninja, and **LLVM 22** once. After that, building Li is one command.
+You need a C++ compiler, CMake, Ninja, and **LLVM 22** once. After that, installing Li is one command.
+
+## Install the compiler (one command)
+
+Once the toolchain is present, this builds the compiler, installs it, and wires its bin directory into your shell profile:
+
+```bash
+./scripts/install.sh
+```
+
+That installs `lic` to `~/.local/bin/lic` and adds it to `~/.zshrc`, `~/.bashrc`, or `~/.config/fish/config.fish` depending on your shell. Open a new terminal and verify:
+
+```bash
+lic --version
+```
+
+| Variable | Effect |
+|----------|--------|
+| `LI_INSTALL_PREFIX=/usr/local` | Install to `/usr/local/bin/lic` |
+| `LI_INSTALL_BIN=/custom/bin` | Install to a specific bin directory |
+| `LI_NO_PROFILE=1` | Skip the shell-profile PATH wiring |
+
+The standard CMake install path is also supported:
+
+```bash
+cmake --build build
+cmake --install build   # -> /usr/local/bin/lic (or set -DCMAKE_INSTALL_PREFIX)
+```
 
 ## macOS
 
@@ -79,7 +106,7 @@ Without `lake`, `lic build` still runs but skips semantics verification (see [pr
 ## Your first build
 
 ```bash
-./build/compiler/lic/lic build examples/hello.li -o hello --release
+lic build examples/hello.li -o hello --release
 ./hello
 ```
 

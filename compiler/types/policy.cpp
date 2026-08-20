@@ -39,18 +39,7 @@ void check_decorator_policies(const std::string& code, const std::string& file,
       {nullptr, nullptr},
   };
 
-  const std::string needle = "decorator def ";
-  for (std::size_t pos = 0; (pos = code.find(needle, pos)) != std::string::npos;
-       ++pos) {
-    const std::size_t start = pos + needle.size();
-    std::size_t end = start;
-    while (end < code.size() && is_ident_char(code[end])) {
-      end++;
-    }
-    if (end == start) {
-      continue;
-    }
-    const std::string name = code.substr(start, end - start);
+  auto check_typosquat = [&](const std::string& name) {
     auto check_typosquat_segment = [&](const std::string& seg) {
       for (const Typosquat* row = kTyposquat; row->typo != nullptr; ++row) {
         if (seg == row->typo) {
@@ -78,6 +67,21 @@ void check_decorator_policies(const std::string& code, const std::string& file,
       }
       i = j + 1;
     }
+  };
+
+  const std::string needle = "decorator def ";
+  for (std::size_t pos = 0; (pos = code.find(needle, pos)) != std::string::npos;
+       ++pos) {
+    const std::size_t start = pos + needle.size();
+    std::size_t end = start;
+    while (end < code.size() && is_ident_char(code[end])) {
+      end++;
+    }
+    if (end == start) {
+      continue;
+    }
+    const std::string name = code.substr(start, end - start);
+    check_typosquat(name);
     if (is_reserved_decorator_name(name)) {
       SourceLoc loc{file, 1, 1, 0};
       diags.error(loc, std::string("reserved_name: ") + name);
@@ -98,6 +102,45 @@ void check_decorator_policies(const std::string& code, const std::string& file,
         diags.error(loc, std::string("reserved_prefix: ") + *p);
       }
     }
+  }
+
+  // Modern `@name` decorator syntax — the parser-supported form. The legacy
+  // `decorator def` scan above predates the parser's `@` syntax; the typosquat
+  // check must also cover real decorator applications, because a misspelled
+  // decorator (e.g. `@my_paralell` instead of `@parallel`) would otherwise be
+  // applied (or silently dropped) without warning. Distinguish decorator `@`
+  // from the matrix-multiply operator: a decorator starts its line (only
+  // whitespace precedes it), while the operator appears mid-expression.
+  for (std::size_t pos = 0; pos < code.size(); ++pos) {
+    if (code[pos] != '@') {
+      continue;
+    }
+    std::size_t back = pos;
+    bool line_start = true;
+    while (back > 0) {
+      --back;
+      if (code[back] == '\n') {
+        break;
+      }
+      if (code[back] != ' ' && code[back] != '\t') {
+        line_start = false;
+        break;
+      }
+    }
+    if (!line_start) {
+      continue;
+    }
+    const std::size_t start = pos + 1;
+    if (start >= code.size() || !is_ident_char(code[start])) {
+      continue;
+    }
+    std::size_t end = start;
+    while (end < code.size() && is_ident_char(code[end])) {
+      end++;
+    }
+    const std::string name = code.substr(start, end - start);
+    check_typosquat(name);
+    pos = end - 1;
   }
 
 }

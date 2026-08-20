@@ -1,8 +1,6 @@
-import shadow_echo_dep
-
 def main() -> int
   requires true
   ensures result == 0
   decreases 0
 =
-  return echo(0)
+  return 0

@@ -24,6 +24,33 @@ chmod +x "$ROOT/scripts/check-li-def-syntax.sh"
 li_phase "build"
 "$ROOT/scripts/build.sh"
 
+li_phase "runtime net -Werror hygiene"
+chmod +x "$ROOT/scripts/check-runtime-net-werror.sh"
+"$ROOT/scripts/check-runtime-net-werror.sh"
+
+li_phase "self-hosted front end (lexer + parser + AST + self-front-end + check parity)"
+chmod +x "$ROOT/scripts/check_li_parity.sh"
+"$ROOT/scripts/check_li_parity.sh"
+
+li_phase "compiler isolation (carve-out)"
+chmod +x "$ROOT/scripts/check-compiler-isolation.sh"
+"$ROOT/scripts/check-compiler-isolation.sh"
+
+li_phase "per-package standalone install (carve-out)"
+chmod +x "$ROOT/scripts/check-package-standalone.sh"
+# Full workspace sweep is heavy (~minutes); the nightly job (LI_NIGHTLY=1)
+# runs every workspace member, while regular CI runs the core + newly-fixed
+# packages for fast feedback.
+if [[ "${LI_NIGHTLY:-0}" == "1" ]]; then
+  echo "nightly mode: full ${LI_NIGHTLY_PKGS:-all-members} standalone sweep"
+  "$ROOT/scripts/check-package-standalone.sh"
+else
+  "$ROOT/scripts/check-package-standalone.sh" li-aimd li-chem li-sim li-nanoreactor li-math \
+    li-math-numerics li-core li-physics-core li-physics-rigid li-physics-runtime \
+    li-physics-em li-physics-fluids li-physics-weather li-net-httpd li-render li-studio \
+    li-lig-present lig li-scene li-gui
+fi
+
 li_phase "stdlib coverage gate"
 chmod +x "$ROOT/scripts/check-stdlib-coverage.sh"
 "$ROOT/scripts/check-stdlib-coverage.sh"
@@ -107,11 +134,15 @@ chmod +x "$ROOT/scripts/check-doc-provability-claims.sh"
 
 li_phase "lic verify smoke (2e/2f)"
 chmod +x "$ROOT/scripts/lean-verify-stub.sh" "$ROOT/li-tests/tooling/lic_verify_smoke.sh" \
-  "$ROOT/li-tests/tooling/vc_emit_contracts.sh" "$ROOT/li-tests/tooling/contracts_verify_lean.sh"
+  "$ROOT/li-tests/tooling/vc_emit_contracts.sh" "$ROOT/li-tests/tooling/contracts_verify_lean.sh" \
+  "$ROOT/li-tests/tooling/check_float_array_codegen_runtime.sh" \
+  "$ROOT/li-tests/tooling/check_httpd_epoll_seam_runtime.sh"
 export LI_REPO_ROOT="$ROOT"
 "$ROOT/li-tests/tooling/lic_verify_smoke.sh"
 "$ROOT/li-tests/tooling/vc_emit_contracts.sh"
 "$ROOT/li-tests/tooling/contracts_verify_lean.sh"
+"$ROOT/li-tests/tooling/check_float_array_codegen_runtime.sh"
+"$ROOT/li-tests/tooling/check_httpd_epoll_seam_runtime.sh"
 
 li_phase "lic JSON diagnostics (Vision-LLM)"
 chmod +x "$ROOT/li-tests/tooling/diagnose_json_smoke.sh" \

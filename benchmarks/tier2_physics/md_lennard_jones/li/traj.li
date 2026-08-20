@@ -1,4 +1,4 @@
-extern proc li_md_traj_from_env()
+extern def li_md_traj_from_env()
   requires true
   ensures true
 

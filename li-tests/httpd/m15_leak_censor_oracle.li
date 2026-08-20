@@ -1,21 +1,21 @@
 # M1.5 leak_censor oracle — TOML load + runtime scrub selftest (C).
 import http
 
-extern proc li_rt_httpd_leak_censor_enabled() -> int
+extern def li_rt_httpd_leak_censor_enabled() -> int
   requires true
   ensures 0 <= result
   ensures result <= 1
 
-extern proc li_rt_httpd_leak_censor_deny_path_count() -> int
+extern def li_rt_httpd_leak_censor_deny_path_count() -> int
   requires true
   ensures 0 <= result
 
-extern proc li_rt_httpd_leak_censor_pattern_openai() -> int
+extern def li_rt_httpd_leak_censor_pattern_openai() -> int
   requires true
   ensures 0 <= result
   ensures result <= 1
 
-extern proc li_rt_httpd_leak_scrub_selftest() -> int
+extern def li_rt_httpd_leak_scrub_selftest() -> int
   requires true
   ensures -3 <= result
   ensures result <= 0
