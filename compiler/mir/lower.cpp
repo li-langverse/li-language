@@ -664,6 +664,8 @@ void emit_scalar_object_slot(const TypeExpr& raw_field_ty, const std::string& sl
     ins.op = MirOp::ArrayAlloc;
     ins.int_value = ty->array_size;
     ins.array_is_float = ty->elem && is_float_type_name(ty->elem->name);
+    ins.array_is_i64 = ty->elem && ty->elem->kind == TypeKind::Named &&
+                       (is_i64_type_name(ty->elem->name) || is_string_type_name(ty->elem->name));
     out.push_back(std::move(ins));
     if (g_arr_ctx && g_arr_ctx->float_array_names) {
       if (ins.array_is_float) {
@@ -1189,6 +1191,19 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
     }
     case Expr::Kind::Ident:
       return e.ident;
+    case Expr::Kind::StringLit: {
+      // String literals are pointer-width: materialize into an i64 temp so
+      // array stores / call args / assignments can reference the slice.
+      const std::string dest = fresh_temp();
+      MirInsn ins;
+      ins.op = MirOp::StoreI64;
+      ins.ident = dest;
+      ins.rhs_is_string = true;
+      ins.str_value = e.str_value;
+      out.push_back(std::move(ins));
+      i64_locals.insert(dest);
+      return dest;
+    }
     case Expr::Kind::Await: {
       if (!e.operand) {
         return fresh_temp();
@@ -1755,6 +1770,10 @@ void lower_stmt(const Stmt& stmt, LowerCtx& ctx, bool returns_float, std::vector
           ins.ident = stmt.var_name;
           ins.int_value = stmt.var_type.array_size;
           ins.array_is_float = is_float_array_type(stmt.var_type);
+          ins.array_is_i64 =
+              stmt.var_type.elem && stmt.var_type.elem->kind == TypeKind::Named &&
+              (is_i64_type_name(stmt.var_type.elem->name) ||
+               is_string_type_name(stmt.var_type.elem->name));
           out.push_back(std::move(ins));
           if (ins.array_is_float) {
             float_array_names.insert(stmt.var_name);
@@ -2455,14 +2474,15 @@ MirModule lower_to_mir(const Module& module) {
             if (el && el->kind == TypeKind::Named) {
               mp.fixed_array_elems = ut->array_size;
               mp.is_float = is_float_type_name(el->name);
+              mp.is_i64 = is_i64_type_name(el->name) || is_string_type_name(el->name);
               mp.is_var = p.type.is_var;
             }
           }
         } else {
           mp.is_float = is_float_type_name(p.type.name);
+          mp.is_string = mir_ptr_param_type_name(p.type.name);
+          mp.is_i64 = is_i64_type_name(p.type.name) || is_string_type_name(p.type.name);
         }
-        mp.is_string = mir_ptr_param_type_name(p.type.name);
-        mp.is_i64 = is_i64_type_name(p.type.name) || is_string_type_name(p.type.name);
         fn.params.push_back(std::move(mp));
       }
     }

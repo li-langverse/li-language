@@ -126,6 +126,8 @@ struct MirInsn {
   std::int64_t lhs_int = 0;
   bool is_i64 = false;
   bool array_is_float = false;
+  /** `array[N, ptr|i64|str|bytes|StringView]`: elements are pointer-width. */
+  bool array_is_i64 = false;
   /** `array[M, array[K, float]]` row-major tile; cols in rhs_int when true. */
   bool array_is_matrix = false;
   /** Element-wise op: other operand is `array[1, *]` — use its index 0 at every lane. */

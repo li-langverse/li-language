@@ -1655,6 +1655,11 @@ suite = "codegen"
 file = "codegen/fp_numerically_stable.li"
 outcome = "compile_ok"
 
+[[tests]]
+suite = "codegen"
+file = "codegen/ptr_array_strings.li"
+outcome = "compile_ok"
+
 # --- hpc_competitive (registry gate; ./li-tests/run_all.sh hpc_competitive) ---
 
 # --- security (malformed inputs; run via ./li-tests/run_security.sh) ---

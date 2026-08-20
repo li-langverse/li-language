@@ -5,9 +5,9 @@
 # generics + effects + borrow corpus. This gates name resolution, type
 # unification, numeric/width mixing, array bounds, protocol sizing, contract
 # well-formedness (E0301/E0302/E0303), effect checking (raises IO/Alloc/Net/
-# Async), and borrow checking (E0310/E0311) — not just accept/reject.
-# (encapsulation visibility/trait policy is a separate later layer not yet part
-# of this gate.)
+# Async), borrow checking (E0310/E0311), and encapsulation policy (private
+# field/method access, visibility, trait/object well-formedness, import
+# resolution for field privacy) — not just accept/reject.
 #
 # Usage:
 #   scripts/check_li_check_parity.sh
@@ -35,7 +35,8 @@ codes_of() {
   || fail "could not build bootstrap/lic/main.li with $LIC"
 
 CORPUS=()
-for d in li-tests/typecheck li-tests/generics li-tests/effects li-tests/borrow; do
+for d in li-tests/typecheck li-tests/generics li-tests/effects li-tests/borrow \
+         li-tests/encapsulation; do
   for f in "$ROOT/$d"/*.li; do
     [[ -f "$f" ]] || continue
     CORPUS+=("$f")

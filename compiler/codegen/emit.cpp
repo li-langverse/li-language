@@ -138,6 +138,7 @@ struct ArraySlot {
   std::int64_t cols = 0;
   bool is_float = false;
   bool is_matrix = false;
+  bool is_i64 = false;
 };
 
 struct EmitCtx {
@@ -1087,12 +1088,19 @@ struct EmitCtx {
           slot = entry_alloca(mat_ty, ins.ident);
           arrays[ins.ident] = ArraySlot{slot, mat_ty, ins.int_value, ins.rhs_int, true, true};
         } else {
-          llvm::Type* elem_ty = ins.array_is_float ? llvm::Type::getDoubleTy(context)
-                                                   : i32_ty(context);
+          llvm::Type* elem_ty = llvm::Type::getDoubleTy(context);
+          if (ins.array_is_float) {
+            elem_ty = llvm::Type::getDoubleTy(context);
+          } else if (ins.array_is_i64) {
+            elem_ty = i64_ty(context);
+          } else {
+            elem_ty = i32_ty(context);
+          }
           llvm::ArrayType* arr_ty =
               llvm::ArrayType::get(elem_ty, static_cast<unsigned>(ins.int_value));
           slot = entry_alloca(arr_ty, ins.ident);
-          arrays[ins.ident] = ArraySlot{slot, arr_ty, ins.int_value, 0, ins.array_is_float, false};
+          arrays[ins.ident] = ArraySlot{slot, arr_ty, ins.int_value, 0, ins.array_is_float, false,
+                                        ins.array_is_i64};
         }
         return true;
       }
@@ -1114,6 +1122,11 @@ struct EmitCtx {
               ins.rhs_is_literal
                   ? llvm::ConstantFP::get(llvm::Type::getDoubleTy(context), ins.float_value)
                   : load_float(ins.rhs_ident);
+          builder->CreateStore(val, ptr);
+        } else if (it->second.is_i64) {
+          llvm::Value* val = ins.rhs_is_literal
+                                 ? llvm::ConstantInt::get(i64_ty(context), ins.rhs_int)
+                                 : load_i64(ins.rhs_ident);
           builder->CreateStore(val, ptr);
         } else {
           llvm::Value* val = ins.rhs_is_literal ? int32_val(*builder, context, ins.rhs_int)
@@ -1138,6 +1151,11 @@ struct EmitCtx {
           llvm::Value* loaded = builder->CreateLoad(llvm::Type::getDoubleTy(context), ptr);
           if (!ins.lhs_ident.empty()) {
             builder->CreateStore(loaded, ensure_float_local(ins.lhs_ident));
+          }
+        } else if (it->second.is_i64) {
+          llvm::Value* loaded = builder->CreateLoad(i64_ty(context), ptr);
+          if (!ins.lhs_ident.empty()) {
+            builder->CreateStore(loaded, ensure_i64_local(ins.lhs_ident));
           }
         } else {
           llvm::Value* loaded = builder->CreateLoad(i32_ty(context), ptr);
@@ -1776,11 +1794,11 @@ bool emit_llvm_ir(const MirModule& mir, const std::string& out_path, int runtime
             // the caller's array. The ABI already passes a pointer; use it
             // directly as the slot base instead of copying in.
             ctx.arrays[mp.name] = ArraySlot{&arg, arr_ty, mp.fixed_array_elems, mp.matrix_cols,
-                                            mp.is_float, mp.is_matrix};
+                                            mp.is_float, mp.is_matrix, mp.is_i64};
           } else {
           llvm::AllocaInst* ap = builder.CreateAlloca(arr_ty, nullptr, mp.name);
           ctx.arrays[mp.name] = ArraySlot{ap, arr_ty, mp.fixed_array_elems, mp.matrix_cols,
-                                          mp.is_float, mp.is_matrix};
+                                          mp.is_float, mp.is_matrix, mp.is_i64};
           llvm::Type* elem = llvm_scalar(context, mp.is_float, mp.is_i64, mp.is_string);
           llvm::Value* zero = llvm::ConstantInt::get(builder.getInt32Ty(), 0);
           if (mp.is_matrix && mp.matrix_cols > 0) {
