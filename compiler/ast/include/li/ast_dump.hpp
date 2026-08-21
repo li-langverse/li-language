@@ -44,7 +44,8 @@ namespace li {
 ///   64 EXPR_IDENT    <lexeme>
 ///   65 EXPR_BINOP    <op-token-kind>               children: lhs, rhs
 ///   66 EXPR_CALL     <callee-name>                 children: args
-///   67 EXPR_UNARY_NOT / 71 EXPR_AWAIT              child: operand
+///   67 EXPR_UNARY_NOT / 71 EXPR_AWAIT / 72 EXPR_UNARY_MINUS
+///                                                  child: operand
 ///   68 EXPR_INDEX                                  children: base, index
 ///   69 EXPR_FIELD    <field>                       child: base
 ///   70 EXPR_METHOD_CALL <method>                   children: base, args

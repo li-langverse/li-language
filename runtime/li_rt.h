@@ -16,12 +16,32 @@ void li_rt_print_str(const char* s);
 int32_t li_rt_emit_token(int32_t kind, const char* text, int32_t start, int32_t end);
 /* Self-hosted AST dump primitives: stream one node line as `code field...`.
  * Used by bootstrap/lic/main.li `ast` to match the C++ `lic ast` dump. */
-int32_t li_rt_ast_int(int64_t v);
+int32_t li_rt_ast_int(int32_t v);
 int32_t li_rt_ast_text(const char* text, int32_t start, int32_t end);
 int32_t li_rt_ast_space(void);
 int32_t li_rt_ast_nl(void);
 /* Self-hosted typechecker diagnostic seam: emit one `error [CODE]` line. */
 int32_t li_rt_emit_err(int32_t code);
+/* Self-hosted MIR dump primitives (Layer 5: `mir <file>` parity with the
+ * C++ `lic mir` dump of lower_to_mir()). li_rt_mir_f64 parses a float
+ * literal slice into a static table and returns its id; li_rt_mir_f64_fmt
+ * prints that value with %.17g (the dump's canonical float format). */
+int32_t li_rt_mir_f64(const char* text, int32_t start, int32_t end);
+int32_t li_rt_mir_f64_fmt(int32_t id);
+int32_t li_rt_mir_f64_of_int(int32_t v);
+int32_t li_rt_mir_f64_neg(int32_t id);
+/* Parse a decimal int literal slice (C++ lexer int_value semantics). */
+int32_t li_rt_mir_int(const char* text, int32_t start, int32_t end);
+/* Print an escaped string slice (mir_dump.cpp esc(): \\ \n \r \t space->\x20). */
+int32_t li_rt_mir_esc(const char* text, int32_t start, int32_t end);
+/* Print a fixed tag string (INS/FN/PARAM/ARG/MIR line headers). */
+int32_t li_rt_mir_str(const char* s);
+/* Print a counter name with a fixed prefix code: 0=__t 1=else_ 2=merge_
+ * 3=while_head_ 4=while_exit_ 5=for_head_ 6=for_exit_. */
+int32_t li_rt_mir_label(int32_t code, int32_t v);
+/* Print a hardcoded callee name by index: 0=li_rt_sqrt, etc.
+ * Used by the self-hosted MIR walker for extern call names. */
+int32_t li_rt_mir_literal(int32_t idx);
 const char* li_rt_resolve_import(const char* file_path, const char* module);
 void li_rt_set_args(int argc, char** argv);
 int li_rt_argc(void);

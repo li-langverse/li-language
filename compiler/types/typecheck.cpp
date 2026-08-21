@@ -1162,6 +1162,8 @@ struct Ctx {
       }
       case Expr::Kind::UnaryNot:
         return make_bool();
+      case Expr::Kind::UnaryMinus:
+        return e.operand ? type_of(*e.operand) : make_int();
       case Expr::Kind::MethodCall: {
         if (!e.base) {
           diags.error(loc(e.span), "method call missing receiver");

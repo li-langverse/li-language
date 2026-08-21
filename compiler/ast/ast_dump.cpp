@@ -187,6 +187,12 @@ void dump_expr(const Expr& e, Dumper& d) {
         dump_expr(*e.operand, d);
       }
       break;
+    case Expr::Kind::UnaryMinus:
+      d.line(72);
+      if (e.operand) {
+        dump_expr(*e.operand, d);
+      }
+      break;
     case Expr::Kind::Index:
       dump_expr(*e.base, d);
       d.line(68);

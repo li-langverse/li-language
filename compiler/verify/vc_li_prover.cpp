@@ -135,6 +135,10 @@ int node_size(const Expr& e, SerCtx& ctx) {
       return 3;  // kAtom
     case Expr::Kind::UnaryNot:
       return 2 + (e.operand ? node_size(*e.operand, ctx) : 2);
+    case Expr::Kind::UnaryMinus:
+      // Encoded as `0 - operand` (kSub with kInt 0) — the bootstrap prover
+      // already understands Sub, so no new node kind is needed.
+      return 3 + (e.operand ? node_size(*e.operand, ctx) : 2);
     case Expr::Kind::BinOp: {
       const int k = binop_kind(e.bin_op);
       if (k == kAtom || !e.lhs || !e.rhs) {
@@ -180,6 +184,23 @@ void emit_node(std::vector<int>& out, const Expr& e, SerCtx& ctx) {
       } else {
         out.push_back(kFalse);
         out.push_back(2);
+      }
+      return;
+    }
+    case Expr::Kind::UnaryMinus: {
+      // Encode as `0 - operand` so the bootstrap prover (kSub) discharges it.
+      out.push_back(kSub);
+      const int csz = e.operand ? node_size(*e.operand, ctx) : 2;
+      out.push_back(3 + csz);
+      out.push_back(kInt);
+      out.push_back(3);
+      out.push_back(0);
+      if (e.operand) {
+        emit_node(out, *e.operand, ctx);
+      } else {
+        out.push_back(kInt);
+        out.push_back(3);
+        out.push_back(0);
       }
       return;
     }

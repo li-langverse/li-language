@@ -89,6 +89,11 @@ struct BorrowCtx {
           check_expr_uses(*e.operand);
         }
         break;
+      case Expr::Kind::UnaryMinus:
+        if (e.operand) {
+          check_expr_uses(*e.operand);
+        }
+        break;
       case Expr::Kind::Await:
         if (e.operand) {
           check_expr_uses(*e.operand);
@@ -317,6 +322,8 @@ bool expr_has_await(const Expr& e) {
       }
       return false;
     case Expr::Kind::UnaryNot:
+      return e.operand && expr_has_await(*e.operand);
+    case Expr::Kind::UnaryMinus:
       return e.operand && expr_has_await(*e.operand);
     case Expr::Kind::Index:
       return (e.base && expr_has_await(*e.base)) || (e.index && expr_has_await(*e.index));

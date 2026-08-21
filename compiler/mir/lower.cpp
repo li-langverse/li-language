@@ -575,6 +575,8 @@ bool is_float_expr(const Expr& e, const std::unordered_set<std::string>& float_n
         return false;
       }
       return is_float_expr(*e.lhs, float_names) || is_float_expr(*e.rhs, float_names);
+    case Expr::Kind::UnaryMinus:
+      return e.operand && is_float_expr(*e.operand, float_names);
     default:
       return false;
   }
@@ -1218,6 +1220,41 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
       out.push_back(std::move(await));
       return dest;
     }
+    case Expr::Kind::UnaryMinus: {
+      // `-x` lowers to `0 - x` (int) or `0.0 - x` (float) with the zero as a
+      // literal lhs, mirroring how a `0 - x` BinOp would lower.
+      const std::string dest = fresh_temp();
+      MirInsn ins;
+      const bool flt = e.operand && is_float_expr(*e.operand, float_names);
+      ins.op = flt ? MirOp::BinOpFloat : MirOp::BinOpInt;
+      ins.ident = dest;
+      ins.bin_op = BinOp::Sub;
+      ins.rhs_is_literal = false;
+      ins.lhs_is_literal = false;
+      if (flt) {
+        const std::string zero = fresh_temp();
+        MirInsn zs;
+        zs.op = MirOp::StoreFloat;
+        zs.ident = zero;
+        zs.rhs_is_literal = true;
+        zs.float_value = 0.0;
+        out.push_back(std::move(zs));
+        float_names.insert(zero);
+        ins.lhs_ident = zero;
+        ins.rhs_ident =
+            lower_expr_to(*e.operand, module, out, float_names, simd_names, i64_locals);
+      } else {
+        ins.lhs_is_literal = true;
+        ins.lhs_int = 0;
+        ins.rhs_ident =
+            lower_expr_to(*e.operand, module, out, float_names, simd_names, i64_locals);
+      }
+      out.push_back(std::move(ins));
+      if (flt) {
+        float_names.insert(dest);
+      }
+      return dest;
+    }
     case Expr::Kind::BinOp: {
       if (e.bin_op == BinOp::MatMul && e.lhs && e.lhs->kind == Expr::Kind::Ident && e.rhs &&
           e.rhs->kind == Expr::Kind::Ident && g_arr_ctx) {
@@ -1673,7 +1710,7 @@ void lower_return_expr(const Expr& e, const LowerCtx& ctx, bool returns_float,
     }
   } else if (e.kind == Expr::Kind::Call || e.kind == Expr::Kind::MethodCall ||
              e.kind == Expr::Kind::BinOp || e.kind == Expr::Kind::Index ||
-             e.kind == Expr::Kind::FieldAccess) {
+             e.kind == Expr::Kind::FieldAccess || e.kind == Expr::Kind::UnaryMinus) {
     const std::string tmp = lower_expr_to(e, module, out, float_names, simd_names, i64_locals);
     if (ret_obj) {
       ins.op = MirOp::ReturnObject;

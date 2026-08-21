@@ -421,6 +421,8 @@ std::string canon(const Expr& e) {
       return "I" + std::to_string(e.int_value);
     case Expr::Kind::UnaryNot:
       return key("Not", e.operand ? canon(*e.operand) : std::string());
+    case Expr::Kind::UnaryMinus:
+      return key("Neg", e.operand ? canon(*e.operand) : std::string());
     case Expr::Kind::Index:
       return key("Idx", (e.base ? canon(*e.base) : std::string()) + "," +
                             (e.index ? canon(*e.index) : std::string()));
@@ -1027,6 +1029,9 @@ Tri eval_bool(const Expr& e, const Ctx& ctx) {
       return e.float_value != 0.0 ? Tri::T : Tri::F;
     case Expr::Kind::UnaryNot:
       return e.operand ? tri_not(eval_bool(*e.operand, ctx)) : Tri::U;
+    case Expr::Kind::UnaryMinus:
+      // `-x` as a condition is truthy iff the operand is non-zero.
+      return e.operand ? eval_bool(*e.operand, ctx) : Tri::U;
     case Expr::Kind::BinOp:
       if (!e.lhs || !e.rhs) {
         return Tri::U;

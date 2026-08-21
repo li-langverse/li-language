@@ -61,6 +61,34 @@ extern def li_rt_resolve_import(file_path: ptr,  module: ptr) -> ptr
 extern def li_rt_emit_token(code: int,  text: ptr,  s: int,  e: int) -> int
   requires true
   ensures true
+extern def li_rt_mir_f64(text: var ptr,  s: int,  e: int) -> int
+  requires true
+  ensures true
+extern def li_rt_mir_f64_fmt(id: int) -> int
+  requires true
+  ensures true
+extern def li_rt_mir_f64_of_int(v: int) -> int
+  requires true
+  ensures true
+extern def li_rt_mir_f64_neg(id: int) -> int
+  requires true
+  ensures true
+extern def li_rt_mir_int(text: var ptr,  s: int,  e: int) -> int
+  requires true
+  ensures true
+extern def li_rt_mir_esc(text: var ptr,  s: int,  e: int) -> int
+  requires true
+  ensures true
+extern def li_rt_mir_str(s: ptr) -> int
+  requires true
+  ensures true
+extern def li_rt_mir_label(code: int,  v: int) -> int
+  requires true
+  ensures true
+extern def li_rt_mir_literal(idx: int) -> int
+  requires true
+  ensures true
+  ensures true
 
 # ---------------- canonical AST dump (self-host milestone 3: tree parity) ----
 # The `ast <file>` subcommand emits an int-encoded canonical dump of the parse
@@ -74,7 +102,7 @@ extern def li_rt_emit_token(code: int,  text: ptr,  s: int,  e: int) -> int
 extern def li_rt_ast_int(v: int) -> int
   requires true
   ensures true
-extern def li_rt_ast_text(s: ptr,  start: int,  end: int) -> int
+extern def li_rt_ast_text(s: var ptr,  start: int,  end: int) -> int
   requires true
   ensures true
 extern def li_rt_ast_space() -> int
@@ -257,6 +285,119 @@ def int_text_value(src: var ptr,  ts: var array[131072,  int],  te: var array[13
   while p < en:
     v = v * 10 + (li_rt_str_char_at(src, p) - 48)
     p = p + 1
+  return v
+
+type Pos16384 = {p: int | 0 <= p and p < 16384}
+type Pos4096 = {p: int | 0 <= p and p < 4096}
+type Pos512 = {p: int | 0 <= p and p < 512}
+type Pos128 = {p: int | 0 <= p and p < 128}
+type Pos40 = {p: int | 0 <= p and p < 40}
+type Pos32 = {p: int | 0 <= p and p < 32}
+type Pos6 = {p: int | 0 <= p and p < 6}
+
+def peek16384(buf: var array[16384, int], p: Pos16384) -> int
+  requires true
+  ensures result == buf[p]
+  decreases 0
+=
+  return buf[p]
+
+def set16384(buf: var array[16384, int], p: Pos16384, v: int) -> int
+  requires true
+  ensures result == v
+  decreases 0
+=
+  buf[p] = v
+  return v
+
+def peek4096(buf: var array[4096, int], p: Pos4096) -> int
+  requires true
+  ensures result == buf[p]
+  decreases 0
+=
+  return buf[p]
+
+def set4096(buf: var array[4096, int], p: Pos4096, v: int) -> int
+  requires true
+  ensures result == v
+  decreases 0
+=
+  buf[p] = v
+  return v
+
+def peek512(buf: var array[512, int], p: Pos512) -> int
+  requires true
+  ensures result == buf[p]
+  decreases 0
+=
+  return buf[p]
+
+def set512(buf: var array[512, int], p: Pos512, v: int) -> int
+  requires true
+  ensures result == v
+  decreases 0
+=
+  buf[p] = v
+  return v
+
+def peek128(buf: var array[128, int], p: Pos128) -> int
+  requires true
+  ensures result == buf[p]
+  decreases 0
+=
+  return buf[p]
+
+def set128(buf: var array[128, int], p: Pos128, v: int) -> int
+  requires true
+  ensures result == v
+  decreases 0
+=
+  buf[p] = v
+  return v
+
+def peek40(buf: var array[40, int], p: Pos40) -> int
+  requires true
+  ensures result == buf[p]
+  decreases 0
+=
+  return buf[p]
+
+def set40(buf: var array[40, int], p: Pos40, v: int) -> int
+  requires true
+  ensures result == v
+  decreases 0
+=
+  buf[p] = v
+  return v
+
+def peek32(buf: var array[32, int], p: Pos32) -> int
+  requires true
+  ensures result == buf[p]
+  decreases 0
+=
+  return buf[p]
+
+def set32(buf: var array[32, int], p: Pos32, v: int) -> int
+  requires true
+  ensures result == v
+  decreases 0
+=
+  buf[p] = v
+  return v
+
+def peek6(buf: var array[6, int], p: Pos6) -> int
+  requires true
+  ensures result == buf[p]
+  decreases 0
+=
+  return buf[p]
+
+def set6(buf: var array[6, int], p: Pos6, v: int) -> int
+  requires true
+  ensures result == v
+  decreases 0
+=
+  buf[p] = v
   return v
 
 type Pos131072 = {p: int | 0 <= p and p < 131072}
@@ -864,8 +1005,7 @@ def tok_is(src: var ptr,  ts: var array[131072,  int],  te: var array[131072,  i
 
 # Compare the text of two tokens (by span), so the same identifier can be
 # matched across signature and body positions.
-def tok_eq(src: var ptr, ts: var array[131072, int], te: var array[131072, int],
-           i: int, j: int) -> int
+def tok_eq(src: var ptr, ts: var array[131072, int], te: var array[131072, int], i: int, j: int) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -1089,7 +1229,17 @@ def parse_expr(src: var ptr, tk: var array[131072, int], ts: var array[131072, i
     left_ok = parse_expr(src, tk, ts, te, n, pi, err, 100, d)
   if k == 60:
     pi[0] = pi[0] + 1
-    left_ok = parse_primary(src, tk, ts, te, n, pi, err, d)
+    var nk60: int = cur_kind(tk, n, pi, err)
+    if nk60 == 5 or nk60 == 6:
+      # `-1` / `-1.5` fold into the literal (span excludes the minus), so the
+      # dump shows the bare literal — matching the C++ parser's fold.
+      left_ok = parse_primary(src, tk, ts, te, n, pi, err, d)
+    else:
+      # `-x` on a general expression: emit the unary-minus node (code 72)
+      # before the operand subtree, like `not` (code 67).
+      if d == 1:
+        a_line(d, 72)
+      left_ok = parse_primary(src, tk, ts, te, n, pi, err, d)
   if k != 39:
     if k != 60:
       left_ok = parse_primary(src, tk, ts, te, n, pi, err, d)
@@ -2992,10 +3142,7 @@ def tc_block(src: var ptr, tk: var array[131072, int], ts: var array[131072, int
   return 1
 
 # ---- record a local/param type ----
-def tc_record_local(src: var ptr, ts: var array[131072, int], te: var array[131072, int],
-                    sym_s: var array[256, int], sym_kind: var array[256, int],
-                    sym_ty: var array[256, int], sym_n: var array[1, int],
-                    i: int, t: int) -> int
+def tc_record_local(src: var ptr, ts: var array[131072, int], te: var array[131072, int], sym_s: var array[256, int], sym_kind: var array[256, int], sym_ty: var array[256, int], sym_n: var array[1, int], i: int, t: int) -> int
   requires true
   ensures result == 0
   decreases 0
@@ -3911,14 +4058,13 @@ def peek256(buf: var array[256, int], p: Pos256) -> int
 =
   return buf[p]
 
-type Pos4096 = {p: int | 0 <= p and p < 4096}
-
-def peek4096(buf: var array[4096, int], p: Pos4096) -> int
+def set256(buf: var array[256, int], p: Pos256, v: int) -> int
   requires true
-  ensures result == buf[p]
+  ensures result == v
   decreases 0
 =
-  return buf[p]
+  buf[p] = v
+  return v
 
 def bk_scalar_name(src: var ptr, ts: var array[131072, int], te: var array[131072, int], i: int) -> int
   requires true
@@ -4827,7 +4973,7 @@ def pl_find_ty(src: var ptr, ts: var array[131072, int], te: var array[131072, i
 
 def ec_tok_text(src: var ptr, ts: var array[131072, int], te: var array[131072, int], tok: int) raises IO -> ptr
   requires true
-  ensures true
+  ensures result >= 0
   decreases 0
 =
   return bytes_slice_i(src, peek_tk(ts, tok + 0), peek_tk(te, tok + 0) - peek_tk(ts, tok + 0))
@@ -5678,6 +5824,2908 @@ def parse_file(src: var ptr, tk: var array[131072, int], ts: var array[131072, i
     return 1
   return 0
 
+# ================= Layer 5: MIR lowering (`mir <file>`) =====================
+# Byte-exact port of compiler/mir/lower.cpp for the scalar slice, gated by
+# scripts/check_li_mir_parity.sh against the C++ `lic mir` dump. The walk
+# mirrors parse_module/parse_proc/parse_stmt/parse_expr but emits INS/ARG/PARAM
+# lines. The module-global temp counter (tc) is shared across all functions
+# like lower_to_mir's temp_counter; labels consume the same counter.
+# Float literals are parsed into the runtime table (ids), never held as Li
+# doubles. Names are represented as (s, e, code) triples: code 0 empty, code 1
+# source slice, code 2 counter-name (prefix code in e: 0=__t 1=else_ 2=merge_
+# 3=while_head_ 4=while_exit_ 5=for_head_ 6=for_exit_).
+#
+# Descriptor arena (6 ints per record):
+#   0=int-lit [v, s, e] | 1=float-lit [fid, s, e] | 2=str-lit [cs, ce, -]
+#   3=ident [s, e, -] | 4=call [cs, ce, args_start, argc]
+#   5=index [base, index] | 6=unary-not [operand]
+#   7=binop [opk, lhs, rhs] | 8=name [is_tmp, v1, v2] (src: v1=s v2=e; tmp: v1=c)
+
+# ---- text / name helpers ----
+def mir_slice_eq(src: var ptr,  s1: int,  e1: int,  s2: int,  e2: int) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  if e1 - s1 != e2 - s2:
+    return 0
+  var k: int = 0
+  while k < e1 - s1:
+    if li_rt_str_char_at(src,  s1 + k) != li_rt_str_char_at(src,  s2 + k):
+      return 0
+    k = k + 1
+  return 1
+
+# Is the name [s,e) one of the float source names (token indices in ftok)?
+def mir_name_float(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], s: int,  e: int,  ftok: var array[512, int],  nft: var array[1, int]) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  var k: int = 0
+  while k < nft[0]:
+    if mir_slice_eq(src,  s,  e,  peek_tk(ts, peek512(ftok, k + 0) + 0),  peek_tk(te, peek512(ftok, k + 0) + 0)) == 1:
+      return 1
+    k = k + 1
+  return 0
+
+# Is the name [s,e) one of the i64 source names (token indices in itok)?
+def mir_name_farray(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], s: int,  e: int,  fatok: var array[64, int],  nfa: var array[1, int]) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  var k: int = 0
+  while k < nfa[0]:
+    if mir_slice_eq(src,  s,  e,  peek_tk(ts, peek64(fatok, 2 * k + 0) + 0),  peek_tk(te, peek64(fatok, 2 * k + 0) + 0)) == 1:
+      return 1
+    k = k + 1
+  return 0
+
+# Size of the 1D float array named [s,e) (from the proc/param tables), else 0.
+# Mirrors the C++ `float_array_sizes` map seeded by seed_float_array_params.
+def mir_farray_size(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], s: int,  e: int,  ptok2: var array[512, int],  pelems: var array[512, int],  pef: var array[512, int],  pp0: var array[128, int],  ppn: var array[128, int],  pn: var array[1, int],  fatok: var array[64, int],  nfa: var array[1, int]) -> int
+  requires true
+  ensures result >= 0
+  decreases 0
+=
+  var p: int = 0
+  while p < pn[0]:
+    var j: int = 0
+    while j < peek128(ppn, p + 0):
+      var pi2: int = peek128(pp0, p + 0) + j
+      if peek512(pef, pi2 + 0) == 1:
+        if mir_slice_eq(src,  s,  e,  peek_tk(ts, peek512(ptok2, pi2 + 0) + 0),  peek_tk(te, peek512(ptok2, pi2 + 0) + 0)) == 1:
+          return peek512(pelems, pi2 + 0)
+      j = j + 1
+    p = p + 1
+  # Also check local float arrays (2-slot fatok encoding: [name, size] per entry)
+  var k: int = 0
+  while k < nfa[0]:
+    if mir_slice_eq(src,  s,  e,  peek_tk(ts, peek64(fatok, 2 * k + 0) + 0),  peek_tk(te, peek64(fatok, 2 * k + 0) + 0)) == 1:
+      return peek64(fatok, 2 * k + 1)
+    k = k + 1
+  return 0
+
+# Read the float-array size stored in ftmp for a temp node (kind 1 or 8).
+# Returns the element count if the temp is a registered float array, else 0.
+def mir_farray_tmp_size(darena: var array[16384, int], rec: int, ftmp: var array[4096, int]) -> int
+  requires true
+  ensures result >= 0
+  decreases 0
+=
+  var k: int = peek16384(darena, rec + 0)
+  if k == 1:
+    var v: int = peek4096(ftmp, peek16384(darena, rec + 2))
+    if v > 1:
+      return v
+    return 0
+  if k == 8:
+    if peek16384(darena, rec + 1) == 1:
+      var v2: int = peek4096(ftmp, peek16384(darena, rec + 2))
+      if v2 > 1:
+        return v2
+    return 0
+  return 0
+
+# Look up the element count for a local int array.
+# Int array entries are stored in fatok after float entries:
+#   fatok[0..2*nfa-1] = float arrays, fatok[2*nfa..2*nfa+2*nia-1] = int arrays
+# nia (int array count) is stored at fatok[63].
+def mir_iarray_size(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], s: int,  e: int,  fatok: var array[64, int],  nfa: var array[1, int]) -> int
+  requires true
+  ensures result >= 0
+  decreases 0
+=
+  var nia_v: int = peek64(fatok, 63)
+  var base: int = 2 * nfa[0]
+  var k: int = 0
+  while k < nia_v:
+    if mir_slice_eq(src,  s,  e,  peek_tk(ts, peek64(fatok, base + 2 * k) + 0),  peek_tk(te, peek64(fatok, base + 2 * k) + 0)) == 1:
+      return peek64(fatok, base + 2 * k + 1)
+    k = k + 1
+  return 0
+
+# Is the name [s,e) one of the local matrix names (token indices in matok)?
+# The C++ matrix_names set holds only local (var-declared) matrices; matrix
+# params are not seeded, so 2D loads/stores on params fall through to no-emit.
+def mir_name_matrix(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], s: int,  e: int,  matok: var array[64, int],  nmat: var array[1, int]) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  var k: int = 0
+  while k < nmat[0]:
+    if mir_slice_eq(src,  s,  e,  peek_tk(ts, peek64(matok, k + 0) + 0),  peek_tk(te, peek64(matok, k + 0) + 0)) == 1:
+      return 1
+    k = k + 1
+  return 0
+
+def mir_name_i64(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], s: int,  e: int,  itok: var array[256, int],  nit: var array[1, int]) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  var k: int = 0
+  while k < nit[0]:
+    if mir_slice_eq(src,  s,  e,  peek_tk(ts, peek256(itok, k + 0) + 0),  peek_tk(te, peek256(itok, k + 0) + 0)) == 1:
+      return 1
+    k = k + 1
+  return 0
+
+# ---- descriptor arena ----
+def d_alloc(darena: var array[16384, int],  dasp: var array[1, int],  kind: int, v1: int,  v2: int,  v3: int) -> int
+  requires true
+  ensures result >= 0
+  decreases 0
+=
+  var rec: int = dasp[0]
+  set16384(darena, rec + 0,kind)
+  set16384(darena, rec + 1,v1)
+  set16384(darena, rec + 2,v2)
+  set16384(darena, rec + 3,v3)
+  set16384(darena, rec + 4,-1)
+  set16384(darena, rec + 5,-1)
+  dasp[0] = rec + 6
+  return rec
+
+# float-ness of a descriptor (mirrors is_float_expr on the AST)
+def mir_desc_float(darena: var array[16384, int],  rec: int,  src: var ptr, ts: var array[131072, int],  te: var array[131072, int], ftok: var array[512, int],  nft: var array[1, int], ftmp: var array[4096, int],  fatok: var array[64, int], nfa: var array[1, int]) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  var k: int = peek16384(darena, rec + 0)
+  if k == 1:
+    if peek4096(ftmp, peek16384(darena, rec + 2)) > 0:
+      return 1
+    return 0
+  if k == 3:
+    return mir_name_float(src,  ts,  te,  peek16384(darena, rec + 1),  peek16384(darena, rec + 2),  ftok,  nft)
+  if k == 8:
+    if peek16384(darena, rec + 1) == 1:
+      if peek4096(ftmp, peek16384(darena, rec + 2)) > 0:
+        return 1
+      return 0
+    return mir_name_float(src,  ts,  te,  peek16384(darena, rec + 2),  peek16384(darena, rec + 3),  ftok,  nft)
+  if k == 7:
+    var opk: int = peek16384(darena, rec + 1)
+    if opk == 37 or opk == 38 or opk == 59 or opk == 60 or opk == 61 or opk == 63 or opk == 64 or opk == 65:
+      if mir_desc_float(darena,  peek16384(darena, rec + 2),  src,  ts,  te,  ftok,  nft,  ftmp,  fatok,  nfa) == 1:
+        return 1
+      return mir_desc_float(darena,  peek16384(darena, rec + 3),  src,  ts,  te,  ftok,  nft,  ftmp,  fatok,  nfa)
+    return 0
+  if k == 11:
+    return mir_desc_float(darena,  peek16384(darena, rec + 1),  src,  ts,  te,  ftok,  nft,  ftmp,  fatok,  nfa)
+  if k == 5:
+    var base: int = peek16384(darena, rec + 1)
+    if peek16384(darena, base + 0) == 3:
+      return mir_name_farray(src,  ts,  te,  peek16384(darena, base + 1),  peek16384(darena, base + 2),  fatok,  nfa)
+    return 0
+  return 0
+
+# ---- emission helpers ----
+# Name cells peek40(f, off..off+2): [v1, v2, code] (code 0 empty, 1 slice, 2 counter-name)
+def mir_name_out(src: var ptr,  f: var array[40, int],  off: int) raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  li_rt_ast_space()
+  if peek40(f, off + 2) == 0:
+    return 0
+  if peek40(f, off + 2) == 1:
+    li_rt_mir_esc(src,  peek40(f, off + 0),  peek40(f, off + 1))
+    return 0
+  if peek40(f, off + 2) == 3:
+    li_rt_mir_literal(peek40(f, off + 0))
+    return 0
+  li_rt_mir_label(peek40(f, off + 1),  peek40(f, off + 0))
+  return 0
+
+# INS field layout: 0..2 ident | 3..5 str_value | 6..8 callee | 9..11 lhs
+# 12..14 rhs | 15..17 label | 18 bin_op | 19 retf | 20 reti64 | 21 idx_lit
+# 22..24 index_ident | 25 use_li | 26 rhs_lit | 27 rhs_int | 28 rhs_str
+# 29 lhs_lit | 30 lhs_int | 31 is_i64 | 32 arrf | 33 arrm | 34 brl | 35 brr
+# 36 simd
+
+def mir_fdef(f: var array[40, int]) -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var i: int = 0
+  while i < 40:
+    set40(f, i + 0,0)
+    i = i + 1
+  f[21] = 1
+  f[26] = 1
+  return 0
+
+def mir_ins_line(src: var ptr,  f: var array[40, int],  op: int,  iv: int,  fid: int, lastop: var array[1, int]) raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  li_rt_mir_str("INS")
+  li_rt_ast_space()
+  li_rt_ast_int(op)
+  li_rt_ast_space()
+  li_rt_ast_int(iv)
+  li_rt_ast_space()
+  if fid >= 0:
+    li_rt_mir_f64_fmt(fid)
+  else:
+    li_rt_ast_int(0)
+  mir_name_out(src,  f,  0)
+  mir_name_out(src,  f,  3)
+  mir_name_out(src,  f,  6)
+  mir_name_out(src,  f,  9)
+  mir_name_out(src,  f,  12)
+  mir_name_out(src,  f,  15)
+  li_rt_ast_space()
+  li_rt_ast_int(f[18])
+  li_rt_ast_space()
+  li_rt_ast_int(f[19])
+  li_rt_ast_space()
+  li_rt_ast_int(f[20])
+  li_rt_ast_space()
+  li_rt_ast_int(f[21])
+  mir_name_out(src,  f,  22)
+  li_rt_ast_space()
+  li_rt_ast_int(f[25])
+  li_rt_ast_space()
+  li_rt_ast_int(f[26])
+  li_rt_ast_space()
+  li_rt_ast_int(f[27])
+  li_rt_ast_space()
+  li_rt_ast_int(f[28])
+  li_rt_ast_space()
+  li_rt_ast_int(f[29])
+  li_rt_ast_space()
+  li_rt_ast_int(f[30])
+  li_rt_ast_space()
+  li_rt_ast_int(f[31])
+  li_rt_ast_space()
+  li_rt_ast_int(f[32])
+  li_rt_ast_space()
+  li_rt_ast_int(f[33])
+  li_rt_ast_space()
+  li_rt_ast_int(f[34])
+  li_rt_ast_space()
+  li_rt_ast_int(f[35])
+  li_rt_ast_space()
+  li_rt_ast_int(f[36])
+  li_rt_ast_nl()
+  lastop[0] = op
+  return 0
+
+def mir_binop_code(opk: int) -> int
+  requires true
+  ensures result >= 0
+  decreases 0
+=
+  if opk == 59:
+    return 0
+  if opk == 60:
+    return 1
+  if opk == 61:
+    return 2
+  if opk == 63:
+    return 3
+  if opk == 65:
+    return 4
+  if opk == 64:
+    return 5
+  if opk == 62:
+    return 6
+  if opk == 76:
+    return 7
+  if opk == 66:
+    return 8
+  if opk == 67:
+    return 9
+  if opk == 68:
+    return 10
+  if opk == 69:
+    return 11
+  if opk == 70:
+    return 12
+  if opk == 71:
+    return 13
+  if opk == 37:
+    return 14
+  if opk == 38:
+    return 15
+  return 0
+
+def mir_slice_is(src: var ptr,  s: int,  e: int,  s2: ptr) raises IO -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  var len: int = li_rt_str_len(s2)
+  if e - s != len:
+    return 0
+  var j: int = 0
+  while j < len:
+    if li_rt_str_char_at(src,  s + j) != li_rt_str_char_at(s2,  j):
+      return 0
+    j = j + 1
+  return 1
+
+def mir_arg_line(src: var ptr,  il: int,  iv: int,  ifl: int,  fid: int, id_s: int,  id_e: int,  id_c: int, is_s: int,  st_s: int,  st_e: int,  iai: int,  ivr: int) raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  li_rt_mir_str("ARG")
+  li_rt_ast_space()
+  li_rt_ast_int(il)
+  li_rt_ast_space()
+  li_rt_ast_int(iv)
+  li_rt_ast_space()
+  li_rt_ast_int(ifl)
+  li_rt_ast_space()
+  if fid >= 0:
+    li_rt_mir_f64_fmt(fid)
+  else:
+    li_rt_ast_int(0)
+  li_rt_ast_space()
+  if id_c == 0:
+    li_rt_ast_space()
+  else:
+    if id_c == 1:
+      li_rt_ast_text(src,  id_s,  id_e)
+    else:
+      li_rt_mir_label(0,  id_s)
+    li_rt_ast_space()
+  li_rt_ast_int(is_s)
+  li_rt_ast_space()
+  if is_s == 1:
+    li_rt_mir_esc(src,  st_s,  st_e)
+  li_rt_ast_space()
+  li_rt_ast_int(iai)
+  li_rt_ast_space()
+  li_rt_ast_int(ivr)
+  li_rt_ast_nl()
+  return 0
+
+# ---- expression parse (descriptor build, no emission) ----
+def mir_parse_postfix(darena: var array[16384, int],  dasp: var array[1, int], src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  rec: int) -> int
+  requires true
+  ensures result >= -1
+  decreases 0
+=
+  var loop: int = 1
+  while loop == 1:
+    if cur_kind(tk,  n,  pi,  err) == 51:
+      pi[0] = pi[0] + 1
+      var ix: int = mir_parse_expr(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err, 0)
+      if ix < 0:
+        return -1
+      expect_k(tk,  n,  pi,  err, 52)
+      rec = d_alloc(darena,  dasp,  5,  rec,  ix,  0)
+      continue
+    if cur_kind(tk,  n,  pi,  err) == 72:
+      # field/method access: outside the scalar slice (object lowering)
+      err[0] = 1
+      return -1
+    loop = 0
+  return rec
+
+def mir_parse_primary(darena: var array[16384, int],  dasp: var array[1, int], src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int]) raises IO -> int
+  requires true
+  ensures result >= -1
+  decreases 0
+=
+  var k: int = cur_kind(tk,  n,  pi,  err)
+  if k == 34:
+    # await: transparent for the scalar slice (no await in the MIR corpus)
+    pi[0] = pi[0] + 1
+    return mir_parse_primary(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err)
+  if k == 8:
+    var t0: int = pi[0]
+    pi[0] = pi[0] + 1
+    var rec0: int = d_alloc(darena,  dasp,  2,  peek_tk(ts, t0 + 0) + 1,  peek_tk(te, t0 + 0) - 1,  0)
+    return mir_parse_postfix(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err,  rec0)
+  if k == 5:
+    var t1: int = pi[0]
+    pi[0] = pi[0] + 1
+    var rec1: int = d_alloc(darena,  dasp,  0,  li_rt_mir_int(src,  peek_tk(ts, t1 + 0),  peek_tk(te, t1 + 0)), peek_tk(ts, t1 + 0),  peek_tk(te, t1 + 0))
+    return mir_parse_postfix(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err,  rec1)
+  if k == 6:
+    var t2: int = pi[0]
+    pi[0] = pi[0] + 1
+    var rec2: int = d_alloc(darena,  dasp,  1,  li_rt_mir_f64(src,  peek_tk(ts, t2 + 0),  peek_tk(te, t2 + 0)), peek_tk(ts, t2 + 0),  peek_tk(te, t2 + 0))
+    return mir_parse_postfix(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err,  rec2)
+  if k == 7:
+    pi[0] = pi[0] + 1
+    var rec3: int = d_alloc(darena,  dasp,  10,  0,  0,  0)
+    return mir_parse_postfix(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err,  rec3)
+  if k == 4 or k == 46 or k == 35 or k == 36:
+    var t4: int = pi[0]
+    pi[0] = pi[0] + 1
+    if accept_k(tk,  n,  pi,  err, 49) == 1:
+      var aroots: array[32, int]
+      var argc: int = 0
+      if cur_kind(tk,  n,  pi,  err) != 50:
+        var done: int = 0
+        while done == 0:
+          var a: int = mir_parse_expr(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err, 0)
+          if a < 0:
+            return -1
+          if argc < 32:
+            set32(aroots, argc + 0,a)
+          argc = argc + 1
+          if accept_k(tk,  n,  pi,  err, 55) == 1:
+            done = 0
+          else:
+            done = 1
+      expect_k(tk,  n,  pi,  err, 50)
+      var crec: int = d_alloc(darena,  dasp,  4,  peek_tk(ts, t4 + 0),  peek_tk(te, t4 + 0),  0)
+      set16384(darena, crec + 4,argc)
+      var rt: int = dasp[0]
+      var ri: int = 0
+      while ri < argc:
+        set16384(darena, rt + ri,peek32(aroots, ri + 0))
+        ri = ri + 1
+      dasp[0] = rt + argc
+      set16384(darena, crec + 5,rt)
+      return mir_parse_postfix(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err,  crec)
+    var rec4: int = d_alloc(darena,  dasp,  3,  peek_tk(ts, t4 + 0),  peek_tk(te, t4 + 0),  0)
+    return mir_parse_postfix(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err,  rec4)
+  if accept_k(tk,  n,  pi,  err, 49) == 1:
+    var e: int = mir_parse_expr(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err, 0)
+    if e < 0:
+      return -1
+    expect_k(tk,  n,  pi,  err, 50)
+    return mir_parse_postfix(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err,  e)
+  err[0] = 1
+  return -1
+
+def mir_parse_expr(darena: var array[16384, int],  dasp: var array[1, int], src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  min_prec: int) -> int
+  requires true
+  ensures result >= -1
+  decreases 0
+=
+  var k: int = cur_kind(tk,  n,  pi,  err)
+  var left: int = -1
+  if k == 39:
+    pi[0] = pi[0] + 1
+    var op: int = mir_parse_expr(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err, 100)
+    if op < 0:
+      return -1
+    left = d_alloc(darena,  dasp,  6,  op,  0,  0)
+  else:
+    if k == 60:
+      pi[0] = pi[0] + 1
+      left = mir_parse_primary(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err)
+      if left >= 0:
+        if peek16384(darena, left + 0) == 0:
+          # Fold `-N` into the int literal (0 - N avoids the compiler's
+          # unary-minus-on-call gap; the value is what matters here).
+          set16384(darena, left + 1,0 - peek16384(darena, left + 1))
+        else:
+          if peek16384(darena, left + 0) == 1:
+            set16384(darena, left + 1,li_rt_mir_f64_neg(peek16384(darena, left + 1)))
+          else:
+            # `-x` on a general expression: keep a unary-minus descriptor
+            # (kind 11), lowered later to `0 - x` / `0.0 - x` like the C++.
+            left = d_alloc(darena,  dasp,  11,  left,  0,  0)
+    else:
+      left = mir_parse_primary(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err)
+  if left < 0:
+    return -1
+  while 1 == 1:
+    var p: int = prec_of(cur_kind(tk,  n,  pi,  err))
+    if p < 0:
+      break
+    if p < min_prec:
+      break
+    var opk: int = cur_kind(tk,  n,  pi,  err)
+    pi[0] = pi[0] + 1
+    var right: int = mir_parse_expr(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err, p + 1)
+    if right < 0:
+      return -1
+    left = d_alloc(darena,  dasp,  7,  opk,  left,  right)
+  return left
+
+# ---- lowering helpers ----
+def mir_proc_find(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], s: int,  e: int,  ptok: var array[128, int],  pn: var array[1, int]) -> int
+  requires true
+  ensures result >= -1
+  decreases 0
+=
+  var k: int = 0
+  while k < pn[0]:
+    if mir_slice_eq(src,  s,  e,  peek_tk(ts, peek128(ptok, k + 0) + 0),  peek_tk(te, peek128(ptok, k + 0) + 0)) == 1:
+      return k
+    k = k + 1
+  return -1
+
+# Overwrite descriptor rec in place with a name record (kind 8).
+def mir_mk_name(darena: var array[16384, int],  rec: int,  is_tmp: int,  v1: int,  v2: int) -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  set16384(darena, rec + 0,8)
+  set16384(darena, rec + 1,is_tmp)
+  set16384(darena, rec + 2,v1)
+  set16384(darena, rec + 3,v2)
+  return 0
+
+# Lower one descriptor to a name (kind 8 in place), emitting INS/ARG lines.
+def mir_lower_expr(darena: var array[16384, int],  dasp: var array[1, int],  rec: int, src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[512, int],  nft: var array[1, int], ftmp: var array[4096, int],  itok: var array[256, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[64, int],  nfa: var array[1, int], matok: var array[64, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int]) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  var f: array[40, int]
+  mir_fdef(f)
+  var k: int = peek16384(darena, rec + 0)
+  if k == 0:
+    var c0: int = tc[0]
+    tc[0] = c0 + 1
+    f[0] = c0
+    f[2] = 2
+    f[26] = 1
+    f[27] = peek16384(darena, rec + 1)
+    mir_ins_line(src,  f,  26,  0,  -1,  lastop)
+    mir_mk_name(darena,  rec,  1,  c0,  0)
+    return 0
+  if k == 1:
+    var c1: int = tc[0]
+    tc[0] = c1 + 1
+    f[0] = c1
+    f[2] = 2
+    f[26] = 1
+    mir_ins_line(src,  f,  28,  0,  peek16384(darena, rec + 1),  lastop)
+    set4096(ftmp, c1 + 0,1)
+    mir_mk_name(darena,  rec,  1,  c1,  0)
+    return 0
+  if k == 2:
+    var c2: int = tc[0]
+    tc[0] = c2 + 1
+    f[0] = c2
+    f[2] = 2
+    f[3] = peek16384(darena, rec + 1)
+    f[4] = peek16384(darena, rec + 2)
+    f[5] = 1
+    f[28] = 1
+    mir_ins_line(src,  f,  27,  0,  -1,  lastop)
+    set4096(itmp, c2 + 0,1)
+    mir_mk_name(darena,  rec,  1,  c2,  0)
+    return 0
+  if k == 3:
+    mir_mk_name(darena,  rec,  0,  peek16384(darena, rec + 1),  peek16384(darena, rec + 2))
+    return 0
+  if k == 10:
+    var c10: int = tc[0]
+    tc[0] = c10 + 1
+    mir_mk_name(darena,  rec,  1,  c10,  0)
+    return 0
+  if k == 6:
+    var c6: int = tc[0]
+    tc[0] = c6 + 1
+    mir_mk_name(darena,  rec,  1,  c6,  0)
+    return 0
+  if k == 11:
+    # `-x` lowers to `0 - x` (int, literal lhs) / `0.0 - x` (float, zero temp)
+    # exactly like the C++ lower_expr_to UnaryMinus case.
+    var c11: int = tc[0]
+    tc[0] = c11 + 1
+    var f11: array[40, int]
+    mir_fdef(f11)
+    f11[0] = c11
+    f11[2] = 2
+    f11[18] = 1
+    var opnd11: int = peek16384(darena, rec + 1)
+    if mir_desc_float(darena,  opnd11,  src,  ts,  te,  ftok,  nft,  ftmp,  fatok,  nfa) == 1:
+      var z11: int = tc[0]
+      tc[0] = z11 + 1
+      var fz: array[40, int]
+      mir_fdef(fz)
+      fz[0] = z11
+      fz[2] = 2
+      fz[26] = 1
+      mir_ins_line(src,  fz,  28,  0,  li_rt_mir_f64_of_int(0),  lastop)
+      set4096(ftmp, z11 + 0,1)
+      f11[9] = z11
+      f11[11] = 2
+      if mir_lower_expr(darena,  dasp,  opnd11,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+        return 1
+      mir_name_cells(darena,  opnd11,  f11,  12)
+      f11[26] = 0
+      mir_ins_line(src,  f11,  31,  0,  -1,  lastop)
+      set4096(ftmp, c11 + 0,1)
+    else:
+      f11[29] = 1
+      f11[30] = 0
+      if mir_lower_expr(darena,  dasp,  opnd11,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+        return 1
+      mir_name_cells(darena,  opnd11,  f11,  12)
+      f11[26] = 0
+      mir_ins_line(src,  f11,  30,  0,  -1,  lastop)
+    mir_mk_name(darena,  rec,  1,  c11,  0)
+    return 0
+  if k == 5:
+    var base: int = peek16384(darena, rec + 1)
+    var idx: int = peek16384(darena, rec + 2)
+    if peek16384(darena, base + 0) == 5:
+      var mat: int = peek16384(darena, base + 1)
+      if peek16384(darena, mat + 0) == 3:
+        if mir_name_matrix(src,  ts,  te,  peek16384(darena, mat + 1),  peek16384(darena, mat + 2),  matok,  nmat) == 1:
+          var row: int = peek16384(darena, base + 2)
+          var col: int = idx
+          var c2d: int = tc[0]
+          tc[0] = c2d + 1
+          var f2d: array[40, int]
+          mir_fdef(f2d)
+          f2d[0] = peek16384(darena, mat + 1)
+          f2d[1] = peek16384(darena, mat + 2)
+          f2d[2] = 1
+          f2d[9] = c2d
+          f2d[11] = 2
+          var iv2d: int = 0
+          if peek16384(darena, row + 0) == 0:
+            f2d[21] = 1
+            iv2d = peek16384(darena, row + 1)
+          else:
+            f2d[21] = 0
+            f2d[22] = peek16384(darena, row + 1)
+            f2d[23] = peek16384(darena, row + 2)
+            f2d[24] = 1
+          if peek16384(darena, col + 0) == 0:
+            f2d[26] = 1
+            f2d[27] = peek16384(darena, col + 1)
+          else:
+            f2d[26] = 0
+            f2d[12] = peek16384(darena, col + 1)
+            f2d[13] = peek16384(darena, col + 2)
+            f2d[14] = 1
+          mir_ins_line(src,  f2d,  15,  iv2d,  -1,  lastop)
+          set4096(ftmp, c2d + 0,1)
+          mir_mk_name(darena,  rec,  1,  c2d,  0)
+          return 0
+        var cp: int = tc[0]
+        tc[0] = cp + 1
+        mir_mk_name(darena,  rec,  1,  cp,  0)
+        return 0
+    var fa: int = 0
+    if peek16384(darena, base + 0) == 3:
+      fa = mir_name_farray(src,  ts,  te,  peek16384(darena, base + 1),  peek16384(darena, base + 2),  fatok,  nfa)
+    var f5: array[40, int]
+    mir_fdef(f5)
+    f5[0] = peek16384(darena, base + 1)
+    f5[1] = peek16384(darena, base + 2)
+    f5[2] = 1
+    if peek16384(darena, idx + 0) == 0:
+      f5[21] = 1
+      var iv5: int = peek16384(darena, idx + 1)
+      if peek16384(darena, idx + 0) == 0:
+        var c5: int = tc[0]
+        tc[0] = c5 + 1
+        # Load destination goes in lhs cells (the C++ ArrayLoadInt writes the
+        # loaded value into lhs_ident; ident holds the array name).
+        f5[9] = c5
+        f5[11] = 2
+        mir_ins_line(src,  f5,  11,  iv5,  -1,  lastop)
+        if fa == 1:
+          set4096(ftmp, c5 + 0,1)
+        mir_mk_name(darena,  rec,  1,  c5,  0)
+        return 0
+    if peek16384(darena, idx + 0) == 3:
+      f5[21] = 0
+      f5[22] = peek16384(darena, idx + 1)
+      f5[23] = peek16384(darena, idx + 2)
+      f5[24] = 1
+    else:
+      if mir_lower_expr(darena,  dasp,  idx,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+        return 1
+      f5[21] = 0
+      mir_name_cells(darena,  idx,  f5,  22)
+    var c5b: int = tc[0]
+    tc[0] = c5b + 1
+    f5[9] = c5b
+    f5[11] = 2
+    mir_ins_line(src,  f5,  11,  0,  -1,  lastop)
+    if fa == 1:
+      set4096(ftmp, c5b + 0,1)
+    mir_mk_name(darena,  rec,  1,  c5b,  0)
+    return 0
+  if k == 7:
+    var opk: int = peek16384(darena, rec + 1)
+    var lrec: int = peek16384(darena, rec + 2)
+    var rrec: int = peek16384(darena, rec + 3)
+    if opk == 76:
+      if peek16384(darena, lrec + 0) == 3:
+        if peek16384(darena, rrec + 0) == 3:
+          var szl: int = mir_farray_size(src,  ts,  te,  peek16384(darena, lrec + 1),  peek16384(darena, lrec + 2),  ptok2,  pelems,  pef,  pp0,  ppn,  pn,  fatok,  nfa)
+          if szl > 0:
+            var szr: int = mir_farray_size(src,  ts,  te,  peek16384(darena, rrec + 1),  peek16384(darena, rrec + 2),  ptok2,  pelems,  pef,  pp0,  ppn,  pn,  fatok,  nfa)
+            if szr == szl:
+              var cd: int = tc[0]
+              tc[0] = cd + 1
+              var fd: array[40, int]
+              mir_fdef(fd)
+              fd[0] = cd
+              fd[2] = 2
+              fd[9] = peek16384(darena, lrec + 1)
+              fd[10] = peek16384(darena, lrec + 2)
+              fd[11] = 1
+              fd[12] = peek16384(darena, rrec + 1)
+              fd[13] = peek16384(darena, rrec + 2)
+              fd[14] = 1
+              mir_ins_line(src,  fd,  14,  szl,  -1,  lastop)
+              set4096(ftmp, cd + 0,1)
+              mir_mk_name(darena,  rec,  1,  cd,  0)
+              return 0
+    # elementwise binop expression: a + b, a - b, a * b, a / b, a ** b
+    # on two float array idents -> ArrayAlloc temp + ArrayBinOpF64
+    if opk == 59 or opk == 60 or opk == 61 or opk == 63 or opk == 62:
+      if peek16384(darena, lrec + 0) == 3:
+        if peek16384(darena, rrec + 0) == 3:
+          var eszl: int = mir_farray_size(src,  ts,  te,  peek16384(darena, lrec + 1),  peek16384(darena, lrec + 2),  ptok2,  pelems,  pef,  pp0,  ppn,  pn,  fatok,  nfa)
+          if eszl > 0:
+            var eszr: int = mir_farray_size(src,  ts,  te,  peek16384(darena, rrec + 1),  peek16384(darena, rrec + 2),  ptok2,  pelems,  pef,  pp0,  ppn,  pn,  fatok,  nfa)
+            if eszr > 0:
+              var ebs: int = 0
+              if eszl == eszr:
+                ebs = 1
+              if eszl == 1:
+                if eszr > 1:
+                  ebs = 1
+              if eszr == 1:
+                if eszl > 1:
+                  ebs = 1
+              if ebs == 1:
+                var esz: int = eszl
+                if eszr > esz:
+                  esz = eszr
+                var ecd: int = tc[0]
+                tc[0] = ecd + 1
+                var fea: array[40, int]
+                mir_fdef(fea)
+                mir_ins_line(src,  fea,  9,  esz,  -1,  lastop)
+                set4096(ftmp, ecd + 0, esz)
+                var feb: array[40, int]
+                mir_fdef(feb)
+                feb[0] = ecd
+                feb[2] = 2
+                feb[9] = peek16384(darena, lrec + 1)
+                feb[10] = peek16384(darena, lrec + 2)
+                feb[11] = 1
+                feb[12] = peek16384(darena, rrec + 1)
+                feb[13] = peek16384(darena, rrec + 2)
+                feb[14] = 1
+                feb[18] = mir_binop_code(opk)
+                if eszl == 1:
+                  if eszr > 1:
+                    feb[34] = 1
+                if eszr == 1:
+                  if eszl > 1:
+                    feb[35] = 1
+                mir_ins_line(src,  feb,  20,  esz,  -1,  lastop)
+                mir_mk_name(darena,  rec,  1,  ecd,  0)
+                return 0
+    # elementwise binop expression on int arrays -> ArrayAlloc temp + ArrayBinOpI64
+    if opk == 59 or opk == 60 or opk == 61 or opk == 63 or opk == 62:
+      if peek16384(darena, lrec + 0) == 3:
+        if peek16384(darena, rrec + 0) == 3:
+          var ieszl: int = mir_iarray_size(src,  ts,  te,  peek16384(darena, lrec + 1),  peek16384(darena, lrec + 2),  fatok,  nfa)
+          if ieszl > 0:
+            var ieszr: int = mir_iarray_size(src,  ts,  te,  peek16384(darena, rrec + 1),  peek16384(darena, rrec + 2),  fatok,  nfa)
+            if ieszr > 0:
+              var iebs: int = 0
+              if ieszl == ieszr:
+                iebs = 1
+              if ieszl == 1:
+                if ieszr > 1:
+                  iebs = 1
+              if ieszr == 1:
+                if ieszl > 1:
+                  iebs = 1
+              if iebs == 1:
+                var iesz: int = ieszl
+                if ieszr > iesz:
+                  iesz = ieszr
+                var iecd: int = tc[0]
+                tc[0] = iecd + 1
+                var fia: array[40, int]
+                mir_fdef(fia)
+                mir_ins_line(src,  fia,  9,  iesz,  -1,  lastop)
+                var fib: array[40, int]
+                mir_fdef(fib)
+                fib[0] = iecd
+                fib[2] = 2
+                fib[9] = peek16384(darena, lrec + 1)
+                fib[10] = peek16384(darena, lrec + 2)
+                fib[11] = 1
+                fib[12] = peek16384(darena, rrec + 1)
+                fib[13] = peek16384(darena, rrec + 2)
+                fib[14] = 1
+                fib[18] = mir_binop_code(opk)
+                if ieszl == 1:
+                  if ieszr > 1:
+                    fib[34] = 1
+                if ieszr == 1:
+                  if ieszl > 1:
+                    fib[35] = 1
+                mir_ins_line(src,  fib,  21,  iesz,  -1,  lastop)
+                mir_mk_name(darena,  rec,  1,  iecd,  0)
+                return 0
+    # float scale: float_literal * float_array_ident -> ArrayAlloc + ArrayScaleF64
+    if opk == 61:
+      var sc_lit: int = 0
+      var sc_arr: int = 0
+      if peek16384(darena, lrec + 0) == 1:
+        if peek16384(darena, rrec + 0) == 3:
+          sc_lit = lrec
+          sc_arr = rrec
+      if peek16384(darena, rrec + 0) == 1:
+        if peek16384(darena, lrec + 0) == 3:
+          sc_lit = rrec
+          sc_arr = lrec
+      if sc_lit > 0:
+        if sc_arr > 0:
+          var scsz: int = mir_farray_size(src,  ts,  te,  peek16384(darena, sc_arr + 1),  peek16384(darena, sc_arr + 2),  ptok2,  pelems,  pef,  pp0,  ppn,  pn,  fatok,  nfa)
+          if scsz > 0:
+            var scd: int = tc[0]
+            tc[0] = scd + 1
+            var fsc2: array[40, int]
+            mir_fdef(fsc2)
+            mir_ins_line(src,  fsc2,  9,  scsz,  -1,  lastop)
+            set4096(ftmp, scd + 0, scsz)
+            var fss: array[40, int]
+            mir_fdef(fss)
+            fss[0] = scd
+            fss[2] = 2
+            fss[9] = peek16384(darena, sc_arr + 1)
+            fss[10] = peek16384(darena, sc_arr + 2)
+            fss[11] = 1
+            fss[26] = 1
+            var sc_fid: int = peek16384(darena, sc_lit + 1)
+            mir_ins_line(src,  fss,  22,  scsz,  sc_fid,  lastop)
+            mir_mk_name(darena,  rec,  1,  scd,  0)
+            return 0
+    var cmp: int = 0
+    if opk == 66 or opk == 67 or opk == 68 or opk == 69 or opk == 70 or opk == 71:
+      cmp = 1
+    var arith: int = 0
+    if opk == 37 or opk == 38 or opk == 59 or opk == 60 or opk == 61 or opk == 63 or opk == 64 or opk == 65:
+      arith = 1
+    var flt: int = 0
+    if arith == 1 or cmp == 1:
+      if mir_desc_float(darena,  lrec,  src,  ts,  te,  ftok,  nft,  ftmp,  fatok,  nfa) == 1:
+        flt = 1
+      else:
+        if mir_desc_float(darena,  rrec,  src,  ts,  te,  ftok,  nft,  ftmp,  fatok,  nfa) == 1:
+          flt = 1
+    var c7: int = tc[0]
+    tc[0] = c7 + 1
+    var f7: array[40, int]
+    mir_fdef(f7)
+    f7[0] = c7
+    f7[2] = 2
+    f7[26] = 0
+    f7[29] = 0
+    if flt == 1:
+      if mir_lower_expr(darena,  dasp,  lrec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+        return 1
+      mir_name_cells(darena,  lrec,  f7,  9)
+      if mir_lower_expr(darena,  dasp,  rrec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+        return 1
+      mir_name_cells(darena,  rrec,  f7,  12)
+      f7[18] = mir_binop_code(opk)
+      mir_ins_line(src,  f7,  31,  0,  -1,  lastop)
+      if flt == 1:
+        if cmp == 0:
+          set4096(ftmp, c7 + 0,1)
+    else:
+      if peek16384(darena, lrec + 0) == 0:
+        f7[29] = 1
+        f7[30] = peek16384(darena, lrec + 1)
+      else:
+        if mir_lower_expr(darena,  dasp,  lrec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+          return 1
+        mir_name_cells(darena,  lrec,  f7,  9)
+      if peek16384(darena, rrec + 0) == 0:
+        f7[26] = 1
+        f7[27] = peek16384(darena, rrec + 1)
+      else:
+        if mir_lower_expr(darena,  dasp,  rrec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+          return 1
+        mir_name_cells(darena,  rrec,  f7,  12)
+      f7[18] = mir_binop_code(opk)
+      mir_ins_line(src,  f7,  30,  0,  -1,  lastop)
+    mir_mk_name(darena,  rec,  1,  c7,  0)
+    return 0
+  if k == 4:
+    if peek16384(darena, rec + 4) == 1:
+      if mir_slice_is(src,  peek16384(darena, rec + 1),  peek16384(darena, rec + 2),  "sum") == 1:
+        var srec: int = peek16384(darena, peek16384(darena, rec + 5) + 0)
+        if peek16384(darena, srec + 0) == 3:
+          var ssz: int = mir_farray_size(src,  ts,  te,  peek16384(darena, srec + 1),  peek16384(darena, srec + 2),  ptok2,  pelems,  pef,  pp0,  ppn,  pn,  fatok,  nfa)
+          if ssz > 0:
+            var c18: int = tc[0]
+            tc[0] = c18 + 1
+            var f18: array[40, int]
+            mir_fdef(f18)
+            f18[0] = c18
+            f18[2] = 2
+            f18[9] = peek16384(darena, srec + 1)
+            f18[10] = peek16384(darena, srec + 2)
+            f18[11] = 1
+            mir_ins_line(src,  f18,  18,  ssz,  -1,  lastop)
+            set4096(ftmp, c18 + 0,1)            mir_mk_name(darena,  rec,  1, c18,  0)
+            return 0
+          # sum(a) on int array -> ArraySumI64
+          var isz: int = mir_iarray_size(src,  ts,  te,  peek16384(darena, srec + 1),  peek16384(darena, srec + 2),  fatok,  nfa)
+          if isz > 0:
+            var ci19: int = tc[0]
+            tc[0] = ci19 + 1
+            var fi19: array[40, int]
+            mir_fdef(fi19)
+            fi19[0] = ci19
+            fi19[2] = 2
+            fi19[9] = peek16384(darena, srec + 1)
+            fi19[10] = peek16384(darena, srec + 2)
+            fi19[11] = 1
+            mir_ins_line(src,  fi19,  19,  isz,  -1,  lastop)
+            mir_mk_name(darena,  rec,  1, ci19,  0)
+            return 0
+        # sum(Mul_expr): sum(a * b) -> ArrayAlloc + ArrayScaleF64 + ArraySumF64 (matches C++ lower_float_array_scale_expr)
+        if peek16384(darena, srec + 0) == 7:
+          var sum_opk: int = peek16384(darena, srec + 1)
+          if sum_opk == 61:
+            var sum_lr: int = peek16384(darena, srec + 2)
+            var sum_rr: int = peek16384(darena, srec + 3)
+            if peek16384(darena, sum_lr + 0) == 3:
+              if peek16384(darena, sum_rr + 0) == 3:
+                var sszl: int = mir_farray_size(src,  ts,  te,  peek16384(darena, sum_lr + 1),  peek16384(darena, sum_lr + 2),  ptok2,  pelems,  pef,  pp0,  ppn,  pn,  fatok,  nfa)
+                var sszr: int = mir_farray_size(src,  ts,  te,  peek16384(darena, sum_rr + 1),  peek16384(darena, sum_rr + 2),  ptok2,  pelems,  pef,  pp0,  ppn,  pn,  fatok,  nfa)
+                if sszl > 0:
+                  if sszr > 0:
+                    if sszl == sszr:
+                      var csz: int = tc[0]
+                      tc[0] = csz + 1
+                      var fsa: array[40, int]
+                      mir_fdef(fsa)
+                      fsa[0] = csz
+                      fsa[2] = 2
+                      fsa[32] = 1
+                      mir_ins_line(src,  fsa,  9,  sszl,  -1,  lastop)
+                      set4096(ftmp, csz + 0,1)
+                      var fsb: array[40, int]
+                      mir_fdef(fsb)
+                      fsb[0] = csz
+                      fsb[2] = 2
+                      fsb[9] = peek16384(darena, sum_rr + 1)
+                      fsb[10] = peek16384(darena, sum_rr + 2)
+                      fsb[11] = 1
+                      fsb[12] = peek16384(darena, sum_lr + 1)
+                      fsb[13] = peek16384(darena, sum_lr + 2)
+                      fsb[14] = 1
+                      fsb[26] = 0
+                      mir_ins_line(src,  fsb,  22,  sszl,  -1,  lastop)
+                      var c18b: int = tc[0]
+                      tc[0] = c18b + 1
+                      var f18b: array[40, int]
+                      mir_fdef(f18b)
+                      f18b[0] = c18b
+                      f18b[2] = 2
+                      f18b[9] = csz
+                      f18b[11] = 2
+                      mir_ins_line(src,  f18b,  18,  sszl,  -1,  lastop)
+                      set4096(ftmp, c18b + 0,1)
+                      mir_mk_name(darena,  rec,  1, c18b,  0)
+                      return 0
+        # sum(any_expr): lower the expression, read temp size from ftmp, emit ArraySumF64
+        if peek16384(darena, srec + 0) != 3:
+          if mir_lower_expr(darena,  dasp,  srec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 0:
+            var tsz: int = mir_farray_tmp_size(darena,  srec,  ftmp)
+            if tsz > 0:
+              var c18s: int = tc[0]
+              tc[0] = c18s + 1
+              var f18s: array[40, int]
+              mir_fdef(f18s)
+              f18s[0] = c18s
+              f18s[2] = 2
+              f18s[9] = peek16384(darena, srec + 1)
+              f18s[10] = peek16384(darena, srec + 2)
+              f18s[11] = 1
+              mir_ins_line(src,  f18s,  18,  tsz,  -1,  lastop)
+              set4096(ftmp, c18s + 0,1)
+              mir_mk_name(darena,  rec,  1, c18s,  0)
+              return 0
+    # builtin: dot(a, b) -> ArrayDotF64 (op 14) on float-array params/locals
+    if peek16384(darena, rec + 4) == 2:
+      if mir_slice_is(src,  peek16384(darena, rec + 1),  peek16384(darena, rec + 2),  "dot") == 1:
+        var da0: int = peek16384(darena, peek16384(darena, rec + 5) + 0)
+        var da1: int = peek16384(darena, peek16384(darena, rec + 5) + 1)
+        if peek16384(darena, da0 + 0) == 3:
+          if peek16384(darena, da1 + 0) == 3:
+            var dszl: int = mir_farray_size(src,  ts,  te,  peek16384(darena, da0 + 1),  peek16384(darena, da0 + 2),  ptok2,  pelems,  pef,  pp0,  ppn,  pn,  fatok,  nfa)
+            var dszr: int = mir_farray_size(src,  ts,  te,  peek16384(darena, da1 + 1),  peek16384(darena, da1 + 2),  ptok2,  pelems,  pef,  pp0,  ppn,  pn,  fatok,  nfa)
+            if dszl > 0:
+              if dszr > 0:
+                if dszl == dszr:
+                  var c14: int = tc[0]
+                  tc[0] = c14 + 1
+                  var f14: array[40, int]
+                  mir_fdef(f14)
+                  f14[0] = c14
+                  f14[2] = 2
+                  f14[9] = peek16384(darena, da0 + 1)
+                  f14[10] = peek16384(darena, da0 + 2)
+                  f14[11] = 1
+                  f14[12] = peek16384(darena, da1 + 1)
+                  f14[13] = peek16384(darena, da1 + 2)
+                  f14[14] = 1                  mir_ins_line(src,  f14,  14,  dszl,  -1,  lastop)
+                  set4096(ftmp, c14 + 0,1)
+                  mir_mk_name(darena,  rec,  1, c14,  0)
+                  return 0
+    # builtin: norm(a) on int array -> ArrayBinOpI64(a,a,mul) + ArraySumI64
+    if peek16384(darena, rec + 4) == 1:
+      if mir_slice_is(src,  peek16384(darena, rec + 1),  peek16384(darena, rec + 2),  "norm") == 1:
+        var nrec: int = peek16384(darena, peek16384(darena, rec + 5) + 0)
+        if peek16384(darena, nrec + 0) == 3:
+          var nsz: int = mir_iarray_size(src,  ts,  te,  peek16384(darena, nrec + 1),  peek16384(darena, nrec + 2),  fatok,  nfa)
+          if nsz > 0:
+            # emit ArrayBinOpI64(a, a, mul) into a temp
+            var ncd: int = tc[0]
+            tc[0] = ncd + 1
+            var fni: array[40, int]
+            mir_fdef(fni)
+            fni[0] = ncd
+            fni[2] = 2
+            mir_ins_line(src,  fni,  9,  nsz,  -1,  lastop)
+            var fnb: array[40, int]
+            mir_fdef(fnb)
+            fnb[0] = ncd
+            fnb[2] = 2
+            fnb[9] = peek16384(darena, nrec + 1)
+            fnb[10] = peek16384(darena, nrec + 2)
+            fnb[11] = 1
+            fnb[12] = peek16384(darena, nrec + 1)
+            fnb[13] = peek16384(darena, nrec + 2)
+            fnb[14] = 1
+            fnb[18] = mir_binop_code(61)
+            mir_ins_line(src,  fnb,  21,  nsz,  -1,  lastop)
+            # emit ArraySumI64 on the temp
+            var cns: int = tc[0]
+            tc[0] = cns + 1
+            var fns: array[40, int]
+            mir_fdef(fns)
+            fns[0] = cns
+            fns[2] = 2
+            fns[9] = ncd
+            fns[11] = 2
+            mir_ins_line(src,  fns,  19,  nsz,  -1,  lastop)
+            mir_mk_name(darena,  rec,  1, cns,  0)
+            return 0
+    # builtin: norm(a) on float array -> ArrayDotF64(a,a) + CallExtern li_rt_sqrt
+    if peek16384(darena, rec + 4) == 1:
+      if mir_slice_is(src,  peek16384(darena, rec + 1),  peek16384(darena, rec + 2),  "norm") == 1:
+        var nfrec: int = peek16384(darena, peek16384(darena, rec + 5) + 0)
+        if peek16384(darena, nfrec + 0) == 3:
+          var nfsz: int = mir_farray_size(src,  ts,  te,  peek16384(darena, nfrec + 1),  peek16384(darena, nfrec + 2),  ptok2,  pelems,  pef,  pp0,  ppn,  pn,  fatok,  nfa)
+          if nfsz > 0:
+            # emit ArrayDotF64(a, a)
+            var nfc: int = tc[0]
+            tc[0] = nfc + 1
+            var fnf: array[40, int]
+            mir_fdef(fnf)
+            fnf[0] = nfc
+            fnf[2] = 2
+            fnf[9] = peek16384(darena, nfrec + 1)
+            fnf[10] = peek16384(darena, nfrec + 2)
+            fnf[11] = 1
+            fnf[12] = peek16384(darena, nfrec + 1)
+            fnf[13] = peek16384(darena, nfrec + 2)
+            fnf[14] = 1
+            mir_ins_line(src,  fnf,  14,  nfsz,  -1,  lastop)
+            set4096(ftmp, nfc + 0,1)
+            # emit CallExtern li_rt_sqrt(dot_result)
+            var nsqrt: int = tc[0]
+            tc[0] = nsqrt + 1
+            var fsc: array[40, int]
+            mir_fdef(fsc)
+            fsc[0] = nsqrt
+            fsc[2] = 2
+            fsc[6] = 0
+            fsc[7] = 0
+            fsc[8] = 3
+            fsc[9] = nfc
+            fsc[10] = nfc
+            fsc[11] = 1
+            mir_ins_line(src,  fsc,  7,  0,  -1,  lastop)
+            # ARG line: arg 0 is the dot result
+            var far: array[40, int]
+            mir_fdef(far)
+            far[0] = nfc
+            far[2] = 2
+            mir_arg_line(src,  0,  0,  0,  -1,  nfc,  nfc,  2,  0,  0,  0,  0,  0)
+            set4096(ftmp, nsqrt + 0,1)
+            mir_mk_name(darena,  rec,  1, nsqrt,  0)
+            return 0
+    # builtin: axpy(2.0, x, y) on float arrays -> ArrayAxpyF64
+    if peek16384(darena, rec + 4) == 3:
+      if mir_slice_is(src,  peek16384(darena, rec + 1),  peek16384(darena, rec + 2),  "axpy") == 1:
+        var ax0: int = peek16384(darena, peek16384(darena, rec + 5) + 0)
+        var ax1: int = peek16384(darena, peek16384(darena, rec + 5) + 1)
+        var ax2: int = peek16384(darena, peek16384(darena, rec + 5) + 2)
+        if peek16384(darena, ax1 + 0) == 3:
+          if peek16384(darena, ax2 + 0) == 3:
+            var axsz: int = mir_farray_size(src,  ts,  te,  peek16384(darena, ax1 + 1),  peek16384(darena, ax1 + 2),  ptok2,  pelems,  pef,  pp0,  ppn,  pn,  fatok,  nfa)
+            if axsz > 0:
+              var fax: array[40, int]
+              mir_fdef(fax)
+              # ident stays empty (mode 0) -- axpy modifies y in place, no dest
+              fax[9] = peek16384(darena, ax1 + 1)
+              fax[10] = peek16384(darena, ax1 + 2)
+              fax[11] = 1
+              fax[12] = peek16384(darena, ax2 + 1)
+              fax[13] = peek16384(darena, ax2 + 2)
+              fax[14] = 1
+              # alpha: float literal or ident
+              var ax_fid: int = -1
+              if peek16384(darena, ax0 + 0) == 1:
+                fax[26] = 1
+                ax_fid = peek16384(darena, ax0 + 1)
+              else:
+                if mir_lower_expr(darena,  dasp,  ax0,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 0:
+                  fax[8] = 1
+                  fax[9] = peek16384(darena, ax0 + 1)
+                  fax[10] = peek16384(darena, ax0 + 2)
+                  fax[11] = 1
+              mir_ins_line(src,  fax,  23,  axsz,  ax_fid,  lastop)
+              mir_mk_name(darena,  rec,  1, tc[0] - 1,  0)
+              return 0
+    var pid: int = mir_proc_find(src,  ts,  te,  peek16384(darena, rec + 1),  peek16384(darena, rec + 2),  ptok,  pn)
+    var is_callproc: int = 0
+    if pid >= 0:
+      if peek128(pex, pid + 0) == 0:
+        is_callproc = 1
+    var abuf: array[128, int]
+    var nab: var array[1, int]
+    nab[0] = 0
+    var ai: int = 0
+    while ai < peek16384(darena, rec + 4):
+      var arec: int = peek16384(darena, peek16384(darena, rec + 5) + ai)
+      var ak: int = peek16384(darena, arec + 0)
+      if ak == 2:
+        set128(abuf, nab[0],0)
+        set128(abuf, nab[0] + 1,1)
+        set128(abuf, nab[0] + 2,peek16384(darena, arec + 1))
+        set128(abuf, nab[0] + 3,peek16384(darena, arec + 2))
+        nab[0] = nab[0] + 4
+      else:
+        if ak == 0:
+          set128(abuf, nab[0],1)
+          set128(abuf, nab[0] + 1,peek16384(darena, arec + 1))
+          nab[0] = nab[0] + 4
+        else:
+          if ak == 1:
+            set128(abuf, nab[0],2)
+            set128(abuf, nab[0] + 1,peek16384(darena, arec + 1))
+            nab[0] = nab[0] + 4
+          else:
+            if ak == 3:
+              set128(abuf, nab[0],3)
+              set128(abuf, nab[0] + 1,peek16384(darena, arec + 1))
+              set128(abuf, nab[0] + 2,peek16384(darena, arec + 2))
+              set128(abuf, nab[0] + 3,0)
+              if is_callproc == 1:
+                if peek512(pty, peek128(pp0, pid + 0) + ai) == 5:
+                  set128(abuf, nab[0] + 3,1)
+              nab[0] = nab[0] + 4
+            else:
+              if mir_lower_expr(darena,  dasp,  arec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+                return 1
+              set128(abuf, nab[0],4)
+              set128(abuf, nab[0] + 1,peek16384(darena, arec + 2))
+              nab[0] = nab[0] + 4
+      ai = ai + 1
+    if is_callproc == 1:
+      var f8b: array[40, int]
+      mir_fdef(f8b)
+      f8b[6] = peek16384(darena, rec + 1)
+      f8b[7] = peek16384(darena, rec + 2)
+      f8b[8] = 1
+      var rd: int = peek128(pret, pid + 0)
+      if rd == 0:
+        mir_ins_line(src,  f8b,  8,  0,  -1,  lastop)
+        mir_mk_name(darena,  rec,  2,  0,  0)
+      else:
+        var c8: int = tc[0]
+        tc[0] = c8 + 1
+        f8b[0] = c8
+        f8b[2] = 2
+        if rd == 2:
+          f8b[19] = 1
+          set4096(ftmp, c8 + 0,1)
+        else:
+          if rd == 3 or rd == 4 or rd == 5:
+            f8b[20] = 1
+            f8b[31] = 1
+            set4096(itmp, c8 + 0,1)
+        mir_ins_line(src,  f8b,  8,  0,  -1,  lastop)
+        mir_mk_name(darena,  rec,  1,  c8,  0)
+    else:
+      var f7x: array[40, int]
+      mir_fdef(f7x)
+      f7x[6] = peek16384(darena, rec + 1)
+      f7x[7] = peek16384(darena, rec + 2)
+      f7x[8] = 1
+      var std_int: int = 0
+      var std_str: int = 0
+      if pid < 0:
+        if mir_slice_is(src,  peek16384(darena, rec + 1),  peek16384(darena, rec + 2),  "bytes_len") == 1:
+          std_int = 1
+        if mir_slice_is(src,  peek16384(darena, rec + 1),  peek16384(darena, rec + 2),  "bytes_slice") == 1:
+          std_str = 1
+      var ev: int = 0
+      if pid >= 0:
+        if peek128(pret, pid + 0) != 0:
+          ev = 1
+      else:
+        if std_int == 1 or std_str == 1:
+          ev = 1
+      if ev == 1:
+        var c9: int = tc[0]
+        tc[0] = c9 + 1
+        f7x[0] = c9
+        f7x[2] = 2
+        if std_str == 1:
+          f7x[20] = 1
+          f7x[31] = 1
+          set4096(itmp, c9 + 0,1)
+        else:
+          if pid >= 0:
+            if peek128(pret, pid + 0) == 2:
+              f7x[19] = 1
+              set4096(ftmp, c9 + 0,1)
+            else:
+              if peek128(pret, pid + 0) == 3 or peek128(pret, pid + 0) == 4 or peek128(pret, pid + 0) == 5:
+                f7x[20] = 1
+                f7x[31] = 1
+                set4096(itmp, c9 + 0,1)
+        mir_ins_line(src,  f7x,  7,  0,  -1,  lastop)
+        mir_mk_name(darena,  rec,  1,  c9,  0)
+      else:
+        mir_ins_line(src,  f7x,  7,  0,  -1,  lastop)
+        var c9b: int = tc[0]
+        tc[0] = c9b + 1
+        mir_mk_name(darena,  rec,  1,  c9b,  0)
+    var bi: int = 0
+    while bi < nab[0]:
+      var akind: int = peek128(abuf, bi + 0)
+      if akind == 0:
+        mir_arg_line(src,  0,  0,  0,  -1,  0,  0,  0,  1,  peek128(abuf, bi + 2),  peek128(abuf, bi + 3),  0,  0)
+      else:
+        if akind == 1:
+          mir_arg_line(src,  1,  peek128(abuf, bi + 1),  0,  -1,  0,  0,  0,  0,  0,  0,  0,  0)
+        else:
+          if akind == 2:
+            mir_arg_line(src,  0,  0,  1,  peek128(abuf, bi + 1),  0,  0,  0,  0,  0,  0,  0,  0)
+          else:
+            if akind == 3:
+              mir_arg_line(src,  0,  0,  0,  -1,  peek128(abuf, bi + 1),  peek128(abuf, bi + 2),  1,  0,  0,  0,  peek128(abuf, bi + 3),  0)
+            else:
+              mir_arg_line(src,  0,  0,  0,  -1,  peek128(abuf, bi + 1),  0,  2,  0,  0,  0,  0,  0)
+      bi = bi + 4
+    return 0
+  err[0] = 1
+  return 1
+
+# ---- statement lowering ----
+def mir_emit_jump_label(src: var ptr,  lastop: var array[1, int],  op: int,  pfx: int,  v: int) -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var f: array[40, int]
+  mir_fdef(f)
+  f[15] = v
+  f[16] = pfx
+  f[17] = 2
+  mir_ins_line(src,  f,  op,  0,  -1,  lastop)
+  return 0
+
+def mir_lower_cond(darena: var array[16384, int],  dasp: var array[1, int],  crec: int, src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[512, int],  nft: var array[1, int], ftmp: var array[4096, int],  itok: var array[256, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[64, int],  nfa: var array[1, int], matok: var array[64, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int]) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  if mir_lower_expr(darena,  dasp,  crec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+    return 1
+  return 0
+
+# Fill the name cells [off..off+2] of `f` from a lowered descriptor `rec`.
+# Descriptor kind 8 carries is_tmp at rec+1: 0 = source slice [s,e], 1 = temp
+# counter name (label code 0 -> `__t{v}`). Mirrors the C++ lowering, which
+# stores ident slices for plain idents and fresh temps for computed operands.
+def mir_name_cells(darena: var array[16384, int],  rec: int,  f: var array[40, int],  off: int) -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  set40(f, off + 0,peek16384(darena, rec + 2))
+  set40(f, off + 1,peek16384(darena, rec + 3))
+  if peek16384(darena, rec + 1) == 1:
+    set40(f, off + 1,0)
+    set40(f, off + 2,2)
+  else:
+    set40(f, off + 2,1)
+  return 0
+
+def mir_stmts(darena: var array[16384, int],  dasp: var array[1, int], src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[512, int],  nft: var array[1, int], ftmp: var array[4096, int],  itok: var array[256, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[64, int],  nfa: var array[1, int], matok: var array[64, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], retf_proc: int,  reti64_proc: int, lhead: var array[32, int],  lexit: var array[32, int],  nlp: var array[1, int]) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  skip_newlines(tk,  n,  pi,  err)
+  expect_k(tk,  n,  pi,  err, 2)
+  skip_newlines(tk,  n,  pi,  err)
+  while 1 == 1:
+    if cur_kind(tk,  n,  pi,  err) == 3:
+      break
+    if cur_kind(tk,  n,  pi,  err) == 0:
+      break
+    var before: int = pi[0]
+    if mir_stmt(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar,  retf_proc,  reti64_proc,  lhead,  lexit,  nlp) == 1:
+      return 1
+    if pi[0] == before:
+      err[0] = 1
+      return 1
+    if lastop[0] >= 0:
+      if lastop[0] <= 4:
+        break
+    skip_newlines(tk,  n,  pi,  err)
+  expect_k(tk,  n,  pi,  err, 3)
+  return 0
+
+def mir_stmt(darena: var array[16384, int],  dasp: var array[1, int], src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[512, int],  nft: var array[1, int], ftmp: var array[4096, int],  itok: var array[256, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[64, int],  nfa: var array[1, int], matok: var array[64, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], retf_proc: int,  reti64_proc: int, lhead: var array[32, int],  lexit: var array[32, int],  nlp: var array[1, int]) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  var k: int = cur_kind(tk,  n,  pi,  err)
+  if k == 20:
+    return mir_var_decl(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar,  retf_proc,  reti64_proc,  lhead,  lexit,  nlp)
+  if k == 27:
+    pi[0] = pi[0] + 1
+    if nlp[0] > 0:
+      mir_emit_jump_label(src,  lastop,  44,  4,  peek32(lexit, nlp[0] - 1))
+    skip_newlines(tk,  n,  pi,  err)
+    return 0
+  if k == 28:
+    pi[0] = pi[0] + 1
+    if nlp[0] > 0:
+      mir_emit_jump_label(src,  lastop,  44,  3,  peek32(lhead, nlp[0] - 1))
+    skip_newlines(tk,  n,  pi,  err)
+    return 0
+  if k == 26:
+    return mir_for(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar,  retf_proc,  reti64_proc,  lhead,  lexit,  nlp)
+  if k == 25:
+    return mir_while(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar,  retf_proc,  reti64_proc,  lhead,  lexit,  nlp)
+  if k == 22:
+    return mir_if(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar,  retf_proc,  reti64_proc,  lhead,  lexit,  nlp)
+  if k == 30:
+    return mir_return(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar,  retf_proc,  reti64_proc,  lhead,  lexit,  nlp)
+  if k == 4:
+    if tok_is(src,  ts,  te,  pi[0],  "discard") == 1:
+      pi[0] = pi[0] + 1
+      skip_newlines(tk,  n,  pi,  err)
+      return 0
+  var lrec: int = mir_parse_primary(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err)
+  if lrec < 0:
+    return 1
+  if accept_k(tk,  n,  pi,  err, 58) == 1:
+    var rrec: int = mir_parse_expr(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err, 0)
+    if rrec < 0:
+      return 1
+    if mir_assign(darena,  dasp,  lrec,  rrec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar,  retf_proc,  reti64_proc,  lhead,  lexit,  nlp) == 1:
+      return 1
+  else:
+    if peek16384(darena, lrec + 0) == 4:
+      if mir_slice_is(src,  peek16384(darena, lrec + 1),  peek16384(darena, lrec + 2),  "print") == 1:
+        var arg0: int = peek16384(darena, peek16384(darena, lrec + 5) + 0)
+        var f5: array[40, int]
+        mir_fdef(f5)
+        if peek16384(darena, arg0 + 0) == 0:
+          mir_ins_line(src,  f5,  5,  peek16384(darena, arg0 + 1),  -1,  lastop)
+        else:
+          if peek16384(darena, arg0 + 0) == 2:
+            f5[3] = peek16384(darena, arg0 + 1)
+            f5[4] = peek16384(darena, arg0 + 2)
+            f5[5] = 1
+            mir_ins_line(src,  f5,  6,  0,  -1,  lastop)
+          else:
+            if peek16384(darena, arg0 + 0) == 3:
+              f5[0] = peek16384(darena, arg0 + 1)
+              f5[1] = peek16384(darena, arg0 + 2)
+              f5[2] = 1
+              mir_ins_line(src,  f5,  5,  0,  -1,  lastop)
+            else:
+              if mir_lower_expr(darena,  dasp,  arg0,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+                return 1
+              f5[0] = peek16384(darena, arg0 + 2)
+              f5[2] = 2
+              mir_ins_line(src,  f5,  5,  0,  -1,  lastop)
+      else:
+        if mir_lower_expr(darena,  dasp,  lrec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+          return 1
+  skip_newlines(tk,  n,  pi,  err)
+  return 0
+
+def mir_if(darena: var array[16384, int],  dasp: var array[1, int], src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[512, int],  nft: var array[1, int], ftmp: var array[4096, int],  itok: var array[256, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[64, int],  nfa: var array[1, int], matok: var array[64, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], retf_proc: int,  reti64_proc: int, lhead: var array[32, int],  lexit: var array[32, int],  nlp: var array[1, int]) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  pi[0] = pi[0] + 1
+  var crec: int = mir_parse_expr(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err, 0)
+  if crec < 0:
+    return 1
+  if mir_lower_cond(darena,  dasp,  crec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+    return 1
+  expect_k(tk,  n,  pi,  err, 56)
+  var el: int = tc[0]
+  tc[0] = el + 1
+  var mg: int = tc[0]
+  tc[0] = mg + 1
+  var fb: array[40, int]
+  mir_fdef(fb)
+  fb[0] = peek16384(darena, crec + 2)
+  fb[1] = 0
+  fb[2] = 2
+  fb[15] = el
+  fb[16] = 1
+  fb[17] = 2
+  mir_ins_line(src,  fb,  45,  0,  -1,  lastop)
+  if mir_stmts(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar,  retf_proc,  reti64_proc,  lhead,  lexit,  nlp) == 1:
+    return 1
+  skip_newlines(tk,  n,  pi,  err)
+  if cur_kind(tk,  n,  pi,  err) == 24:
+    mir_emit_jump_label(src,  lastop,  44,  2,  mg)
+    mir_emit_jump_label(src,  lastop,  43,  1,  el)
+    if mir_if(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar,  retf_proc,  reti64_proc,  lhead,  lexit,  nlp) == 1:
+      return 1
+    mir_emit_jump_label(src,  lastop,  43,  2,  mg)
+    return 0
+  if cur_kind(tk,  n,  pi,  err) == 23:
+    mir_emit_jump_label(src,  lastop,  44,  2,  mg)
+    mir_emit_jump_label(src,  lastop,  43,  1,  el)
+    pi[0] = pi[0] + 1
+    expect_k(tk,  n,  pi,  err, 56)
+    if mir_stmts(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar,  retf_proc,  reti64_proc,  lhead,  lexit,  nlp) == 1:
+      return 1
+    mir_emit_jump_label(src,  lastop,  43,  2,  mg)
+    return 0
+  mir_emit_jump_label(src,  lastop,  43,  1,  el)
+  return 0
+
+def mir_while(darena: var array[16384, int],  dasp: var array[1, int], src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[512, int],  nft: var array[1, int], ftmp: var array[4096, int],  itok: var array[256, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[64, int],  nfa: var array[1, int], matok: var array[64, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], retf_proc: int,  reti64_proc: int, lhead: var array[32, int],  lexit: var array[32, int],  nlp: var array[1, int]) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  pi[0] = pi[0] + 1
+  var hd: int = tc[0]
+  tc[0] = hd + 1
+  var ex: int = tc[0]
+  tc[0] = ex + 1
+  set32(lhead, nlp[0],hd)
+  set32(lexit, nlp[0],ex)
+  nlp[0] = nlp[0] + 1
+  mir_emit_jump_label(src,  lastop,  43,  3,  hd)
+  var crec: int = mir_parse_expr(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err, 0)
+  if crec < 0:
+    return 1
+  if mir_lower_cond(darena,  dasp,  crec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+    return 1
+  expect_k(tk,  n,  pi,  err, 56)
+  var fb: array[40, int]
+  mir_fdef(fb)
+  fb[0] = peek16384(darena, crec + 2)
+  fb[1] = 0
+  fb[2] = 2
+  fb[15] = ex
+  fb[16] = 4
+  fb[17] = 2
+  mir_ins_line(src,  fb,  45,  0,  -1,  lastop)
+  if mir_stmts(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar,  retf_proc,  reti64_proc,  lhead,  lexit,  nlp) == 1:
+    return 1
+  mir_emit_jump_label(src,  lastop,  44,  3,  hd)
+  mir_emit_jump_label(src,  lastop,  43,  4,  ex)
+  nlp[0] = nlp[0] - 1
+  skip_newlines(tk,  n,  pi,  err)
+  return 0
+
+def mir_for(darena: var array[16384, int],  dasp: var array[1, int], src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[512, int],  nft: var array[1, int], ftmp: var array[4096, int],  itok: var array[256, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[64, int],  nfa: var array[1, int], matok: var array[64, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], retf_proc: int,  reti64_proc: int, lhead: var array[32, int],  lexit: var array[32, int],  nlp: var array[1, int]) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  pi[0] = pi[0] + 1
+  var iter_t: int = pi[0]
+  pi[0] = pi[0] + 1
+  pi[0] = pi[0] + 1
+  var st: int = 0
+  var en: int = 0
+  if cur_kind(tk,  n,  pi,  err) == 5:
+    st = int_text_value(src,  ts,  te,  pi[0])
+    pi[0] = pi[0] + 1
+  pi[0] = pi[0] + 1
+  if cur_kind(tk,  n,  pi,  err) == 5:
+    en = int_text_value(src,  ts,  te,  pi[0])
+    pi[0] = pi[0] + 1
+  expect_k(tk,  n,  pi,  err, 56)
+  var hd: int = tc[0]
+  tc[0] = hd + 1
+  var ex: int = tc[0]
+  tc[0] = ex + 1
+  set32(lhead, nlp[0],hd)
+  set32(lexit, nlp[0],ex)
+  nlp[0] = nlp[0] + 1
+  var f24: array[40, int]
+  mir_fdef(f24)
+  f24[0] = peek_tk(ts, iter_t + 0)
+  f24[1] = peek_tk(te, iter_t + 0)
+  f24[2] = 1
+  mir_ins_line(src,  f24,  24,  0,  -1,  lastop)
+  var el: int = tc[0]
+  tc[0] = el + 1
+  var f26: array[40, int]
+  mir_fdef(f26)
+  f26[0] = el
+  f26[2] = 2
+  f26[26] = 1
+  f26[27] = en
+  mir_ins_line(src,  f26,  26,  0,  -1,  lastop)
+  var f26b: array[40, int]
+  mir_fdef(f26b)
+  f26b[0] = peek_tk(ts, iter_t + 0)
+  f26b[1] = peek_tk(te, iter_t + 0)
+  f26b[2] = 1
+  f26b[26] = 1
+  f26b[27] = st
+  mir_ins_line(src,  f26b,  26,  0,  -1,  lastop)
+  mir_emit_jump_label(src,  lastop,  43,  5,  hd)
+  var df: int = tc[0]
+  tc[0] = df + 1
+  var fd: array[40, int]
+  mir_fdef(fd)
+  fd[0] = df
+  fd[2] = 2
+  fd[9] = el
+  fd[10] = 0
+  fd[11] = 2
+  fd[12] = peek_tk(ts, iter_t + 0)
+  fd[13] = peek_tk(te, iter_t + 0)
+  fd[14] = 1
+  fd[18] = 1
+  mir_ins_line(src,  fd,  30,  0,  -1,  lastop)
+  var fb: array[40, int]
+  mir_fdef(fb)
+  fb[0] = df
+  fb[1] = 0
+  fb[2] = 2
+  fb[15] = ex
+  fb[16] = 6
+  fb[17] = 2
+  mir_ins_line(src,  fb,  45,  0,  -1,  lastop)
+  if mir_stmts(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar,  retf_proc,  reti64_proc,  lhead,  lexit,  nlp) == 1:
+    return 1
+  var on: int = tc[0]
+  tc[0] = on + 1
+  var fo: array[40, int]
+  mir_fdef(fo)
+  fo[0] = on
+  fo[2] = 2
+  fo[26] = 1
+  fo[27] = 1
+  mir_ins_line(src,  fo,  26,  0,  -1,  lastop)
+  var fi: array[40, int]
+  mir_fdef(fi)
+  fi[0] = peek_tk(ts, iter_t + 0)
+  fi[1] = peek_tk(te, iter_t + 0)
+  fi[2] = 1
+  fi[9] = peek_tk(ts, iter_t + 0)
+  fi[10] = peek_tk(te, iter_t + 0)
+  fi[11] = 1
+  fi[12] = on
+  fi[13] = 0
+  fi[14] = 2
+  fi[18] = 0
+  mir_ins_line(src,  fi,  30,  0,  -1,  lastop)
+  mir_emit_jump_label(src,  lastop,  44,  5,  hd)
+  mir_emit_jump_label(src,  lastop,  43,  6,  ex)
+  nlp[0] = nlp[0] - 1
+  skip_newlines(tk,  n,  pi,  err)
+  return 0
+
+def mir_rec_name_i64(darena: var array[16384, int],  rec: int,  src: var ptr, ts: var array[131072, int],  te: var array[131072, int], itok: var array[256, int],  nit: var array[1, int], itmp: var array[4096, int]) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  if peek16384(darena, rec + 1) == 1:
+    return peek4096(itmp, peek16384(darena, rec + 2))
+  return mir_name_i64(src,  ts,  te,  peek16384(darena, rec + 2),  peek16384(darena, rec + 3),  itok,  nit)
+
+def mir_type_info(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  ti: var array[6, int]) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  ti[0] = 6
+  ti[1] = 0
+  ti[2] = 0
+  ti[3] = 0
+  ti[4] = 0
+  ti[5] = 0
+  if accept_k(tk,  n,  pi,  err, 53) == 1:
+    if cur_kind(tk,  n,  pi,  err) != 4:
+      err[0] = 1
+      return 1
+    pi[0] = pi[0] + 1
+    expect_k(tk,  n,  pi,  err, 56)
+    if mir_type_info(src,  tk,  ts,  te,  n,  pi,  err,  ti) == 1:
+      return 1
+    expect_k(tk,  n,  pi,  err, 74)
+    parse_contract_expr(src,  tk,  ts,  te,  n,  pi,  err, 0)
+    expect_k(tk,  n,  pi,  err, 54)
+    return 0
+  if cur_kind(tk,  n,  pi,  err) == 20:
+    ti[1] = 1
+    pi[0] = pi[0] + 1
+  var k: int = cur_kind(tk,  n,  pi,  err)
+  if k != 4:
+    if k != 48:
+      if k != 47:
+        err[0] = 1
+        return 1
+  var nm: int = pi[0]
+  pi[0] = pi[0] + 1
+  if tok_is(src,  ts,  te,  nm,  "array") == 1:
+    if accept_k(tk,  n,  pi,  err, 51) == 1:
+      if cur_kind(tk,  n,  pi,  err) != 5:
+        err[0] = 1
+        return 1
+      ti[2] = int_text_value(src,  ts,  te,  pi[0])
+      pi[0] = pi[0] + 1
+      expect_k(tk,  n,  pi,  err, 55)
+      var eti: array[6, int]
+      if mir_type_info(src,  tk,  ts,  te,  n,  pi,  err,  eti) == 1:
+        return 1
+      expect_k(tk,  n,  pi,  err, 52)
+      ti[0] = 5
+      ti[3] = eti[0]
+      if eti[0] == 5:
+        ti[4] = eti[2]
+        ti[5] = eti[3]
+      return 0
+    ti[0] = 5
+    return 0
+  if tok_is(src,  ts,  te,  nm,  "int") == 1:
+    ti[0] = 0
+    return 0
+  if tok_is(src,  ts,  te,  nm,  "bool") == 1:
+    ti[0] = 0
+    return 0
+  if tok_is(src,  ts,  te,  nm,  "float") == 1:
+    ti[0] = 1
+    return 0
+  if tok_is(src,  ts,  te,  nm,  "float64") == 1:
+    ti[0] = 1
+    return 0
+  if tok_is(src,  ts,  te,  nm,  "str") == 1:
+    ti[0] = 2
+    return 0
+  if tok_is(src,  ts,  te,  nm,  "string") == 1:
+    ti[0] = 2
+    return 0
+  if tok_is(src,  ts,  te,  nm,  "bytes") == 1:
+    ti[0] = 3
+    return 0
+  if tok_is(src,  ts,  te,  nm,  "StringView") == 1:
+    ti[0] = 3
+    return 0
+  if tok_is(src,  ts,  te,  nm,  "ptr") == 1:
+    ti[0] = 4
+    return 0
+  if tok_is(src,  ts,  te,  nm,  "int64") == 1:
+    ti[0] = 4
+    return 0
+  if tok_is(src,  ts,  te,  nm,  "i64") == 1:
+    ti[0] = 4
+    return 0
+  if tok_is(src,  ts,  te,  nm,  "long") == 1:
+    ti[0] = 4
+    return 0
+  if tok_is(src,  ts,  te,  nm,  "unit") == 1:
+    ti[0] = 7
+    return 0
+  # unknown named type (object/callable/tuple/simd): skip type args
+  if cur_kind(tk,  n,  pi,  err) == 49:
+    var dep: int = 0
+    var d2: int = 0
+    while d2 == 0:
+      var kk: int = cur_kind(tk,  n,  pi,  err)
+      if kk == 49 or kk == 51:
+        dep = dep + 1
+      if kk == 50 or kk == 52:
+        dep = dep - 1
+      pi[0] = pi[0] + 1
+      if dep <= 0:
+        d2 = 1
+  return 0
+
+def mir_try_fma(darena: var array[16384, int],  lrec: int,  rrec: int,  src: var ptr, ts: var array[131072, int],  te: var array[131072, int], lastop: var array[1, int]) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  if peek16384(darena, rrec + 0) != 7:
+    return 0
+  if peek16384(darena, rrec + 1) != 59:
+    return 0
+  var ml: int = peek16384(darena, rrec + 2)
+  var ad: int = peek16384(darena, rrec + 3)
+  if peek16384(darena, ml + 0) != 7:
+    return 0
+  if peek16384(darena, ml + 1) != 61:
+    return 0
+  var m1: int = peek16384(darena, ml + 2)
+  var m2: int = peek16384(darena, ml + 3)
+  var adfid: int = -1
+  if peek16384(darena, ad + 0) == 1:
+    adfid = peek16384(darena, ad + 1)
+  else:
+    if peek16384(darena, ad + 0) == 0:
+      adfid = li_rt_mir_f64_of_int(peek16384(darena, ad + 1))
+    else:
+      return 0
+  var factor: int = -1
+  if peek16384(darena, m1 + 0) == 3 and peek16384(darena, m2 + 0) == 3:
+    if peek16384(darena, lrec + 0) == 3:
+      if mir_slice_eq(src,  peek16384(darena, m1 + 1),  peek16384(darena, m1 + 2),  peek16384(darena, lrec + 1),  peek16384(darena, lrec + 2)) == 1:
+        factor = m2
+      else:
+        if mir_slice_eq(src,  peek16384(darena, m2 + 1),  peek16384(darena, m2 + 2),  peek16384(darena, lrec + 1),  peek16384(darena, lrec + 2)) == 1:
+          factor = m1
+  if factor < 0:
+    return 0
+  var f: array[40, int]
+  mir_fdef(f)
+  f[0] = peek16384(darena, lrec + 1)
+  f[1] = peek16384(darena, lrec + 2)
+  f[2] = 1
+  f[9] = peek16384(darena, factor + 1)
+  f[10] = peek16384(darena, factor + 2)
+  f[11] = 1
+  f[12] = peek16384(darena, lrec + 1)
+  f[13] = peek16384(darena, lrec + 2)
+  f[14] = 1
+  mir_ins_line(src,  f,  32,  0,  adfid,  lastop)
+  return 1
+
+def mir_return(darena: var array[16384, int],  dasp: var array[1, int], src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[512, int],  nft: var array[1, int], ftmp: var array[4096, int],  itok: var array[256, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[64, int],  nfa: var array[1, int], matok: var array[64, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], retf_proc: int,  reti64_proc: int, lhead: var array[32, int],  lexit: var array[32, int],  nlp: var array[1, int]) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  pi[0] = pi[0] + 1
+  var kk: int = cur_kind(tk,  n,  pi,  err)
+  if kk == 1:
+    var f0: array[40, int]
+    mir_fdef(f0)
+    mir_ins_line(src,  f0,  0,  0,  -1,  lastop)
+  else:
+    if kk == 3:
+      var f0a: array[40, int]
+      mir_fdef(f0a)
+      mir_ins_line(src,  f0a,  0,  0,  -1,  lastop)
+    else:
+      if kk == 0:
+        var f0b: array[40, int]
+        mir_fdef(f0b)
+        mir_ins_line(src,  f0b,  0,  0,  -1,  lastop)
+      else:
+        var rec: int = mir_parse_expr(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err, 0)
+        if rec < 0:
+          return 1
+        var rk: int = peek16384(darena, rec + 0)
+        if rk == 0:
+          var f1: array[40, int]
+          mir_fdef(f1)
+          mir_ins_line(src,  f1,  1,  peek16384(darena, rec + 1),  -1,  lastop)
+        else:
+          if rk == 1:
+            var f2: array[40, int]
+            mir_fdef(f2)
+            mir_ins_line(src,  f2,  2,  0,  peek16384(darena, rec + 1),  lastop)
+          else:
+            if rk == 3:
+              var f3: array[40, int]
+              mir_fdef(f3)
+              f3[0] = peek16384(darena, rec + 1)
+              f3[1] = peek16384(darena, rec + 2)
+              f3[2] = 1
+              var rf: int = retf_proc
+              var ri: int = reti64_proc
+              if mir_name_float(src,  ts,  te,  peek16384(darena, rec + 1),  peek16384(darena, rec + 2),  ftok,  nft) == 1:
+                rf = 1
+              if mir_name_i64(src,  ts,  te,  peek16384(darena, rec + 1),  peek16384(darena, rec + 2),  itok,  nit) == 1:
+                ri = 1
+              f3[19] = rf
+              f3[20] = ri
+              mir_ins_line(src,  f3,  3,  0,  -1,  lastop)
+            else:
+              if rk == 7 or rk == 4 or rk == 5 or rk == 11:
+                if mir_lower_expr(darena,  dasp,  rec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+                  return 1
+                var f4: array[40, int]
+                mir_fdef(f4)
+                f4[0] = peek16384(darena, rec + 2)
+                f4[2] = 2
+                var rf4: int = retf_proc
+                var ri4: int = reti64_proc
+                if mir_desc_float(darena,  rec,  src,  ts,  te,  ftok,  nft,  ftmp,  fatok,  nfa) == 1:
+                  rf4 = 1
+                if mir_rec_name_i64(darena,  rec,  src,  ts,  te,  itok,  nit,  itmp) == 1:
+                  ri4 = 1
+                f4[19] = rf4
+                f4[20] = ri4
+                mir_ins_line(src,  f4,  3,  0,  -1,  lastop)
+              else:
+                var f5: array[40, int]
+                mir_fdef(f5)
+                mir_ins_line(src,  f5,  0,  0,  -1,  lastop)
+  skip_newlines(tk,  n,  pi,  err)
+  return 0
+
+def mir_var_decl(darena: var array[16384, int],  dasp: var array[1, int], src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[512, int],  nft: var array[1, int], ftmp: var array[4096, int],  itok: var array[256, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[64, int],  nfa: var array[1, int], matok: var array[64, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], retf_proc: int,  reti64_proc: int, lhead: var array[32, int],  lexit: var array[32, int],  nlp: var array[1, int]) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  pi[0] = pi[0] + 1
+  var vn: int = pi[0]
+  pi[0] = pi[0] + 1
+  expect_k(tk,  n,  pi,  err, 56)
+  var ti: array[6, int]
+  if mir_type_info(src,  tk,  ts,  te,  n,  pi,  err,  ti) == 1:
+    return 1
+  var has_init: int = 0
+  var rec: int = -1
+  if accept_k(tk,  n,  pi,  err, 58) == 1:
+    has_init = 1
+    rec = mir_parse_expr(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err, 0)
+    if rec < 0:
+      return 1
+  var ty: int = ti[0]
+  if ty == 1:
+    var f35: array[40, int]
+    mir_fdef(f35)
+    f35[0] = peek_tk(ts, vn + 0)
+    f35[1] = peek_tk(te, vn + 0)
+    f35[2] = 1
+    mir_ins_line(src,  f35,  35,  0,  -1,  lastop)
+    set512(ftok, nft[0],vn)
+    nft[0] = nft[0] + 1
+    if has_init == 1:
+      var f28: array[40, int]
+      mir_fdef(f28)
+      f28[0] = peek_tk(ts, vn + 0)
+      f28[1] = peek_tk(te, vn + 0)
+      f28[2] = 1
+      var fidv: int = -1
+      if peek16384(darena, rec + 0) == 1:
+        fidv = peek16384(darena, rec + 1)
+      else:
+        if peek16384(darena, rec + 0) == 3:
+          f28[26] = 0
+          f28[12] = peek16384(darena, rec + 1)
+          f28[13] = peek16384(darena, rec + 2)
+          f28[14] = 1
+        else:
+          if mir_lower_expr(darena,  dasp,  rec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+            return 1
+          f28[26] = 0
+          f28[12] = peek16384(darena, rec + 2)
+          f28[14] = 2
+      mir_ins_line(src,  f28,  28,  0,  fidv,  lastop)
+  else:
+    if ty == 2 or ty == 3 or ty == 4:
+      var f25: array[40, int]
+      mir_fdef(f25)
+      f25[0] = peek_tk(ts, vn + 0)
+      f25[1] = peek_tk(te, vn + 0)
+      f25[2] = 1
+      mir_ins_line(src,  f25,  25,  0,  -1,  lastop)
+      set256(itok, nit[0],vn)
+      nit[0] = nit[0] + 1
+      if has_init == 1:
+        var f27: array[40, int]
+        mir_fdef(f27)
+        f27[0] = peek_tk(ts, vn + 0)
+        f27[1] = peek_tk(te, vn + 0)
+        f27[2] = 1
+        if peek16384(darena, rec + 0) == 2:
+          f27[28] = 1
+          f27[3] = peek16384(darena, rec + 1)
+          f27[4] = peek16384(darena, rec + 2)
+          f27[5] = 1
+        else:
+          if peek16384(darena, rec + 0) == 0:
+            f27[26] = 1
+            f27[27] = peek16384(darena, rec + 1)
+          else:
+            if peek16384(darena, rec + 0) == 3:
+              f27[26] = 0
+              f27[12] = peek16384(darena, rec + 1)
+              f27[13] = peek16384(darena, rec + 2)
+              f27[14] = 1
+            else:
+              if mir_lower_expr(darena,  dasp,  rec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+                return 1
+              f27[26] = 0
+              f27[12] = peek16384(darena, rec + 2)
+              f27[14] = 2
+        mir_ins_line(src,  f27,  27,  0,  -1,  lastop)
+    else:
+      if ty == 5:
+        var f9: array[40, int]
+        mir_fdef(f9)
+        f9[0] = peek_tk(ts, vn + 0)
+        f9[1] = peek_tk(te, vn + 0)
+        f9[2] = 1
+        var fid9: int = -1
+        var is_mat9: int = 0
+        if ti[3] == 5:
+          if ti[5] == 1:
+            is_mat9 = 1
+        if is_mat9 == 1:
+          f9[32] = 1
+          f9[33] = 1
+          f9[27] = ti[4]
+          mir_ins_line(src,  f9,  9,  ti[2],  fid9,  lastop)
+          set64(matok, nmat[0],vn)
+          nmat[0] = nmat[0] + 1
+        else:
+          if ti[3] == 1:
+            f9[32] = 1
+            set64(fatok, 2 * nfa[0],vn)
+            set64(fatok, 2 * nfa[0] + 1,ti[2])
+            nfa[0] = nfa[0] + 1
+          if ti[3] == 0:
+            var nia_v: int = peek64(fatok, 63)
+            set64(fatok, 2 * nfa[0] + 2 * nia_v, vn)
+            set64(fatok, 2 * nfa[0] + 2 * nia_v + 1, ti[2])
+            set64(fatok, 63, nia_v + 1)
+          mir_ins_line(src,  f9,  9,  ti[2],  fid9,  lastop)
+          if has_init == 1:
+            # elementwise: var c = a + b on float arrays -> ArrayBinOpF64 directly into c
+            if peek16384(darena, rec + 0) == 7:
+              var vopk: int = peek16384(darena, rec + 1)
+              if vopk == 59 or vopk == 60 or vopk == 61 or vopk == 63 or vopk == 62:
+                var vlr: int = peek16384(darena, rec + 2)
+                var vrr: int = peek16384(darena, rec + 3)
+                if peek16384(darena, vlr + 0) == 3:
+                  if peek16384(darena, vrr + 0) == 3:
+                    var vszl: int = mir_farray_size(src,  ts,  te,  peek16384(darena, vlr + 1),  peek16384(darena, vlr + 2),  ptok2,  pelems,  pef,  pp0,  ppn,  pn,  fatok,  nfa)
+                    var vszr: int = mir_farray_size(src,  ts,  te,  peek16384(darena, vrr + 1),  peek16384(darena, vrr + 2),  ptok2,  pelems,  pef,  pp0,  ppn,  pn,  fatok,  nfa)
+                    if vszl > 0:
+                      if vszr > 0:
+                        var vbs: int = 0
+                        if vszl == vszr:
+                          vbs = 1
+                        if vszl == 1:
+                          if vszr > 1:
+                            vbs = 1
+                        if vszr == 1:
+                          if vszl > 1:
+                            vbs = 1
+                        if vbs == 1:
+                          var vesz: int = vszl
+                          if vszr > vesz:
+                            vesz = vszr
+                          var fv20: array[40, int]
+                          mir_fdef(fv20)
+                          fv20[0] = peek_tk(ts, vn + 0)
+                          fv20[1] = peek_tk(te, vn + 0)
+                          fv20[2] = 1
+                          fv20[9] = peek16384(darena, vlr + 1)
+                          fv20[10] = peek16384(darena, vlr + 2)
+                          fv20[11] = 1
+                          fv20[12] = peek16384(darena, vrr + 1)
+                          fv20[13] = peek16384(darena, vrr + 2)
+                          fv20[14] = 1
+                          fv20[18] = mir_binop_code(vopk)
+                          if vszl == 1:
+                            if vszr > 1:
+                              fv20[34] = 1
+                          if vszr == 1:
+                            if vszl > 1:
+                              fv20[35] = 1
+                          mir_ins_line(src,  fv20,  20,  vesz,  -1,  lastop)
+                          skip_newlines(tk,  n,  pi,  err)
+                          return 0
+            # elementwise: var c = a + b on int arrays -> ArrayBinOpI64 directly into c
+            if peek16384(darena, rec + 0) == 7:
+              var vopk2: int = peek16384(darena, rec + 1)
+              if vopk2 == 59 or vopk2 == 60 or vopk2 == 61 or vopk2 == 63 or vopk2 == 62:
+                var vil: int = peek16384(darena, rec + 2)
+                var vir: int = peek16384(darena, rec + 3)
+                if peek16384(darena, vil + 0) == 3:
+                  if peek16384(darena, vir + 0) == 3:
+                    var viszl: int = mir_iarray_size(src,  ts,  te,  peek16384(darena, vil + 1),  peek16384(darena, vil + 2),  fatok,  nfa)
+                    var viszr: int = mir_iarray_size(src,  ts,  te,  peek16384(darena, vir + 1),  peek16384(darena, vir + 2),  fatok,  nfa)
+                    if viszl > 0:
+                      if viszr > 0:
+                        var vibs: int = 0
+                        if viszl == viszr:
+                          vibs = 1
+                        if viszl == 1:
+                          if viszr > 1:
+                            vibs = 1
+                        if viszr == 1:
+                          if viszl > 1:
+                            vibs = 1
+                        if vibs == 1:
+                          var viesz: int = viszl
+                          if viszr > viesz:
+                            viesz = viszr
+                          var fvi21: array[40, int]
+                          mir_fdef(fvi21)
+                          fvi21[0] = peek_tk(ts, vn + 0)
+                          fvi21[1] = peek_tk(te, vn + 0)
+                          fvi21[2] = 1
+                          fvi21[9] = peek16384(darena, vil + 1)
+                          fvi21[10] = peek16384(darena, vil + 2)
+                          fvi21[11] = 1
+                          fvi21[12] = peek16384(darena, vir + 1)
+                          fvi21[13] = peek16384(darena, vir + 2)
+                          fvi21[14] = 1
+                          fvi21[18] = mir_binop_code(vopk2)
+                          if viszl == 1:
+                            if viszr > 1:
+                              fvi21[34] = 1
+                          if viszr == 1:
+                            if viszl > 1:
+                              fvi21[35] = 1
+                          mir_ins_line(src,  fvi21,  21,  viesz,  -1,  lastop)
+                          skip_newlines(tk,  n,  pi,  err)
+                          return 0
+            # float scale: var y = float_lit * float_array_ident -> ArrayScaleF64 directly
+            if peek16384(darena, rec + 0) == 7:
+              var sopk: int = peek16384(darena, rec + 1)
+              if sopk == 61:
+                var slrec: int = peek16384(darena, rec + 2)
+                var srrec: int = peek16384(darena, rec + 3)
+                var sl_lit: int = 0
+                var sl_arr: int = 0
+                if peek16384(darena, slrec + 0) == 1:
+                  if peek16384(darena, srrec + 0) == 3:
+                    sl_lit = slrec
+                    sl_arr = srrec
+                if peek16384(darena, srrec + 0) == 1:
+                  if peek16384(darena, slrec + 0) == 3:
+                    sl_lit = srrec
+                    sl_arr = slrec
+                if sl_lit > 0:
+                  if sl_arr > 0:
+                    var slsz: int = mir_farray_size(src,  ts,  te,  peek16384(darena, sl_arr + 1),  peek16384(darena, sl_arr + 2),  ptok2,  pelems,  pef,  pp0,  ppn,  pn,  fatok,  nfa)
+                    if slsz > 0:
+                      var fss3: array[40, int]
+                      mir_fdef(fss3)
+                      fss3[0] = peek_tk(ts, vn + 0)
+                      fss3[1] = peek_tk(te, vn + 0)
+                      fss3[2] = 1
+                      fss3[9] = peek16384(darena, sl_arr + 1)
+                      fss3[10] = peek16384(darena, sl_arr + 2)
+                      fss3[11] = 1
+                      fss3[26] = 1
+                      var sl_fid: int = peek16384(darena, sl_lit + 1)
+                      mir_ins_line(src,  fss3,  22,  slsz,  sl_fid,  lastop)
+                      skip_newlines(tk,  n,  pi,  err)
+                      return 0
+            if mir_lower_expr(darena,  dasp,  rec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+              return 1
+      else:
+        var f24: array[40, int]
+        mir_fdef(f24)
+        f24[0] = peek_tk(ts, vn + 0)
+        f24[1] = peek_tk(te, vn + 0)
+        f24[2] = 1
+        mir_ins_line(src,  f24,  24,  0,  -1,  lastop)
+        if has_init == 1:
+          var f26: array[40, int]
+          mir_fdef(f26)
+          f26[0] = peek_tk(ts, vn + 0)
+          f26[1] = peek_tk(te, vn + 0)
+          f26[2] = 1
+          if peek16384(darena, rec + 0) == 0:
+            f26[26] = 1
+            f26[27] = peek16384(darena, rec + 1)
+          else:
+            if peek16384(darena, rec + 0) == 3:
+              f26[26] = 0
+              f26[12] = peek16384(darena, rec + 1)
+              f26[13] = peek16384(darena, rec + 2)
+              f26[14] = 1
+            else:
+              if mir_lower_expr(darena,  dasp,  rec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+                return 1
+              f26[26] = 0
+              f26[12] = peek16384(darena, rec + 2)
+              f26[14] = 2
+          mir_ins_line(src,  f26,  26,  0,  -1,  lastop)
+  skip_newlines(tk,  n,  pi,  err)
+  return 0
+
+def mir_assign(darena: var array[16384, int],  dasp: var array[1, int],  lrec: int,  rrec: int, src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[512, int],  nft: var array[1, int], ftmp: var array[4096, int],  itok: var array[256, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[64, int],  nfa: var array[1, int], matok: var array[64, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], retf_proc: int,  reti64_proc: int, lhead: var array[32, int],  lexit: var array[32, int],  nlp: var array[1, int]) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  if peek16384(darena, lrec + 0) == 5:
+    var base: int = peek16384(darena, lrec + 1)
+    var idx: int = peek16384(darena, lrec + 2)
+    if peek16384(darena, base + 0) == 5:
+      var mat: int = peek16384(darena, base + 1)
+      if peek16384(darena, mat + 0) == 3:
+        if mir_name_matrix(src,  ts,  te,  peek16384(darena, mat + 1),  peek16384(darena, mat + 2),  matok,  nmat) == 1:
+          var row: int = peek16384(darena, base + 2)
+          var col: int = idx
+          var f2d: array[40, int]
+          mir_fdef(f2d)
+          f2d[0] = peek16384(darena, mat + 1)
+          f2d[1] = peek16384(darena, mat + 2)
+          f2d[2] = 1
+          var iv2d: int = 0
+          if peek16384(darena, row + 0) == 0:
+            f2d[21] = 1
+            iv2d = peek16384(darena, row + 1)
+          else:
+            f2d[21] = 0
+            f2d[22] = peek16384(darena, row + 1)
+            f2d[23] = peek16384(darena, row + 2)
+            f2d[24] = 1
+          if peek16384(darena, col + 0) == 0:
+            f2d[26] = 1
+            f2d[27] = peek16384(darena, col + 1)
+          else:
+            f2d[26] = 0
+            f2d[12] = peek16384(darena, col + 1)
+            f2d[13] = peek16384(darena, col + 2)
+            f2d[14] = 1
+          var fid2d: int = -1
+          if peek16384(darena, rrec + 0) == 1:
+            f2d[29] = 1
+            fid2d = peek16384(darena, rrec + 1)
+          else:
+            if peek16384(darena, rrec + 0) == 3:
+              f2d[29] = 0
+              f2d[9] = peek16384(darena, rrec + 1)
+              f2d[10] = peek16384(darena, rrec + 2)
+              f2d[11] = 1
+            else:
+              if mir_lower_expr(darena,  dasp,  rrec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+                return 1
+              f2d[29] = 0
+              mir_name_cells(darena,  rrec,  f2d,  9)
+          mir_ins_line(src,  f2d,  16,  iv2d,  fid2d,  lastop)
+        return 0
+    var fa: int = 0
+    if peek16384(darena, base + 0) == 3:
+      fa = mir_name_farray(src,  ts,  te,  peek16384(darena, base + 1),  peek16384(darena, base + 2),  fatok,  nfa)
+    var op: int = 10
+    if fa == 1:
+      op = 12
+    var f: array[40, int]
+    mir_fdef(f)
+    f[0] = peek16384(darena, base + 1)
+    f[1] = peek16384(darena, base + 2)
+    f[2] = 1
+    var iv: int = 0
+    if peek16384(darena, idx + 0) == 0:
+      f[21] = 1
+      iv = peek16384(darena, idx + 1)
+    else:
+      if peek16384(darena, idx + 0) == 3:
+        f[21] = 0
+        f[22] = peek16384(darena, idx + 1)
+        f[23] = peek16384(darena, idx + 2)
+        f[24] = 1
+      else:
+        if mir_lower_expr(darena,  dasp,  idx,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+          return 1
+        f[21] = 0
+        f[22] = peek16384(darena, idx + 2)
+        f[24] = 2
+    var fid: int = -1
+    if fa == 1:
+      if peek16384(darena, rrec + 0) == 1:
+        f[26] = 1
+        fid = peek16384(darena, rrec + 1)
+      else:
+        if peek16384(darena, rrec + 0) == 3:
+          f[26] = 0
+          f[12] = peek16384(darena, rrec + 1)
+          f[13] = peek16384(darena, rrec + 2)
+          f[14] = 1
+        else:
+          if mir_lower_expr(darena,  dasp,  rrec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+            return 1
+          f[26] = 0
+          f[12] = peek16384(darena, rrec + 2)
+          f[14] = 2
+    else:
+      if peek16384(darena, rrec + 0) == 0:
+        f[26] = 1
+        f[27] = peek16384(darena, rrec + 1)
+      else:
+        if peek16384(darena, rrec + 0) == 3:
+          f[26] = 0
+          f[12] = peek16384(darena, rrec + 1)
+          f[13] = peek16384(darena, rrec + 2)
+          f[14] = 1
+        else:
+          if mir_lower_expr(darena,  dasp,  rrec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+            return 1
+          f[26] = 0
+          f[12] = peek16384(darena, rrec + 2)
+          f[14] = 2
+    mir_ins_line(src,  f,  op,  iv,  fid,  lastop)
+    return 0
+  if peek16384(darena, lrec + 0) == 3:
+    if peek16384(darena, rrec + 0) == 7:
+      var eopk: int = peek16384(darena, rrec + 1)
+      if eopk == 59 or eopk == 60 or eopk == 61 or eopk == 63 or eopk == 62:
+        var el: int = peek16384(darena, rrec + 2)
+        var er: int = peek16384(darena, rrec + 3)
+        if peek16384(darena, el + 0) == 3:
+          if peek16384(darena, er + 0) == 3:
+            var szl: int = mir_farray_size(src,  ts,  te,  peek16384(darena, el + 1),  peek16384(darena, el + 2),  ptok2,  pelems,  pef,  pp0,  ppn,  pn,  fatok,  nfa)
+            if szl > 0:
+              var szr: int = mir_farray_size(src,  ts,  te,  peek16384(darena, er + 1),  peek16384(darena, er + 2),  ptok2,  pelems,  pef,  pp0,  ppn,  pn,  fatok,  nfa)
+              if szr > 0:
+                var eb: int = 0
+                if szl == szr:
+                  eb = 1
+                if szl == 1:
+                  if szr > 1:
+                    eb = 1
+                if szr == 1:
+                  if szl > 1:
+                    eb = 1
+                if eb == 1:
+                  var f20: array[40, int]
+                  mir_fdef(f20)
+                  f20[0] = peek16384(darena, lrec + 1)
+                  f20[1] = peek16384(darena, lrec + 2)
+                  f20[2] = 1
+                  f20[9] = peek16384(darena, el + 1)
+                  f20[10] = peek16384(darena, el + 2)
+                  f20[11] = 1
+                  f20[12] = peek16384(darena, er + 1)
+                  f20[13] = peek16384(darena, er + 2)
+                  f20[14] = 1
+                  f20[18] = mir_binop_code(eopk)
+                  if szl == 1:
+                    if szr > 1:
+                      f20[34] = 1
+                  if szr == 1:
+                    if szl > 1:
+                      f20[35] = 1
+                  var esz: int = szl
+                  if szr > esz:
+                    esz = szr
+                  mir_ins_line(src,  f20,  20,  esz,  -1,  lastop)
+                  return 0
+    var flt: int = mir_name_float(src,  ts,  te,  peek16384(darena, lrec + 1),  peek16384(darena, lrec + 2),  ftok,  nft)
+    if flt == 1:
+      if peek16384(darena, rrec + 0) == 7:
+        if mir_try_fma(darena,  lrec,  rrec,  src,  ts,  te,  lastop) == 1:
+          return 0
+    var op2: int = 26
+    if flt == 1:
+      op2 = 28
+    var f2: array[40, int]
+    mir_fdef(f2)
+    f2[0] = peek16384(darena, lrec + 1)
+    f2[1] = peek16384(darena, lrec + 2)
+    f2[2] = 1
+    var fid2: int = -1
+    if flt == 1:
+      if peek16384(darena, rrec + 0) == 1:
+        f2[26] = 1
+        fid2 = peek16384(darena, rrec + 1)
+      else:
+        if peek16384(darena, rrec + 0) == 3:
+          f2[26] = 0
+          f2[12] = peek16384(darena, rrec + 1)
+          f2[13] = peek16384(darena, rrec + 2)
+          f2[14] = 1
+        else:
+          if mir_lower_expr(darena,  dasp,  rrec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+            return 1
+          f2[26] = 0
+          f2[12] = peek16384(darena, rrec + 2)
+          f2[14] = 2
+    else:
+      if peek16384(darena, rrec + 0) == 0:
+        f2[26] = 1
+        f2[27] = peek16384(darena, rrec + 1)
+      else:
+        if peek16384(darena, rrec + 0) == 3:
+          f2[26] = 0
+          f2[12] = peek16384(darena, rrec + 1)
+          f2[13] = peek16384(darena, rrec + 2)
+          f2[14] = 1
+        else:
+          if mir_lower_expr(darena,  dasp,  rrec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+            return 1
+          f2[26] = 0
+          f2[12] = peek16384(darena, rrec + 2)
+          f2[14] = 2
+    mir_ins_line(src,  f2,  op2,  0,  fid2,  lastop)
+    return 0
+  err[0] = 1
+  return 1
+
+def mir_fn_line(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], name_tok: int,  retf: int,  reti64: int,  retvoid: int,  is_extern: int) raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  li_rt_mir_str("FN")
+  li_rt_ast_space()
+  li_rt_ast_text(src,  peek_tk(ts, name_tok + 0),  peek_tk(te, name_tok + 0))
+  li_rt_ast_space()
+  li_rt_ast_int(retf)
+  li_rt_ast_space()
+  li_rt_ast_int(reti64)
+  li_rt_ast_space()
+  li_rt_ast_int(retvoid)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(is_extern)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_nl()
+  return 0
+
+def mir_param_line(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], name_tok: int,  ty: int,  elems: int,  ef: int,  ei: int,  is_var: int,  mx: int,  mc: int) raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  li_rt_mir_str("PARAM")
+  li_rt_ast_space()
+  li_rt_ast_text(src,  peek_tk(ts, name_tok + 0),  peek_tk(te, name_tok + 0))
+  var pf: int = 0
+  if ty == 1:
+    pf = 1
+  if ty == 5:
+    if ef == 1:
+      pf = 1
+    if mx == 1:
+      pf = 1
+  var ps: int = 0
+  if ty == 2 or ty == 3:
+    ps = 1
+  var pi2: int = 0
+  if ty == 4 or ty == 2:
+    pi2 = 1
+  if ty == 5:
+    if ei == 1:
+      pi2 = 1
+  var fe: int = 0
+  if ty == 5:
+    fe = elems
+  li_rt_ast_space()
+  li_rt_ast_int(pf)
+  li_rt_ast_space()
+  li_rt_ast_int(ps)
+  li_rt_ast_space()
+  li_rt_ast_int(pi2)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(fe)
+  li_rt_ast_space()
+  li_rt_ast_int(mx)
+  li_rt_ast_space()
+  li_rt_ast_int(mc)
+  li_rt_ast_space()
+  li_rt_ast_int(is_var)
+  li_rt_ast_nl()
+  return 0
+
+def mir_skip_raises(tk: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int]) -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if cur_kind(tk,  n,  pi,  err) == 31:
+    pi[0] = pi[0] + 1
+    if cur_kind(tk,  n,  pi,  err) == 4:
+      var done: int = 0
+      while done == 0:
+        pi[0] = pi[0] + 1
+        if accept_k(tk,  n,  pi,  err, 55) == 1:
+          done = 0
+        else:
+          done = 1
+  return 0
+
+def mir_skip_contracts(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int]) -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  while 1 == 1:
+    var ck: int = cur_kind(tk,  n,  pi,  err)
+    if ck == 41 or ck == 42 or ck == 43 or ck == 44 or ck == 45:
+      parse_contract(src,  tk,  ts,  te,  n,  pi,  err, 0)
+      continue
+    break
+  return 0
+
+def mir_collect_proc(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  is_extern: int,  pid: int, ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  ptok2: var array[512, int], pty: var array[512, int],  pelems: var array[512, int], pef: var array[512, int],  pei: var array[512, int], pvar: var array[512, int],  pmx: var array[512, int],  pmc: var array[512, int],  pcount: var array[1, int]) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  if is_extern == 0:
+    if cur_kind(tk,  n,  pi,  err) == 16:
+      pi[0] = pi[0] + 1
+    else:
+      if cur_kind(tk,  n,  pi,  err) == 17:
+        pi[0] = pi[0] + 1
+    if cur_kind(tk,  n,  pi,  err) == 10:
+      pi[0] = pi[0] + 1
+    else:
+      err[0] = 1
+      return 1
+  var pname: int = pi[0]
+  pi[0] = pi[0] + 1
+  set128(ptok, pid + 0,pname)
+  set128(pex, pid + 0,is_extern)
+  parse_type_params(src,  tk,  ts,  te,  n,  pi,  err, 0, 1)
+  expect_k(tk,  n,  pi,  err, 49)
+  skip_param_layout(tk,  n,  pi,  err)
+  set128(pp0, pid + 0,pcount[0])
+  if cur_kind(tk,  n,  pi,  err) != 50:
+    var done: int = 0
+    while done == 0:
+      skip_param_layout(tk,  n,  pi,  err)
+      var pn2: int = pi[0]
+      pi[0] = pi[0] + 1
+      expect_k(tk,  n,  pi,  err, 56)
+      var ti: array[6, int]
+      if mir_type_info(src,  tk,  ts,  te,  n,  pi,  err,  ti) == 1:
+        return 1
+      set512(ptok2, pcount[0],pn2)
+      set512(pty, pcount[0],ti[0])
+      set512(pelems, pcount[0],ti[2])
+      if ti[3] == 1:
+        set512(pef, pcount[0],1)
+      else:
+        set512(pef, pcount[0],0)
+      if ti[3] == 2 or ti[3] == 4:
+        set512(pei, pcount[0],1)
+      else:
+        set512(pei, pcount[0],0)
+      if ti[3] == 5:
+        if ti[5] == 1:
+          set512(pmx, pcount[0],1)
+          set512(pmc, pcount[0],ti[4])
+        else:
+          set512(pmx, pcount[0],0)
+          set512(pmc, pcount[0],0)
+      else:
+        set512(pmx, pcount[0],0)
+        set512(pmc, pcount[0],0)
+      set512(pvar, pcount[0],ti[1])
+      pcount[0] = pcount[0] + 1
+      skip_param_layout(tk,  n,  pi,  err)
+      if accept_k(tk,  n,  pi,  err, 55) == 1:
+        done = 0
+      else:
+        done = 1
+  set128(ppn, pid + 0,pcount[0] - peek128(pp0, pid + 0))
+  skip_param_layout(tk,  n,  pi,  err)
+  expect_k(tk,  n,  pi,  err, 50)
+  skip_newlines(tk,  n,  pi,  err)
+  mir_skip_raises(tk,  n,  pi,  err)
+  skip_newlines(tk,  n,  pi,  err)
+  var ret: int = 0
+  if accept_k(tk,  n,  pi,  err, 57) == 1:
+    var ti2: array[6, int]
+    if mir_type_info(src,  tk,  ts,  te,  n,  pi,  err,  ti2) == 1:
+      return 1
+    if ti2[0] == 7:
+      ret = 0
+    else:
+      if ti2[0] == 0:
+        ret = 1
+      else:
+        if ti2[0] == 1:
+          ret = 2
+        else:
+          if ti2[0] == 2:
+            ret = 3
+          else:
+            if ti2[0] == 3:
+              ret = 3
+            else:
+              if ti2[0] == 4:
+                ret = 4
+              else:
+                if ti2[0] == 5:
+                  ret = 5
+                else:
+                  ret = 6
+  set128(pret, pid + 0,ret)
+  skip_newlines(tk,  n,  pi,  err)
+  mir_skip_raises(tk,  n,  pi,  err)
+  skip_newlines(tk,  n,  pi,  err)
+  mir_skip_contracts(src,  tk,  ts,  te,  n,  pi,  err)
+  if is_extern == 1:
+    skip_newlines(tk,  n,  pi,  err)
+    return 0
+  expect_k(tk,  n,  pi,  err, 58)
+  skip_newlines(tk,  n,  pi,  err)
+  parse_block(src,  tk,  ts,  te,  n,  pi,  err, 0)
+  return 0
+
+def mir_proc(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  is_extern: int,  pid: int, tc: var array[1, int],  lastop: var array[1, int], ftok: var array[512, int],  nft: var array[1, int], ftmp: var array[4096, int],  itok: var array[256, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[64, int],  nfa: var array[1, int], matok: var array[64, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], pmx: var array[512, int],  pmc: var array[512, int]) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  # Float/i64/float-array name tables are per-proc (the C++ lowering uses a
+  # fresh float_names / i64_locals / float_array_names set per proc). Temp
+  # flag tables (ftmp/itmp) stay global because temp counters are global.
+  nft[0] = 0
+  nit[0] = 0
+  nfa[0] = 0
+  nmat[0] = 0
+  set64(fatok, 63, 0)
+  if is_extern == 0:
+    if cur_kind(tk,  n,  pi,  err) == 16:
+      pi[0] = pi[0] + 1
+    else:
+      if cur_kind(tk,  n,  pi,  err) == 17:
+        pi[0] = pi[0] + 1
+    if cur_kind(tk,  n,  pi,  err) == 10:
+      pi[0] = pi[0] + 1
+    else:
+      err[0] = 1
+      return 1
+  var pname: int = pi[0]
+  pi[0] = pi[0] + 1
+  parse_type_params(src,  tk,  ts,  te,  n,  pi,  err, 0, 1)
+  expect_k(tk,  n,  pi,  err, 49)
+  skip_param_layout(tk,  n,  pi,  err)
+  if cur_kind(tk,  n,  pi,  err) != 50:
+    var done: int = 0
+    while done == 0:
+      skip_param_layout(tk,  n,  pi,  err)
+      pi[0] = pi[0] + 1
+      expect_k(tk,  n,  pi,  err, 56)
+      var ti: array[6, int]
+      if mir_type_info(src,  tk,  ts,  te,  n,  pi,  err,  ti) == 1:
+        return 1
+      skip_param_layout(tk,  n,  pi,  err)
+      if accept_k(tk,  n,  pi,  err, 55) == 1:
+        done = 0
+      else:
+        done = 1
+  skip_param_layout(tk,  n,  pi,  err)
+  expect_k(tk,  n,  pi,  err, 50)
+  skip_newlines(tk,  n,  pi,  err)
+  mir_skip_raises(tk,  n,  pi,  err)
+  skip_newlines(tk,  n,  pi,  err)
+  if accept_k(tk,  n,  pi,  err, 57) == 1:
+    var ti2: array[6, int]
+    if mir_type_info(src,  tk,  ts,  te,  n,  pi,  err,  ti2) == 1:
+      return 1
+  skip_newlines(tk,  n,  pi,  err)
+  mir_skip_raises(tk,  n,  pi,  err)
+  skip_newlines(tk,  n,  pi,  err)
+  mir_skip_contracts(src,  tk,  ts,  te,  n,  pi,  err)
+  var ret: int = peek128(pret, pid + 0)
+  var retf: int = 0
+  var reti64: int = 0
+  var retvoid: int = 0
+  if ret == 2:
+    retf = 1
+  if ret == 3 or ret == 4:
+    reti64 = 1
+  if ret == 0:
+    retvoid = 1
+  mir_fn_line(src,  ts,  te,  peek128(ptok, pid + 0),  retf,  reti64,  retvoid,  is_extern)
+  var j: int = 0
+  while j < peek128(ppn, pid + 0):
+    var pi2: int = peek128(pp0, pid + 0) + j
+    mir_param_line(src,  ts,  te,  peek512(ptok2, pi2 + 0),  peek512(pty, pi2 + 0),  peek512(pelems, pi2 + 0),  peek512(pef, pi2 + 0),  peek512(pei, pi2 + 0),  peek512(pvar, pi2 + 0),  peek512(pmx, pi2 + 0),  peek512(pmc, pi2 + 0))
+    if peek512(pty, pi2 + 0) == 1:
+      set512(ftok, nft[0],peek512(ptok2, pi2 + 0))
+      nft[0] = nft[0] + 1
+    else:
+      if peek512(pty, pi2 + 0) == 2 or peek512(pty, pi2 + 0) == 3 or peek512(pty, pi2 + 0) == 4:
+        set256(itok, nit[0],peek512(ptok2, pi2 + 0))
+        nit[0] = nit[0] + 1
+      else:
+        if peek512(pty, pi2 + 0) == 5:
+          if peek512(pef, pi2 + 0) == 1:
+            set64(fatok, 2 * nfa[0],peek512(ptok2, pi2 + 0))
+            set64(fatok, 2 * nfa[0] + 1,peek512(pelems, pi2 + 0))
+            nfa[0] = nfa[0] + 1
+          if peek512(pef, pi2 + 0) == 0:
+            var pnia: int = peek64(fatok, 63)
+            set64(fatok, 2 * nfa[0] + 2 * pnia, peek512(ptok2, pi2 + 0))
+            set64(fatok, 2 * nfa[0] + 2 * pnia + 1, peek512(pelems, pi2 + 0))
+            set64(fatok, 63, pnia + 1)
+    j = j + 1
+  lastop[0] = -1
+  if is_extern == 1:
+    skip_newlines(tk,  n,  pi,  err)
+    return 0
+  expect_k(tk,  n,  pi,  err, 58)
+  var lhead: array[32, int]
+  var lexit: array[32, int]
+  var nlp: array[1, int]
+  nlp[0] = 0
+  var darena: array[16384, int]
+  var dasp: array[1, int]
+  dasp[0] = 0
+  if mir_stmts(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar,  retf,  reti64,  lhead,  lexit,  nlp) == 1:
+    return 1
+  if lastop[0] < 0:
+    var f0: array[40, int]
+    mir_fdef(f0)
+    mir_ins_line(src,  f0,  0,  0,  -1,  lastop)
+  else:
+    if lastop[0] > 4:
+      var f0b: array[40, int]
+      mir_fdef(f0b)
+      mir_ins_line(src,  f0b,  0,  0,  -1,  lastop)
+  return 0
+
+def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  mode: int, tc: var array[1, int],  lastop: var array[1, int], ftok: var array[512, int],  nft: var array[1, int], ftmp: var array[4096, int],  itok: var array[256, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[64, int],  nfa: var array[1, int], matok: var array[64, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int],  pmx: var array[512, int],  pmc: var array[512, int], pcount: var array[1, int]) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  skip_newlines(tk,  n,  pi,  err)
+  while 1 == 1:
+    var k: int = cur_kind(tk,  n,  pi,  err)
+    if k == 0:
+      break
+    if k == 18:
+      parse_import(src,  tk,  ts,  te,  n,  pi,  err, 0)
+      skip_newlines(tk,  n,  pi,  err)
+      continue
+    if k == 32:
+      pi[0] = pi[0] + 1
+      if cur_kind(tk,  n,  pi,  err) == 10:
+        pi[0] = pi[0] + 1
+      if mode == 0:
+        if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  1,  pn[0], ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef, pei,  pvar,  pmx,  pmc,  pcount) == 1:
+          return 1
+        pn[0] = pn[0] + 1
+      else:
+        # Emit pid from pcount; pn stays at the collected total so
+        # mir_proc_find can resolve calls to any proc (incl. recursion).
+        if mir_proc(src,  tk,  ts,  te,  n,  pi,  err,  1,  pcount[0], tc,  lastop,  ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar,  pmx,  pmc) == 1:
+          return 1
+        pcount[0] = pcount[0] + 1
+      skip_newlines(tk,  n,  pi,  err)
+      continue
+    if k == 33:
+      pi[0] = pi[0] + 1
+      if mode == 0:
+        if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  pn[0], ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef, pei,  pvar,  pmx,  pmc,  pcount) == 1:
+          return 1
+        pn[0] = pn[0] + 1
+      else:
+        if mir_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  pcount[0], tc,  lastop,  ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar,  pmx,  pmc) == 1:
+          return 1
+        pcount[0] = pcount[0] + 1
+      skip_newlines(tk,  n,  pi,  err)
+      continue
+    if k == 76:
+      var save0: int = pi[0]
+      parse_decorator_list(src,  tk,  ts,  te,  n,  pi,  err, 0)
+      var dpos: int = pi[0]
+      if at_fn_kw(tk,  n,  pi,  err) == 0:
+        err[0] = 1
+        return 1
+      pi[0] = save0
+      parse_decorator_list(src,  tk,  ts,  te,  n,  pi,  err, 0)
+      pi[0] = dpos
+      if mode == 0:
+        if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  pn[0], ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef, pei,  pvar,  pmx,  pmc,  pcount) == 1:
+          return 1
+        pn[0] = pn[0] + 1
+      else:
+        if mir_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  pcount[0], tc,  lastop,  ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar,  pmx,  pmc) == 1:
+          return 1
+        pcount[0] = pcount[0] + 1
+      skip_newlines(tk,  n,  pi,  err)
+      continue
+    if k == 16:
+      if peek_off(tk,  n,  pi,  1) == 10:
+        if mode == 0:
+          if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  pn[0], ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef, pei,  pvar,  pmx,  pmc,  pcount) == 1:
+            return 1
+          pn[0] = pn[0] + 1
+        else:
+          if mir_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  pcount[0], tc,  lastop,  ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar,  pmx,  pmc) == 1:
+            return 1
+          pcount[0] = pcount[0] + 1
+        skip_newlines(tk,  n,  pi,  err)
+        continue
+      err[0] = 1
+      return 1
+    if k == 17:
+      if peek_off(tk,  n,  pi,  1) == 10:
+        if mode == 0:
+          if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  pn[0], ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef, pei,  pvar,  pmx,  pmc,  pcount) == 1:
+            return 1
+          pn[0] = pn[0] + 1
+        else:
+          if mir_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  pcount[0], tc,  lastop,  ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar,  pmx,  pmc) == 1:
+            return 1
+          pcount[0] = pcount[0] + 1
+        skip_newlines(tk,  n,  pi,  err)
+        continue
+      err[0] = 1
+      return 1
+    if k == 10:
+      if mode == 0:
+        if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  pn[0], ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef, pei,  pvar,  pmx,  pmc,  pcount) == 1:
+          return 1
+        pn[0] = pn[0] + 1
+      else:
+        if mir_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  pcount[0], tc,  lastop,  ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar,  pmx,  pmc) == 1:
+          return 1
+        pcount[0] = pcount[0] + 1
+      skip_newlines(tk,  n,  pi,  err)
+      continue
+    if k == 11:
+      parse_type_alias(src,  tk,  ts,  te,  n,  pi,  err, 0)
+      skip_newlines(tk,  n,  pi,  err)
+      continue
+    if k == 29:
+      parse_error_decl(src,  tk,  ts,  te,  n,  pi,  err, 0)
+      skip_newlines(tk,  n,  pi,  err)
+      continue
+    if k == 12:
+      pi[0] = pi[0] + 1
+      parse_theorem(src,  tk,  ts,  te,  n,  pi,  err,  1,  0,  0)
+      skip_newlines(tk,  n,  pi,  err)
+      continue
+    if k == 13:
+      pi[0] = pi[0] + 1
+      parse_theorem(src,  tk,  ts,  te,  n,  pi,  err,  0,  0,  0)
+      skip_newlines(tk,  n,  pi,  err)
+      continue
+    if k == 14:
+      pi[0] = pi[0] + 1
+      parse_theorem(src,  tk,  ts,  te,  n,  pi,  err,  0,  1,  0)
+      skip_newlines(tk,  n,  pi,  err)
+      continue
+    err[0] = 1
+    return 1
+  return 0
+
+def mir_module(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int]) raises IO -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  var tc: array[1, int]
+  tc[0] = 0
+  var lastop: array[1, int]
+  lastop[0] = -1
+  var ftok: array[512, int]
+  var nft: array[1, int]
+  nft[0] = 0
+  var ftmp: array[4096, int]
+  var itok: array[256, int]
+  var nit: array[1, int]
+  nit[0] = 0
+  var itmp: array[4096, int]
+  var fatok: array[64, int]
+  var nfa: array[1, int]
+  nfa[0] = 0
+  set64(fatok, 63, 0)
+  var matok: array[64, int]
+  var nmat: array[1, int]
+  nmat[0] = 0
+  var ptok: array[128, int]
+  var pex: array[128, int]
+  var pp0: array[128, int]
+  var ppn: array[128, int]
+  var pret: array[128, int]
+  var pn: array[1, int]
+  pn[0] = 0
+  var ptok2: array[512, int]
+  var pty: array[512, int]
+  var pelems: array[512, int]
+  var pef: array[512, int]
+  var pei: array[512, int]
+  var pvar: array[512, int]
+  var pmx: array[512, int]
+  var pmc: array[512, int]
+  var pcount: array[1, int]
+  pcount[0] = 0
+  pi[0] = 0
+  err[0] = 0
+  if mir_walk(src,  tk,  ts,  te,  n,  pi,  err,  0, tc,  lastop,  ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar,  pmx,  pmc,  pcount) == 1:
+    return 1
+  li_rt_mir_str("MIR")
+  li_rt_ast_space()
+  li_rt_ast_int(pn[0])
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_nl()
+  pi[0] = 0
+  err[0] = 0
+  # pn keeps the collected proc count so body lowering can resolve calls to
+  # any proc (recursion, forward refs); pcount becomes the emit pid counter.
+  pcount[0] = 0
+  if mir_walk(src,  tk,  ts,  te,  n,  pi,  err,  1, tc,  lastop,  ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar,  pmx,  pmc,  pcount) == 1:
+    return 1
+  return 0
+
 def main() raises IO -> int
   requires true
   ensures result == 0 or result == 1
@@ -5733,9 +8781,19 @@ def main() raises IO -> int
       return 1
     return 0
   if strcmp(li_rt_argv(1), "mir") == 0:
-    # Layer 5 not yet ported — placeholder for the MIR-lowering parity gate.
-    print("mir: not yet implemented")
-    return 1
+    if argc < 3:
+      print_usage()
+      return 1
+    var f: ptr = li_rt_read_file(li_rt_argv(2))
+    var r: int = lex_source(f, tk, ts, te, n, 0)
+    if r == 1:
+      print("mir error")
+      return 1
+    var mr: int = mir_module(f, tk, ts, te, n, pi, err)
+    if mr == 1:
+      print("mir error")
+      return 1
+    return 0
   if strcmp(li_rt_argv(1), "check") == 0:
     if argc < 3:
       print_usage()

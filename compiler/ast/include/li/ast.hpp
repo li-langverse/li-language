@@ -67,6 +67,7 @@ struct Expr {
     BinOp,
     Call,
     UnaryNot,
+    UnaryMinus,
     Index,
     FieldAccess,
     MethodCall,

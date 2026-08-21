@@ -827,6 +827,12 @@ file = "runtime/argv_ptr_abi.li"
 outcome = "verify_open_ok"
 note = "E0360 guard: extern -> ptr / li_rt_argv_i links; open VC on argv contracts only"
 
+[[tests]]
+suite = "runtime"
+file = "runtime/unary_minus.li"
+outcome = "verify_ok"
+note = "Unary minus on general exprs (-g()) and signed extern int args"
+
 # --- index helpers (Task 1: bounds-ensuring helpers as array indices) ---
 
 [[tests]]
@@ -1252,6 +1258,12 @@ outcome = "verify_ok"
 
 [[tests]]
 suite = "math_linalg"
+file = "math_linalg/vec_add_sum.li"
+outcome = "compile_open_ok"
+note = "ArrayBinOpF64 (c = a + b) and ArraySumF64 (sum(a)) on float array params; open float VC"
+
+[[tests]]
+suite = "math_linalg"
 file = "math_linalg/elementwise_len_mismatch.li"
 outcome = "compile_fail"
 expected_substr = "matching lengths"
@@ -1659,6 +1671,12 @@ outcome = "compile_ok"
 suite = "codegen"
 file = "codegen/ptr_array_strings.li"
 outcome = "compile_ok"
+
+[[tests]]
+suite = "codegen"
+file = "codegen/neg_float_procs.li"
+outcome = "compile_open_ok"
+note = "Unary minus on int/float procs; per-proc float-name tables; open float VCs"
 
 # --- hpc_competitive (registry gate; ./li-tests/run_all.sh hpc_competitive) ---
 

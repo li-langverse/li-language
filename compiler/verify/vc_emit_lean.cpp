@@ -268,6 +268,14 @@ std::optional<std::string> expr_to_lean(const Expr& e, const VcCtx& ctx) {
         }
       }
       return std::nullopt;
+    case Expr::Kind::UnaryMinus:
+      if (e.operand) {
+        const auto inner = expr_to_lean(*e.operand, ctx);
+        if (inner) {
+          return "(-" + *inner + ")";
+        }
+      }
+      return std::nullopt;
     default:
       return std::nullopt;
   }

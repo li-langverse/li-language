@@ -36,8 +36,8 @@ int32_t li_rt_emit_token(int32_t kind, const char* text, int32_t start, int32_t 
 /* Self-hosted AST dump primitives: stream one node line as `code field...`.
  * The li bootstrap parser calls these in parse order; the C++ `lic ast`
  * subcommand prints the same bytes from the C++ AST (check_li_ast_parity.sh). */
-int32_t li_rt_ast_int(int64_t v) {
-  printf("%lld", (long long)v);
+int32_t li_rt_ast_int(int32_t v) {
+  printf("%d", (int)v);
   return 0;
 }
 
@@ -131,6 +131,131 @@ int32_t li_rt_emit_err(int32_t code) {
 
 int32_t li_rt_ast_nl(void) {
   fputc('\n', stdout);
+  return 0;
+}
+
+/* ---- Self-hosted MIR dump primitives (Layer 5) ---- */
+
+/* Float literals are parsed into a static table; the li bootstrap carries the
+ * id (a small int) instead of a double, and formats at emission time. */
+static double li_mir_fvals[256];
+static int li_mir_fvals_n = 0;
+
+int32_t li_rt_mir_f64(const char* text, int32_t start, int32_t end) {
+  if (text == NULL || start < 0 || end <= start) {
+    return -1;
+  }
+  char buf[64];
+  size_t n = (size_t)(end - start);
+  if (n >= sizeof(buf)) {
+    n = sizeof(buf) - 1;
+  }
+  memcpy(buf, text + start, n);
+  buf[n] = '\0';
+  const double v = strtod(buf, NULL);
+  if (li_mir_fvals_n < (int)(sizeof(li_mir_fvals) / sizeof(li_mir_fvals[0]))) {
+    li_mir_fvals[li_mir_fvals_n] = v;
+    return li_mir_fvals_n++;
+  }
+  return -1;
+}
+
+int32_t li_rt_mir_f64_fmt(int32_t id) {
+  if (id >= 0 && id < li_mir_fvals_n) {
+    printf("%.17g", li_mir_fvals[id]);
+  } else {
+    fputc('0', stdout);
+  }
+  return 0;
+}
+
+int32_t li_rt_mir_f64_of_int(int32_t v) {
+  if (li_mir_fvals_n < (int)(sizeof(li_mir_fvals) / sizeof(li_mir_fvals[0]))) {
+    li_mir_fvals[li_mir_fvals_n] = (double)v;
+    return li_mir_fvals_n++;
+  }
+  return -1;
+}
+
+int32_t li_rt_mir_f64_neg(int32_t id) {
+  if (id >= 0 && id < li_mir_fvals_n &&
+      li_mir_fvals_n < (int)(sizeof(li_mir_fvals) / sizeof(li_mir_fvals[0]))) {
+    li_mir_fvals[li_mir_fvals_n] = -li_mir_fvals[id];
+    return li_mir_fvals_n++;
+  }
+  return -1;
+}
+
+int32_t li_rt_mir_int(const char* text, int32_t start, int32_t end) {
+  if (text == NULL || start < 0 || end <= start) {
+    return 0;
+  }
+  int64_t v = 0;
+  for (int32_t i = start; i < end; ++i) {
+    const unsigned char c = (unsigned char)text[i];
+    if (c >= '0' && c <= '9') {
+      v = v * 10 + (c - '0');
+    }
+  }
+  return (int32_t)v;
+}
+
+int32_t li_rt_mir_esc(const char* text, int32_t start, int32_t end) {
+  if (text == NULL || start < 0) {
+    return 0;
+  }
+  if (end > start) {
+    for (int32_t i = start; i < end; ++i) {
+      const char c = text[i];
+      switch (c) {
+        case '\\': fputs("\\\\", stdout); break;
+        case '\n': fputs("\\n", stdout); break;
+        case '\r': fputs("\\r", stdout); break;
+        case '\t': fputs("\\t", stdout); break;
+        case ' ': fputs("\\x20", stdout); break;
+        default: fputc(c, stdout); break;
+      }
+    }
+  }
+  return 0;
+}
+
+int32_t li_rt_mir_str(const char* s) {
+  if (s != NULL) {
+    fputs(s, stdout);
+  }
+  return 0;
+}
+
+int32_t li_rt_mir_label(int32_t code, int32_t v) {
+  const char* p = NULL;
+  switch (code) {
+    case 0: p = "__t"; break;
+    case 1: p = "else_"; break;
+    case 2: p = "merge_"; break;
+    case 3: p = "while_head_"; break;
+    case 4: p = "while_exit_"; break;
+    case 5: p = "for_head_"; break;
+    case 6: p = "for_exit_"; break;
+    default: break;
+  }
+  if (p != NULL) {
+    fputs(p, stdout);
+  }
+  printf("%d", (int)v);
+  return 0;
+}
+
+int32_t li_rt_mir_literal(int32_t idx) {
+  const char* names[] = {
+    "li_rt_sqrt",
+    "li_rt_abs",
+    "li_rt_clamp",
+  };
+  int32_t count = (int32_t)(sizeof(names) / sizeof(names[0]));
+  if (idx >= 0 && idx < count) {
+    fputs(names[idx], stdout);
+  }
   return 0;
 }
 

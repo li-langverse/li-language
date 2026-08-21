@@ -151,3 +151,14 @@ Compiler gaps found and fixed while self-hosting the lexer:
 - Layer 6: LLVM codegen in Li, or stage-2 bootstrap (Li-compiled `lic`
   compiling itself).
 - `lic build` / `lic check` fully in bootstrap source
+- **Agent skill for writing Li (post self-host).** Once the bootstrap
+  compiler is self-hosted and the C++ host is only a reference (per the
+  upgrade-li-from-cpp discipline), distill the language-authoring knowledge
+  accumulated during the port into a proper agent skill
+  (`.cursor/skills/write-li-language/SKILL.md`): the idiomatic way to write Li
+  source that the compiler accepts — preferred syntax/type idioms, how to
+  phrase contracts (requires/ensures/decreases) so VCs discharge, array index
+  refinement patterns, effect/`raises` discipline, borrow rules, and the
+  self-host parity-gate workflow for extending the compiler itself. This
+  makes the language writable by agents (and documentable from one
+  canonical source) now that the toolchain no longer needs the C++ host.

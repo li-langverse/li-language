@@ -25,6 +25,8 @@ bool expr_references_disjoint(const Expr& e) {
              (e.rhs && expr_references_disjoint(*e.rhs));
     case Expr::Kind::UnaryNot:
       return e.operand && expr_references_disjoint(*e.operand);
+    case Expr::Kind::UnaryMinus:
+      return e.operand && expr_references_disjoint(*e.operand);
     case Expr::Kind::Index:
       return (e.base && expr_references_disjoint(*e.base)) ||
              (e.index && expr_references_disjoint(*e.index));

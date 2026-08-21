@@ -387,6 +387,7 @@ std::unique_ptr<Expr> Parser::parse_expr(int min_prec) {
     left->span = {t.start, t.end};
     left->operand = parse_expr(100);
   } else if (at(TokenKind::Minus)) {
+    const Token t = cur();
     i++;
     auto inner = parse_primary();
     if (inner && inner->kind == Expr::Kind::IntLit) {
@@ -395,6 +396,13 @@ std::unique_ptr<Expr> Parser::parse_expr(int min_prec) {
     } else if (inner && inner->kind == Expr::Kind::FloatLit) {
       inner->float_value = -inner->float_value;
       left = std::move(inner);
+    } else if (inner) {
+      // `-x` on a general expression: keep the negation as a real AST node
+      // (previously the minus was silently dropped, producing wrong code).
+      left = std::make_unique<Expr>();
+      left->kind = Expr::Kind::UnaryMinus;
+      left->span = {t.start, t.end};
+      left->operand = std::move(inner);
     } else {
       left = std::move(inner);
     }

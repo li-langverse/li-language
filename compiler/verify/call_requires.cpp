@@ -508,6 +508,11 @@ std::string expr_to_user_string(const Expr& e) {
         return "not " + expr_to_user_string(*e.operand);
       }
       return "not ?";
+    case Expr::Kind::UnaryMinus:
+      if (e.operand) {
+        return "-" + expr_to_user_string(*e.operand);
+      }
+      return "-?";
     case Expr::Kind::BinOp:
       if (e.lhs && e.rhs) {
         return expr_to_user_string(*e.lhs) + std::string(" ") + binop_spelling(e.bin_op) +

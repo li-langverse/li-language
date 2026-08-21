@@ -23,6 +23,12 @@ std::string debug_expr(const Expr& e, int indent) {
       os << p << "Not\n";
       os << debug_expr(*e.operand, indent + 2);
       break;
+    case Expr::Kind::UnaryMinus:
+      os << p << "Neg\n";
+      if (e.operand) {
+        os << debug_expr(*e.operand, indent + 2);
+      }
+      break;
     case Expr::Kind::BinOp:
       os << p << "BinOp\n";
       os << debug_expr(*e.lhs, indent + 2);
