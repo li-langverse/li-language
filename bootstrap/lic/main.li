@@ -8201,7 +8201,7 @@ def mir_assign(darena: var array[16384, int],  dasp: var array[1, int],  lrec: i
   err[0] = 1
   return 1
 
-def mir_fn_line(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], name_tok: int,  retf: int,  reti64: int,  retvoid: int,  is_extern: int) raises IO -> int
+def mir_fn_line(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], name_tok: int,  retf: int,  reti64: int,  retvoid: int,  is_extern: int,  no_vec: int) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -8222,7 +8222,26 @@ def mir_fn_line(src: var ptr,  ts: var array[131072, int],  te: var array[131072
   li_rt_ast_space()
   li_rt_ast_int(0)
   li_rt_ast_space()
-  li_rt_ast_int(0)
+  li_rt_ast_int(no_vec)
+  li_rt_ast_nl()
+  return 0
+
+def mir_dec_line(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], name_tok: int,  lanes: int,  vectorized: int,  parallel: int,  disjoint: int) raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  li_rt_mir_str("DEC")
+  li_rt_ast_space()
+  li_rt_ast_text(src,  peek_tk(ts, name_tok + 0),  peek_tk(te, name_tok + 0))
+  li_rt_ast_space()
+  li_rt_ast_int(lanes)
+  li_rt_ast_space()
+  li_rt_ast_int(vectorized)
+  li_rt_ast_space()
+  li_rt_ast_int(parallel)
+  li_rt_ast_space()
+  li_rt_ast_int(disjoint)
   li_rt_ast_nl()
   return 0
 
@@ -8479,7 +8498,9 @@ def mir_proc(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
     reti64 = 1
   if ret == 0:
     retvoid = 1
-  mir_fn_line(src,  ts,  te,  peek128(ptok, pid + 0),  retf,  reti64,  retvoid,  is_extern)
+  mir_fn_line(src,  ts,  te,  peek128(ptok, pid + 0),  retf,  reti64,  retvoid,  is_extern,  peek4096(ftmp, 4092))
+  if peek4096(ftmp, 4093) >= 0:
+    mir_dec_line(src,  ts,  te,  peek4096(ftmp, 4093),  peek4096(ftmp, 4094),  peek4096(ftmp, 4095),  0,  0)
   var j: int = 0
   while j < peek128(ppn, pid + 0):
     var pi2: int = peek128(pp0, pid + 0) + j
@@ -8534,7 +8555,15 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
   decreases 0
 =
   skip_newlines(tk,  n,  pi,  err)
+  set4096(ftmp, 4092, 0)
+  set4096(ftmp, 4093, -1)
+  set4096(ftmp, 4094, 0)
+  set4096(ftmp, 4095, 0)
   while 1 == 1:
+    set4096(ftmp, 4092, 0)
+    set4096(ftmp, 4093, -1)
+    set4096(ftmp, 4094, 0)
+    set4096(ftmp, 4095, 0)
     var k: int = cur_kind(tk,  n,  pi,  err)
     if k == 0:
       break
@@ -8577,9 +8606,34 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
       if at_fn_kw(tk,  n,  pi,  err) == 0:
         err[0] = 1
         return 1
+      # Extract decorator name and args from token stream at save0
+      # save0: 76(@) 4(name) ... 49(Args) 4(argname) 58(=) 5(int) 50(CloseArgs) ...
+      var dec_name_tok: int = save0 + 1
+      var dec_lanes: int = 0
+      var dec_vectorized: int = 0
+      var dec_no_vectorize: int = 0
+      # Check if decorator is vectorized
+      if tok_is(src, ts, te, dec_name_tok + 0, "vectorized") == 1:
+        dec_vectorized = 1
+        # Look for lanes=N arg -- scan for tok "lanes" followed by 58(=) then 5(int)
+        if peek_tk(tk, save0 + 2) == 49:
+          var ai: int = save0 + 3
+          while ai < dpos:
+            if tok_is(src, ts, te, ai + 0, "lanes") == 1:
+              if peek_tk(tk, ai + 1) == 58 and peek_tk(tk, ai + 2) == 5:
+                dec_lanes = li_rt_mir_int(src, peek_tk(ts, ai + 2), peek_tk(te, ai + 2))
+              break
+            ai = ai + 1
+      if tok_is(src, ts, te, dec_name_tok + 0, "no_vectorize") == 1:
+        dec_no_vectorize = 1
       pi[0] = save0
       parse_decorator_list(src,  tk,  ts,  te,  n,  pi,  err, 0)
       pi[0] = dpos
+      # Store decorator info in ftmp side-channel for mir_proc to emit DEC
+      set4096(ftmp, 4092, dec_no_vectorize)
+      set4096(ftmp, 4093, dec_name_tok)
+      set4096(ftmp, 4094, dec_lanes)
+      set4096(ftmp, 4095, dec_vectorized)
       if mode == 0:
         if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  pn[0], ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef, pei,  pvar,  pmx,  pmc,  pcount) == 1:
           return 1
@@ -8587,6 +8641,7 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
       else:
         if mir_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  pcount[0], tc,  lastop,  ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar,  pmx,  pmc) == 1:
           return 1
+        set4096(ftmp, 4093, -1)
         pcount[0] = pcount[0] + 1
       skip_newlines(tk,  n,  pi,  err)
       continue
