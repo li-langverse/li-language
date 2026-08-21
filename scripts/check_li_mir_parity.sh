@@ -49,6 +49,15 @@ CORPUS=(
   "li-tests/math_linalg/scale_float4.li"
   "li-tests/math_linalg/norm_float4.li"
   "li-tests/math_linalg/norm_int4_sq.li"
+  "li-tests/decorators/vectorized_dot_ok.li"
+  "li-tests/decorators/cpu_only_ok.li"
+  "li-tests/decorators/no_vectorize_dot_ok.li"
+  "li-tests/decorators/vectorized_dot_proc_ok.li"
+  "li-tests/effects/async_ok.li"
+  "li-tests/async/await_codegen_ok.li"
+  "li-tests/math_linalg/matmul_2x3_ok.li"
+  "li-tests/decorators/vectorized_for_scope_ok.li"
+  "li-tests/decorators/vectorized_for_parse_ok.li"
 )
 
 fail() {
