@@ -42,6 +42,12 @@ int32_t li_rt_mir_label(int32_t code, int32_t v);
 /* Print a hardcoded callee name by index: 0=li_rt_sqrt, etc.
  * Used by the self-hosted MIR walker for extern call names. */
 int32_t li_rt_mir_literal(int32_t idx);
+/* Object-field mangled-name registry: register `__li_o_<base>_<field>` once
+ * and reference it by index from name cells (mir_dump.cpp parity). */
+int32_t li_rt_mir_objname_add(const char* text, int32_t bs, int32_t be,
+                              int32_t fs, int32_t fe);
+int32_t li_rt_mir_objname_out(int32_t idx);
+void li_rt_mir_objname_clear(void);
 const char* li_rt_resolve_import(const char* file_path, const char* module);
 void li_rt_set_args(int argc, char** argv);
 int li_rt_argc(void);

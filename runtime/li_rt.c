@@ -259,6 +259,55 @@ int32_t li_rt_mir_literal(int32_t idx) {
   return 0;
 }
 
+/* Object-field mangled-name registry (Layer 5 MIR parity): the C++ dump
+ * prints object slots as `__li_o_<base>_<field>` directly in name cells, but
+ * the self-hosted walker's name cells only carry two source positions. So the
+ * walker registers the mangled name once (li_rt_mir_objname_add) and name
+ * cells reference it by index (li_rt_mir_objname_out). */
+#define LI_RT_OBJNAME_MAX 512
+static const char* li_rt_objname_text = NULL;
+static int32_t li_rt_objname_bs[LI_RT_OBJNAME_MAX];
+static int32_t li_rt_objname_be[LI_RT_OBJNAME_MAX];
+static int32_t li_rt_objname_fs[LI_RT_OBJNAME_MAX];
+static int32_t li_rt_objname_fe[LI_RT_OBJNAME_MAX];
+static int32_t li_rt_objname_n = 0;
+
+int32_t li_rt_mir_objname_add(const char* text, int32_t bs, int32_t be,
+                              int32_t fs, int32_t fe) {
+  if (li_rt_objname_n == 0) {
+    li_rt_objname_text = text;
+  }
+  for (int32_t i = 0; i < li_rt_objname_n; ++i) {
+    if (li_rt_objname_bs[i] == bs && li_rt_objname_be[i] == be &&
+        li_rt_objname_fs[i] == fs && li_rt_objname_fe[i] == fe) {
+      return i;
+    }
+  }
+  if (li_rt_objname_n >= LI_RT_OBJNAME_MAX) {
+    return 0;
+  }
+  li_rt_objname_bs[li_rt_objname_n] = bs;
+  li_rt_objname_be[li_rt_objname_n] = be;
+  li_rt_objname_fs[li_rt_objname_n] = fs;
+  li_rt_objname_fe[li_rt_objname_n] = fe;
+  const int32_t idx = li_rt_objname_n;
+  li_rt_objname_n += 1;
+  return idx;
+}
+
+int32_t li_rt_mir_objname_out(int32_t idx) {
+  if (idx < 0 || idx >= li_rt_objname_n) {
+    return 0;
+  }
+  fputs("__li_o_", stdout);
+  li_rt_mir_esc(li_rt_objname_text, li_rt_objname_bs[idx], li_rt_objname_be[idx]);
+  fputs("_", stdout);
+  li_rt_mir_esc(li_rt_objname_text, li_rt_objname_fs[idx], li_rt_objname_fe[idx]);
+  return 0;
+}
+
+void li_rt_mir_objname_clear(void) { li_rt_objname_n = 0; li_rt_objname_text = NULL; }
+
 static int li_argc = 0;
 static char** li_argv = NULL;
 
