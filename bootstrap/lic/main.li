@@ -6093,6 +6093,68 @@ def mir_ins_mangled(src: var ptr, op: int, iv: int, base_s: int, base_e: int, fl
   lastop[0] = op
   return 0
 
+# Emit INS with a mangled base-only name (e.g. `return v` -> INS 4 __li_o_v)
+def mir_ins_mangled_base(src: var ptr, op: int, base_s: int, base_e: int, lastop: var array[1, int]) raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  li_rt_mir_str("INS")
+  li_rt_ast_space()
+  li_rt_ast_int(op)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_mir_str("__li_o_")
+  li_rt_mir_esc(src, base_s, base_e)
+  # 5 empty name cells
+  li_rt_ast_space()
+  li_rt_ast_space()
+  li_rt_ast_space()
+  li_rt_ast_space()
+  li_rt_ast_space()
+  # f18..f21
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(1)
+  # name cell 6 (empty)
+  li_rt_ast_space()
+  # f25..f36
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(1)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_nl()
+  lastop[0] = op
+  return 0
+
 # Emit INS with a mangled name as LHS of a binop
 def mir_ins_mangled_binop(src: var ptr, op: int, dest_s: int, dest_e: int, lhs_s: int, lhs_e: int, rhs_s: int, rhs_e: int, flag1: int, flag2: int, binop: int, lastop: var array[1, int]) raises IO -> int
   requires true
@@ -6229,6 +6291,206 @@ def mir_obj_field_float(itmp: var array[4096, int], type_idx: int, field_idx: in
   var fbase: int = peek4096(itmp, 3001 + type_idx * 6 + 3)
   return peek4096(itmp, 3401 + (fbase + field_idx) + 0)
 
+# Emit the field copy (or element-wise array-field copy) for whole-object
+# assignment/init: dst.<field> <- src.<field>. src_is_cr=1 means the source is
+# the call-result slot __li_o___cr<crid>.
+def mir_obj_emit_copy(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], itmp: var array[4096, int],  obj_ti: int,  fidx: int,  dst_s: int,  dst_e: int,  src_s: int,  src_e: int,  src_is_cr: int,  crid: int,  tc: var array[1, int]) raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var fel: int = mir_obj_field_elems(itmp, obj_ti, fidx)
+  var fa: array[2, int]
+  mir_obj_field_name(itmp, obj_ti, fidx, fa)
+  var fs: int = fa[0]
+  var fe: int = fa[1]
+  if fel == 0:
+    var cop: int = 26
+    if mir_obj_field_float(itmp, obj_ti, fidx) == 1:
+      cop = 28
+    li_rt_mir_str("INS")
+    li_rt_ast_space()
+    li_rt_ast_int(cop)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_mir_str("__li_o_")
+    li_rt_mir_esc(src, dst_s, dst_e)
+    li_rt_mir_str("_")
+    li_rt_mir_esc(src, fs, fe)
+    li_rt_ast_space()
+    li_rt_ast_space()
+    li_rt_ast_space()
+    li_rt_ast_space()
+    if src_is_cr == 1:
+      li_rt_mir_str("__li_o___cr")
+      li_rt_ast_int(crid)
+    else:
+      li_rt_mir_str("__li_o_")
+      li_rt_mir_esc(src, src_s, src_e)
+    li_rt_mir_str("_")
+    li_rt_mir_esc(src, fs, fe)
+    li_rt_ast_space()
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(1)
+    li_rt_ast_space()
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_nl()
+    return 0
+  # array field: element-wise INS 11 load into temp + INS 10 store
+  var e: int = 0
+  while e < fel:
+    var t: int = tc[0]
+    tc[0] = t + 1
+    li_rt_mir_str("INS")
+    li_rt_ast_space()
+    li_rt_ast_int(11)
+    li_rt_ast_space()
+    li_rt_ast_int(e)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    if src_is_cr == 1:
+      li_rt_mir_str("__li_o___cr")
+      li_rt_ast_int(crid)
+    else:
+      li_rt_mir_str("__li_o_")
+      li_rt_mir_esc(src, src_s, src_e)
+    li_rt_mir_str("_")
+    li_rt_mir_esc(src, fs, fe)
+    li_rt_ast_space()
+    li_rt_ast_space()
+    li_rt_ast_space()
+    li_rt_mir_str("__t")
+    li_rt_ast_int(t)
+    li_rt_ast_space()
+    li_rt_ast_space()
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(1)
+    li_rt_ast_space()
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(1)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_nl()
+    li_rt_mir_str("INS")
+    li_rt_ast_space()
+    li_rt_ast_int(10)
+    li_rt_ast_space()
+    li_rt_ast_int(e)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_mir_str("__li_o_")
+    li_rt_mir_esc(src, dst_s, dst_e)
+    li_rt_mir_str("_")
+    li_rt_mir_esc(src, fs, fe)
+    li_rt_ast_space()
+    li_rt_ast_space()
+    li_rt_ast_space()
+    li_rt_ast_space()
+    li_rt_mir_str("__t")
+    li_rt_ast_int(t)
+    li_rt_ast_space()
+    li_rt_ast_space()
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(1)
+    li_rt_ast_space()
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_nl()
+    e = e + 1
+  return 0
+# fixed-array element count of a field (0 = scalar)
+def mir_obj_field_elems(itmp: var array[4096, int], type_idx: int, field_idx: int) -> int
+  requires true
+  ensures result >= 0
+  decreases 0
+=
+  var fbase: int = peek4096(itmp, 3001 + type_idx * 6 + 3)
+  return peek4096(itmp, 3501 + (fbase + field_idx) + 0)
+
 def mir_obj_find_field(src: var ptr, itmp: var array[4096, int], type_idx: int, fs: int, fe: int) -> int
   requires true
   ensures result >= -1
@@ -6279,7 +6541,7 @@ def mir_obj_find_var(src: var ptr, ts: var array[131072, int], te: var array[131
     k = k + 1
   return -1
 
-def mir_obj_reg_field(itmp: var array[4096, int], fs: int, fe: int, fflt: int) -> int
+def mir_obj_reg_field(itmp: var array[4096, int], fs: int, fe: int, fflt: int, elems: int) -> int
   requires true
   ensures result == 0
   decreases 0
@@ -6290,6 +6552,7 @@ def mir_obj_reg_field(itmp: var array[4096, int], fs: int, fe: int, fflt: int) -
   set4096(itmp, 3201 + nf * 2 + 0, fs)
   set4096(itmp, 3201 + nf * 2 + 1, fe)
   set4096(itmp, 3401 + nf + 0, fflt)
+  set4096(itmp, 3501 + nf + 0, elems)
   set4096(itmp, 3200, nf + 1)
   return 0
 
@@ -6805,6 +7068,78 @@ def mir_lower_expr(darena: var array[16384, int],  dasp: var array[1, int],  rec
   if k == 5:
     var base: int = peek16384(darena, rec + 1)
     var idx: int = peek16384(darena, rec + 2)
+    if peek16384(darena, base + 0) == 9:
+      # Object array-field load: b.xs[i] -> INS 11 (int) / INS 13 (float) into temp
+      var fb9e: int = peek16384(darena, base + 1)
+      var fs9e: int = peek16384(darena, base + 2)
+      var fe9e: int = peek16384(darena, base + 3)
+      if peek16384(darena, fb9e + 0) == 3:
+        var ov9e: int = mir_obj_find_var(src,  ts,  te,  itmp,  peek16384(darena, fb9e + 1),  peek16384(darena, fb9e + 2))
+        if ov9e >= 0:
+          var fidx9e: int = mir_obj_find_field(src, itmp, ov9e, fs9e, fe9e)
+          var fel9e: int = 0
+          if fidx9e >= 0:
+            fel9e = mir_obj_field_elems(itmp, ov9e, fidx9e)
+          if fel9e > 0:
+            if peek16384(darena, idx + 0) == 0:
+              var iv9e: int = peek16384(darena, idx + 1)
+              var c9e: int = tc[0]
+              tc[0] = c9e + 1
+              li_rt_mir_str("INS")
+              li_rt_ast_space()
+              li_rt_ast_int(11)
+              li_rt_ast_space()
+              li_rt_ast_int(iv9e)
+              li_rt_ast_space()
+              li_rt_ast_int(0)
+              li_rt_ast_space()
+              li_rt_mir_str("__li_o_")
+              li_rt_mir_esc(src, peek16384(darena, fb9e + 1), peek16384(darena, fb9e + 2))
+              li_rt_mir_str("_")
+              li_rt_mir_esc(src, fs9e, fe9e)
+              li_rt_ast_space()
+              li_rt_ast_space()
+              li_rt_ast_space()
+              li_rt_mir_str("__t")
+              li_rt_ast_int(c9e)
+              li_rt_ast_space()
+              li_rt_ast_space()
+              li_rt_ast_space()
+              li_rt_ast_int(0)
+              li_rt_ast_space()
+              li_rt_ast_int(0)
+              li_rt_ast_space()
+              li_rt_ast_int(0)
+              li_rt_ast_space()
+              li_rt_ast_int(1)
+              li_rt_ast_space()
+              li_rt_ast_space()
+              li_rt_ast_int(0)
+              li_rt_ast_space()
+              li_rt_ast_int(1)
+              li_rt_ast_space()
+              li_rt_ast_int(0)
+              li_rt_ast_space()
+              li_rt_ast_int(0)
+              li_rt_ast_space()
+              li_rt_ast_int(0)
+              li_rt_ast_space()
+              li_rt_ast_int(0)
+              li_rt_ast_space()
+              li_rt_ast_int(0)
+              li_rt_ast_space()
+              li_rt_ast_int(0)
+              li_rt_ast_space()
+              li_rt_ast_int(0)
+              li_rt_ast_space()
+              li_rt_ast_int(0)
+              li_rt_ast_space()
+              li_rt_ast_int(0)
+              li_rt_ast_space()
+              li_rt_ast_int(0)
+              li_rt_ast_nl()
+              mir_mk_name(darena,  rec,  1,  c9e,  0)
+              return 0
     if peek16384(darena, base + 0) == 5:
       var mat: int = peek16384(darena, base + 1)
       if peek16384(darena, mat + 0) == 3:
@@ -8148,20 +8483,30 @@ def mir_return(darena: var array[16384, int],  dasp: var array[1, int], src: var
             mir_ins_line(src,  f2,  2,  0,  peek16384(darena, rec + 1),  lastop)
           else:
             if rk == 3:
-              var f3: array[40, int]
-              mir_fdef(f3)
-              f3[0] = peek16384(darena, rec + 1)
-              f3[1] = peek16384(darena, rec + 2)
-              f3[2] = 1
-              var rf: int = retf_proc
-              var ri: int = reti64_proc
-              if mir_name_float(src,  ts,  te,  peek16384(darena, rec + 1),  peek16384(darena, rec + 2),  ftok,  nft) == 1:
-                rf = 1
-              if mir_name_i64(src,  ts,  te,  peek16384(darena, rec + 1),  peek16384(darena, rec + 2),  itok,  nit) == 1:
-                ri = 1
-              f3[19] = rf
-              f3[20] = ri
-              mir_ins_line(src,  f3,  3,  0,  -1,  lastop)
+              # Object return: `return v` -> INS 4 (mangled base) + OBJ layout
+              var robj: int = mir_obj_find_var(src,  ts,  te,  itmp,  peek16384(darena, rec + 1),  peek16384(darena, rec + 2))
+              if robj >= 0:
+                mir_ins_mangled_base(src, 4, peek16384(darena, rec + 1), peek16384(darena, rec + 2), lastop)
+                var nfo: int = mir_obj_field_count(itmp, robj)
+                var fo: int = 0
+                while fo < nfo:
+                  mir_obj_line(src,  ts,  te,  itmp,  robj,  fo)
+                  fo = fo + 1
+              else:
+                var f3: array[40, int]
+                mir_fdef(f3)
+                f3[0] = peek16384(darena, rec + 1)
+                f3[1] = peek16384(darena, rec + 2)
+                f3[2] = 1
+                var rf: int = retf_proc
+                var ri: int = reti64_proc
+                if mir_name_float(src,  ts,  te,  peek16384(darena, rec + 1),  peek16384(darena, rec + 2),  ftok,  nft) == 1:
+                  rf = 1
+                if mir_name_i64(src,  ts,  te,  peek16384(darena, rec + 1),  peek16384(darena, rec + 2),  itok,  nit) == 1:
+                  ri = 1
+                f3[19] = rf
+                f3[20] = ri
+                mir_ins_line(src,  f3,  3,  0,  -1,  lastop)
             else:
               if rk == 7 or rk == 4 or rk == 5 or rk == 11:
                 if mir_lower_expr(darena,  dasp,  rec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
@@ -8223,11 +8568,160 @@ def mir_var_decl(darena: var array[16384, int],  dasp: var array[1, int], src: v
         mir_obj_field_name(itmp, obj_ti, fi, ff_arr)
         var ff_s: int = ff_arr[0]
         var ff_e: int = ff_arr[1]
-        if mir_obj_field_float(itmp, obj_ti, fi) == 1:
-          mir_ins_mangled(src, 35, 0, peek_tk(ts, vn + 0), peek_tk(te, vn + 0), ff_s, ff_e, 0, 1, 0, lastop)
+        var felems_v: int = mir_obj_field_elems(itmp, obj_ti, fi)
+        if felems_v > 0:
+          mir_ins_mangled(src, 9, felems_v, peek_tk(ts, vn + 0), peek_tk(te, vn + 0), ff_s, ff_e, 0, 1, 0, lastop)
         else:
-          mir_ins_mangled(src, 24, 0, peek_tk(ts, vn + 0), peek_tk(te, vn + 0), ff_s, ff_e, 0, 1, 0, lastop)
+          if mir_obj_field_float(itmp, obj_ti, fi) == 1:
+            mir_ins_mangled(src, 35, 0, peek_tk(ts, vn + 0), peek_tk(te, vn + 0), ff_s, ff_e, 0, 1, 0, lastop)
+          else:
+            mir_ins_mangled(src, 24, 0, peek_tk(ts, vn + 0), peek_tk(te, vn + 0), ff_s, ff_e, 0, 1, 0, lastop)
         fi = fi + 1
+      # Call init returning object: `var u: T = f()` lowers to cr<N> slots,
+      # CallProc with OBJ layout, then field copies into the var slots.
+      if has_init == 1:
+        if peek16384(darena, rec + 0) == 4:
+          var crid: int = tc[0]
+          tc[0] = crid + 1
+          var fc: int = 0
+          while fc < nfld:
+            mir_obj_field_name(itmp, obj_ti, fc, ff_arr)
+            var ffs3: int = ff_arr[0]
+            var ffe3: int = ff_arr[1]
+            var cop3: int = 24
+            var iv3: int = 0
+            if mir_obj_field_elems(itmp, obj_ti, fc) > 0:
+              cop3 = 9
+              iv3 = mir_obj_field_elems(itmp, obj_ti, fc)
+            else:
+              if mir_obj_field_float(itmp, obj_ti, fc) == 1:
+                cop3 = 35
+            li_rt_mir_str("INS")
+            li_rt_ast_space()
+            li_rt_ast_int(cop3)
+            li_rt_ast_space()
+            li_rt_ast_int(iv3)
+            li_rt_ast_space()
+            li_rt_ast_int(0)
+            li_rt_ast_space()
+            li_rt_mir_str("__li_o___cr")
+            li_rt_ast_int(crid)
+            li_rt_mir_str("_")
+            li_rt_mir_esc(src, ffs3, ffe3)
+            # 5 empty name cells
+            li_rt_ast_space()
+            li_rt_ast_space()
+            li_rt_ast_space()
+            li_rt_ast_space()
+            li_rt_ast_space()
+            # f18..f21
+            li_rt_ast_space()
+            li_rt_ast_int(0)
+            li_rt_ast_space()
+            li_rt_ast_int(0)
+            li_rt_ast_space()
+            li_rt_ast_int(0)
+            li_rt_ast_space()
+            li_rt_ast_int(1)
+            # name cell 6 (empty)
+            li_rt_ast_space()
+            # f25..f36
+            li_rt_ast_space()
+            li_rt_ast_int(0)
+            li_rt_ast_space()
+            li_rt_ast_int(1)
+            li_rt_ast_space()
+            li_rt_ast_int(0)
+            li_rt_ast_space()
+            li_rt_ast_int(0)
+            li_rt_ast_space()
+            li_rt_ast_int(0)
+            li_rt_ast_space()
+            li_rt_ast_int(0)
+            li_rt_ast_space()
+            li_rt_ast_int(0)
+            li_rt_ast_space()
+            li_rt_ast_int(0)
+            li_rt_ast_space()
+            li_rt_ast_int(0)
+            li_rt_ast_space()
+            li_rt_ast_int(0)
+            li_rt_ast_space()
+            li_rt_ast_int(0)
+            li_rt_ast_space()
+            li_rt_ast_int(0)
+            li_rt_ast_nl()
+            fc = fc + 1
+          # INS 8 CallProc with mangled base dest + callee + OBJ layout
+          li_rt_mir_str("INS")
+          li_rt_ast_space()
+          li_rt_ast_int(8)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_mir_str("__li_o___cr")
+          li_rt_ast_int(crid)
+          # str_value cell (empty), then callee name cell
+          li_rt_ast_space()
+          li_rt_ast_space()
+          li_rt_mir_esc(src,  peek16384(darena, rec + 1),  peek16384(darena, rec + 2))
+          # 3 empty name cells (lhs_ident, rhs_ident, label)
+          li_rt_ast_space()
+          li_rt_ast_space()
+          li_rt_ast_space()
+          # f18..f21
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(1)
+          # name cell 6 (empty)
+          li_rt_ast_space()
+          # f25..f36
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(1)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_nl()
+          fc = 0
+          while fc < nfld:
+            mir_obj_field_name(itmp, obj_ti, fc, ff_arr)
+            mir_obj_line(src,  ts,  te,  itmp,  obj_ti,  fc)
+            fc = fc + 1
+          # field copies cr -> var
+          fc = 0
+          while fc < nfld:
+            mir_obj_field_name(itmp, obj_ti, fc, ff_arr)
+            var ffs4: int = ff_arr[0]
+            var ffe4: int = ff_arr[1]
+            mir_obj_emit_copy(src,  ts,  te,  itmp,  obj_ti,  fc,  peek_tk(ts, vn + 0),  peek_tk(te, vn + 0),  0,  0,  1,  crid,  tc)
+            fc = fc + 1
+          return 0
       # Whole-object copy init: `var b: T = a` copies each source slot
       # (StoreFloat 28 / StoreInt 26 with dst in ident, src in rhs_ident)
       if has_init == 1:
@@ -8236,73 +8730,7 @@ def mir_var_decl(darena: var array[16384, int],  dasp: var array[1, int], src: v
           if src_obj >= 0:
             var fi2: int = 0
             while fi2 < nfld:
-              mir_obj_field_name(itmp, obj_ti, fi2, ff_arr)
-              var ff_s2: int = ff_arr[0]
-              var ff_e2: int = ff_arr[1]
-              var cop: int = 26
-              if mir_obj_field_float(itmp, obj_ti, fi2) == 1:
-                cop = 28
-              li_rt_mir_str("INS")
-              li_rt_ast_space()
-              li_rt_ast_int(cop)
-              li_rt_ast_space()
-              li_rt_ast_int(0)
-              li_rt_ast_space()
-              li_rt_ast_int(0)
-              li_rt_ast_space()
-              li_rt_mir_str("__li_o_")
-              li_rt_mir_esc(src, peek_tk(ts, vn + 0), peek_tk(te, vn + 0))
-              li_rt_mir_str("_")
-              li_rt_mir_esc(src, ff_s2, ff_e2)
-              # empty cells: str_value, callee, lhs_ident
-              li_rt_ast_space()
-              li_rt_ast_space()
-              li_rt_ast_space()
-              # rhs_ident: source mangled slot
-              li_rt_ast_space()
-              li_rt_mir_str("__li_o_")
-              li_rt_mir_esc(src, peek16384(darena, rec + 1), peek16384(darena, rec + 2))
-              li_rt_mir_str("_")
-              li_rt_mir_esc(src, ff_s2, ff_e2)
-              # label cell empty
-              li_rt_ast_space()
-              # f18..f21
-              li_rt_ast_space()
-              li_rt_ast_int(0)
-              li_rt_ast_space()
-              li_rt_ast_int(0)
-              li_rt_ast_space()
-              li_rt_ast_int(0)
-              li_rt_ast_space()
-              li_rt_ast_int(1)
-              # name cell 6 (empty)
-              li_rt_ast_space()
-              # f25..f36
-              li_rt_ast_space()
-              li_rt_ast_int(0)
-              li_rt_ast_space()
-              li_rt_ast_int(0)
-              li_rt_ast_space()
-              li_rt_ast_int(0)
-              li_rt_ast_space()
-              li_rt_ast_int(0)
-              li_rt_ast_space()
-              li_rt_ast_int(0)
-              li_rt_ast_space()
-              li_rt_ast_int(0)
-              li_rt_ast_space()
-              li_rt_ast_int(0)
-              li_rt_ast_space()
-              li_rt_ast_int(0)
-              li_rt_ast_space()
-              li_rt_ast_int(0)
-              li_rt_ast_space()
-              li_rt_ast_int(0)
-              li_rt_ast_space()
-              li_rt_ast_int(0)
-              li_rt_ast_space()
-              li_rt_ast_int(0)
-              li_rt_ast_nl()
+              mir_obj_emit_copy(src,  ts,  te,  itmp,  obj_ti,  fi2,  peek_tk(ts, vn + 0),  peek_tk(te, vn + 0),  peek16384(darena, rec + 1),  peek16384(darena, rec + 2),  0,  0,  tc)
               fi2 = fi2 + 1
       skip_newlines(tk,  n,  pi,  err)
       return 0
@@ -8689,6 +9117,37 @@ def mir_assign(darena: var array[16384, int],  dasp: var array[1, int],  lrec: i
   if peek16384(darena, lrec + 0) == 5:
     var base: int = peek16384(darena, lrec + 1)
     var idx: int = peek16384(darena, lrec + 2)
+    if peek16384(darena, base + 0) == 9:
+      # Object array-field store: a.xs[i] = v -> INS 10 (int) / INS 12 (float)
+      var fb9: int = peek16384(darena, base + 1)
+      var fs9: int = peek16384(darena, base + 2)
+      var fe9: int = peek16384(darena, base + 3)
+      if peek16384(darena, fb9 + 0) == 3:
+        var ov9: int = mir_obj_find_var(src,  ts,  te,  itmp,  peek16384(darena, fb9 + 1),  peek16384(darena, fb9 + 2))
+        if ov9 >= 0:
+          var fidx9: int = mir_obj_find_field(src, itmp, ov9, fs9, fe9)
+          var fel9: int = 0
+          if fidx9 >= 0:
+            fel9 = mir_obj_field_elems(itmp, ov9, fidx9)
+          if fel9 > 0:
+            var iv9: int = 0
+            if peek16384(darena, idx + 0) == 0:
+              iv9 = peek16384(darena, idx + 1)
+            else:
+              if peek16384(darena, idx + 0) == 3:
+                iv9 = -2
+            if iv9 >= 0:
+              if peek16384(darena, rrec + 0) == 0:
+                mir_ins_mangled(src, 10, iv9, peek16384(darena, fb9 + 1), peek16384(darena, fb9 + 2), fs9, fe9, 0, 1, peek16384(darena, rrec + 1), lastop)
+                return 0
+              if peek16384(darena, rrec + 0) == 3:
+                var isrc9: int = mir_obj_find_var(src,  ts,  te,  itmp,  peek16384(darena, rrec + 1),  peek16384(darena, rrec + 2))
+                if isrc9 >= 0:
+                  # a.xs[i] = b.ys[j] is uncommon; fall through to generic (temp) path
+                  iv9 = -3
+              if iv9 >= 0:
+                mir_ins_mangled(src, 10, iv9, peek16384(darena, fb9 + 1), peek16384(darena, fb9 + 2), fs9, fe9, 0, 1, peek16384(darena, rrec + 1), lastop)
+                return 0
     if peek16384(darena, base + 0) == 5:
       var mat: int = peek16384(darena, base + 1)
       if peek16384(darena, mat + 0) == 3:
@@ -8797,6 +9256,164 @@ def mir_assign(darena: var array[16384, int],  dasp: var array[1, int],  lrec: i
     mir_ins_line(src,  f,  op,  iv,  fid,  lastop)
     return 0
   if peek16384(darena, lrec + 0) == 3:
+    # Whole-object assignment: c = f() (call) or b = a (object copy).
+    var la_obj: int = mir_obj_find_var(src,  ts,  te,  itmp,  peek16384(darena, lrec + 1),  peek16384(darena, lrec + 2))
+    if la_obj >= 0:
+      var nfld_a: int = mir_obj_field_count(itmp, la_obj)
+      var ff_a: array[2, int]
+      if peek16384(darena, rrec + 0) == 4:
+        var crid: int = tc[0]
+        tc[0] = crid + 1
+        var fc: int = 0
+        while fc < nfld_a:
+          mir_obj_field_name(itmp, la_obj, fc, ff_a)
+          var ffs3: int = ff_a[0]
+          var ffe3: int = ff_a[1]
+          var cop3: int = 24
+          var iv3: int = 0
+          if mir_obj_field_elems(itmp, la_obj, fc) > 0:
+            cop3 = 9
+            iv3 = mir_obj_field_elems(itmp, la_obj, fc)
+          else:
+            if mir_obj_field_float(itmp, la_obj, fc) == 1:
+              cop3 = 35
+          li_rt_mir_str("INS")
+          li_rt_ast_space()
+          li_rt_ast_int(cop3)
+          li_rt_ast_space()
+          li_rt_ast_int(iv3)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_mir_str("__li_o___cr")
+          li_rt_ast_int(crid)
+          li_rt_mir_str("_")
+          li_rt_mir_esc(src, ffs3, ffe3)
+          # 5 empty name cells
+          li_rt_ast_space()
+          li_rt_ast_space()
+          li_rt_ast_space()
+          li_rt_ast_space()
+          li_rt_ast_space()
+          # f18..f21
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(1)
+          # name cell 6 (empty)
+          li_rt_ast_space()
+          # f25..f36
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(1)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_nl()
+          fc = fc + 1
+        # INS 8 CallProc with mangled base dest + callee + OBJ layout
+        li_rt_mir_str("INS")
+        li_rt_ast_space()
+        li_rt_ast_int(8)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_mir_str("__li_o___cr")
+        li_rt_ast_int(crid)
+        # str_value cell (empty), then callee name cell
+        li_rt_ast_space()
+        li_rt_ast_space()
+        li_rt_mir_esc(src,  peek16384(darena, rrec + 1),  peek16384(darena, rrec + 2))
+        # 3 empty name cells (lhs_ident, rhs_ident, label)
+        li_rt_ast_space()
+        li_rt_ast_space()
+        li_rt_ast_space()
+        # f18..f21
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(1)
+        # name cell 6 (empty)
+        li_rt_ast_space()
+        # f25..f36
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(1)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_nl()
+        fc = 0
+        while fc < nfld_a:
+          mir_obj_field_name(itmp, la_obj, fc, ff_a)
+          mir_obj_line(src,  ts,  te,  itmp,  la_obj,  fc)
+          fc = fc + 1
+        # field copies cr -> var
+        fc = 0
+        while fc < nfld_a:
+          mir_obj_field_name(itmp, la_obj, fc, ff_a)
+          var ffs4: int = ff_a[0]
+          var ffe4: int = ff_a[1]
+          mir_obj_emit_copy(src,  ts,  te,  itmp,  la_obj,  fc,  peek16384(darena, lrec + 1),  peek16384(darena, lrec + 2),  0,  0,  1,  crid,  tc)
+          fc = fc + 1
+        return 0
+      if peek16384(darena, rrec + 0) == 3:
+        var ra_obj: int = mir_obj_find_var(src,  ts,  te,  itmp,  peek16384(darena, rrec + 1),  peek16384(darena, rrec + 2))
+        if ra_obj >= 0:
+          var fc2: int = 0
+          while fc2 < nfld_a:
+            mir_obj_field_name(itmp, la_obj, fc2, ff_a)
+            var fs2: int = ff_a[0]
+            var fe2: int = ff_a[1]
+            mir_obj_emit_copy(src,  ts,  te,  itmp,  la_obj,  fc2,  peek16384(darena, lrec + 1),  peek16384(darena, lrec + 2),  peek16384(darena, rrec + 1),  peek16384(darena, rrec + 2),  0,  0,  tc)
+            fc2 = fc2 + 1
+          return 0
     if peek16384(darena, rrec + 0) == 7:
       var eopk: int = peek16384(darena, rrec + 1)
       if eopk == 59 or eopk == 60 or eopk == 61 or eopk == 63 or eopk == 62:
@@ -8918,7 +9535,7 @@ def mir_assign(darena: var array[16384, int],  dasp: var array[1, int],  lrec: i
   err[0] = 1
   return 1
 
-def mir_fn_line(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], name_tok: int,  retf: int,  reti64: int,  retvoid: int,  is_extern: int,  no_vec: int,  is_async_fn: int) raises IO -> int
+def mir_fn_line(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], name_tok: int,  retf: int,  reti64: int,  retvoid: int,  retobj: int,  is_extern: int,  no_vec: int,  is_async_fn: int) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -8933,13 +9550,78 @@ def mir_fn_line(src: var ptr,  ts: var array[131072, int],  te: var array[131072
   li_rt_ast_space()
   li_rt_ast_int(retvoid)
   li_rt_ast_space()
-  li_rt_ast_int(0)
+  li_rt_ast_int(retobj)
   li_rt_ast_space()
   li_rt_ast_int(is_extern)
   li_rt_ast_space()
   li_rt_ast_int(is_async_fn)
   li_rt_ast_space()
   li_rt_ast_int(no_vec)
+  li_rt_ast_nl()
+  return 0
+
+def mir_retparam_line(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], itmp: var array[4096, int],  type_idx: int,  field_idx: int) raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var fa: array[2, int]
+  mir_obj_field_name(itmp, type_idx, field_idx, fa)
+  var fflt: int = mir_obj_field_float(itmp, type_idx, field_idx)
+  li_rt_mir_str("RETPARAM")
+  li_rt_ast_space()
+  li_rt_ast_text(src,  fa[0],  fa[1])
+  li_rt_ast_space()
+  li_rt_ast_int(fflt)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_nl()
+  return 0
+
+def mir_obj_line(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], itmp: var array[4096, int],  type_idx: int,  field_idx: int) raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var fa: array[2, int]
+  mir_obj_field_name(itmp, type_idx, field_idx, fa)
+  var fflt: int = mir_obj_field_float(itmp, type_idx, field_idx)
+  var felems_o: int = mir_obj_field_elems(itmp, type_idx, field_idx)
+  li_rt_mir_str("OBJ")
+  li_rt_ast_space()
+  li_rt_ast_text(src,  fa[0],  fa[1])
+  li_rt_ast_space()
+  li_rt_ast_int(fflt)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(felems_o)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
   li_rt_ast_nl()
   return 0
 
@@ -9200,7 +9882,11 @@ def mir_proc(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
   skip_newlines(tk,  n,  pi,  err)
   mir_skip_raises(tk,  n,  pi,  err)
   skip_newlines(tk,  n,  pi,  err)
+  var rt_tok2: int = -1
   if accept_k(tk,  n,  pi,  err, 57) == 1:
+    var rk3: int = cur_kind(tk,  n,  pi,  err)
+    if rk3 == 4 or rk3 == 47 or rk3 == 48:
+      rt_tok2 = pi[0]
     var ti2: array[6, int]
     if mir_type_info(src,  tk,  ts,  te,  n,  pi,  err,  ti2) == 1:
       return 1
@@ -9212,13 +9898,26 @@ def mir_proc(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
   var retf: int = 0
   var reti64: int = 0
   var retvoid: int = 0
+  var retobj: int = 0
+  var ret_obj_ti: int = -1
   if ret == 2:
     retf = 1
   if ret == 3 or ret == 4:
     reti64 = 1
   if ret == 0:
     retvoid = 1
-  mir_fn_line(src,  ts,  te,  peek128(ptok, pid + 0),  retf,  reti64,  retvoid,  is_extern,  peek4096(ftmp, 4092),  peek4096(ftmp, 4091))
+  if ret == 6:
+    if rt_tok2 >= 0:
+      ret_obj_ti = mir_obj_find_type(src, ts, te, itmp, peek_tk(ts, rt_tok2 + 0), peek_tk(te, rt_tok2 + 0))
+      if ret_obj_ti >= 0:
+        retobj = 1
+  mir_fn_line(src,  ts,  te,  peek128(ptok, pid + 0),  retf,  reti64,  retvoid,  retobj,  is_extern,  peek4096(ftmp, 4092),  peek4096(ftmp, 4091))
+  if ret_obj_ti >= 0:
+    var rj: int = 0
+    var rn: int = mir_obj_field_count(itmp, ret_obj_ti)
+    while rj < rn:
+      mir_retparam_line(src,  ts,  te,  itmp,  ret_obj_ti,  rj)
+      rj = rj + 1
   if peek4096(ftmp, 4093) >= 0:
     mir_dec_line(src,  ts,  te,  peek4096(ftmp, 4093),  peek4096(ftmp, 4094),  peek4096(ftmp, 4095),  0,  0)
   var j: int = 0
@@ -9475,19 +10174,23 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
               var fld_e: int = peek_tk(te, chk)
               chk = chk + 1
               # capture the field type name (token after ':') to know
-              # float-ness for LocalAllocFloat/StoreFloat parity
+              # float-ness for LocalAllocFloat/StoreFloat parity, and
+              # array[N, ...] element count for LocalAllocArray parity
               var fld_float: int = 0
+              var fld_elems: int = 0
               if chk + 1 < n[0] and peek_tk(tk, chk) == 56:
                 var ty_tok: int = chk + 1
                 if tok_is(src, ts, te, ty_tok, "float") == 1 or tok_is(src, ts, te, ty_tok, "float64") == 1 or tok_is(src, ts, te, ty_tok, "float32") == 1 or tok_is(src, ts, te, ty_tok, "float16") == 1 or tok_is(src, ts, te, ty_tok, "float8") == 1 or tok_is(src, ts, te, ty_tok, "float4") == 1 or tok_is(src, ts, te, ty_tok, "f64") == 1 or tok_is(src, ts, te, ty_tok, "f32") == 1 or tok_is(src, ts, te, ty_tok, "f16") == 1 or tok_is(src, ts, te, ty_tok, "f8") == 1 or tok_is(src, ts, te, ty_tok, "f4") == 1:
                   fld_float = 1
+                if ty_tok + 2 < n[0] and tok_is(src, ts, te, ty_tok, "array") == 1 and tok_is(src, ts, te, ty_tok + 1, "[") == 1:
+                  fld_elems = li_rt_mir_int(src,  peek_tk(ts, ty_tok + 2),  peek_tk(te, ty_tok + 2))
               # skip : and type tokens until newline
               while chk < n[0] and peek_tk(tk, chk) != 1:
                 chk = chk + 1
               # skip newlines
               while chk < n[0] and peek_tk(tk, chk) == 1:
                 chk = chk + 1
-              mir_obj_reg_field(itmp, fld_s, fld_e, fld_float)
+              mir_obj_reg_field(itmp, fld_s, fld_e, fld_float, fld_elems)
               nfields = nfields + 1
             mir_obj_reg_type(itmp, src, ts, te, obj_type_start, obj_type_end, nfields, field_base, -1, -1)
       skip_newlines(tk,  n,  pi,  err)
