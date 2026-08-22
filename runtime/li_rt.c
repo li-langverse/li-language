@@ -611,6 +611,14 @@ int32_t li_rt_str_eq(const char* a, const char* b) {
   return strcmp(a, b) == 0 ? 1 : 0;
 }
 
+int32_t li_rt_str_prefix(const char* s, const char* prefix) {
+  if (s == NULL || prefix == NULL) {
+    return 0;
+  }
+  const size_t plen = strlen(prefix);
+  return strncmp(s, prefix, plen) == 0 ? 1 : 0;
+}
+
 const char* li_rt_read_file(const char* path) {
   if (path == NULL) {
     return NULL;

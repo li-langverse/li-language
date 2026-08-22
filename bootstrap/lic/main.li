@@ -49,6 +49,9 @@ extern def li_rt_str_char_at(s: var ptr,  i: int) -> int
 extern def li_rt_str_eq(a: ptr,  b: ptr) -> int
   requires true
   ensures true
+extern def li_rt_str_prefix(s: ptr,  prefix: ptr) -> int
+  requires true
+  ensures true
 extern def bytes_slice_i(b: ptr,  off: int,  n: int) -> ptr
   requires true
   ensures true
@@ -5930,17 +5933,11 @@ def mir_farray_size(src: var ptr,  ts: var array[131072, int],  te: var array[13
   ensures result >= 0
   decreases 0
 =
-  var p: int = 0
-  while p < pn[0]:
-    var j: int = 0
-    while j < peek128(ppn, p + 0):
-      var pi2: int = peek128(pp0, p + 0) + j
-      if peek512(pef, pi2 + 0) == 1:
-        if mir_slice_eq(src,  s,  e,  peek_tk(ts, peek512(ptok2, pi2 + 0) + 0),  peek_tk(te, peek512(ptok2, pi2 + 0) + 0)) == 1:
-          return peek512(pelems, pi2 + 0)
-      j = j + 1
-    p = p + 1
-  # Also check local float arrays (2-slot fatok encoding: [name, size] per entry)
+  # Float-array size lookup is scoped to the CURRENT proc only: the emit pass
+  # registers the current proc's float-array params + locals in fatok before
+  # lowering bodies (2-slot encoding: [name, size] per entry). Scanning all
+  # procs' params would leak e.g. `r: var array[8,float]` from another proc
+  # into a scalar `r` here, wrongly firing the array-scale path.
   var k: int = 0
   while k < nfa[0]:
     if mir_slice_eq(src,  s,  e,  peek_tk(ts, peek512(fatok, 2 * k + 0) + 0),  peek_tk(te, peek512(fatok, 2 * k + 0) + 0)) == 1:
@@ -6357,6 +6354,91 @@ def mir_cr_alloc_fields(src: var ptr,  ts: var array[131072, int],  te: var arra
     i_c = i_c + 1
   return 0
 
+# Recursively emit LocalAlloc for a method-call write-back temp wb<N>,
+# flattening nested object fields: __li_o_wb<N>[_<parent>_]<leaf>.
+def mir_wb_alloc_fields(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], itmp: var array[4096, int],  crid: int,  type_idx: int,  p_s: int,  p_e: int) raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var nf_w: int = mir_obj_field_count(itmp, type_idx)
+  var i_w: int = 0
+  var fa_w: array[2, int]
+  while i_w < nf_w:
+    mir_obj_field_name(itmp, type_idx, i_w, fa_w)
+    var sub_w: int = mir_obj_field_obj_type(src, ts, te, itmp, type_idx, i_w)
+    if sub_w >= 0:
+      mir_wb_alloc_fields(src,  ts,  te,  itmp,  crid,  sub_w,  fa_w[0],  fa_w[1])
+    else:
+      var cop_w: int = 24
+      var iv_w: int = 0
+      if mir_obj_field_elems(itmp, type_idx, i_w) > 0:
+        cop_w = 9
+        iv_w = mir_obj_field_elems(itmp, type_idx, i_w)
+      else:
+        if mir_obj_field_float(itmp, type_idx, i_w) == 1:
+          cop_w = 35
+      li_rt_mir_str("INS")
+      li_rt_ast_space()
+      li_rt_ast_int(cop_w)
+      li_rt_ast_space()
+      li_rt_ast_int(iv_w)
+      li_rt_ast_space()
+      li_rt_ast_int(0)
+      li_rt_ast_space()
+      li_rt_mir_str("__li_o_wb")
+      li_rt_ast_int(crid)
+      li_rt_mir_str("_")
+      if p_s >= 0:
+        li_rt_mir_esc(src, p_s, p_e)
+        li_rt_mir_str("_")
+      li_rt_mir_esc(src, fa_w[0], fa_w[1])
+      # 5 empty name cells
+      li_rt_ast_space()
+      li_rt_ast_space()
+      li_rt_ast_space()
+      li_rt_ast_space()
+      li_rt_ast_space()
+      # f18..f21
+      li_rt_ast_space()
+      li_rt_ast_int(0)
+      li_rt_ast_space()
+      li_rt_ast_int(0)
+      li_rt_ast_space()
+      li_rt_ast_int(0)
+      li_rt_ast_space()
+      li_rt_ast_int(1)
+      # name cell 6 (empty)
+      li_rt_ast_space()
+      # f25..f36
+      li_rt_ast_space()
+      li_rt_ast_int(0)
+      li_rt_ast_space()
+      li_rt_ast_int(1)
+      li_rt_ast_space()
+      li_rt_ast_int(0)
+      li_rt_ast_space()
+      li_rt_ast_int(0)
+      li_rt_ast_space()
+      li_rt_ast_int(0)
+      li_rt_ast_space()
+      li_rt_ast_int(0)
+      li_rt_ast_space()
+      li_rt_ast_int(0)
+      li_rt_ast_space()
+      li_rt_ast_int(0)
+      li_rt_ast_space()
+      li_rt_ast_int(0)
+      li_rt_ast_space()
+      li_rt_ast_int(0)
+      li_rt_ast_space()
+      li_rt_ast_int(0)
+      li_rt_ast_space()
+      li_rt_ast_int(0)
+      li_rt_ast_nl()
+    i_w = i_w + 1
+  return 0
+
 # Emit INS with a mangled base-only name (e.g. `return v` -> INS 4 __li_o_v)
 def mir_ins_mangled_base(src: var ptr, op: int, base_s: int, base_e: int, lastop: var array[1, int]) raises IO -> int
   requires true
@@ -6580,10 +6662,17 @@ def mir_obj_emit_copy(src: var ptr,  ts: var array[131072, int],  te: var array[
     li_rt_ast_space()
     li_rt_ast_int(0)
     li_rt_ast_space()
-    li_rt_mir_str("__li_o_")
-    li_rt_mir_esc(src, dst_s, dst_e)
-    li_rt_mir_str("_")
-    li_rt_mir_esc(src, fs, fe)
+    if src_is_cr == 2:
+      # dst is wb temp: __li_o_wb<crid>_<field>
+      li_rt_mir_str("__li_o_wb")
+      li_rt_ast_int(crid)
+      li_rt_mir_str("_")
+      li_rt_mir_esc(src, fs, fe)
+    else:
+      li_rt_mir_str("__li_o_")
+      li_rt_mir_esc(src, dst_s, dst_e)
+      li_rt_mir_str("_")
+      li_rt_mir_esc(src, fs, fe)
     li_rt_ast_space()
     li_rt_ast_space()
     li_rt_ast_space()
@@ -6592,8 +6681,13 @@ def mir_obj_emit_copy(src: var ptr,  ts: var array[131072, int],  te: var array[
       li_rt_mir_str("__li_o___cr")
       li_rt_ast_int(crid)
     else:
-      li_rt_mir_str("__li_o_")
-      li_rt_mir_esc(src, src_s, src_e)
+      if src_is_cr == 3:
+        # src is wb temp: __li_o_wb<crid>_<field>
+        li_rt_mir_str("__li_o_wb")
+        li_rt_ast_int(crid)
+      else:
+        li_rt_mir_str("__li_o_")
+        li_rt_mir_esc(src, src_s, src_e)
     li_rt_mir_str("_")
     li_rt_mir_esc(src, fs, fe)
     li_rt_ast_space()
@@ -7130,6 +7224,38 @@ def mir_arg_obj_line(src: var ptr, base_s: int, base_e: int, itmp: var array[409
   li_rt_ast_nl()
   return 0
 
+# ARG line for a method-call write-back slot: __li_o_wb<id>_<field>.
+def mir_arg_wb_line(src: var ptr, itmp: var array[4096, int], type_idx: int, field_idx: int, wbid: int, iai: int, is_var: int) raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var fw: array[2, int]
+  mir_obj_field_name(itmp, type_idx, field_idx, fw)
+  li_rt_mir_str("ARG")
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_mir_str("__li_o_wb")
+  li_rt_ast_int(wbid)
+  li_rt_mir_str("_")
+  li_rt_mir_esc(src,  fw[0],  fw[1])
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_space()
+  li_rt_ast_int(iai)
+  li_rt_ast_space()
+  li_rt_ast_int(is_var)
+  li_rt_ast_nl()
+  return 0
+
 # ---- expression parse (descriptor build, no emission) ----
 def mir_parse_postfix(darena: var array[65536, int],  dasp: var array[1, int], src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  rec: int) -> int
   requires true
@@ -7154,6 +7280,38 @@ def mir_parse_postfix(darena: var array[65536, int],  dasp: var array[1, int], s
         return -1
       var fld_t: int = pi[0]
       pi[0] = pi[0] + 1
+      # Method call: x.field(...) -> kind 13 (base, method_s, method_e,
+      # argc, arglist). The kind-9 field access is replaced by a method call
+      # descriptor so lowering can emit the var-object write-back dance.
+      if cur_kind(tk,  n,  pi,  err) == 49:
+        pi[0] = pi[0] + 1
+        var ma: array[32, int]
+        var mac: int = 0
+        if cur_kind(tk,  n,  pi,  err) != 50:
+          var md: int = 0
+          while md == 0:
+            var marg: int = mir_parse_expr(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err, 0)
+            if marg < 0:
+              return -1
+            if mac < 32:
+              set32(ma, mac + 0, marg)
+            mac = mac + 1
+            if accept_k(tk,  n,  pi,  err, 55) == 1:
+              md = 0
+            else:
+              md = 1
+        expect_k(tk,  n,  pi,  err, 50)
+        var mrec: int = d_alloc(darena,  dasp,  13,  rec,  peek_tk(ts, fld_t + 0),  peek_tk(te, fld_t + 0))
+        set65536(darena, mrec + 4, mac)
+        var mrt: int = dasp[0]
+        var mri: int = 0
+        while mri < mac:
+          set65536(darena, mrt + mri, peek32(ma, mri + 0))
+          mri = mri + 1
+        dasp[0] = mrt + mac
+        set65536(darena, mrec + 5, mrt)
+        rec = mrec
+        continue
       rec = d_alloc(darena,  dasp,  9,  rec, peek_tk(ts, fld_t + 0), peek_tk(te, fld_t + 0))
       continue
     loop = 0
@@ -7291,6 +7449,42 @@ def mir_proc_find(src: var ptr,  ts: var array[131072, int],  te: var array[1310
       return k
     k = k + 1
   return -1
+
+# Find the proc whose name is the mangled method callee `Type_method`
+# (type-name span ty_s..ty_e, method-name span ms..me). Returns the pid or -1.
+def mir_method_pid(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], ty_s: int,  ty_e: int,  ms: int,  me: int,  ptok: var array[128, int],  pn: var array[1, int]) -> int
+  requires true
+  ensures result >= -1
+  decreases 0
+=
+  var tlen: int = ty_e - ty_s
+  var mlen: int = me - ms
+  var k: int = 0
+  while k < pn[0]:
+    var ns: int = peek_tk(ts, peek128(ptok, k + 0) + 0)
+    var ne: int = peek_tk(te, peek128(ptok, k + 0) + 0)
+    if ne - ns == tlen + 1 + mlen:
+      if mir_slice_eq(src,  ns,  ns + tlen,  ty_s,  ty_e) == 1:
+        if li_rt_str_char_at(src,  ns + tlen) == 95:
+          if mir_slice_eq(src,  ns + tlen + 1,  ne,  ms,  me) == 1:
+            return k
+    k = k + 1
+  return -1
+
+# Is the first param of proc pid a `var Object` (write-back receiver)?
+def mir_method_first_var(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], pid: int,  pp0: var array[128, int],  pvar: var array[512, int]) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  if pid < 0:
+    return 0
+  var fi: int = peek128(pp0, pid + 0)
+  var pv: int = peek512(pvar, fi + 0)
+  if pv >= 1000:
+    if (pv - 1000) % 2 == 1:
+      return 1
+  return 0
 
 # Overwrite descriptor rec in place with a name record (kind 8).
 def mir_mk_name(darena: var array[65536, int],  rec: int,  is_tmp: int,  v1: int,  v2: int) -> int
@@ -7844,6 +8038,208 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
       mir_ins_line(src,  f7,  30,  0,  -1,  lastop)
     mir_mk_name(darena,  rec,  1,  c7,  0)
     return 0
+  if k == 13:
+    # Method call `recv.method(args)` on a var-object receiver: C++ lowers it
+    # as the in-out write-back dance — wb temp slots, copy-in, CallProc with
+    # the wb slots as is_var_ref args, then copy-back to the receiver.
+    var mb: int = peek65536(darena, rec + 1)
+    var ms: int = peek65536(darena, rec + 2)
+    var me: int = peek65536(darena, rec + 3)
+    if peek65536(darena, mb + 0) == 3:
+      var rv_s: int = peek65536(darena, mb + 1)
+      var rv_e: int = peek65536(darena, mb + 2)
+      var rv_ti: int = mir_obj_find_var(src, ts, te, itmp, rv_s, rv_e)
+      if rv_ti >= 0:
+        var ty_s: int = peek4096(itmp, 3001 + rv_ti * 6 + 0)
+        var ty_e: int = peek4096(itmp, 3001 + rv_ti * 6 + 1)
+        var mpid: int = mir_method_pid(src, ts, te, ty_s, ty_e, ms, me, ptok, pn)
+        var nf_m: int = mir_obj_field_count(itmp, rv_ti)
+        var fi_m: int = 0
+        var rd_m: int = 8
+        if mpid >= 0:
+          rd_m = peek128(pret, mpid + 0)
+        var drec: int = -1
+        if rd_m != 0:
+          if rd_m != 8:
+            drec = tc[0]
+            tc[0] = drec + 1
+        if mir_method_first_var(src, ts, te, mpid, pp0, pvar) == 1:
+          var wbid: int = tc[0]
+          tc[0] = wbid + 1
+          # 1) wb slot allocs (INS 35 float / 24 int / 9 array), nested flattened
+          mir_wb_alloc_fields(src,  ts,  te,  itmp,  wbid,  rv_ti,  -1,  -1)
+          # 2) copy-in: wb slots <- receiver slots
+          fi_m = 0
+          while fi_m < nf_m:
+            mir_obj_emit_copy(src,  ts,  te,  itmp,  rv_ti,  fi_m,  0,  0,  rv_s,  rv_e,  2,  wbid,  tc)
+            fi_m = fi_m + 1
+          # 3) INS 8 CallProc <Type>_<method> with wb args + method args
+          li_rt_mir_str("INS")
+          li_rt_ast_space()
+          li_rt_ast_int(8)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          if drec >= 0:
+            li_rt_mir_str("__t")
+            li_rt_ast_int(drec)
+            li_rt_ast_space()
+            if rd_m == 2:
+              set32768(ftmp, drec + 0, 1)
+            li_rt_ast_space()
+          else:
+            li_rt_ast_space()
+            li_rt_ast_space()
+          li_rt_mir_esc(src, ty_s, ty_e)
+          li_rt_mir_str("_")
+          li_rt_mir_esc(src, ms, me)
+          li_rt_ast_space()
+          li_rt_ast_space()
+          li_rt_ast_space()
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(1)
+          li_rt_ast_space()
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(1)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_nl()
+          # wb arg slots (is_var_ref=1)
+          fi_m = 0
+          while fi_m < nf_m:
+            mir_arg_wb_line(src, itmp, rv_ti, fi_m, wbid, 0, 1)
+            fi_m = fi_m + 1
+        else:
+          # By-value receiver (self: Type): plain CallProc — receiver slots
+          # passed directly as value args (is_var_ref=0).
+          li_rt_mir_str("INS")
+          li_rt_ast_space()
+          li_rt_ast_int(8)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          if drec >= 0:
+            li_rt_mir_str("__t")
+            li_rt_ast_int(drec)
+            li_rt_ast_space()
+            if rd_m == 2:
+              set32768(ftmp, drec + 0, 1)
+            li_rt_ast_space()
+          else:
+            li_rt_ast_space()
+            li_rt_ast_space()
+          li_rt_mir_esc(src, ty_s, ty_e)
+          li_rt_mir_str("_")
+          li_rt_mir_esc(src, ms, me)
+          li_rt_ast_space()
+          li_rt_ast_space()
+          li_rt_ast_space()
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(1)
+          li_rt_ast_space()
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(1)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_nl()
+          # receiver field args (is_var_ref=0)
+          fi_m = 0
+          while fi_m < nf_m:
+            var iai_m: int = 0
+            if mir_obj_field_elems(itmp, rv_ti, fi_m) > 0:
+              iai_m = 1
+            mir_arg_obj_line(src, rv_s, rv_e, itmp, rv_ti, fi_m, iai_m, 0)
+            fi_m = fi_m + 1
+        # method args
+        var nma: int = peek65536(darena, rec + 4)
+        var ma_i: int = 0
+        while ma_i < nma:
+          var mar: int = peek65536(darena, peek65536(darena, rec + 5) + ma_i)
+          var mk2: int = peek65536(darena, mar + 0)
+          if mk2 == 0:
+            # int literal: ARG 1 <val> 0 0 ...
+            mir_arg_line(src,  1,  peek65536(darena, mar + 1),  0,  -1,  0,  0,  0,  0,  0,  0,  0,  0)
+          else:
+            if mk2 == 1:
+              # float literal: ARG 0 0 1 <fmt> 0 0 0
+              mir_arg_line(src,  0,  0,  1,  peek65536(darena, mar + 1),  0,  0,  0,  0,  0,  0,  0,  0)
+            else:
+              if mk2 == 3:
+                mir_arg_line(src,  0,  0,  0,  -1,  peek65536(darena, mar + 1),  peek65536(darena, mar + 2),  1,  0,  0,  0,  0,  0)
+              else:
+                if mir_lower_expr(darena,  dasp,  mar,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+                  return 1
+                mir_arg_line(src,  0,  0,  0,  -1,  peek65536(darena, mar + 2),  0,  2,  0,  0,  0,  0,  0)
+          ma_i = ma_i + 1
+        # 4) copy-back (wb case only): receiver slots <- wb slots
+        if mir_method_first_var(src, ts, te, mpid, pp0, pvar) == 1:
+          fi_m = 0
+          while fi_m < nf_m:
+            mir_obj_emit_copy(src,  ts,  te,  itmp,  rv_ti,  fi_m,  rv_s,  rv_e,  0,  0,  3,  wbid,  tc)
+            fi_m = fi_m + 1
+        if drec >= 0:
+          mir_mk_name(darena,  rec,  1,  drec,  0)
+        else:
+          mir_mk_name(darena,  rec,  2,  0,  0)
+        return 0
+    err[0] = 1
+    return 1
   if k == 4:
     if peek65536(darena, rec + 4) == 1:
       if mir_slice_is(src,  peek65536(darena, rec + 1),  peek65536(darena, rec + 2),  "sum") == 1:
@@ -8091,6 +8487,59 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
     if pid >= 0:
       if peek128(pex, pid + 0) == 0:
         is_callproc = 1
+    # SIMD builtins: __li_simd_splat_f64 (37), __li_simd_mul_f64 (38),
+    # __li_simd_add_f64 (39), __li_horiz_sum_f64 (40). These mirror the C++
+    # Call-expr special cases; the dest is always a fresh temp with simd_lanes=4.
+    var simd_op: int = -1
+    if mir_slice_is(src,  peek65536(darena, rec + 1),  peek65536(darena, rec + 2),  "__li_simd_splat_f64") == 1:
+      simd_op = 37
+    if mir_slice_is(src,  peek65536(darena, rec + 1),  peek65536(darena, rec + 2),  "__li_simd_mul_f64") == 1:
+      simd_op = 38
+    if mir_slice_is(src,  peek65536(darena, rec + 1),  peek65536(darena, rec + 2),  "__li_simd_add_f64") == 1:
+      simd_op = 39
+    if mir_slice_is(src,  peek65536(darena, rec + 1),  peek65536(darena, rec + 2),  "__li_horiz_sum_f64") == 1:
+      simd_op = 40
+    if simd_op >= 0:
+      var fsd: array[44, int]
+      mir_fdef(fsd)
+      var sd_t: int = tc[0]
+      tc[0] = sd_t + 1
+      fsd[0] = sd_t
+      fsd[2] = 2
+      fsd[36] = 4
+      var sd_a: int = 0
+      while sd_a < peek65536(darena, rec + 4):
+        var sd_rec: int = peek65536(darena, peek65536(darena, rec + 5) + sd_a)
+        var sd_kind: int = peek65536(darena, sd_rec + 0)
+        # Plain idents pass directly by span; anything else lowers to a temp.
+        var sd_s: int = -1
+        var sd_e: int = -1
+        if sd_kind == 3:
+          sd_s = peek65536(darena, sd_rec + 1)
+          sd_e = peek65536(darena, sd_rec + 2)
+        else:
+          if mir_lower_expr(darena,  dasp,  sd_rec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+            return 1
+          sd_s = peek65536(darena, sd_rec + 2)
+          sd_e = peek65536(darena, sd_rec + 2)
+        if sd_a == 0:
+          if simd_op == 37:
+            fsd[12] = sd_s
+            fsd[13] = sd_e
+            fsd[14] = 1
+          else:
+            fsd[9] = sd_s
+            fsd[10] = sd_e
+            fsd[11] = 1
+        else:
+          if simd_op != 37 and simd_op != 40:
+            fsd[12] = sd_s
+            fsd[13] = sd_e
+            fsd[14] = 1
+        sd_a = sd_a + 1
+      mir_ins_line(src,  fsd,  simd_op,  0,  -1,  lastop)
+      mir_mk_name(darena,  rec,  1,  sd_t,  0)
+      return 0
     var abuf: array[128, int]
     var aobj: array[128, int]
     var nab: var array[1, int]
@@ -8236,7 +8685,8 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
       var ev: int = 0
       if pid >= 0:
         if peek128(pret, pid + 0) != 0:
-          ev = 1
+          if peek128(pret, pid + 0) != 8:
+            ev = 1
       else:
         if std_int == 1 or std_str == 1:
           ev = 1
@@ -8487,6 +8937,10 @@ def mir_stmt(darena: var array[65536, int],  dasp: var array[1, int], src: var p
       else:
         if mir_lower_expr(darena,  dasp,  lrec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
           return 1
+    else:
+      # Non-ident expression statement (method call, etc.): lower it.
+      if mir_lower_expr(darena,  dasp,  lrec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+        return 1
   skip_newlines(tk,  n,  pi,  err)
   return 0
 
@@ -8835,7 +9289,20 @@ def mir_type_info(src: var ptr,  tk: var array[131072, int],  ts: var array[1310
   if tok_is(src,  ts,  te,  nm,  "unit") == 1:
     ti[0] = 7
     return 0
-  # unknown named type (object/callable/tuple/simd): skip type args
+  if tok_is(src,  ts,  te,  nm,  "simd") == 1:
+    # simd[f64, N] — record lanes in ti[2] (type code 8 = simd f64).
+    ti[0] = 8
+    if accept_k(tk,  n,  pi,  err, 51) == 1:
+      var eti3: array[6, int]
+      if mir_type_info(src,  tk,  ts,  te,  n,  pi,  err,  eti3) == 1:
+        return 1
+      if accept_k(tk,  n,  pi,  err, 55) == 1:
+        if cur_kind(tk,  n,  pi,  err) == 5:
+          ti[2] = int_text_value(src,  ts,  te,  pi[0])
+          pi[0] = pi[0] + 1
+      expect_k(tk,  n,  pi,  err, 52)
+    return 0
+  # unknown named type (object/callable/tuple): skip type args
   if cur_kind(tk,  n,  pi,  err) == 49 or cur_kind(tk,  n,  pi,  err) == 51:
     var dep: int = 0
     var d2: int = 0
@@ -9127,6 +9594,18 @@ def mir_var_decl(darena: var array[65536, int],  dasp: var array[1, int], src: v
               fi2 = fi2 + 1
       skip_newlines(tk,  n,  pi,  err)
       return 0
+  if ty == 8:
+    # simd[f64, N] var: C++ emits LocalAllocSimdF64 (INS 36) with simd_lanes
+    # in the final field and DROPS the init expression entirely.
+    var f36: array[44, int]
+    mir_fdef(f36)
+    f36[0] = peek_tk(ts, vn + 0)
+    f36[1] = peek_tk(te, vn + 0)
+    f36[2] = 1
+    f36[36] = ti[2]
+    mir_ins_line(src,  f36,  36,  0,  -1,  lastop)
+    skip_newlines(tk,  n,  pi,  err)
+    return 0
   if ty == 1:
     var f35: array[44, int]
     mir_fdef(f35)
@@ -10338,7 +10817,7 @@ def mir_collect_proc(src: var ptr,  tk: var array[131072, int],  ts: var array[1
   skip_newlines(tk,  n,  pi,  err)
   mir_skip_raises(tk,  n,  pi,  err)
   skip_newlines(tk,  n,  pi,  err)
-  var ret: int = 0
+  var ret: int = 8
   if accept_k(tk,  n,  pi,  err, 57) == 1:
     var ti2: array[6, int]
     if mir_type_info(src,  tk,  ts,  te,  n,  pi,  err,  ti2) == 1:
@@ -10451,6 +10930,11 @@ def mir_proc(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
     reti64 = 1
   if ret == 0:
     retvoid = 1
+  if ret == 8:
+    # No `-> type` clause. C++ sets returns_void=false for non-extern procs
+    # with no return type; extern procs without a return type are void.
+    if is_extern == 1:
+      retvoid = 1
   if ret == 6:
     if rt_tok2 >= 0:
       ret_obj_ti = mir_obj_find_type(src, ts, te, itmp, peek_tk(ts, rt_tok2 + 0), peek_tk(te, rt_tok2 + 0))
@@ -10819,6 +11303,51 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
     return 1
   return 0
 
+# Scan the token stream for extern call sites and set the MIR module
+# runtime-link flags in ftmp cells (4086=needs_rt_httpd, 4087=needs_rt_net,
+# 4088=needs_rt_log), mirroring mir_runtime_link.cpp's prefix rules. A call
+# site is `ident(` where ident resolves to a collected extern proc.
+def mir_scan_rt_flags(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  ftmp: var array[32768, int],  ptok: var array[128, int],  pex: var array[128, int],  pn: var array[1, int]) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  var pi2: array[1, int]
+  pi2[0] = 0
+  var err2: array[1, int]
+  err2[0] = 0
+  skip_newlines(tk,  n,  pi2,  err2)
+  while 1 == 1:
+    var k: int = cur_kind(tk,  n,  pi2,  err2)
+    if k == 0 or k == 3:
+      break
+    if k == 4:
+      # Skip declarations (`extern def name(` / `def name(`): the token before
+      # the ident is `def` (kind 10). Only call sites set runtime-link flags.
+      var is_decl: int = 0
+      if pi2[0] >= 1:
+        if peek_tk(tk, pi2[0] - 1) == 10:
+          is_decl = 1
+      if is_decl == 0:
+        if peek_off(tk,  n,  pi2,  1) == 49:
+          var pid: int = mir_proc_find(src,  ts,  te,  peek_tk(ts, pi2[0] + 0),  peek_tk(te, pi2[0] + 0),  ptok,  pn)
+          if pid >= 0:
+            if peek128(pex, pid + 0) == 1:
+              var nm: ptr = bytes_slice_i(src,  peek_tk(ts, pi2[0] + 0),  peek_tk(te, pi2[0] + 0) - peek_tk(ts, pi2[0] + 0))
+              if li_rt_str_prefix(nm, "li_log_") == 1 or li_rt_str_prefix(nm, "li_rt_log_") == 1:
+                set32768(ftmp, 4088, 1)
+              if li_rt_str_prefix(nm, "httpd_") == 1 or li_rt_str_prefix(nm, "li_rt_httpd_") == 1 or li_rt_str_prefix(nm, "proxy_") == 1 or li_rt_str_prefix(nm, "li_rt_proxy_") == 1:
+                set32768(ftmp, 4086, 1)
+              if li_rt_str_prefix(nm, "net_") == 1 or li_rt_str_prefix(nm, "tcp_") == 1 or li_rt_str_prefix(nm, "epoll_") == 1 or li_rt_str_prefix(nm, "hdr_") == 1 or li_rt_str_prefix(nm, "buf_") == 1 or li_rt_str_prefix(nm, "bytes_") == 1 or li_rt_str_prefix(nm, "li_rt_net") == 1 or li_rt_str_prefix(nm, "li_async_") == 1 or li_rt_str_prefix(nm, "tcp_echo_") == 1:
+                set32768(ftmp, 4087, 1)
+              if li_rt_str_eq(nm, "path_ends_with_conf") == 1 or li_rt_str_eq(nm, "net_ping") == 1:
+                set32768(ftmp, 4087, 1)
+    pi2[0] = pi2[0] + 1
+  # Note: `lic mir` (lower_to_mir) sets these flags only from direct extern
+  # callee names during lowering — the httpd→net→log cascade runs only in the
+  # codegen path, so we do NOT apply it here.
+  return 0
+
 def mir_module(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int]) raises IO -> int
   requires true
   ensures result == 0 or result == 1
@@ -10865,6 +11394,11 @@ def mir_module(src: var ptr,  tk: var array[131072, int],  ts: var array[131072,
   if mir_walk(src,  tk,  ts,  te,  n,  pi,  err,  0, tc,  lastop,  ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar,  pmx,  pmc,  pcount) == 1:
     return 1
   var has_async: int = peek32768(ftmp, 4091)
+  set32768(ftmp, 4086, 0)
+  set32768(ftmp, 4087, 0)
+  set32768(ftmp, 4088, 0)
+  if mir_scan_rt_flags(src,  tk,  ts,  te,  n,  ftmp,  ptok,  pex,  pn) == 1:
+    return 1
   li_rt_mir_str("MIR")
   li_rt_ast_space()
   li_rt_ast_int(pn[0])
@@ -10873,11 +11407,11 @@ def mir_module(src: var ptr,  tk: var array[131072, int],  ts: var array[131072,
   li_rt_ast_space()
   li_rt_ast_int(has_async)
   li_rt_ast_space()
-  li_rt_ast_int(0)
+  li_rt_ast_int(peek32768(ftmp, 4086))
   li_rt_ast_space()
-  li_rt_ast_int(0)
+  li_rt_ast_int(peek32768(ftmp, 4087))
   li_rt_ast_space()
-  li_rt_ast_int(0)
+  li_rt_ast_int(peek32768(ftmp, 4088))
   li_rt_ast_space()
   li_rt_ast_int(0)
   li_rt_ast_nl()
