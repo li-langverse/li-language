@@ -302,6 +302,8 @@ def int_text_value(src: var ptr,  ts: var array[131072,  int],  te: var array[13
 type Pos65536 = {p: int | 0 <= p and p < 65536}
 type Pos4096 = {p: int | 0 <= p and p < 4096}
 type Pos32768 = {p: int | 0 <= p and p < 32768}
+type Pos16384 = {p: int | 0 <= p and p < 16384}
+type Pos1024 = {p: int | 0 <= p and p < 1024}
 type Pos512 = {p: int | 0 <= p and p < 512}
 type Pos128 = {p: int | 0 <= p and p < 128}
 type Pos40 = {p: int | 0 <= p and p < 40}
@@ -346,6 +348,36 @@ def peek32768(buf: var array[32768, int], p: Pos32768) -> int
   return buf[p]
 
 def set32768(buf: var array[32768, int], p: Pos32768, v: int) -> int
+  requires true
+  ensures result == v
+  decreases 0
+=
+  buf[p] = v
+  return v
+
+def peek16384(buf: var array[16384, int], p: Pos16384) -> int
+  requires true
+  ensures result == buf[p]
+  decreases 0
+=
+  return buf[p]
+
+def set16384(buf: var array[16384, int], p: Pos16384, v: int) -> int
+  requires true
+  ensures result == v
+  decreases 0
+=
+  buf[p] = v
+  return v
+
+def peek1024(buf: var array[1024, int], p: Pos1024) -> int
+  requires true
+  ensures result == buf[p]
+  decreases 0
+=
+  return buf[p]
+
+def set1024(buf: var array[1024, int], p: Pos1024, v: int) -> int
   requires true
   ensures result == v
   decreases 0
@@ -475,7 +507,7 @@ def print_usage() raises IO -> int
   ensures result == 1
   decreases 0
 =
-  print("usage: lic-from-li --version | smoke | lex <file> | parse <file> | ast <file>")
+  print("usage: lic-from-li --version | smoke | lex <file> | parse <file> | ast <file> | mir <file> | check <file>")
   return 1
 
 # ------------------------------------------------------------------ lexer --
@@ -5884,6 +5916,48 @@ def mir_slice_eq(src: var ptr,  s1: int,  e1: int,  s2: int,  e2: int) -> int
     k = k + 1
   return 1
 
+# ---- pname: text-based proc name storage (cross-file lookup) -----------
+# Each proc's name is stored at pname_data[pid * 64 .. pid * 64 + 63], one
+# byte per int.  pname_off is unused (kept for signature compat).
+
+def mir_pname_store(pname_data: var array[16384, int], pname_off: var array[1024, int], pn: var array[1, int], src: var ptr, s: int, e: int) -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var pid: int = pn[0]
+  var base: int = pid * 64
+  if base + 64 > 16384:
+    return 0
+  var i: int = 0
+  var nlen: int = e - s
+  if nlen > 63:
+    nlen = 63
+  while i < nlen:
+    set16384(pname_data, base + i, li_rt_str_char_at(src, s + i))
+    i = i + 1
+  set16384(pname_data, base + i, 0)
+  return 0
+
+def mir_pname_eq(pname_data: var array[16384, int], pname_off: var array[1024, int], pid: int, src: var ptr, s: int, e: int) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  var base: int = pid * 64
+  if base + 64 > 16384:
+    return 0
+  var nlen: int = e - s
+  var i: int = 0
+  while i < nlen:
+    if peek16384(pname_data, base + i) != li_rt_str_char_at(src, s + i):
+      return 0
+    i = i + 1
+  if i < 63:
+    if peek16384(pname_data, base + i) != 0:
+      return 0
+  return 1
+
 # Is the name [s,e) one of the float source names (token indices in ftok)?
 def mir_name_float(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], s: int,  e: int,  ftok: var array[4096, int],  nft: var array[1, int]) -> int
   requires true
@@ -7450,6 +7524,23 @@ def mir_proc_find(src: var ptr,  ts: var array[131072, int],  te: var array[1310
     k = k + 1
   return -1
 
+def mir_proc_find_ext(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], s: int,  e: int,  ptok: var array[128, int],  pn: var array[1, int], pname_data: var array[16384, int], pname_off: var array[1024, int]) -> int
+  requires true
+  ensures result >= -1
+  decreases 0
+=
+  var k: int = 0
+  while k < pn[0]:
+    if mir_slice_eq(src,  s,  e,  peek_tk(ts, peek128(ptok, k + 0) + 0),  peek_tk(te, peek128(ptok, k + 0) + 0)) == 1:
+      return k
+    k = k + 1
+  k = 0
+  while k < pn[0]:
+    if mir_pname_eq(pname_data, pname_off, k, src, s, e) == 1:
+      return k
+    k = k + 1
+  return -1
+
 # Find the proc whose name is the mangled method callee `Type_method`
 # (type-name span ty_s..ty_e, method-name span ms..me). Returns the pid or -1.
 def mir_method_pid(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], ty_s: int,  ty_e: int,  ms: int,  me: int,  ptok: var array[128, int],  pn: var array[1, int]) -> int
@@ -7467,6 +7558,38 @@ def mir_method_pid(src: var ptr,  ts: var array[131072, int],  te: var array[131
       if mir_slice_eq(src,  ns,  ns + tlen,  ty_s,  ty_e) == 1:
         if li_rt_str_char_at(src,  ns + tlen) == 95:
           if mir_slice_eq(src,  ns + tlen + 1,  ne,  ms,  me) == 1:
+            return k
+    k = k + 1
+  return -1
+
+def mir_method_pid_ext(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], ty_s: int,  ty_e: int,  ms: int,  me: int,  ptok: var array[128, int],  pn: var array[1, int], pname_data: var array[16384, int], pname_off: var array[1024, int]) -> int
+  requires true
+  ensures result >= -1
+  decreases 0
+=
+  var tlen: int = ty_e - ty_s
+  var mlen: int = me - ms
+  var k: int = 0
+  while k < pn[0]:
+    var base: int = k * 64
+    var i: int = 0
+    var match_type: int = 1
+    while i < tlen:
+      if peek16384(pname_data, base + i) != li_rt_str_char_at(src, ty_s + i):
+        match_type = 0
+        i = tlen
+      i = i + 1
+    if match_type == 1:
+      if peek16384(pname_data, base + tlen) == 95:
+        var j: int = 0
+        var match_method: int = 1
+        while j < mlen:
+          if peek16384(pname_data, base + tlen + 1 + j) != li_rt_str_char_at(src, ms + j):
+            match_method = 0
+            j = mlen
+          j = j + 1
+        if match_method == 1:
+          if peek16384(pname_data, base + tlen + 1 + mlen) == 0:
             return k
     k = k + 1
   return -1
@@ -11307,7 +11430,7 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
 # runtime-link flags in ftmp cells (4086=needs_rt_httpd, 4087=needs_rt_net,
 # 4088=needs_rt_log), mirroring mir_runtime_link.cpp's prefix rules. A call
 # site is `ident(` where ident resolves to a collected extern proc.
-def mir_scan_rt_flags(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  ftmp: var array[32768, int],  ptok: var array[128, int],  pex: var array[128, int],  pn: var array[1, int]) -> int
+def mir_scan_rt_flags(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  ftmp: var array[32768, int],  ptok: var array[128, int],  pex: var array[128, int],  pn: var array[1, int], pname_data: var array[16384, int], pname_off: var array[1024, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -11330,7 +11453,7 @@ def mir_scan_rt_flags(src: var ptr,  tk: var array[131072, int],  ts: var array[
           is_decl = 1
       if is_decl == 0:
         if peek_off(tk,  n,  pi2,  1) == 49:
-          var pid: int = mir_proc_find(src,  ts,  te,  peek_tk(ts, pi2[0] + 0),  peek_tk(te, pi2[0] + 0),  ptok,  pn)
+          var pid: int = mir_proc_find_ext(src,  ts,  te,  peek_tk(ts, pi2[0] + 0),  peek_tk(te, pi2[0] + 0),  ptok,  pn,  pname_data,  pname_off)
           if pid >= 0:
             if peek128(pex, pid + 0) == 1:
               var nm: ptr = bytes_slice_i(src,  peek_tk(ts, pi2[0] + 0),  peek_tk(te, pi2[0] + 0) - peek_tk(ts, pi2[0] + 0))
@@ -11389,6 +11512,8 @@ def mir_module(src: var ptr,  tk: var array[131072, int],  ts: var array[131072,
   var pmc: array[512, int]
   var pcount: array[1, int]
   pcount[0] = 0
+  var pname_data: array[16384, int]
+  var pname_off: array[1024, int]
   pi[0] = 0
   err[0] = 0
   if mir_walk(src,  tk,  ts,  te,  n,  pi,  err,  0, tc,  lastop,  ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar,  pmx,  pmc,  pcount) == 1:
@@ -11397,7 +11522,7 @@ def mir_module(src: var ptr,  tk: var array[131072, int],  ts: var array[131072,
   set32768(ftmp, 4086, 0)
   set32768(ftmp, 4087, 0)
   set32768(ftmp, 4088, 0)
-  if mir_scan_rt_flags(src,  tk,  ts,  te,  n,  ftmp,  ptok,  pex,  pn) == 1:
+  if mir_scan_rt_flags(src,  tk,  ts,  te,  n,  ftmp,  ptok,  pex,  pn,  pname_data,  pname_off) == 1:
     return 1
   li_rt_mir_str("MIR")
   li_rt_ast_space()

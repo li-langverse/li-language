@@ -1,6 +1,7 @@
 #include "li_rt.h"
 #include "li_parallel.h"
 
+#include <dirent.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -53,38 +54,10 @@ int32_t li_rt_ast_space(void) {
   return 0;
 }
 
-/* Resolve a single-segment import (e.g. `vault_lib`) to a sibling file of the
- * importer (e.g. <dir-of-file>/vault_lib.li), mirroring the first local
- * candidate of import_resolve.cpp. Returns the file contents, or NULL when no
- * candidate exists. The returned pointer is a static buffer reused on the next
- * call, matching li_rt_read_file's single-buffer contract. */
-const char* li_rt_resolve_import(const char* file_path, const char* module) {
-  if (file_path == NULL || module == NULL) {
-    return NULL;
-  }
-  /* Directory of the importing file: strip everything from the last '/'. */
-  const char* slash = strrchr(file_path, '/');
-  const size_t dir_len = slash != NULL ? (size_t)(slash - file_path) : 0;
-  const size_t mlen = strlen(module);
-  static char buf[4096];
-  if (dir_len + 1 + mlen + 3 >= sizeof(buf)) {
-    return NULL;
-  }
-  size_t p = 0;
-  if (dir_len > 0) {
-    memcpy(buf, file_path, dir_len);
-    p = dir_len;
-  }
-  buf[p++] = '/';
-  memcpy(buf + p, module, mlen);
-  p += mlen;
-  memcpy(buf + p, ".li", 3);
-  p += 3;
-  if (p >= sizeof(buf)) {
-    return NULL;
-  }
-  buf[p] = '\0';
-  FILE* f = fopen(buf, "rb");
+/* Helper: try to read the file at `path`, returning its content in the static
+ * buffer or NULL. */
+static const char* try_read_file(const char* path) {
+  FILE* f = fopen(path, "rb");
   if (f == NULL) {
     return NULL;
   }
@@ -100,6 +73,102 @@ const char* li_rt_resolve_import(const char* file_path, const char* module) {
   fclose(f);
   content[got] = '\0';
   return content;
+}
+
+/* Walk up from the file to find the workspace root (directory containing
+ * a `packages/` subdirectory). Populates `root` (up to root_cap bytes) and
+ * returns the length, or 0 on failure. */
+static size_t find_workspace_root(const char* file_path, char* root,
+                                  size_t root_cap) {
+  const char* slash = strrchr(file_path, '/');
+  if (slash == NULL) {
+    return 0;
+  }
+  size_t len = (size_t)(slash - file_path);
+  while (len > 0) {
+    if (len + 10 >= root_cap) {
+      return 0;
+    }
+    memcpy(root, file_path, len);
+    root[len] = '\0';
+    strcat(root, "/packages");
+    DIR* d = opendir(root);
+    root[len] = '\0';  /* undo strcat */
+    if (d != NULL) {
+      closedir(d);
+      return len;
+    }
+    /* Walk up one level */
+    while (len > 0 && root[len - 1] != '/') {
+      --len;
+    }
+    if (len > 0) {
+      --len;  /* skip the '/' */
+    }
+  }
+  return 0;
+}
+
+/* Resolve a single-segment import (e.g. `vault_lib`) or a dotted workspace
+ * import (e.g. `physics.rigid`) to a file path.
+ *
+ * Try candidates in order:
+ * 1. Same-directory sibling: <dir-of-file>/<module>.li
+ * 2. Workspace package:    <workspace-root>/packages/li-<mod-dashed>/src/lib.li
+ *
+ * Returns the file contents, or NULL when no candidate exists. */
+const char* li_rt_resolve_import(const char* file_path, const char* module) {
+  if (file_path == NULL || module == NULL) {
+    return NULL;
+  }
+  const char* slash = strrchr(file_path, '/');
+  const size_t dir_len = slash != NULL ? (size_t)(slash - file_path) : 0;
+  const size_t mlen = strlen(module);
+  static char buf[4096];
+
+  /* Candidate 1: same-directory sibling */
+  if (dir_len + 1 + mlen + 3 < sizeof(buf)) {
+    size_t p = 0;
+    if (dir_len > 0) {
+      memcpy(buf, file_path, dir_len);
+      p = dir_len;
+    }
+    buf[p++] = '/';
+    memcpy(buf + p, module, mlen);
+    p += mlen;
+    memcpy(buf + p, ".li", 3);
+    p += 3;
+    buf[p] = '\0';
+    const char* result = try_read_file(buf);
+    if (result != NULL) {
+      return result;
+    }
+  }
+
+  /* Candidate 2: workspace package */
+  char root[4096];
+  size_t root_len = find_workspace_root(file_path, root, sizeof(root));
+  if (root_len > 0 && root_len + 11 + mlen + 12 < sizeof(buf)) {
+    /* Build packages/li-<module-with-hyphens>/src/lib.li */
+    size_t p = 0;
+    memcpy(buf + p, root, root_len);
+    p = root_len;
+    memcpy(buf + p, "/packages/li-", 13);
+    p += 13;
+    /* Copy module name, replacing '.' with '-' */
+    for (size_t i = 0; i < mlen && p < sizeof(buf) - 1; ++i) {
+      buf[p++] = module[i] == '.' ? '-' : module[i];
+    }
+    memcpy(buf + p, "/src/lib.li", 12);
+    p += 12;
+    buf[p] = '\0';
+    const char* result = try_read_file(buf);
+    if (result != NULL) {
+      return result;
+    }
+  }
+
+  return NULL;
 }
 
 /* Self-hosted typechecker diagnostic seam: emit one `error [CODE]` line for a
