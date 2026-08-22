@@ -106,6 +106,16 @@ static size_t find_workspace_root(const char* file_path, char* root,
       --len;  /* skip the '/' */
     }
   }
+  /* Fallback: check current directory */
+  {
+    DIR* d = opendir("packages");
+    if (d != NULL) {
+      closedir(d);
+      root[0] = '.';
+      root[1] = '\0';
+      return 1;
+    }
+  }
   return 0;
 }
 
@@ -148,23 +158,46 @@ const char* li_rt_resolve_import(const char* file_path, const char* module) {
   /* Candidate 2: workspace package */
   char root[4096];
   size_t root_len = find_workspace_root(file_path, root, sizeof(root));
-  if (root_len > 0 && root_len + 11 + mlen + 12 < sizeof(buf)) {
+  if (root_len > 0) {
     /* Build packages/li-<module-with-hyphens>/src/lib.li */
-    size_t p = 0;
-    memcpy(buf + p, root, root_len);
-    p = root_len;
-    memcpy(buf + p, "/packages/li-", 13);
-    p += 13;
-    /* Copy module name, replacing '.' with '-' */
-    for (size_t i = 0; i < mlen && p < sizeof(buf) - 1; ++i) {
-      buf[p++] = module[i] == '.' ? '-' : module[i];
+    if (root_len + 11 + mlen + 12 < sizeof(buf)) {
+      size_t p = 0;
+      memcpy(buf + p, root, root_len);
+      p = root_len;
+      memcpy(buf + p, "/packages/li-", 13);
+      p += 13;
+      for (size_t i = 0; i < mlen && p < sizeof(buf) - 1; ++i) {
+        buf[p++] = module[i] == '.' ? '-' : module[i];
+      }
+      memcpy(buf + p, "/src/lib.li", 12);
+      p += 12;
+      buf[p] = '\0';
+      const char* result = try_read_file(buf);
+      if (result != NULL) {
+        return result;
+      }
     }
-    memcpy(buf + p, "/src/lib.li", 12);
-    p += 12;
-    buf[p] = '\0';
-    const char* result = try_read_file(buf);
-    if (result != NULL) {
-      return result;
+    /* Candidate 3: strip "std." prefix (namespace prefix) */
+    if (mlen > 4 && memcmp(module, "std.", 4) == 0) {
+      const char* stripped = module + 4;
+      const size_t slen = mlen - 4;
+      if (root_len + 11 + slen + 12 < sizeof(buf)) {
+        size_t p = 0;
+        memcpy(buf + p, root, root_len);
+        p = root_len;
+        memcpy(buf + p, "/packages/li-", 13);
+        p += 13;
+        for (size_t i = 0; i < slen && p < sizeof(buf) - 1; ++i) {
+          buf[p++] = stripped[i] == '.' ? '-' : stripped[i];
+        }
+        memcpy(buf + p, "/src/lib.li", 12);
+        p += 12;
+        buf[p] = '\0';
+        const char* result = try_read_file(buf);
+        if (result != NULL) {
+          return result;
+        }
+      }
     }
   }
 

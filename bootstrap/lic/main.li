@@ -308,6 +308,7 @@ type Pos512 = {p: int | 0 <= p and p < 512}
 type Pos128 = {p: int | 0 <= p and p < 128}
 type Pos40 = {p: int | 0 <= p and p < 40}
 type Pos32 = {p: int | 0 <= p and p < 32}
+type Pos16 = {p: int | 0 <= p and p < 16}
 type Pos6 = {p: int | 0 <= p and p < 6}
 
 def peek65536(buf: var array[65536, int], p: Pos65536) -> int
@@ -438,6 +439,21 @@ def peek32(buf: var array[32, int], p: Pos32) -> int
   return buf[p]
 
 def set32(buf: var array[32, int], p: Pos32, v: int) -> int
+  requires true
+  ensures result == v
+  decreases 0
+=
+  buf[p] = v
+  return v
+
+def peek16(buf: var array[16, int], p: Pos16) -> int
+  requires true
+  ensures result == buf[p]
+  decreases 0
+=
+  return buf[p]
+
+def set16(buf: var array[16, int], p: Pos16, v: int) -> int
   requires true
   ensures result == v
   decreases 0
@@ -11471,7 +11487,7 @@ def mir_scan_rt_flags(src: var ptr,  tk: var array[131072, int],  ts: var array[
   # codegen path, so we do NOT apply it here.
   return 0
 
-def mir_module(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int]) raises IO -> int
+def mir_module(src: var ptr,  file_path: ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int]) raises IO -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -11514,9 +11530,59 @@ def mir_module(src: var ptr,  tk: var array[131072, int],  ts: var array[131072,
   pcount[0] = 0
   var pname_data: array[16384, int]
   var pname_off: array[1024, int]
+  # ---- Pre-scan main for imports, store resolved file contents ----
+  var imp_files: array[16, ptr]
+  var imp_n: array[1, int]
+  imp_n[0] = 0
+  pi[0] = 0
+  err[0] = 0
+  skip_newlines(tk,  n,  pi,  err)
+  while cur_kind(tk,  n,  pi,  err) != 0:
+    var ki2: int = cur_kind(tk,  n,  pi,  err)
+    if ki2 == 18:
+      pi[0] = pi[0] + 1
+      if cur_kind(tk,  n,  pi,  err) != 4:
+        continue
+      var ims: int = peek_tk(ts, pi[0] + 0)
+      var ime: int = peek_tk(te, pi[0] + 0)
+      pi[0] = pi[0] + 1
+      while accept_k(tk,  n,  pi,  err, 72) == 1:
+        if cur_kind(tk,  n,  pi,  err) == 4:
+          ime = peek_tk(te, pi[0] + 0)
+          pi[0] = pi[0] + 1
+      if cur_kind(tk,  n,  pi,  err) == 4:
+        if tok_is(src, ts, te, pi[0], "as") == 1:
+          pi[0] = pi[0] + 1
+          if cur_kind(tk,  n,  pi,  err) == 4:
+            pi[0] = pi[0] + 1
+      var mn2: ptr = bytes_slice_i(src,  ims,  ime - ims)
+      var f2: ptr = li_rt_resolve_import(file_path,  mn2)
+      if f2 != 0:
+        if imp_n[0] < 16:
+          imp_files[imp_n[0]] = f2
+          imp_n[0] = imp_n[0] + 1
+      continue
+    pi[0] = pi[0] + 1
+  # ---- Collect: re-lex main, collect, then collect each import ----
+  n[0] = 0
+  if lex_source(src,  tk,  ts,  te,  n, 0) == 1:
+    return 1
   pi[0] = 0
   err[0] = 0
   if mir_walk(src,  tk,  ts,  te,  n,  pi,  err,  0, tc,  lastop,  ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar,  pmx,  pmc,  pcount) == 1:
+    return 1
+  var ii: int = 0
+  while ii < imp_n[0]:
+    n[0] = 0
+    if lex_source(imp_files[ii],  tk,  ts,  te,  n, 0) == 0:
+      pi[0] = 0
+      err[0] = 0
+      if mir_walk(imp_files[ii],  tk,  ts,  te,  n,  pi,  err,  0, tc,  lastop,  ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar,  pmx,  pmc,  pcount) == 1:
+        return 1
+    ii = ii + 1
+  # ---- Emit: re-lex main, scan flags, header, emit main, then emit imports ----
+  n[0] = 0
+  if lex_source(src,  tk,  ts,  te,  n, 0) == 1:
     return 1
   var has_async: int = peek32768(ftmp, 4091)
   set32768(ftmp, 4086, 0)
@@ -11542,11 +11608,20 @@ def mir_module(src: var ptr,  tk: var array[131072, int],  ts: var array[131072,
   li_rt_ast_nl()
   pi[0] = 0
   err[0] = 0
-  # pn keeps the collected proc count so body lowering can resolve calls to
-  # any proc (recursion, forward refs); pcount becomes the emit pid counter.
   pcount[0] = 0
   if mir_walk(src,  tk,  ts,  te,  n,  pi,  err,  1, tc,  lastop,  ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar,  pmx,  pmc,  pcount) == 1:
     return 1
+  # ---- Emit imports ----
+  ii = 0
+  while ii < imp_n[0]:
+    var f3: ptr = imp_files[ii]
+    n[0] = 0
+    if lex_source(f3,  tk,  ts,  te,  n, 0) == 0:
+      pi[0] = 0
+      err[0] = 0
+      if mir_walk(f3,  tk,  ts,  te,  n,  pi,  err,  1, tc,  lastop,  ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar,  pmx,  pmc,  pcount) == 1:
+        return 1
+    ii = ii + 1
   return 0
 
 def main() raises IO -> int
@@ -11612,7 +11687,7 @@ def main() raises IO -> int
     if r == 1:
       print("mir error")
       return 1
-    var mr: int = mir_module(f, tk, ts, te, n, pi, err)
+    var mr: int = mir_module(f, li_rt_argv(2), tk, ts, te, n, pi, err)
     if mr == 1:
       print("mir error")
       return 1
