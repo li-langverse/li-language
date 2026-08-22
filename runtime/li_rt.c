@@ -177,10 +177,35 @@ const char* li_rt_resolve_import(const char* file_path, const char* module) {
         return result;
       }
     }
-    /* Candidate 3: strip "std." prefix (namespace prefix) */
+    /* Candidate 3: "std.X" → "std/X/X.li" (stdlib tree) */
     if (mlen > 4 && memcmp(module, "std.", 4) == 0) {
       const char* stripped = module + 4;
       const size_t slen = mlen - 4;
+      if (root_len + 5 + slen + 3 + slen + 3 < sizeof(buf)) {
+        size_t p = 0;
+        memcpy(buf + p, root, root_len);
+        p = root_len;
+        buf[p++] = '/';
+        memcpy(buf + p, "std/", 4);
+        p += 4;
+        /* Copy stripped name, replacing '.' with '/' */
+        for (size_t i = 0; i < slen && p < sizeof(buf) - 1; ++i) {
+          buf[p++] = stripped[i] == '.' ? '/' : stripped[i];
+        }
+        buf[p++] = '/';
+        /* Copy stripped name again for the file */
+        for (size_t i = 0; i < slen && p < sizeof(buf) - 1; ++i) {
+          buf[p++] = stripped[i] == '.' ? '/' : stripped[i];
+        }
+        memcpy(buf + p, ".li", 3);
+        p += 3;
+        buf[p] = '\0';
+        const char* result = try_read_file(buf);
+        if (result != NULL) {
+          return result;
+        }
+      }
+      /* Candidate 4: stripped name as package (fallback) */
       if (root_len + 11 + slen + 12 < sizeof(buf)) {
         size_t p = 0;
         memcpy(buf + p, root, root_len);
