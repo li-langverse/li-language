@@ -112,9 +112,10 @@ reference.
 | 1 | CLI / argv bridge (Phase 6 seed) | done |
 | 2 | `lex` — token-stream parity vs C++ lexer | done (492/492) |
 | 3 | `parse` + `ast` — parser and int-encoded AST-dump parity vs `lic parse` / `lic ast`; plus the self-front-end gate (Li front end processes its own source) | done (482/482) |
-| 4 | `check` — name resolution, type unification, contract well-formedness, borrowck/effects vs `lic check` | in progress |
-| 5 | MIR lowering in Li | not started |
-| 6 | LLVM codegen in Li (or stage-2: Li-compiled `lic` compiling itself) | not started |
+| 4 | `check` — name resolution, type unification, contract well-formedness, borrowck/effects vs `lic check` | parity-gated slice; full language policy still open |
+| 5 | MIR lowering in Li | substantial byte-exact slice; full-repo gaps remain |
+| 6 | LLVM codegen/build driver in Li; stage-2 `lic` compiling itself | not started |
+| 7 | Post-bootstrap Li authoring skill and stage-3 release gate | documented; blocked on Layer 6 |
 
 The C++ host remains the compiler that builds `bootstrap/lic/main.li` and runs
 the parity gates until Layer 6 lands and a Li-compiled `lic` can compile itself.
@@ -125,5 +126,6 @@ the parity gates until Layer 6 lands and a Li-compiled `lic` can compile itself.
   seed; this skill is the discipline for growing it past the seed).
 - `agent-diagnose-fix-li` — triage/fix workflow when a C++-side bug is found.
 - `scripts/bootstrap_lic.sh` — build the Li binary from Li source.
-- `scripts/check_li_{lexer,parser,ast,self_frontend}_parity.sh` — parity gates.
+- `scripts/check_li_{lexer,parser,ast,self_frontend,check,mir}_parity.sh` — parity gates.
+- `scripts/check_li_stage2_frontend.sh` — proves a C++-built stage-2 binary can process its own source; this is not yet full self-hosting.
 - `docs/superpowers/plans/2026-05-14-phase-06-self-host.md` — layer roadmap.

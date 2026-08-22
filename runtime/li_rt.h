@@ -32,6 +32,9 @@ int32_t li_rt_mir_f64_of_int(int32_t v);
 int32_t li_rt_mir_f64_neg(int32_t id);
 /* Parse a decimal int literal slice (C++ lexer int_value semantics). */
 int32_t li_rt_mir_int(const char* text, int32_t start, int32_t end);
+/* Print a decimal int literal slice at its full 64-bit value (Li int cells
+ * are 32-bit, so the MIR walker prints big literals from the source span). */
+int32_t li_rt_mir_int64_out(const char* text, int32_t start, int32_t end);
 /* Print an escaped string slice (mir_dump.cpp esc(): \\ \n \r \t space->\x20). */
 int32_t li_rt_mir_esc(const char* text, int32_t start, int32_t end);
 /* Print a fixed tag string (INS/FN/PARAM/ARG/MIR line headers). */

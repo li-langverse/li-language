@@ -200,6 +200,33 @@ int32_t li_rt_mir_int(const char* text, int32_t start, int32_t end) {
   return (int32_t)v;
 }
 
+/* Print a decimal int literal slice with its full 64-bit value (the Li int
+ * cells are 32-bit, so big literals are printed from the source span at
+ * emission time to match the C++ i64 MIR dump fields). */
+int32_t li_rt_mir_int64_out(const char* text, int32_t start, int32_t end) {
+  if (text == NULL || start < 0 || end <= start) {
+    fputc('0', stdout);
+    return 0;
+  }
+  int64_t v = 0;
+  int32_t i = start;
+  if (text[i] == '-') {
+    ++i;
+  }
+  for (; i < end; ++i) {
+    const unsigned char c = (unsigned char)text[i];
+    if (c >= '0' && c <= '9') {
+      v = v * 10 + (c - '0');
+    }
+  }
+  if (start < end && text[start] == '-') {
+    printf("%lld", (long long)-v);
+  } else {
+    printf("%lld", (long long)v);
+  }
+  return 0;
+}
+
 int32_t li_rt_mir_esc(const char* text, int32_t start, int32_t end) {
   if (text == NULL || start < 0) {
     return 0;

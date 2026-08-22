@@ -56,6 +56,7 @@ CORPUS=(
   "li-tests/effects/async_ok.li"
   "li-tests/async/await_codegen_ok.li"
   "li-tests/math_linalg/matmul_2x3_ok.li"
+  "li-tests/math_linalg/matmul_chain_ok.li"
   "li-tests/decorators/vectorized_for_scope_ok.li"
   "li-tests/decorators/vectorized_for_parse_ok.li"
   "li-tests/physics/golden_positions_sum.li"

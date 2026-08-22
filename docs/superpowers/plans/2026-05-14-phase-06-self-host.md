@@ -141,24 +141,22 @@ Compiler gaps found and fixed while self-hosting the lexer:
   error codes (not just accept/reject) across typecheck+generics+effects (35
   files). Still deferred: borrowck (E0310/E0311) and encapsulation
   visibility/trait/object policy — separate later layers.
-- Layer 5: MIR lowering in Li. Follow `upgrade-li-from-cpp`:
-  1. Add `lic mir <file>` to the C++ host — a canonical byte-exact dump of
-     `lower_to_mir()` output (`compiler/mir/lower.cpp`, `mir.hpp`) as the
-     parity reference.
-  2. Implement the `mir` subcommand in `bootstrap/lic/main.li` (AST → MIR),
-     diffing against the C++ dump.
-  3. Gate with `scripts/check_li_mir_parity.sh` (skeleton in place).
-- Layer 6: LLVM codegen in Li, or stage-2 bootstrap (Li-compiled `lic`
-  compiling itself).
-- `lic build` / `lic check` fully in bootstrap source
-- **Agent skill for writing Li (post self-host).** Once the bootstrap
-  compiler is self-hosted and the C++ host is only a reference (per the
-  upgrade-li-from-cpp discipline), distill the language-authoring knowledge
-  accumulated during the port into a proper agent skill
-  (`.cursor/skills/write-li-language/SKILL.md`): the idiomatic way to write Li
-  source that the compiler accepts — preferred syntax/type idioms, how to
-  phrase contracts (requires/ensures/decreases) so VCs discharge, array index
-  refinement patterns, effect/`raises` discipline, borrow rules, and the
-  self-host parity-gate workflow for extending the compiler itself. This
-  makes the language writable by agents (and documentable from one
-  canonical source) now that the toolchain no longer needs the C++ host.
+- Layer 5: MIR lowering in Li — **substantial slice DONE; full-repo parity remains**.
+  `lic mir <file>` is the C++ byte-exact reference and
+  `scripts/check_li_mir_parity.sh` gates scalar, array, matrix, decorator,
+  async, and selected object lowering. The remaining MIR gaps include full
+  module/import resolution, generic/object ABI corners, and unsupported AST
+  constructs; they must be closed before claiming a complete port.
+- Layer 6: LLVM codegen and the build driver in Li — **OPEN**. The bootstrap
+  source currently exposes `lex`, `parse`, `ast`, `check`, and `mir`; it does
+  not expose `build`. The C++ host still owns MIR → LLVM, runtime linking,
+  package/module resolution, and the proof/build policy.
+- Stage-2 gate: `scripts/check_li_stage2_frontend.sh` proves that a C++-built
+  `lic-from-li` can process `bootstrap/lic/main.li` with exact lexer/parser/AST
+  parity. It is an explicit frontend gate, not a claim of full self-hosting;
+  `lic-from-li mir bootstrap/lic/main.li` is not yet a supported stage-3 gate.
+- **Agent skill for writing Li (post self-host).** The initial
+  `.cursor/skills/write-li-language/SKILL.md` is now present and records the
+  authoring, contracts, effects, borrow, package-isolation, and C++-first port
+  discipline. It becomes the canonical skill only after Layer 6 and the
+  stage-3 compiler gate are complete.

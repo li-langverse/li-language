@@ -32,6 +32,10 @@ li_phase "self-hosted front end (lexer + parser + AST + self-front-end + check +
 chmod +x "$ROOT/scripts/check_li_parity.sh"
 "$ROOT/scripts/check_li_parity.sh"
 
+li_phase "stage-2 self-host frontend"
+chmod +x "$ROOT/scripts/check_li_stage2_frontend.sh"
+"$ROOT/scripts/check_li_stage2_frontend.sh"
+
 li_phase "compiler isolation (carve-out)"
 chmod +x "$ROOT/scripts/check-compiler-isolation.sh"
 "$ROOT/scripts/check-compiler-isolation.sh"
