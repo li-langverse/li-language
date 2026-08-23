@@ -54,8 +54,17 @@ int32_t li_rt_ast_space(void) {
   return 0;
 }
 
-/* Helper: try to read the file at `path`, returning its content in the static
- * buffer or NULL. */
+/* Ring of static buffers for try_read_file so multiple imports don't
+ * overwrite each other.  Each slot is 1 MiB; the ring head advances on
+ * every successful read.  li_rt_resolve_import needs at least ~30 stable
+ * buffers for transitive imports (std + workspace + same-dir). */
+#define TRY_FILE_RING 64
+#define TRY_FILE_BUFSZ (1 << 20)
+static char  try_file_ring[TRY_FILE_RING][TRY_FILE_BUFSZ];
+static int   try_file_ring_head = 0;
+
+/* Helper: try to read the file at `path`, returning its content in the next
+ * ring slot or NULL. */
 static const char* try_read_file(const char* path) {
   FILE* f = fopen(path, "rb");
   if (f == NULL) {
@@ -64,14 +73,15 @@ static const char* try_read_file(const char* path) {
   fseek(f, 0, SEEK_END);
   const long sz = ftell(f);
   fseek(f, 0, SEEK_SET);
-  static char content[1 << 20];
-  if (sz < 0 || (size_t)sz >= sizeof(content)) {
+  char* content = try_file_ring[try_file_ring_head];
+  if (sz < 0 || (size_t)sz >= TRY_FILE_BUFSZ) {
     fclose(f);
     return NULL;
   }
   const size_t got = fread(content, 1, (size_t)sz, f);
   fclose(f);
   content[got] = '\0';
+  try_file_ring_head = (try_file_ring_head + 1) % TRY_FILE_RING;
   return content;
 }
 
@@ -127,6 +137,57 @@ static size_t find_workspace_root(const char* file_path, char* root,
  * 2. Workspace package:    <workspace-root>/packages/li-<mod-dashed>/src/lib.li
  *
  * Returns the file contents, or NULL when no candidate exists. */
+/* Indexed import path store: lets the Li walker retrieve the resolved
+ * file path for each import by index, so transitive resolution uses the
+ * correct base directory. */
+#define LI_RT_IMPORT_PATH_MAX 32
+static const char* li_rt_import_paths[LI_RT_IMPORT_PATH_MAX];
+static int         li_rt_import_path_count = 0;
+
+void li_rt_import_paths_clear(void) { li_rt_import_path_count = 0; }
+
+/* Store a resolved path at the next index. Called after each successful
+ * li_rt_resolve_import in the Li walker. */
+void li_rt_import_path_store(const char* path) {
+  if (li_rt_import_path_count < LI_RT_IMPORT_PATH_MAX) {
+    /* Duplicate the path since the ring buffer may recycle slots. */
+    size_t len = strlen(path);
+    char* dup = (char*)malloc(len + 1);
+    if (dup) { memcpy(dup, path, len + 1); }
+    li_rt_import_paths[li_rt_import_path_count] = dup;
+    li_rt_import_path_count++;
+  }
+}
+
+/* Retrieve the stored path for import index `idx`. Returns NULL if out of range. */
+const char* li_rt_import_path_get(int idx) {
+  if (idx < 0 || idx >= li_rt_import_path_count) return NULL;
+  return li_rt_import_paths[idx];
+}
+
+/* Path ring buffer: mirrors the content ring buffer so callers can retrieve
+ * the path that was successfully resolved by li_rt_resolve_import. */
+static char  li_rt_path_ring[TRY_FILE_RING][4096];
+static int   li_rt_path_ring_head = 0;
+
+/* Return a pointer to the path that was last successfully resolved by
+ * li_rt_resolve_import.  The pointer is stable until TRY_FILE_RING more
+ * resolve calls overwrite the ring slot. */
+const char* li_rt_resolve_import_last_path(void) {
+  if (li_rt_path_ring_head == 0) return li_rt_path_ring[TRY_FILE_RING - 1];
+  return li_rt_path_ring[li_rt_path_ring_head - 1];
+}
+
+/* Store the resolved path into the path ring and return the file content. */
+static const char* store_resolved_path(const char* content, const char* path) {
+  size_t len = strlen(path);
+  if (len >= 4096) len = 4095;
+  memcpy(li_rt_path_ring[li_rt_path_ring_head], path, len);
+  li_rt_path_ring[li_rt_path_ring_head][len] = '\0';
+  li_rt_path_ring_head = (li_rt_path_ring_head + 1) % TRY_FILE_RING;
+  return content;
+}
+
 const char* li_rt_resolve_import(const char* file_path, const char* module) {
   if (file_path == NULL || module == NULL) {
     return NULL;
@@ -151,7 +212,7 @@ const char* li_rt_resolve_import(const char* file_path, const char* module) {
     buf[p] = '\0';
     const char* result = try_read_file(buf);
     if (result != NULL) {
-      return result;
+      return store_resolved_path(result, buf);
     }
   }
 
@@ -173,7 +234,7 @@ const char* li_rt_resolve_import(const char* file_path, const char* module) {
     buf[p] = '\0';
     const char* result2 = try_read_file(buf);
     if (result2 != NULL) {
-      return result2;
+      return store_resolved_path(result2, buf);
     }
   }
 
@@ -201,7 +262,7 @@ const char* li_rt_resolve_import(const char* file_path, const char* module) {
       buf[p] = '\0';
       const char* result = try_read_file(buf);
       if (result != NULL) {
-        return result;
+        return store_resolved_path(result, buf);
       }
     }
     /* Candidate 2b: packages/<module>/src/lib.li (no li- prefix)
@@ -222,7 +283,7 @@ const char* li_rt_resolve_import(const char* file_path, const char* module) {
       buf[p] = '\0';
       const char* result2 = try_read_file(buf);
       if (result2 != NULL) {
-        return result2;
+        return store_resolved_path(result2, buf);
       }
     }
     /* Candidate 2c: strip li- prefix, then dash-convert.
@@ -247,7 +308,7 @@ const char* li_rt_resolve_import(const char* file_path, const char* module) {
         buf[p] = '\0';
         const char* result3 = try_read_file(buf);
         if (result3 != NULL) {
-          return result3;
+          return store_resolved_path(result3, buf);
         }
       }
     }
@@ -284,7 +345,7 @@ const char* li_rt_resolve_import(const char* file_path, const char* module) {
         buf[p] = '\0';
         const char* result = try_read_file(buf);
         if (result != NULL) {
-          return result;
+          return store_resolved_path(result, buf);
         }
       }
       /* Candidate 4: stripped name as package (fallback) */
@@ -302,7 +363,7 @@ const char* li_rt_resolve_import(const char* file_path, const char* module) {
         buf[p] = '\0';
         const char* result = try_read_file(buf);
         if (result != NULL) {
-          return result;
+          return store_resolved_path(result, buf);
         }
       }
     }

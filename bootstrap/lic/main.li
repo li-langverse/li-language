@@ -61,6 +61,18 @@ extern def li_rt_read_file(path: ptr) -> ptr
 extern def li_rt_resolve_import(file_path: ptr,  module: ptr) -> ptr
   requires true
   ensures true
+extern def li_rt_resolve_import_last_path() -> ptr
+  requires true
+  ensures true
+extern def li_rt_import_paths_clear() -> int
+  requires true
+  ensures true
+extern def li_rt_import_path_store(path: ptr) -> int
+  requires true
+  ensures true
+extern def li_rt_import_path_get(idx: int) -> ptr
+  requires true
+  ensures true
 extern def li_rt_emit_token(code: int,  text: ptr,  s: int,  e: int) -> int
   requires true
   ensures true
@@ -11484,6 +11496,7 @@ def mir_module(src: var ptr,  file_path: ptr,  tk: var array[131072, int],  ts: 
   var imp_files: array[16, ptr]
   var imp_n: array[1, int]
   imp_n[0] = 0
+  li_rt_import_paths_clear()
   pi[0] = 0
   err[0] = 0
   skip_newlines(tk,  n,  pi,  err)
@@ -11510,6 +11523,7 @@ def mir_module(src: var ptr,  file_path: ptr,  tk: var array[131072, int],  ts: 
       if f2 != 0:
         if imp_n[0] < 16:
           imp_files[imp_n[0]] = f2
+          li_rt_import_path_store(li_rt_resolve_import_last_path())
           imp_n[0] = imp_n[0] + 1
       continue
     pi[0] = pi[0] + 1
@@ -11541,7 +11555,7 @@ def mir_module(src: var ptr,  file_path: ptr,  tk: var array[131072, int],  ts: 
               if cur_kind(tk, n, pi, err) == 4:
                 pi[0] = pi[0] + 1
           var mn3: ptr = bytes_slice_i(imp_files[scan_idx], ims2, ime2 - ims2)
-          var f3: ptr = li_rt_resolve_import(file_path, mn3)
+          var f3: ptr = li_rt_resolve_import(li_rt_import_path_get(scan_idx), mn3)
           if f3 != 0:
             var dup: int = 0
             var jj: int = 0
@@ -11552,6 +11566,7 @@ def mir_module(src: var ptr,  file_path: ptr,  tk: var array[131072, int],  ts: 
             if dup == 0:
               if imp_n[0] < 16:
                 imp_files[imp_n[0]] = f3
+                li_rt_import_path_store(li_rt_resolve_import_last_path())
                 imp_n[0] = imp_n[0] + 1
           continue
         pi[0] = pi[0] + 1
