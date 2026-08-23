@@ -155,6 +155,28 @@ const char* li_rt_resolve_import(const char* file_path, const char* module) {
     }
   }
 
+  /* Candidate 1b: same-directory package <module>/<module>.li */
+  if (dir_len + 1 + mlen + 1 + mlen + 3 + 1 < sizeof(buf)) {
+    size_t p = 0;
+    if (dir_len > 0) {
+      memcpy(buf, file_path, dir_len);
+      p = dir_len;
+    }
+    buf[p++] = '/';
+    memcpy(buf + p, module, mlen);
+    p += mlen;
+    buf[p++] = '/';
+    memcpy(buf + p, module, mlen);
+    p += mlen;
+    memcpy(buf + p, ".li", 3);
+    p += 3;
+    buf[p] = '\0';
+    const char* result2 = try_read_file(buf);
+    if (result2 != NULL) {
+      return result2;
+    }
+  }
+
   /* Candidate 2: workspace package */
   char root[4096];
   size_t root_len = find_workspace_root(file_path, root, sizeof(root));
@@ -177,25 +199,33 @@ const char* li_rt_resolve_import(const char* file_path, const char* module) {
         return result;
       }
     }
-    /* Candidate 3: "std.X" → "std/X/X.li" (stdlib tree) */
+    /* Candidate 3: "std.X.Y" → "std/X/Y.li" (stdlib tree) */
     if (mlen > 4 && memcmp(module, "std.", 4) == 0) {
       const char* stripped = module + 4;
       const size_t slen = mlen - 4;
-      if (root_len + 5 + slen + 3 + slen + 3 < sizeof(buf)) {
+      /* Find last dot for the leaf filename */
+      size_t last_dot = 0;
+      for (size_t i = 0; i < slen; ++i) {
+        if (stripped[i] == '.') last_dot = i;
+      }
+      /* Build: root/std/<all-but-last-sep>/<last-sep>.li */
+      if (root_len + 5 + slen + 3 + 200 < sizeof(buf)) {
         size_t p = 0;
         memcpy(buf + p, root, root_len);
         p = root_len;
         buf[p++] = '/';
         memcpy(buf + p, "std/", 4);
         p += 4;
-        /* Copy stripped name, replacing '.' with '/' */
-        for (size_t i = 0; i < slen && p < sizeof(buf) - 1; ++i) {
+        /* Copy prefix (before last dot), replacing '.' with '/' */
+        for (size_t i = 0; i < last_dot && p < sizeof(buf) - 1; ++i) {
           buf[p++] = stripped[i] == '.' ? '/' : stripped[i];
         }
-        buf[p++] = '/';
-        /* Copy stripped name again for the file */
-        for (size_t i = 0; i < slen && p < sizeof(buf) - 1; ++i) {
-          buf[p++] = stripped[i] == '.' ? '/' : stripped[i];
+        if (last_dot > 0) {
+          buf[p++] = '/';
+        }
+        /* Copy last segment as filename */
+        for (size_t i = last_dot + 1; i < slen && p < sizeof(buf) - 1; ++i) {
+          buf[p++] = stripped[i];
         }
         memcpy(buf + p, ".li", 3);
         p += 3;
@@ -461,6 +491,39 @@ int32_t li_rt_mir_objname_out(int32_t idx) {
 }
 
 void li_rt_mir_objname_clear(void) { li_rt_objname_n = 0; li_rt_objname_text = NULL; }
+
+/* Proc-name registry for cross-file call resolution.
+ * Stores one NUL-terminated name per proc ID (max 128 procs, 63 chars each).
+ * Used by the self-hosted MIR walker so that imported proc names survive
+ * token-buffer re-lexing across source files. */
+#define LI_RT_PNAME_MAX 128
+static char li_rt_pname_buf[LI_RT_PNAME_MAX * 64];
+static int32_t li_rt_pname_len[LI_RT_PNAME_MAX];
+static int32_t li_rt_pname_count = 0;
+
+int32_t li_rt_mir_pname_store(int32_t pid, const char* src, int32_t s, int32_t e) {
+  if (pid < 0 || pid >= LI_RT_PNAME_MAX || src == NULL) return 0;
+  int32_t len = e - s;
+  if (len > 63) len = 63;
+  if (len < 0) len = 0;
+  char* dst = li_rt_pname_buf + pid * 64;
+  for (int32_t i = 0; i < len; i++) dst[i] = src[s + i];
+  dst[len] = '\0';
+  li_rt_pname_len[pid] = len;
+  if (pid >= li_rt_pname_count) li_rt_pname_count = pid + 1;
+  return 0;
+}
+
+int32_t li_rt_mir_pname_eq(int32_t pid, const char* src, int32_t s, int32_t e) {
+  if (pid < 0 || pid >= LI_RT_PNAME_MAX || src == NULL) return 0;
+  int32_t len = e - s;
+  if (len != li_rt_pname_len[pid]) return 0;
+  const char* stored = li_rt_pname_buf + pid * 64;
+  for (int32_t i = 0; i < len; i++) {
+    if (stored[i] != src[s + i]) return 0;
+  }
+  return 1;
+}
 
 static int li_argc = 0;
 static char** li_argv = NULL;

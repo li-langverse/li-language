@@ -51,6 +51,12 @@ int32_t li_rt_mir_objname_add(const char* text, int32_t bs, int32_t be,
                               int32_t fs, int32_t fe);
 int32_t li_rt_mir_objname_out(int32_t idx);
 void li_rt_mir_objname_clear(void);
+/* Proc-name registry for cross-file call resolution in the self-hosted MIR walker.
+ * Each collected proc's name is stored by pid; mir_proc_find can look up
+ * whether a call-site name matches any collected proc without needing the
+ * original source buffer.  (avoids threading pname arrays through lowering). */
+int32_t li_rt_mir_pname_store(int32_t pid, const char* src, int32_t s, int32_t e);
+int32_t li_rt_mir_pname_eq(int32_t pid, const char* src, int32_t s, int32_t e);
 const char* li_rt_resolve_import(const char* file_path, const char* module);
 void li_rt_set_args(int argc, char** argv);
 int li_rt_argc(void);
