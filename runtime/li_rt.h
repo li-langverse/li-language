@@ -66,6 +66,10 @@ const char* li_rt_resolve_import_last_path(void);
 void li_rt_import_paths_clear(void);
 void li_rt_import_path_store(const char* path);
 const char* li_rt_import_path_get(int idx);
+/* Per-type source pointer store: the source where each registered Object type
+ * was defined, so field name positions can be read from the correct buffer. */
+void li_rt_type_src_store(int idx, const char* src);
+const char* li_rt_type_src_get(int idx);
 void li_rt_set_args(int argc, char** argv);
 int li_rt_argc(void);
 const char* li_rt_argv(int index);

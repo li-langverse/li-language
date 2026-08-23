@@ -165,6 +165,21 @@ const char* li_rt_import_path_get(int idx) {
   return li_rt_import_paths[idx];
 }
 
+/* Per-type source pointer store: lets field name positions be read from the
+ * correct source buffer even when the type was defined in a different file. */
+#define LI_RT_TYPE_SRC_MAX 30
+static const char* li_rt_type_srcs[LI_RT_TYPE_SRC_MAX];
+static const char* li_rt_type_src_fld = NULL;
+void li_rt_type_src_store(int idx, const char* src) {
+  if (idx == -1) { li_rt_type_src_fld = src; return; }
+  if (idx >= 0 && idx < LI_RT_TYPE_SRC_MAX) li_rt_type_srcs[idx] = src;
+}
+const char* li_rt_type_src_get(int idx) {
+  if (idx == -1) return li_rt_type_src_fld;
+  if (idx < 0 || idx >= LI_RT_TYPE_SRC_MAX) return NULL;
+  return li_rt_type_srcs[idx];
+}
+
 /* Path ring buffer: mirrors the content ring buffer so callers can retrieve
  * the path that was successfully resolved by li_rt_resolve_import. */
 static char  li_rt_path_ring[TRY_FILE_RING][4096];
