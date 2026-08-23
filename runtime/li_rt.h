@@ -57,6 +57,8 @@ void li_rt_mir_objname_clear(void);
  * original source buffer.  (avoids threading pname arrays through lowering). */
 int32_t li_rt_mir_pname_store(int32_t pid, const char* src, int32_t s, int32_t e);
 int32_t li_rt_mir_pname_eq(int32_t pid, const char* src, int32_t s, int32_t e);
+int32_t li_rt_mir_pname_set_extern(int32_t pid, int32_t is_extern);
+int32_t li_rt_mir_pname_is_extern(int32_t pid);
 const char* li_rt_resolve_import(const char* file_path, const char* module);
 void li_rt_set_args(int argc, char** argv);
 int li_rt_argc(void);

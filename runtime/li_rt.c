@@ -499,6 +499,7 @@ void li_rt_mir_objname_clear(void) { li_rt_objname_n = 0; li_rt_objname_text = N
 #define LI_RT_PNAME_MAX 128
 static char li_rt_pname_buf[LI_RT_PNAME_MAX * 64];
 static int32_t li_rt_pname_len[LI_RT_PNAME_MAX];
+static int32_t li_rt_pname_ext[LI_RT_PNAME_MAX];  /* is_extern flag */
 static int32_t li_rt_pname_count = 0;
 
 int32_t li_rt_mir_pname_store(int32_t pid, const char* src, int32_t s, int32_t e) {
@@ -522,7 +523,23 @@ int32_t li_rt_mir_pname_eq(int32_t pid, const char* src, int32_t s, int32_t e) {
   for (int32_t i = 0; i < len; i++) {
     if (stored[i] != src[s + i]) return 0;
   }
+  if (len == 19) {
+    fprintf(stderr, "PNAME_EQ_MATCH pid=%d ext=%d name=", pid, li_rt_pname_ext[pid]);
+    fwrite(src + s, 1, (size_t)len, stderr);
+    fprintf(stderr, "\n");
+  }
   return 1;
+}
+
+int32_t li_rt_mir_pname_set_extern(int32_t pid, int32_t is_extern) {
+  if (pid < 0 || pid >= LI_RT_PNAME_MAX) return 0;
+  li_rt_pname_ext[pid] = is_extern;
+  return 0;
+}
+
+int32_t li_rt_mir_pname_is_extern(int32_t pid) {
+  if (pid < 0 || pid >= LI_RT_PNAME_MAX) return 0;
+  return li_rt_pname_ext[pid];
 }
 
 static int li_argc = 0;
