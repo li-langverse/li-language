@@ -181,7 +181,10 @@ const char* li_rt_resolve_import(const char* file_path, const char* module) {
   char root[4096];
   size_t root_len = find_workspace_root(file_path, root, sizeof(root));
   if (root_len > 0) {
-    /* Build packages/li-<module-with-hyphens>/src/lib.li */
+    /* Candidate 2a: packages/li-<module-dashed>/src/lib.li
+     * Convert dots and underscores to hyphens so that
+     *   import li_demo → packages/li-demo/src/lib.li
+     *   import net.httpd → packages/li-net-httpd/src/lib.li */
     if (root_len + 11 + mlen + 12 < sizeof(buf)) {
       size_t p = 0;
       memcpy(buf + p, root, root_len);
@@ -189,7 +192,9 @@ const char* li_rt_resolve_import(const char* file_path, const char* module) {
       memcpy(buf + p, "/packages/li-", 13);
       p += 13;
       for (size_t i = 0; i < mlen && p < sizeof(buf) - 1; ++i) {
-        buf[p++] = module[i] == '.' ? '-' : module[i];
+        char c = module[i];
+        if (c == '.' || c == '_') c = '-';
+        buf[p++] = c;
       }
       memcpy(buf + p, "/src/lib.li", 12);
       p += 12;
@@ -197,6 +202,53 @@ const char* li_rt_resolve_import(const char* file_path, const char* module) {
       const char* result = try_read_file(buf);
       if (result != NULL) {
         return result;
+      }
+    }
+    /* Candidate 2b: packages/<module>/src/lib.li (no li- prefix)
+     * Handles imports that match a package directory directly. */
+    if (root_len + 10 + mlen + 12 < sizeof(buf)) {
+      size_t p = 0;
+      memcpy(buf + p, root, root_len);
+      p = root_len;
+      memcpy(buf + p, "/packages/", 10);
+      p += 10;
+      for (size_t i = 0; i < mlen && p < sizeof(buf) - 1; ++i) {
+        char c = module[i];
+        if (c == '.') c = '-';
+        buf[p++] = c;
+      }
+      memcpy(buf + p, "/src/lib.li", 12);
+      p += 12;
+      buf[p] = '\0';
+      const char* result2 = try_read_file(buf);
+      if (result2 != NULL) {
+        return result2;
+      }
+    }
+    /* Candidate 2c: strip li- prefix, then dash-convert.
+     * import li_demo → packages/li-demo/src/lib.li
+     * (C++ workspace_package_entry matches kebab_to_snake(member)) */
+    if (mlen > 3 && module[0] == 'l' && module[1] == 'i' && module[2] == '_') {
+      const char* stripped = module + 3;
+      const size_t slen = mlen - 3;
+      if (root_len + 10 + slen + 12 < sizeof(buf)) {
+        size_t p = 0;
+        memcpy(buf + p, root, root_len);
+        p = root_len;
+        memcpy(buf + p, "/packages/li-", 13);
+        p = root_len + 13;
+        for (size_t i = 0; i < slen && p < sizeof(buf) - 1; ++i) {
+          char c = stripped[i];
+          if (c == '.' || c == '_') c = '-';
+          buf[p++] = c;
+        }
+        memcpy(buf + p, "/src/lib.li", 12);
+        p += 12;
+        buf[p] = '\0';
+        const char* result3 = try_read_file(buf);
+        if (result3 != NULL) {
+          return result3;
+        }
       }
     }
     /* Candidate 3: "std.X.Y" → "std/X/Y.li" (stdlib tree) */
