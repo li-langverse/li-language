@@ -6977,10 +6977,14 @@ def mir_obj_find_field(src: var ptr, itmp: var array[4096, int], type_idx: int, 
   var nfld: int = mir_obj_field_count(itmp, type_idx)
   var fi: int = 0
   var fa: array[2, int]
+  var lookup_hash: int = mir_name_hash(src, fs, fe)
+  var lookup_len: int = fe - fs
+  var fbase: int = peek4096(itmp, 3001 + type_idx * 6 + 3)
   while fi < nfld:
-    mir_obj_field_name(itmp, type_idx, fi, fa)
-    if mir_slice_eq(src, fs, fe, fa[0], fa[1]) == 1:
-      return fi
+    if peek4096(itmp, 3801 + fbase + fi) == lookup_hash:
+      mir_obj_field_name(itmp, type_idx, fi, fa)
+      if fe - fs == fa[1] - fa[0]:
+        return fi
     fi = fi + 1
   return -1
 
@@ -7023,7 +7027,7 @@ def mir_obj_find_var(src: var ptr, ts: var array[131072, int], te: var array[131
     k = k + 1
   return found
 
-def mir_obj_reg_field(itmp: var array[4096, int], fs: int, fe: int, fflt: int, elems: int, tname_s: int, tname_e: int) -> int
+def mir_obj_reg_field(itmp: var array[4096, int], src: var ptr, fs: int, fe: int, fflt: int, elems: int, tname_s: int, tname_e: int) -> int
   requires true
   ensures result == 0
   decreases 0
@@ -7037,6 +7041,7 @@ def mir_obj_reg_field(itmp: var array[4096, int], fs: int, fe: int, fflt: int, e
   set4096(itmp, 3501 + nf + 0, elems)
   set4096(itmp, 3601 + nf * 2 + 0, tname_s)
   set4096(itmp, 3601 + nf * 2 + 1, tname_e)
+  set4096(itmp, 3801 + nf, mir_name_hash(src, fs, fe))
   set4096(itmp, 3200, nf + 1)
   return 0
 
@@ -11427,7 +11432,7 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
               # skip newlines
               while chk < n[0] and peek_tk(tk, chk) == 1:
                 chk = chk + 1
-              mir_obj_reg_field(itmp, fld_s, fld_e, fld_float, fld_elems, fld_tn_s, fld_tn_e)
+              mir_obj_reg_field(itmp, src, fld_s, fld_e, fld_float, fld_elems, fld_tn_s, fld_tn_e)
               nfields = nfields + 1
             # Inheritance: `type Dog = object of Animal` — C++ for_each_object_field
             # recurses into the base first, so base fields precede derived fields.
@@ -11449,6 +11454,7 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
                   set4096(itmp, 3501 + (merged_base + bj) + 0, peek4096(itmp, 3501 + (base_fb + bj) + 0))
                   set4096(itmp, 3601 + (merged_base + bj) * 2 + 0, peek4096(itmp, 3601 + (base_fb + bj) * 2 + 0))
                   set4096(itmp, 3601 + (merged_base + bj) * 2 + 1, peek4096(itmp, 3601 + (base_fb + bj) * 2 + 1))
+                  set4096(itmp, 3801 + merged_base + bj, peek4096(itmp, 3801 + base_fb + bj))
                   bj = bj + 1
                 var dj: int = 0
                 while dj < nfields:
@@ -11458,6 +11464,7 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
                   set4096(itmp, 3501 + (merged_base + base_nf + dj) + 0, peek4096(itmp, 3501 + (field_base + dj) + 0))
                   set4096(itmp, 3601 + (merged_base + base_nf + dj) * 2 + 0, peek4096(itmp, 3601 + (field_base + dj) * 2 + 0))
                   set4096(itmp, 3601 + (merged_base + base_nf + dj) * 2 + 1, peek4096(itmp, 3601 + (field_base + dj) * 2 + 1))
+                  set4096(itmp, 3801 + merged_base + base_nf + dj, peek4096(itmp, 3801 + field_base + dj))
                   dj = dj + 1
                 set4096(itmp, 3200, merged_base + base_nf + nfields)
                 reg_nf = base_nf + nfields
