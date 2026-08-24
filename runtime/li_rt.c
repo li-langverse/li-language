@@ -140,6 +140,14 @@ static size_t find_workspace_root(const char* file_path, char* root,
 /* Indexed import path store: lets the Li walker retrieve the resolved
  * file path for each import by index, so transitive resolution uses the
  * correct base directory. */
+/* Global proc-count accumulator for the Li MIR walker.  Works around a
+ * Li compiler bug where var array parameters are passed by value in
+ * some code paths, causing pn[0] to not propagate across nested
+ * mir_walk calls (e.g. the import collect loop). */
+static int32_t g_li_pn = 0;
+int32_t li_rt_pn_get(void) { return g_li_pn; }
+void li_rt_pn_set(int32_t v) { g_li_pn = v; }
+
 #define LI_RT_IMPORT_PATH_MAX 32
 static const char* li_rt_import_paths[LI_RT_IMPORT_PATH_MAX];
 static int         li_rt_import_path_count = 0;

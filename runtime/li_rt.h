@@ -69,6 +69,11 @@ const char* li_rt_import_path_get(int idx);
 /* Per-type source pointer store: the source where each registered Object type
  * was defined, so field name positions can be read from the correct buffer. */
 void li_rt_type_src_store(int idx, const char* src);
+/* Global proc-count accumulator: works around a Li compiler bug where
+ * var array parameters are passed by value in some code paths, causing
+ * the proc-count pn[0] to not propagate across nested mir_walk calls. */
+int32_t li_rt_pn_get(void);
+void li_rt_pn_set(int32_t v);
 const char* li_rt_type_src_get(int idx);
 void li_rt_set_args(int argc, char** argv);
 int li_rt_argc(void);

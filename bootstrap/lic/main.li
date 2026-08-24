@@ -79,6 +79,12 @@ extern def li_rt_type_src_store(idx: int, src: ptr) -> int
 extern def li_rt_type_src_get(idx: int) -> ptr
   requires true
   ensures true
+extern def li_rt_pn_get() -> int
+  requires true
+  ensures true
+extern def li_rt_pn_set(v: int) -> int
+  requires true
+  ensures true
 extern def li_rt_emit_token(code: int,  text: ptr,  s: int,  e: int) -> int
   requires true
   ensures true
@@ -11233,6 +11239,10 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
   ensures result == 0 or result == 1
   decreases 0
 =
+  # Sync proc count from C global (workaround var-array pass-by-value bug)
+  var _pn: int = 0
+  if mode == 0:
+    _pn = li_rt_pn_get()
   skip_newlines(tk,  n,  pi,  err)
   set32768(ftmp, 4092, 0)
   set32768(ftmp, 4093, -1)
@@ -11257,14 +11267,14 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
       if cur_kind(tk,  n,  pi,  err) == 10:
         pi[0] = pi[0] + 1
       if mode == 0:
-        if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  1,  pn[0], ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  pcount) == 1:
+        if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  1,  _pn, ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  pcount) == 1:
           return 1
         # Store name + mark as extern so mir_proc_find yields INS 7.
-        var _pns1: int = peek_tk(ts, peek128(ptok, pn[0] + 0) + 0)
-        var _pne1: int = peek_tk(te, peek128(ptok, pn[0] + 0) + 0)
-        li_rt_mir_pname_store(pn[0], src, _pns1, _pne1)
-        li_rt_mir_pname_set_extern(pn[0], 1)
-        pn[0] = pn[0] + 1
+        var _pns1: int = peek_tk(ts, peek128(ptok, _pn + 0) + 0)
+        var _pne1: int = peek_tk(te, peek128(ptok, _pn + 0) + 0)
+        li_rt_mir_pname_store(_pn, src, _pns1, _pne1)
+        li_rt_mir_pname_set_extern(_pn, 1)
+        _pn = _pn + 1
       else:
         # Emit pid from pcount; pn stays at the collected total so
         # mir_proc_find can resolve calls to any proc (incl. recursion).
@@ -11277,12 +11287,12 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
       pi[0] = pi[0] + 1
       set32768(ftmp, 4091, 1)
       if mode == 0:
-        if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  pn[0], ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  pcount) == 1:
+        if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  _pn, ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  pcount) == 1:
           return 1
-        var _pns2: int = peek_tk(ts, peek128(ptok, pn[0] + 0) + 0)
-        var _pne2: int = peek_tk(te, peek128(ptok, pn[0] + 0) + 0)
-        li_rt_mir_pname_store(pn[0], src, _pns2, _pne2)
-        pn[0] = pn[0] + 1
+        var _pns2: int = peek_tk(ts, peek128(ptok, _pn + 0) + 0)
+        var _pne2: int = peek_tk(te, peek128(ptok, _pn + 0) + 0)
+        li_rt_mir_pname_store(_pn, src, _pns2, _pne2)
+        _pn = _pn + 1
       else:
         if mir_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  pcount[0], tc,  lastop,  ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc) == 1:
           return 1
@@ -11326,12 +11336,12 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
       set32768(ftmp, 4093, dec_name_tok)
       set32768(ftmp, 4094, dec_lanes)
       set32768(ftmp, 4095, dec_vectorized)      if mode == 0:
-        if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  pn[0], ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  pcount) == 1:
+        if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  _pn, ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  pcount) == 1:
           return 1
-        var _pns3: int = peek_tk(ts, peek128(ptok, pn[0] + 0) + 0)
-        var _pne3: int = peek_tk(te, peek128(ptok, pn[0] + 0) + 0)
-        li_rt_mir_pname_store(pn[0], src, _pns3, _pne3)
-        pn[0] = pn[0] + 1
+        var _pns3: int = peek_tk(ts, peek128(ptok, _pn + 0) + 0)
+        var _pne3: int = peek_tk(te, peek128(ptok, _pn + 0) + 0)
+        li_rt_mir_pname_store(_pn, src, _pns3, _pne3)
+        _pn = _pn + 1
       else:
         if mir_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  pcount[0], tc,  lastop,  ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc) == 1:
           return 1
@@ -11342,12 +11352,12 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
     if k == 16:
       if peek_off(tk,  n,  pi,  1) == 10:
         if mode == 0:
-          if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  pn[0], ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  pcount) == 1:
+          if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  _pn, ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  pcount) == 1:
             return 1
-          var _pns4: int = peek_tk(ts, peek128(ptok, pn[0] + 0) + 0)
-          var _pne4: int = peek_tk(te, peek128(ptok, pn[0] + 0) + 0)
-          li_rt_mir_pname_store(pn[0], src, _pns4, _pne4)
-          pn[0] = pn[0] + 1
+          var _pns4: int = peek_tk(ts, peek128(ptok, _pn + 0) + 0)
+          var _pne4: int = peek_tk(te, peek128(ptok, _pn + 0) + 0)
+          li_rt_mir_pname_store(_pn, src, _pns4, _pne4)
+          _pn = _pn + 1
         else:
           if mir_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  pcount[0], tc,  lastop,  ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc) == 1:
             return 1
@@ -11359,12 +11369,12 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
     if k == 17:
       if peek_off(tk,  n,  pi,  1) == 10:
         if mode == 0:
-          if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  pn[0], ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  pcount) == 1:
+          if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  _pn, ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  pcount) == 1:
             return 1
-          var _pns5: int = peek_tk(ts, peek128(ptok, pn[0] + 0) + 0)
-          var _pne5: int = peek_tk(te, peek128(ptok, pn[0] + 0) + 0)
-          li_rt_mir_pname_store(pn[0], src, _pns5, _pne5)
-          pn[0] = pn[0] + 1
+          var _pns5: int = peek_tk(ts, peek128(ptok, _pn + 0) + 0)
+          var _pne5: int = peek_tk(te, peek128(ptok, _pn + 0) + 0)
+          li_rt_mir_pname_store(_pn, src, _pns5, _pne5)
+          _pn = _pn + 1
         else:
           if mir_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  pcount[0], tc,  lastop,  ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc) == 1:
             return 1
@@ -11375,12 +11385,12 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
       return 1
     if k == 10:
       if mode == 0:
-        if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  pn[0], ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  pcount) == 1:
+        if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  _pn, ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  pcount) == 1:
           return 1
-        var _pns6: int = peek_tk(ts, peek128(ptok, pn[0] + 0) + 0)
-        var _pne6: int = peek_tk(te, peek128(ptok, pn[0] + 0) + 0)
-        li_rt_mir_pname_store(pn[0], src, _pns6, _pne6)
-        pn[0] = pn[0] + 1
+        var _pns6: int = peek_tk(ts, peek128(ptok, _pn + 0) + 0)
+        var _pne6: int = peek_tk(te, peek128(ptok, _pn + 0) + 0)
+        li_rt_mir_pname_store(_pn, src, _pns6, _pne6)
+        _pn = _pn + 1
       else:
         if mir_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  pcount[0], tc,  lastop,  ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc) == 1:
           return 1
@@ -11531,6 +11541,9 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
       continue
     err[0] = 1
     return 1
+  # Sync proc count back to C global
+  if mode == 0:
+    li_rt_pn_set(_pn)
   return 0
 
 # Scan the token stream for extern call sites and set the MIR module
@@ -11706,16 +11719,20 @@ def mir_module(src: var ptr,  file_path: ptr,  tk: var array[131072, int],  ts: 
   if lex_source(src,  tk,  ts,  te,  n, 0) == 1:
     return 1
   pi[0] = 0  err[0] = 0
+  li_rt_pn_set(0)
   if mir_walk(src,  tk,  ts,  te,  n,  pi,  err,  0, tc,  lastop,  ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  pcount) == 1:
     return 1
+  pn[0] = li_rt_pn_get()
   var ii: int = 0
   while ii < imp_n[0]:
     n[0] = 0
     if lex_source(imp_files[ii],  tk,  ts,  te,  n, 0) == 0:
       pi[0] = 0
       err[0] = 0
+      li_rt_pn_set(pn[0])
       if mir_walk(imp_files[ii],  tk,  ts,  te,  n,  pi,  err,  0, tc,  lastop,  ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  pcount) == 1:
         return 1
+      pn[0] = li_rt_pn_get()
     ii = ii + 1
   # ---- Emit: re-lex main, scan flags, header, emit main, then emit imports ----
   n[0] = 0
