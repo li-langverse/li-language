@@ -74,6 +74,8 @@ void li_rt_type_src_store(int idx, const char* src);
  * the proc-count pn[0] to not propagate across nested mir_walk calls. */
 int32_t li_rt_pn_get(void);
 void li_rt_pn_set(int32_t v);
+int32_t li_rt_pidx_get(void);
+void li_rt_pidx_set(int32_t v);
 const char* li_rt_type_src_get(int idx);
 void li_rt_set_args(int argc, char** argv);
 int li_rt_argc(void);

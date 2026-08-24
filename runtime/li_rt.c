@@ -148,6 +148,13 @@ static int32_t g_li_pn = 0;
 int32_t li_rt_pn_get(void) { return g_li_pn; }
 void li_rt_pn_set(int32_t v) { g_li_pn = v; }
 
+/* Global param-index accumulator — separate from pn because
+ * mir_collect_proc uses this as the param-slot index into ptok2/pty/etc,
+ * while mir_walk uses pn as the proc-id counter. */
+static int32_t g_li_pidx = 0;
+int32_t li_rt_pidx_get(void) { return g_li_pidx; }
+void li_rt_pidx_set(int32_t v) { g_li_pidx = v; }
+
 #define LI_RT_IMPORT_PATH_MAX 32
 static const char* li_rt_import_paths[LI_RT_IMPORT_PATH_MAX];
 static int         li_rt_import_path_count = 0;
