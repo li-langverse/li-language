@@ -155,6 +155,39 @@ static int32_t g_li_pidx = 0;
 int32_t li_rt_pidx_get(void) { return g_li_pidx; }
 void li_rt_pidx_set(int32_t v) { g_li_pidx = v; }
 
+/* ---- Global param registry (Layer 5 MIR parity) ----
+ * Works around the Li compiler bug where var-array parameters are passed
+ * by value.  mir_collect_proc writes param metadata here; mir_proc reads
+ * it back during emit.  Tables:
+ *   0=ptok  1=pex  2=pp0  3=ppn  4=pret  (proc-level, 128 slots)
+ *   5=ptok2 6=pty  7=pelems 8=pef 9=pei
+ *   10=pvar 11=pmx 12=pmc  (param-slot-level, 512 slots) */
+#define LI_RT_PREG_PMAX 128
+#define LI_RT_PREG_SMAX 512
+#define LI_RT_PREG_TABLES 13
+static int32_t g_li_preg[LI_RT_PREG_TABLES * LI_RT_PREG_SMAX];
+static int32_t g_li_preg_sizes[LI_RT_PREG_TABLES] = {
+  LI_RT_PREG_PMAX, LI_RT_PREG_PMAX, LI_RT_PREG_PMAX, LI_RT_PREG_PMAX, LI_RT_PREG_PMAX,
+  LI_RT_PREG_SMAX, LI_RT_PREG_SMAX, LI_RT_PREG_SMAX, LI_RT_PREG_SMAX, LI_RT_PREG_SMAX,
+  LI_RT_PREG_SMAX, LI_RT_PREG_SMAX, LI_RT_PREG_SMAX
+};
+
+int32_t li_rt_preg_get(int32_t table, int32_t idx) {
+  if (table < 0 || table >= LI_RT_PREG_TABLES) return 0;
+  if (idx < 0 || idx >= g_li_preg_sizes[table]) return 0;
+  return g_li_preg[table * LI_RT_PREG_SMAX + idx];
+}
+
+void li_rt_preg_set(int32_t table, int32_t idx, int32_t val) {
+  if (table < 0 || table >= LI_RT_PREG_TABLES) return;
+  if (idx < 0 || idx >= g_li_preg_sizes[table]) return;
+  g_li_preg[table * LI_RT_PREG_SMAX + idx] = val;
+}
+
+void li_rt_preg_clear(void) {
+  memset(g_li_preg, 0, sizeof(g_li_preg));
+}
+
 #define LI_RT_IMPORT_PATH_MAX 32
 static const char* li_rt_import_paths[LI_RT_IMPORT_PATH_MAX];
 static int         li_rt_import_path_count = 0;

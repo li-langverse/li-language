@@ -76,6 +76,12 @@ int32_t li_rt_pn_get(void);
 void li_rt_pn_set(int32_t v);
 int32_t li_rt_pidx_get(void);
 void li_rt_pidx_set(int32_t v);
+/* Global param registry get/set (workaround var-array pass-by-value bug).
+ * table: 0=ptok 1=pex 2=pp0 3=ppn 4=pret 5=ptok2 6=pty 7=pelems
+ *         8=pef 9=pei 10=pvar 11=pmx 12=pmc */
+int32_t li_rt_preg_get(int32_t table, int32_t idx);
+void li_rt_preg_set(int32_t table, int32_t idx, int32_t val);
+void li_rt_preg_clear(void);
 const char* li_rt_type_src_get(int idx);
 void li_rt_set_args(int argc, char** argv);
 int li_rt_argc(void);

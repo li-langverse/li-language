@@ -91,6 +91,15 @@ extern def li_rt_pidx_get() -> int
 extern def li_rt_pidx_set(v: int) -> int
   requires true
   ensures true
+extern def li_rt_preg_get(table: int,  idx: int) -> int
+  requires true
+  ensures true
+extern def li_rt_preg_set(table: int,  idx: int,  val: int) -> int
+  requires true
+  ensures true
+extern def li_rt_preg_clear() -> int
+  requires true
+  ensures true
 extern def li_rt_emit_token(code: int,  text: ptr,  s: int,  e: int) -> int
   requires true
   ensures true
@@ -7598,7 +7607,7 @@ def mir_proc_find(src: var ptr,  ts: var array[131072, int],  te: var array[1310
   # Second pass: token-based lookup (works for same-file procs)
   k = 0
   while k < _pn_limit:
-    if mir_slice_eq(src,  s,  e,  peek_tk(ts, peek128(ptok, k + 0) + 0),  peek_tk(te, peek128(ptok, k + 0) + 0)) == 1:
+    if mir_slice_eq(src,  s,  e,  peek_tk(ts, li_rt_preg_get(0, k) + 0),  peek_tk(te, li_rt_preg_get(0, k) + 0)) == 1:
       return k
     k = k + 1
   return -1
@@ -7615,8 +7624,8 @@ def mir_method_pid(src: var ptr,  ts: var array[131072, int],  te: var array[131
   var _pn_limit2: int = li_rt_pn_get()
   var k: int = 0
   while k < _pn_limit2:
-    var ns: int = peek_tk(ts, peek128(ptok, k + 0) + 0)
-    var ne: int = peek_tk(te, peek128(ptok, k + 0) + 0)
+    var ns: int = peek_tk(ts, li_rt_preg_get(0, k) + 0)
+    var ne: int = peek_tk(te, li_rt_preg_get(0, k) + 0)
     if ne - ns == tlen + 1 + mlen:
       if mir_slice_eq(src,  ns,  ns + tlen,  ty_s,  ty_e) == 1:
         if li_rt_str_char_at(src,  ns + tlen) == 95:
@@ -7633,8 +7642,8 @@ def mir_method_first_var(src: var ptr,  ts: var array[131072, int],  te: var arr
 =
   if pid < 0:
     return 0
-  var fi: int = peek128(pp0, pid + 0)
-  var pv: int = peek512(pvar, fi + 0)
+  var fi: int = li_rt_preg_get(2, pid)
+  var pv: int = li_rt_preg_get(10, fi)
   # Type 6 (var object): pv = 1000 + type_tok*2 + var_bit
   if pv >= 1000:
     if (pv - 1000) % 2 == 1:
@@ -8215,7 +8224,7 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
         var fi_m: int = 0
         var rd_m: int = 8
         if mpid >= 0:
-          rd_m = peek128(pret, mpid + 0)
+          rd_m = li_rt_preg_get(4, mpid)
         var drec: int = -1
         if rd_m != 0:
           if rd_m != 8:
@@ -8643,7 +8652,7 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
     var pid: int = mir_proc_find(src,  ts,  te,  peek65536(darena, rec + 1),  peek65536(darena, rec + 2),  ptok,  pn)
     var is_callproc: int = 0
     if pid >= 0:
-      if peek128(pex, pid + 0) == 0:
+      if li_rt_preg_get(1, pid) == 0:
         if li_rt_mir_pname_is_extern(pid) == 0:
           is_callproc = 1
     # SIMD builtins: __li_simd_splat_f64 (37), __li_simd_mul_f64 (38),
@@ -8742,8 +8751,8 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
             if ak == 3:
               var obj_arg_type: int = -1
               if is_callproc == 1:
-                if peek512(pty, peek128(pp0, pid + 0) + ai) == 6:
-                  var obj_code_arg: int = peek512(pvar, peek128(pp0, pid + 0) + ai)
+                if li_rt_preg_get(6, li_rt_preg_get(2, pid) + ai) == 6:
+                  var obj_code_arg: int = li_rt_preg_get(10, li_rt_preg_get(2, pid) + ai)
                   if obj_code_arg >= 1000:
                     var obj_type_tok_arg: int = (obj_code_arg - 1000) / 2
                     obj_arg_type = mir_obj_find_type(src, ts, te, itmp, peek_tk(ts, obj_type_tok_arg + 0), peek_tk(te, obj_type_tok_arg + 0))
@@ -8776,7 +8785,7 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
                 set128(abuf, nab[0] + 2,peek65536(darena, arec + 2))
                 set128(abuf, nab[0] + 3,0)
                 if is_callproc == 1:
-                  if peek512(pty, peek128(pp0, pid + 0) + ai) == 5:
+                  if li_rt_preg_get(6, li_rt_preg_get(2, pid) + ai) == 5:
                     set128(abuf, nab[0] + 3,1)
                 nab[0] = nab[0] + 4
             else:
@@ -8850,7 +8859,7 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
       f8b[6] = peek65536(darena, rec + 1)
       f8b[7] = peek65536(darena, rec + 2)
       f8b[8] = 1
-      var rd: int = peek128(pret, pid + 0)
+      var rd: int = li_rt_preg_get(4, pid)
       if rd == 0:
         mir_ins_line(src,  f8b,  8,  0,  -1,  lastop)
         mir_mk_name(darena,  rec,  2,  0,  0)
@@ -8883,8 +8892,8 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
           std_str = 1
       var ev: int = 0
       if pid >= 0:
-        if peek128(pret, pid + 0) != 0:
-          if peek128(pret, pid + 0) != 8:
+        if li_rt_preg_get(4, pid) != 0:
+          if li_rt_preg_get(4, pid) != 8:
             ev = 1
       else:
         if std_int == 1 or std_str == 1:
@@ -8900,11 +8909,11 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
           set4096(itmp, c9 + 0,1)
         else:
           if pid >= 0:
-            if peek128(pret, pid + 0) == 2:
+            if li_rt_preg_get(4, pid) == 2:
               f7x[19] = 1
               set32768(ftmp, c9 + 0,1)
             else:
-              if peek128(pret, pid + 0) == 3 or peek128(pret, pid + 0) == 4 or peek128(pret, pid + 0) == 5:
+              if li_rt_preg_get(4, pid) == 3 or li_rt_preg_get(4, pid) == 4 or li_rt_preg_get(4, pid) == 5:
                 f7x[20] = 1
                 f7x[31] = 1
                 set4096(itmp, c9 + 0,1)
@@ -10974,13 +10983,13 @@ def mir_collect_proc(src: var ptr,  tk: var array[131072, int],  ts: var array[1
       return 1
   var pname: int = pi[0]
   pi[0] = pi[0] + 1
-  set128(ptok, pid + 0,pname)
-  set128(pex, pid + 0,is_extern)
+  li_rt_preg_set(0, pid, pname)
+  li_rt_preg_set(1, pid, is_extern)
   parse_type_params(src,  tk,  ts,  te,  n,  pi,  err, 0, 1)
   expect_k(tk,  n,  pi,  err, 49)
   skip_param_layout(tk,  n,  pi,  err)
   var _pc: int = li_rt_pidx_get()
-  set128(pp0, pid + 0, _pc)
+  li_rt_preg_set(2, pid, _pc)
   if cur_kind(tk,  n,  pi,  err) != 50:
     var done: int = 0
     while done == 0:
@@ -10994,36 +11003,36 @@ def mir_collect_proc(src: var ptr,  tk: var array[131072, int],  ts: var array[1
       var ti: array[6, int]
       if mir_type_info(src,  tk,  ts,  te,  n,  pi,  err,  ti) == 1:
         return 1
-      set512(ptok2, _pc, pn2)
-      set512(pty, _pc, ti[0])
-      set512(pelems, _pc, ti[2])
+      li_rt_preg_set(5, _pc, pn2)
+      li_rt_preg_set(6, _pc, ti[0])
+      li_rt_preg_set(7, _pc, ti[2])
       if ti[3] == 1:
-        set512(pef, _pc, 1)
+        li_rt_preg_set(8, _pc, 1)
       else:
-        set512(pef, _pc, 0)
+        li_rt_preg_set(8, _pc, 0)
       if ti[3] == 2 or ti[3] == 4:
-        set512(pei, _pc, 1)
+        li_rt_preg_set(9, _pc, 1)
       else:
-        set512(pei, _pc, 0)
+        li_rt_preg_set(9, _pc, 0)
       if ti[3] == 5:
         if ti[5] == 1:
-          set512(pmx, _pc, 1)
-          set512(pmc, _pc, ti[4])
+          li_rt_preg_set(11, _pc, 1)
+          li_rt_preg_set(12, _pc, ti[4])
         else:
-          set512(pmx, _pc, 0)
-          set512(pmc, _pc, 0)
+          li_rt_preg_set(11, _pc, 0)
+          li_rt_preg_set(12, _pc, 0)
       else:
-        set512(pmx, _pc, 0)
-        set512(pmc, _pc, 0)
+        li_rt_preg_set(11, _pc, 0)
+        li_rt_preg_set(12, _pc, 0)
       if ti[0] == 5:
-        set512(pvar, _pc, ti[1])
+        li_rt_preg_set(10, _pc, ti[1])
       else:
         if ti[0] == 6:
-          set512(pvar, _pc, 1000 + type_tok * 2 + ti[1])
+          li_rt_preg_set(10, _pc, 1000 + type_tok * 2 + ti[1])
         else:
-          set512(pvar, _pc, 0)
+          li_rt_preg_set(10, _pc, 0)
       if ti[0] == 6:
-        set512(pmc, _pc, type_tok)
+        li_rt_preg_set(12, _pc, type_tok)
       _pc = _pc + 1
       skip_param_layout(tk,  n,  pi,  err)
       if accept_k(tk,  n,  pi,  err, 55) == 1:
@@ -11031,7 +11040,7 @@ def mir_collect_proc(src: var ptr,  tk: var array[131072, int],  ts: var array[1
       else:
         done = 1
   li_rt_pidx_set(_pc)
-  set128(ppn, pid + 0, _pc - peek128(pp0, pid + 0))
+  li_rt_preg_set(3, pid, _pc - li_rt_preg_get(2, pid))
   skip_param_layout(tk,  n,  pi,  err)
   expect_k(tk,  n,  pi,  err, 50)
   skip_newlines(tk,  n,  pi,  err)
@@ -11064,7 +11073,7 @@ def mir_collect_proc(src: var ptr,  tk: var array[131072, int],  ts: var array[1
                   ret = 5
                 else:
                   ret = 6
-  set128(pret, pid + 0,ret)
+  li_rt_preg_set(4, pid, ret)
   skip_newlines(tk,  n,  pi,  err)
   mir_skip_raises(tk,  n,  pi,  err)
   skip_newlines(tk,  n,  pi,  err)
@@ -11138,7 +11147,7 @@ def mir_proc(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
   mir_skip_raises(tk,  n,  pi,  err)
   skip_newlines(tk,  n,  pi,  err)
   mir_skip_contracts(src,  tk,  ts,  te,  n,  pi,  err)
-  var ret: int = peek128(pret, pid + 0)
+  var ret: int = li_rt_preg_get(4, pid)
   var retf: int = 0
   var reti64: int = 0
   var retvoid: int = 0
@@ -11160,48 +11169,48 @@ def mir_proc(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
       ret_obj_ti = mir_obj_find_type(src, ts, te, itmp, peek_tk(ts, rt_tok2 + 0), peek_tk(te, rt_tok2 + 0))
       if ret_obj_ti >= 0:
         retobj = 1
-  mir_fn_line(src,  ts,  te,  peek128(ptok, pid + 0),  retf,  reti64,  retvoid,  retobj,  is_extern,  peek32768(ftmp, 4092),  peek32768(ftmp, 4091))
+  mir_fn_line(src,  ts,  te,  li_rt_preg_get(0, pid),  retf,  reti64,  retvoid,  retobj,  is_extern,  peek32768(ftmp, 4092),  peek32768(ftmp, 4091))
   if peek32768(ftmp, 4093) >= 0:
     mir_dec_line(src,  ts,  te,  peek32768(ftmp, 4093),  peek32768(ftmp, 4094),  peek32768(ftmp, 4095),  0,  0)
   var j: int = 0
-  while j < peek128(ppn, pid + 0):
-    var pi2: int = peek128(pp0, pid + 0) + j
-    var ptype2: int = peek512(pty, pi2 + 0)
+  while j < li_rt_preg_get(3, pid):
+    var pi2: int = li_rt_preg_get(2, pid) + j
+    var ptype2: int = li_rt_preg_get(6, pi2)
     var pobj2: int = -1
     if ptype2 == 6:
-      var ptype_tok2: int = peek512(pmc, pi2 + 0)
+      var ptype_tok2: int = li_rt_preg_get(12, pi2)
       pobj2 = mir_obj_find_type(src, ts, te, itmp, peek_tk(ts, ptype_tok2 + 0), peek_tk(te, ptype_tok2 + 0))
     if pobj2 >= 0:
-      mir_obj_reg_var(itmp, peek_tk(ts, peek512(ptok2, pi2 + 0) + 0), peek_tk(te, peek512(ptok2, pi2 + 0) + 0), pobj2)
+      mir_obj_reg_var(itmp, peek_tk(ts, li_rt_preg_get(5, pi2) + 0), peek_tk(te, li_rt_preg_get(5, pi2) + 0), pobj2)
       var obj_is_var2: int = 0
-      var obj_code2: int = peek512(pvar, pi2 + 0)
+      var obj_code2: int = li_rt_preg_get(10, pi2)
       if obj_code2 >= 1000:
         obj_is_var2 = (obj_code2 - 1000) % 2
-      mir_emit_object_params(src, ts, te, itmp, pobj2, peek_tk(ts, peek512(ptok2, pi2 + 0) + 0), peek_tk(te, peek512(ptok2, pi2 + 0) + 0), obj_is_var2)
+      mir_emit_object_params(src, ts, te, itmp, pobj2, peek_tk(ts, li_rt_preg_get(5, pi2) + 0), peek_tk(te, li_rt_preg_get(5, pi2) + 0), obj_is_var2)
     else:
       if ptype2 == 6:
         # Unknown named types (generic/protocol parameters) are not object
         # layouts; do not leak the encoded type-token through PARAM fields.
-        mir_param_line(src, ts, te, peek512(ptok2, pi2 + 0), ptype2, 0, 0, 0, 0, 0, 0)
+        mir_param_line(src, ts, te, li_rt_preg_get(5, pi2), ptype2, 0, 0, 0, 0, 0, 0)
       else:
-        mir_param_line(src, ts, te, peek512(ptok2, pi2 + 0), ptype2, peek512(pelems, pi2 + 0), peek512(pef, pi2 + 0), peek512(pei, pi2 + 0), peek512(pvar, pi2 + 0), peek512(pmx, pi2 + 0), peek512(pmc, pi2 + 0))
+        mir_param_line(src, ts, te, li_rt_preg_get(5, pi2), ptype2, li_rt_preg_get(7, pi2), li_rt_preg_get(8, pi2), li_rt_preg_get(9, pi2), li_rt_preg_get(10, pi2), li_rt_preg_get(11, pi2), li_rt_preg_get(12, pi2))
     if ptype2 == 1:
-      set4096(ftok, nft[0],peek512(ptok2, pi2 + 0))
+      set4096(ftok, nft[0],li_rt_preg_get(5, pi2))
       nft[0] = nft[0] + 1
     else:
-      if peek512(pty, pi2 + 0) == 2 or peek512(pty, pi2 + 0) == 3 or peek512(pty, pi2 + 0) == 4:
-        set4096(itok, nit[0],peek512(ptok2, pi2 + 0))
+      if li_rt_preg_get(6, pi2) == 2 or li_rt_preg_get(6, pi2) == 3 or li_rt_preg_get(6, pi2) == 4:
+        set4096(itok, nit[0],li_rt_preg_get(5, pi2))
         nit[0] = nit[0] + 1
       else:
-        if peek512(pty, pi2 + 0) == 5:
-          if peek512(pef, pi2 + 0) == 1:
-            set512(fatok, 2 * nfa[0],peek512(ptok2, pi2 + 0))
-            set512(fatok, 2 * nfa[0] + 1,peek512(pelems, pi2 + 0))
+        if li_rt_preg_get(6, pi2) == 5:
+          if li_rt_preg_get(8, pi2) == 1:
+            set512(fatok, 2 * nfa[0],li_rt_preg_get(5, pi2))
+            set512(fatok, 2 * nfa[0] + 1,li_rt_preg_get(7, pi2))
             nfa[0] = nfa[0] + 1
-          if peek512(pef, pi2 + 0) == 0:
+          if li_rt_preg_get(8, pi2) == 0:
             var pnia: int = peek512(fatok, 63)
-            set512(fatok, 2 * nfa[0] + 2 * pnia, peek512(ptok2, pi2 + 0))
-            set512(fatok, 2 * nfa[0] + 2 * pnia + 1, peek512(pelems, pi2 + 0))
+            set512(fatok, 2 * nfa[0] + 2 * pnia, li_rt_preg_get(5, pi2))
+            set512(fatok, 2 * nfa[0] + 2 * pnia + 1, li_rt_preg_get(7, pi2))
             set512(fatok, 63, pnia + 1)
     j = j + 1
   if ret_obj_ti >= 0:
@@ -11276,8 +11285,8 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
         if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  1,  _pn, ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  pcount) == 1:
           return 1
         # Store name + mark as extern so mir_proc_find yields INS 7.
-        var _pns1: int = peek_tk(ts, peek128(ptok, _pn + 0) + 0)
-        var _pne1: int = peek_tk(te, peek128(ptok, _pn + 0) + 0)
+        var _pns1: int = peek_tk(ts, li_rt_preg_get(0, _pn) + 0)
+        var _pne1: int = peek_tk(te, li_rt_preg_get(0, _pn) + 0)
         li_rt_mir_pname_store(_pn, src, _pns1, _pne1)
         li_rt_mir_pname_set_extern(_pn, 1)
         _pn = _pn + 1
@@ -11295,8 +11304,8 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
       if mode == 0:
         if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  _pn, ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  pcount) == 1:
           return 1
-        var _pns2: int = peek_tk(ts, peek128(ptok, _pn + 0) + 0)
-        var _pne2: int = peek_tk(te, peek128(ptok, _pn + 0) + 0)
+        var _pns2: int = peek_tk(ts, li_rt_preg_get(0, _pn) + 0)
+        var _pne2: int = peek_tk(te, li_rt_preg_get(0, _pn) + 0)
         li_rt_mir_pname_store(_pn, src, _pns2, _pne2)
         _pn = _pn + 1
       else:
@@ -11344,8 +11353,8 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
       set32768(ftmp, 4095, dec_vectorized)      if mode == 0:
         if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  _pn, ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  pcount) == 1:
           return 1
-        var _pns3: int = peek_tk(ts, peek128(ptok, _pn + 0) + 0)
-        var _pne3: int = peek_tk(te, peek128(ptok, _pn + 0) + 0)
+        var _pns3: int = peek_tk(ts, li_rt_preg_get(0, _pn) + 0)
+        var _pne3: int = peek_tk(te, li_rt_preg_get(0, _pn) + 0)
         li_rt_mir_pname_store(_pn, src, _pns3, _pne3)
         _pn = _pn + 1
       else:
@@ -11360,8 +11369,8 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
         if mode == 0:
           if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  _pn, ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  pcount) == 1:
             return 1
-          var _pns4: int = peek_tk(ts, peek128(ptok, _pn + 0) + 0)
-          var _pne4: int = peek_tk(te, peek128(ptok, _pn + 0) + 0)
+          var _pns4: int = peek_tk(ts, li_rt_preg_get(0, _pn) + 0)
+          var _pne4: int = peek_tk(te, li_rt_preg_get(0, _pn) + 0)
           li_rt_mir_pname_store(_pn, src, _pns4, _pne4)
           _pn = _pn + 1
         else:
@@ -11377,8 +11386,8 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
         if mode == 0:
           if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  _pn, ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  pcount) == 1:
             return 1
-          var _pns5: int = peek_tk(ts, peek128(ptok, _pn + 0) + 0)
-          var _pne5: int = peek_tk(te, peek128(ptok, _pn + 0) + 0)
+          var _pns5: int = peek_tk(ts, li_rt_preg_get(0, _pn) + 0)
+          var _pne5: int = peek_tk(te, li_rt_preg_get(0, _pn) + 0)
           li_rt_mir_pname_store(_pn, src, _pns5, _pne5)
           _pn = _pn + 1
         else:
@@ -11393,8 +11402,8 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
       if mode == 0:
         if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  _pn, ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  pcount) == 1:
           return 1
-        var _pns6: int = peek_tk(ts, peek128(ptok, _pn + 0) + 0)
-        var _pne6: int = peek_tk(te, peek128(ptok, _pn + 0) + 0)
+        var _pns6: int = peek_tk(ts, li_rt_preg_get(0, _pn) + 0)
+        var _pne6: int = peek_tk(te, li_rt_preg_get(0, _pn) + 0)
         li_rt_mir_pname_store(_pn, src, _pns6, _pne6)
         _pn = _pn + 1
       else:
@@ -11584,7 +11593,7 @@ def mir_scan_rt_flags(src: var ptr,  tk: var array[131072, int],  ts: var array[
             set32768(ftmp, 4087, 1)
           var pid: int = mir_proc_find(src,  ts,  te,  peek_tk(ts, pi2[0] + 0),  peek_tk(te, pi2[0] + 0),  ptok,  pn)
           if pid >= 0:
-            if peek128(pex, pid + 0) == 1:
+            if li_rt_preg_get(1, pid) == 1:
               var nm: ptr = bytes_slice_i(src,  peek_tk(ts, pi2[0] + 0),  peek_tk(te, pi2[0] + 0) - peek_tk(ts, pi2[0] + 0))
               if li_rt_str_prefix(nm, "li_log_") == 1 or li_rt_str_prefix(nm, "li_rt_log_") == 1:
                 set32768(ftmp, 4088, 1)
@@ -11727,6 +11736,7 @@ def mir_module(src: var ptr,  file_path: ptr,  tk: var array[131072, int],  ts: 
   pi[0] = 0  err[0] = 0
   li_rt_pn_set(0)
   li_rt_pidx_set(0)
+  li_rt_preg_clear()
   if mir_walk(src,  tk,  ts,  te,  n,  pi,  err,  0, tc,  lastop,  ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  pcount) == 1:
     return 1
   pn[0] = li_rt_pn_get()
@@ -11784,7 +11794,7 @@ def mir_module(src: var ptr,  file_path: ptr,  tk: var array[131072, int],  ts: 
   pcount[0] = 0
   if mir_walk(src,  tk,  ts,  te,  n,  pi,  err,  1, tc,  lastop,  ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar,  pmx,  pmc,  pcount) == 1:
     return 1
-  # ---- Emit imports ----
+  # ---- Emit imports (re-lex each import; mir_proc reads from C globals) ----
   ii = 0
   while ii < imp_n[0]:
     var f3: ptr = imp_files[ii]
