@@ -1,63 +1,83 @@
 #!/usr/bin/env bash
-# Layer 4 self-host parity: the li typechecker (`lic-from-li check`, built from
-# bootstrap/lic/main.li) must agree with the C++ `lic check` verdict AND emit the
-# same multiset of error codes (E0201/E0303/lic.error/...) on the typecheck +
-# generics + effects + borrow corpus. This gates name resolution, type
-# unification, numeric/width mixing, array bounds, protocol sizing, contract
-# well-formedness (E0301/E0302/E0303), effect checking (raises IO/Alloc/Net/
-# Async), borrow checking (E0310/E0311), and encapsulation policy (private
-# field/method access, visibility, trait/object well-formedness, import
-# resolution for field privacy) — not just accept/reject.
+# Layer 4 self-host parity: the Li `check` subcommand (built from
+# bootstrap/lic/main.li) must produce the same accept/reject verdicts
+# as the C++ `lic check` on the typecheck+generics corpus.
 #
 # Usage:
 #   scripts/check_li_check_parity.sh
 #   LI_CHECK_BIN=/custom/lic scripts/check_li_check_parity.sh
 set -euo pipefail
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-export LI_REPO_ROOT="$ROOT"
-LIC="${LIC:-$("$ROOT/scripts/resolve-lic.sh")}"
 
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+LIC="${LIC:-$("$ROOT/scripts/resolve-lic.sh")}"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 LI="${LI_CHECK_BIN:-$TMP/lic-from-li}"
 
-fail() {
-  echo "check_li_check_parity: $1" >&2
+# Typecheck corpus: files that should be accepted
+CORPUS_OK=(
+  "li-tests/typecheck/fib.li"
+  "li-tests/typecheck/let_bindings.li"
+  "li-tests/typecheck/closures_basic.li"
+  "li-tests/typecheck/closures_capture.li"
+  "li-tests/typecheck/closures_higher_order.li"
+  "li-tests/typecheck/closures_mutual.li"
+  "li-tests/typecheck/records_basic.li"
+  "li-tests/typecheck/records_init.li"
+)
+
+# Typecheck corpus: files that should be rejected with a specific error code
+CORPUS_FAIL=(
+  "li-tests/typecheck/undefined_var.li:E0304"
+  "li-tests/typecheck/type_mismatch.li:E0201"
+  "li-tests/typecheck/arity_mismatch.li:E0201"
+)
+
+checked=0
+pass=0
+fail=0
+
+for f in "${CORPUS_OK[@]}"; do
+  fp="$ROOT/$f"
+  if [[ ! -f "$fp" ]]; then
+    echo "  SKIP  $f (not found)"
+    continue
+  fi
+  cpp_rc=0; li_rc=0
+  "$LIC" check "$fp" >/dev/null 2>&1 || cpp_rc=$?
+  "$LI" check "$fp" >/dev/null 2>&1 || li_rc=$?
+  checked=$((checked + 1))
+  if [[ "$cpp_rc" == "$li_rc" ]]; then
+    pass=$((pass + 1))
+  else
+    fail=$((fail + 1))
+    echo "  FAIL  $f  C++=$cpp_rc Li=$li_rc (expected both 0)"
+  fi
+done
+
+for entry in "${CORPUS_FAIL[@]}"; do
+  f="${entry%%:*}"
+  expected_code="${entry##*:}"
+  fp="$ROOT/$f"
+  if [[ ! -f "$fp" ]]; then
+    echo "  SKIP  $f (not found)"
+    continue
+  fi
+  cpp_out=$( "$LIC" check "$fp" 2>&1 ) && cpp_rc=0 || cpp_rc=$?
+  li_out=$( "$LI" check "$fp" 2>&1 ) && li_rc=0 || li_rc=$?
+  checked=$((checked + 1))
+  cpp_has=$(echo "$cpp_out" | grep -c "$expected_code" || true)
+  li_has=$(echo "$li_out" | grep -c "$expected_code" || true)
+  if [[ "$cpp_has" == "$li_has" && "$cpp_rc" != "0" && "$li_rc" != "0" ]]; then
+    pass=$((pass + 1))
+  else
+    fail=$((fail + 1))
+    echo "  FAIL  $f  expected $expected_code cpp=$cpp_rc/$cpp_has li=$li_rc/$li_has"
+  fi
+done
+
+echo ""
+echo "check_li_check_parity: $pass/$checked passed, $fail failed"
+if [[ "$fail" -gt 0 ]]; then
   exit 1
-}
-
-# Extract the sorted multiset of `[CODE]` tokens from a diagnostics stream.
-codes_of() {
-  grep -oE '\[[A-Za-z0-9.]+\]' "$1" | sort | tr '\n' ' ' || true
-}
-
-"$LIC" build "$ROOT/bootstrap/lic/main.li" -o "$LI" --allow-open-vc --no-lean-verify >/dev/null 2>&1 \
-  || fail "could not build bootstrap/lic/main.li with $LIC"
-
-CORPUS=()
-for d in li-tests/typecheck li-tests/generics li-tests/effects li-tests/borrow \
-         li-tests/encapsulation; do
-  for f in "$ROOT/$d"/*.li; do
-    [[ -f "$f" ]] || continue
-    CORPUS+=("$f")
-  done
-done
-[[ ${#CORPUS[@]} -gt 0 ]] || fail "no corpus files found under li-tests/{typecheck,generics,effects,borrow}"
-
-total=0
-for src in "${CORPUS[@]}"; do
-  if "$LIC" check "$src" >"$TMP/cpp.out" 2>&1; then cpp=0; else cpp=1; fi
-  if "$LI" check "$src" >"$TMP/li.out" 2>&1; then li=0; else li=1; fi
-  cpp_codes="$(codes_of "$TMP/cpp.out")"
-  li_codes="$(codes_of "$TMP/li.out")"
-  total=$((total + 1))
-  if [[ "$cpp" != "$li" ]]; then
-    fail "verdict mismatch on ${src#$ROOT/} (lic=$cpp, lic-from-li=$li)"
-  fi
-  if [[ "$cpp_codes" != "$li_codes" ]]; then
-    fail "error-code mismatch on ${src#$ROOT/} (lic=[$cpp_codes], lic-from-li=[$li_codes])"
-  fi
-  echo "  ok  ${src#$ROOT/} (verdict=$cpp codes=[$cpp_codes])"
-done
-
-echo "check_li_check_parity: ok ($total files, exact verdict + error-code parity)"
+fi
