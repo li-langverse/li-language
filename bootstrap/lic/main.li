@@ -7583,14 +7583,15 @@ def mir_proc_find(src: var ptr,  ts: var array[131072, int],  te: var array[1310
   # First pass: pname registry lookup (works for cross-file procs)
   # Do pname FIRST so imported procs resolve correctly even when
   # stale ptok values from the import walk cause false token matches.
+  var _pn_limit: int = li_rt_pn_get()
   var k: int = 0
-  while k < pn[0]:
+  while k < _pn_limit:
     if li_rt_mir_pname_eq(k, src, s, e) == 1:
       return k
     k = k + 1
   # Second pass: token-based lookup (works for same-file procs)
   k = 0
-  while k < pn[0]:
+  while k < _pn_limit:
     if mir_slice_eq(src,  s,  e,  peek_tk(ts, peek128(ptok, k + 0) + 0),  peek_tk(te, peek128(ptok, k + 0) + 0)) == 1:
       return k
     k = k + 1
@@ -7605,8 +7606,9 @@ def mir_method_pid(src: var ptr,  ts: var array[131072, int],  te: var array[131
 =
   var tlen: int = ty_e - ty_s
   var mlen: int = me - ms
+  var _pn_limit2: int = li_rt_pn_get()
   var k: int = 0
-  while k < pn[0]:
+  while k < _pn_limit2:
     var ns: int = peek_tk(ts, peek128(ptok, k + 0) + 0)
     var ne: int = peek_tk(te, peek128(ptok, k + 0) + 0)
     if ne - ns == tlen + 1 + mlen:
