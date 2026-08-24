@@ -363,6 +363,27 @@ const char* li_rt_resolve_import(const char* file_path, const char* module) {
           return store_resolved_path(result, buf);
         }
       }
+      /* Candidate 3b: std/X/X.li package directory pattern */
+      if (root_len + 5 + slen + 1 + slen + 3 + 200 < sizeof(buf)) {
+        size_t p = 0;
+        memcpy(buf + p, root, root_len);
+        p = root_len;
+        buf[p++] = '/';
+        memcpy(buf + p, "std/", 4);
+        p += 4;
+        memcpy(buf + p, stripped, slen);
+        p += slen;
+        buf[p++] = '/';
+        memcpy(buf + p, stripped, slen);
+        p += slen;
+        memcpy(buf + p, ".li", 3);
+        p += 3;
+        buf[p] = '\0';
+        const char* result3b = try_read_file(buf);
+        if (result3b != NULL) {
+          return store_resolved_path(result3b, buf);
+        }
+      }
       /* Candidate 4: stripped name as package (fallback) */
       if (root_len + 11 + slen + 12 < sizeof(buf)) {
         size_t p = 0;
