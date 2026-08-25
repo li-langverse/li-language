@@ -11623,38 +11623,20 @@ def mir_scan_rt_flags(src: var ptr,  tk: var array[131072, int],  ts: var array[
   pi2[0] = 0
   var err2: array[1, int]
   err2[0] = 0
-  var decl_line: int = 0
   skip_newlines(tk,  n,  pi2,  err2)
   while 1 == 1:
     var k: int = cur_kind(tk,  n,  pi2,  err2)
     if k == 0 or k == 3:
       break
-    if k == 1:
-      decl_line = 0
-      pi2[0] = pi2[0] + 1
-      continue
-    if k == 32 or k == 10:
-      decl_line = 1
-      pi2[0] = pi2[0] + 1
-      continue
-    if k == 58:
-      # A body marker ends the declaration header; calls on a same-line body
-      # remain eligible for runtime-link classification.
-      decl_line = 0
-      pi2[0] = pi2[0] + 1
-      continue
     if k == 4:
-      # Declaration headers are tracked line-wise above, which also handles
-      # multiline signatures and imported extern seams.
-      var is_decl: int = decl_line
+      # Skip declaration names; only an identifier immediately followed by
+      # an opening parenthesis is a call site.
+      var is_decl: int = 0
       if pi2[0] >= 1:
         if peek_tk(tk, pi2[0] - 1) == 10:
           is_decl = 1
-      if pi2[0] >= 2:
-        if peek_tk(tk, pi2[0] - 2) == 32:
-          is_decl = 1
       if is_decl == 0:
-        if 1 == 1:
+        if peek_off(tk,  n,  pi2,  1) == 49:
           var scan_nm: ptr = bytes_slice_i(src,  peek_tk(ts, pi2[0] + 0),  peek_tk(te, pi2[0] + 0) - peek_tk(ts, pi2[0] + 0))
           if li_rt_str_prefix(scan_nm, "bytes_") == 1 or li_rt_str_prefix(scan_nm, "net_") == 1 or li_rt_str_prefix(scan_nm, "tcp_") == 1 or li_rt_str_prefix(scan_nm, "epoll_") == 1 or li_rt_str_prefix(scan_nm, "li_rt_net") == 1 or li_rt_str_prefix(scan_nm, "li_async_") == 1:
             set32768(ftmp, 4087, 1)
