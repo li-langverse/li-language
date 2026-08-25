@@ -11638,26 +11638,25 @@ def mir_scan_rt_flags(src: var ptr,  tk: var array[131072, int],  ts: var array[
       if is_decl == 0:
         if peek_off(tk,  n,  pi2,  1) == 49:
           var scan_nm: ptr = bytes_slice_i(src,  peek_tk(ts, pi2[0] + 0),  peek_tk(te, pi2[0] + 0) - peek_tk(ts, pi2[0] + 0))
-          if li_rt_str_prefix(scan_nm, "bytes_") == 1 or li_rt_str_prefix(scan_nm, "net_") == 1 or li_rt_str_prefix(scan_nm, "tcp_") == 1 or li_rt_str_prefix(scan_nm, "epoll_") == 1 or li_rt_str_prefix(scan_nm, "li_rt_net") == 1 or li_rt_str_prefix(scan_nm, "li_async_") == 1:
-            set32768(ftmp, 4087, 1)
-          if li_rt_str_prefix(scan_nm, "httpd_") == 1 or li_rt_str_prefix(scan_nm, "li_rt_httpd_") == 1 or li_rt_str_prefix(scan_nm, "proxy_") == 1 or li_rt_str_prefix(scan_nm, "li_rt_proxy_") == 1:
-            set32768(ftmp, 4086, 1)
+          # Do not classify by spelling before symbol resolution: imported
+          # Li procedures such as net_tag are ordinary CallProc functions and
+          # must not set runtime-link bits. The resolved-name path below is
+          # the only call-name scanner used for MIR parity.
           var pid: int = mir_proc_find(src,  ts,  te,  peek_tk(ts, pi2[0] + 0),  peek_tk(te, pi2[0] + 0),  ptok,  pn)
           if pid >= 0:
-            # Runtime-link needs are module properties, not only properties of
-            # direct extern declarations. Imported function bodies are merged
-            # into the C++ MIR module, so scan every call name in every source
-            # file; requiring pex[pid] here missed calls after cross-file pid
-            # remapping and dropped the httpd/net header flags.
-            var nm: ptr = bytes_slice_i(src,  peek_tk(ts, pi2[0] + 0),  peek_tk(te, pi2[0] + 0) - peek_tk(ts, pi2[0] + 0))
-            if li_rt_str_prefix(nm, "li_log_") == 1 or li_rt_str_prefix(nm, "li_rt_log_") == 1:
-              set32768(ftmp, 4088, 1)
-            if li_rt_str_prefix(nm, "httpd_") == 1 or li_rt_str_prefix(nm, "li_rt_httpd_") == 1 or li_rt_str_prefix(nm, "proxy_") == 1 or li_rt_str_prefix(nm, "li_rt_proxy_") == 1:
-              set32768(ftmp, 4086, 1)
-            if li_rt_str_prefix(nm, "net_") == 1 or li_rt_str_prefix(nm, "tcp_") == 1 or li_rt_str_prefix(nm, "epoll_") == 1 or li_rt_str_prefix(nm, "hdr_") == 1 or li_rt_str_prefix(nm, "buf_") == 1 or li_rt_str_prefix(nm, "bytes_") == 1 or li_rt_str_prefix(nm, "li_rt_net") == 1 or li_rt_str_prefix(nm, "li_async_") == 1 or li_rt_str_prefix(nm, "tcp_echo_") == 1:
-              set32768(ftmp, 4087, 1)
-            if li_rt_str_eq(nm, "path_ends_with_conf") == 1 or li_rt_str_eq(nm, "net_ping") == 1:
-              set32768(ftmp, 4087, 1)
+            # Runtime-link flags come from CallExtern, not ordinary imported
+            # CallProc bodies. Keep the symbol-resolution boundary identical
+            # to C++ lowering before applying runtime-name prefixes.
+            if li_rt_preg_get(1, pid) == 1:
+              var nm: ptr = bytes_slice_i(src,  peek_tk(ts, pi2[0] + 0),  peek_tk(te, pi2[0] + 0) - peek_tk(ts, pi2[0] + 0))
+              if li_rt_str_prefix(nm, "li_log_") == 1 or li_rt_str_prefix(nm, "li_rt_log_") == 1:
+                set32768(ftmp, 4088, 1)
+              if li_rt_str_prefix(nm, "httpd_") == 1 or li_rt_str_prefix(nm, "li_rt_httpd_") == 1 or li_rt_str_prefix(nm, "proxy_") == 1 or li_rt_str_prefix(nm, "li_rt_proxy_") == 1:
+                set32768(ftmp, 4086, 1)
+              if li_rt_str_prefix(nm, "net_") == 1 or li_rt_str_prefix(nm, "tcp_") == 1 or li_rt_str_prefix(nm, "epoll_") == 1 or li_rt_str_prefix(nm, "hdr_") == 1 or li_rt_str_prefix(nm, "buf_") == 1 or li_rt_str_prefix(nm, "bytes_") == 1 or li_rt_str_prefix(nm, "li_rt_net") == 1 or li_rt_str_prefix(nm, "li_async_") == 1 or li_rt_str_prefix(nm, "tcp_echo_") == 1:
+                set32768(ftmp, 4087, 1)
+              if li_rt_str_eq(nm, "path_ends_with_conf") == 1 or li_rt_str_eq(nm, "net_ping") == 1:
+                set32768(ftmp, 4087, 1)
     pi2[0] = pi2[0] + 1
   # Note: `lic mir` (lower_to_mir) sets these flags only from direct extern
   # callee names during lowering — the httpd→net→log cascade runs only in the
@@ -11824,6 +11823,15 @@ def mir_module(src: var ptr,  file_path: ptr,  tk: var array[131072, int],  ts: 
   var has_async: int = peek32768(ftmp, 4091)
   set32768(ftmp, 4091, 0)
   set32768(ftmp, 4086, 0)
+  # Apply the same runtime-module policy to the current source file that is
+  # already applied to resolved imports. C++ lowers a package module and its
+  # imported declarations as one MIR module, so li-http/li-net-httpd must set
+  # their header bits even when the command targets src/lib.li directly.
+  if li_rt_str_contains(li_rt_argv(2), "/li-http/") == 1:
+    set32768(ftmp, 4086, 1)
+  if li_rt_str_contains(li_rt_argv(2), "/li-net-httpd/") == 1:
+    set32768(ftmp, 4086, 1)
+    set32768(ftmp, 4087, 1)
   set32768(ftmp, 4087, 0)
   set32768(ftmp, 4088, 0)
   if mir_scan_rt_flags(src,  tk,  ts,  te,  n,  ftmp,  ptok,  pex,  pn) == 1:
@@ -11844,8 +11852,6 @@ def mir_module(src: var ptr,  file_path: ptr,  tk: var array[131072, int],  ts: 
           set32768(ftmp, 4086, 1)
         if li_rt_str_contains(scan_path, "/li-net-httpd/") == 1:
           set32768(ftmp, 4086, 1)
-          set32768(ftmp, 4087, 1)
-        if li_rt_str_contains(scan_path, "/li-net/") == 1:
           set32768(ftmp, 4087, 1)
         if li_rt_str_contains(scan_path, "/li-log/") == 1:
           set32768(ftmp, 4088, 1)
