@@ -162,14 +162,14 @@ void li_rt_pidx_set(int32_t v) { g_li_pidx = v; }
  *   0=ptok  1=pex  2=pp0  3=ppn  4=pret  (proc-level, 128 slots)
  *   5=ptok2 6=pty  7=pelems 8=pef 9=pei
  *   10=pvar 11=pmx 12=pmc  (param-slot-level, 512 slots) */
-#define LI_RT_PREG_PMAX 128
+#define LI_RT_PREG_PMAX 512
 #define LI_RT_PREG_SMAX 512
-#define LI_RT_PREG_TABLES 13
+#define LI_RT_PREG_TABLES 14
 static int32_t g_li_preg[LI_RT_PREG_TABLES * LI_RT_PREG_SMAX];
 static int32_t g_li_preg_sizes[LI_RT_PREG_TABLES] = {
   LI_RT_PREG_PMAX, LI_RT_PREG_PMAX, LI_RT_PREG_PMAX, LI_RT_PREG_PMAX, LI_RT_PREG_PMAX,
   LI_RT_PREG_SMAX, LI_RT_PREG_SMAX, LI_RT_PREG_SMAX, LI_RT_PREG_SMAX, LI_RT_PREG_SMAX,
-  LI_RT_PREG_SMAX, LI_RT_PREG_SMAX, LI_RT_PREG_SMAX
+  LI_RT_PREG_SMAX, LI_RT_PREG_SMAX, LI_RT_PREG_SMAX, LI_RT_PREG_SMAX
 };
 
 int32_t li_rt_preg_get(int32_t table, int32_t idx) {
@@ -1026,6 +1026,13 @@ int32_t li_rt_str_prefix(const char* s, const char* prefix) {
   }
   const size_t plen = strlen(prefix);
   return strncmp(s, prefix, plen) == 0 ? 1 : 0;
+}
+
+int32_t li_rt_str_contains(const char* s, const char* needle) {
+  if (s == NULL || needle == NULL) {
+    return 0;
+  }
+  return strstr(s, needle) != NULL ? 1 : 0;
 }
 
 const char* li_rt_read_file(const char* path) {

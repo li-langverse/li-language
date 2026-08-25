@@ -52,6 +52,9 @@ extern def li_rt_str_eq(a: ptr,  b: ptr) -> int
 extern def li_rt_str_prefix(s: ptr,  prefix: ptr) -> int
   requires true
   ensures true
+extern def li_rt_str_contains(s: ptr,  needle: ptr) -> int
+  requires true
+  ensures true
 extern def bytes_slice_i(b: ptr,  off: int,  n: int) -> ptr
   requires true
   ensures true
@@ -8752,10 +8755,12 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
               var obj_arg_type: int = -1
               if is_callproc == 1:
                 if li_rt_preg_get(6, li_rt_preg_get(2, pid) + ai) == 6:
-                  var obj_code_arg: int = li_rt_preg_get(10, li_rt_preg_get(2, pid) + ai)
-                  if obj_code_arg >= 1000:
-                    var obj_type_tok_arg: int = (obj_code_arg - 1000) / 2
-                    obj_arg_type = mir_obj_find_type(src, ts, te, itmp, peek_tk(ts, obj_type_tok_arg + 0), peek_tk(te, obj_type_tok_arg + 0))
+                  obj_arg_type = li_rt_preg_get(13, li_rt_preg_get(2, pid) + ai)
+                  if obj_arg_type < 0:
+                    var obj_code_arg: int = li_rt_preg_get(10, li_rt_preg_get(2, pid) + ai)
+                    if obj_code_arg >= 1000:
+                      var obj_type_tok_arg: int = (obj_code_arg - 1000) / 2
+                      obj_arg_type = mir_obj_find_type(src, ts, te, itmp, peek_tk(ts, obj_type_tok_arg + 0), peek_tk(te, obj_type_tok_arg + 0))
               # Also flatten if the ARG ITSELF is an object variable
               # (e.g. writer_push_byte(w, ...) passes w as __li_o_w_len)
               # But only when the first param is NOT var — var params go
@@ -8868,11 +8873,11 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
       # is `var Object` and the caller's first arg is an Object ident,
       # emit wb allocs + copy-in before INS 8, wb ARG lines (is_var_ref=1)
       # instead of the first arg, and copy-back after all args.
-      if nab[0] >= 4 and (peek128(abuf, 0) == 0 or peek128(abuf, 0) == 3):
+      if nab[0] >= 4 and (peek128(abuf, 0) == 0 or peek128(abuf, 0) == 3 or peek128(abuf, 0) == 5):
         if mir_method_first_var(src, ts, te, pid, pp0, pvar) == 1:
           var ca_s: int = peek128(abuf, 2)
           var ca_e: int = peek128(abuf, 3)
-          if peek128(abuf, 0) == 3:
+          if peek128(abuf, 0) == 3 or peek128(abuf, 0) == 5:
             ca_s = peek128(abuf, 1)
             ca_e = peek128(abuf, 2)
           var ca_ti: int = mir_obj_find_var(src, ts, te, itmp, ca_s, ca_e)
@@ -8964,6 +8969,10 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
         while wbi < cp_nf:
           mir_arg_wb_line(src, itmp, cp_ti, wbi, cp_wbid, 0, 1)
           wbi = wbi + 1
+        # The original first object was expanded into cp_nf kind-5 records
+        # while collecting args. They are replaced by the write-back records;
+        # resume at the first non-object argument.
+        bi = cp_nf * 4 - 4
       else:
         var akind: int = peek128(abuf, bi + 0)
         if akind == 0:
@@ -8991,7 +9000,7 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
       var cbi: int = 0
       var cbi_s: int = peek128(abuf, 2)
       var cbi_e: int = peek128(abuf, 3)
-      if peek128(abuf, 0) == 3:
+      if peek128(abuf, 0) == 3 or peek128(abuf, 0) == 5:
         cbi_s = peek128(abuf, 1)
         cbi_e = peek128(abuf, 2)
       while cbi < cp_nf:
@@ -10997,7 +11006,7 @@ def mir_skip_contracts(src: var ptr,  tk: var array[131072, int],  ts: var array
     break
   return 0
 
-def mir_collect_proc(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  is_extern: int,  pid: int, ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  ptok2: var array[512, int], pty: var array[512, int],  pelems: var array[512, int], pef: var array[512, int],  pei: var array[512, int], pvar: var array[512, int],  pmx: var array[512, int],  pmc: var array[512, int],  pcount: var array[1, int]) raises IO -> int
+def mir_collect_proc(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  is_extern: int,  pid: int, ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  ptok2: var array[512, int], pty: var array[512, int],  pelems: var array[512, int],  pef: var array[512, int],  pei: var array[512, int], pvar: var array[512, int],  pmx: var array[512, int],  pmc: var array[512, int],  itmp: var array[4096, int],  pcount: var array[1, int]) raises IO -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -11058,11 +11067,17 @@ def mir_collect_proc(src: var ptr,  tk: var array[131072, int],  ts: var array[1
         li_rt_preg_set(12, _pc, 0)
       if ti[0] == 5:
         li_rt_preg_set(10, _pc, ti[1])
+        li_rt_preg_set(13, _pc, -1)
       else:
         if ti[0] == 6:
           li_rt_preg_set(10, _pc, 1000 + type_tok * 2 + ti[1])
+          # Preserve the resolved object index for cross-file emit. The type
+          # token itself belongs to this source file and cannot be reused
+          # against the caller's token buffer.
+          li_rt_preg_set(13, _pc, mir_obj_find_type(src, ts, te, itmp, peek_tk(ts, type_tok + 0), peek_tk(te, type_tok + 0)))
         else:
           li_rt_preg_set(10, _pc, 0)
+          li_rt_preg_set(13, _pc, -1)
       if ti[0] == 6:
         li_rt_preg_set(12, _pc, type_tok)
       _pc = _pc + 1
@@ -11210,8 +11225,10 @@ def mir_proc(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
     var ptype2: int = li_rt_preg_get(6, pi2)
     var pobj2: int = -1
     if ptype2 == 6:
-      var ptype_tok2: int = li_rt_preg_get(12, pi2)
-      pobj2 = mir_obj_find_type(src, ts, te, itmp, peek_tk(ts, ptype_tok2 + 0), peek_tk(te, ptype_tok2 + 0))
+      pobj2 = li_rt_preg_get(13, pi2)
+      if pobj2 < 0:
+        var ptype_tok2: int = li_rt_preg_get(12, pi2)
+        pobj2 = mir_obj_find_type(src, ts, te, itmp, peek_tk(ts, ptype_tok2 + 0), peek_tk(te, ptype_tok2 + 0))
     if pobj2 >= 0:
       mir_obj_reg_var(itmp, peek_tk(ts, li_rt_preg_get(5, pi2) + 0), peek_tk(te, li_rt_preg_get(5, pi2) + 0), pobj2)
       var obj_is_var2: int = 0
@@ -11314,7 +11331,7 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
       if cur_kind(tk,  n,  pi,  err) == 10:
         pi[0] = pi[0] + 1
       if mode == 0:
-        if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  1,  _pn, ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  pcount) == 1:
+        if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  1,  _pn, ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  itmp,  pcount) == 1:
           return 1
         # Store name + mark as extern so mir_proc_find yields INS 7.
         var _pns1: int = peek_tk(ts, li_rt_preg_get(0, _pn) + 0)
@@ -11334,7 +11351,7 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
       pi[0] = pi[0] + 1
       set32768(ftmp, 4091, 1)
       if mode == 0:
-        if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  _pn, ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  pcount) == 1:
+        if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  _pn, ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  itmp,  pcount) == 1:
           return 1
         var _pns2: int = peek_tk(ts, li_rt_preg_get(0, _pn) + 0)
         var _pne2: int = peek_tk(te, li_rt_preg_get(0, _pn) + 0)
@@ -11383,7 +11400,7 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
       set32768(ftmp, 4093, dec_name_tok)
       set32768(ftmp, 4094, dec_lanes)
       set32768(ftmp, 4095, dec_vectorized)      if mode == 0:
-        if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  _pn, ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  pcount) == 1:
+        if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  _pn, ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  itmp,  pcount) == 1:
           return 1
         var _pns3: int = peek_tk(ts, li_rt_preg_get(0, _pn) + 0)
         var _pne3: int = peek_tk(te, li_rt_preg_get(0, _pn) + 0)
@@ -11399,7 +11416,7 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
     if k == 16:
       if peek_off(tk,  n,  pi,  1) == 10:
         if mode == 0:
-          if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  _pn, ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  pcount) == 1:
+          if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  _pn, ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  itmp,  pcount) == 1:
             return 1
           var _pns4: int = peek_tk(ts, li_rt_preg_get(0, _pn) + 0)
           var _pne4: int = peek_tk(te, li_rt_preg_get(0, _pn) + 0)
@@ -11416,7 +11433,7 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
     if k == 17:
       if peek_off(tk,  n,  pi,  1) == 10:
         if mode == 0:
-          if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  _pn, ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  pcount) == 1:
+          if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  _pn, ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  itmp,  pcount) == 1:
             return 1
           var _pns5: int = peek_tk(ts, li_rt_preg_get(0, _pn) + 0)
           var _pne5: int = peek_tk(te, li_rt_preg_get(0, _pn) + 0)
@@ -11432,7 +11449,7 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
       return 1
     if k == 10:
       if mode == 0:
-        if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  _pn, ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  pcount) == 1:
+        if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  _pn, ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  itmp,  pcount) == 1:
           return 1
         var _pns6: int = peek_tk(ts, li_rt_preg_get(0, _pn) + 0)
         var _pne6: int = peek_tk(te, li_rt_preg_get(0, _pn) + 0)
@@ -11606,35 +11623,59 @@ def mir_scan_rt_flags(src: var ptr,  tk: var array[131072, int],  ts: var array[
   pi2[0] = 0
   var err2: array[1, int]
   err2[0] = 0
+  var decl_line: int = 0
   skip_newlines(tk,  n,  pi2,  err2)
   while 1 == 1:
     var k: int = cur_kind(tk,  n,  pi2,  err2)
     if k == 0 or k == 3:
       break
+    if k == 1:
+      decl_line = 0
+      pi2[0] = pi2[0] + 1
+      continue
+    if k == 32 or k == 10:
+      decl_line = 1
+      pi2[0] = pi2[0] + 1
+      continue
+    if k == 58:
+      # A body marker ends the declaration header; calls on a same-line body
+      # remain eligible for runtime-link classification.
+      decl_line = 0
+      pi2[0] = pi2[0] + 1
+      continue
     if k == 4:
-      # Skip declarations (`extern def name(` / `def name(`): the token before
-      # the ident is `def` (kind 10). Only call sites set runtime-link flags.
-      var is_decl: int = 0
+      # Declaration headers are tracked line-wise above, which also handles
+      # multiline signatures and imported extern seams.
+      var is_decl: int = decl_line
       if pi2[0] >= 1:
         if peek_tk(tk, pi2[0] - 1) == 10:
           is_decl = 1
+      if pi2[0] >= 2:
+        if peek_tk(tk, pi2[0] - 2) == 32:
+          is_decl = 1
       if is_decl == 0:
-        if peek_off(tk,  n,  pi2,  1) == 49:
+        if 1 == 1:
           var scan_nm: ptr = bytes_slice_i(src,  peek_tk(ts, pi2[0] + 0),  peek_tk(te, pi2[0] + 0) - peek_tk(ts, pi2[0] + 0))
           if li_rt_str_prefix(scan_nm, "bytes_") == 1 or li_rt_str_prefix(scan_nm, "net_") == 1 or li_rt_str_prefix(scan_nm, "tcp_") == 1 or li_rt_str_prefix(scan_nm, "epoll_") == 1 or li_rt_str_prefix(scan_nm, "li_rt_net") == 1 or li_rt_str_prefix(scan_nm, "li_async_") == 1:
             set32768(ftmp, 4087, 1)
+          if li_rt_str_prefix(scan_nm, "httpd_") == 1 or li_rt_str_prefix(scan_nm, "li_rt_httpd_") == 1 or li_rt_str_prefix(scan_nm, "proxy_") == 1 or li_rt_str_prefix(scan_nm, "li_rt_proxy_") == 1:
+            set32768(ftmp, 4086, 1)
           var pid: int = mir_proc_find(src,  ts,  te,  peek_tk(ts, pi2[0] + 0),  peek_tk(te, pi2[0] + 0),  ptok,  pn)
           if pid >= 0:
-            if li_rt_preg_get(1, pid) == 1:
-              var nm: ptr = bytes_slice_i(src,  peek_tk(ts, pi2[0] + 0),  peek_tk(te, pi2[0] + 0) - peek_tk(ts, pi2[0] + 0))
-              if li_rt_str_prefix(nm, "li_log_") == 1 or li_rt_str_prefix(nm, "li_rt_log_") == 1:
-                set32768(ftmp, 4088, 1)
-              if li_rt_str_prefix(nm, "httpd_") == 1 or li_rt_str_prefix(nm, "li_rt_httpd_") == 1 or li_rt_str_prefix(nm, "proxy_") == 1 or li_rt_str_prefix(nm, "li_rt_proxy_") == 1:
-                set32768(ftmp, 4086, 1)
-              if li_rt_str_prefix(nm, "net_") == 1 or li_rt_str_prefix(nm, "tcp_") == 1 or li_rt_str_prefix(nm, "epoll_") == 1 or li_rt_str_prefix(nm, "hdr_") == 1 or li_rt_str_prefix(nm, "buf_") == 1 or li_rt_str_prefix(nm, "bytes_") == 1 or li_rt_str_prefix(nm, "li_rt_net") == 1 or li_rt_str_prefix(nm, "li_async_") == 1 or li_rt_str_prefix(nm, "tcp_echo_") == 1:
-                set32768(ftmp, 4087, 1)
-              if li_rt_str_eq(nm, "path_ends_with_conf") == 1 or li_rt_str_eq(nm, "net_ping") == 1:
-                set32768(ftmp, 4087, 1)
+            # Runtime-link needs are module properties, not only properties of
+            # direct extern declarations. Imported function bodies are merged
+            # into the C++ MIR module, so scan every call name in every source
+            # file; requiring pex[pid] here missed calls after cross-file pid
+            # remapping and dropped the httpd/net header flags.
+            var nm: ptr = bytes_slice_i(src,  peek_tk(ts, pi2[0] + 0),  peek_tk(te, pi2[0] + 0) - peek_tk(ts, pi2[0] + 0))
+            if li_rt_str_prefix(nm, "li_log_") == 1 or li_rt_str_prefix(nm, "li_rt_log_") == 1:
+              set32768(ftmp, 4088, 1)
+            if li_rt_str_prefix(nm, "httpd_") == 1 or li_rt_str_prefix(nm, "li_rt_httpd_") == 1 or li_rt_str_prefix(nm, "proxy_") == 1 or li_rt_str_prefix(nm, "li_rt_proxy_") == 1:
+              set32768(ftmp, 4086, 1)
+            if li_rt_str_prefix(nm, "net_") == 1 or li_rt_str_prefix(nm, "tcp_") == 1 or li_rt_str_prefix(nm, "epoll_") == 1 or li_rt_str_prefix(nm, "hdr_") == 1 or li_rt_str_prefix(nm, "buf_") == 1 or li_rt_str_prefix(nm, "bytes_") == 1 or li_rt_str_prefix(nm, "li_rt_net") == 1 or li_rt_str_prefix(nm, "li_async_") == 1 or li_rt_str_prefix(nm, "tcp_echo_") == 1:
+              set32768(ftmp, 4087, 1)
+            if li_rt_str_eq(nm, "path_ends_with_conf") == 1 or li_rt_str_eq(nm, "net_ping") == 1:
+              set32768(ftmp, 4087, 1)
     pi2[0] = pi2[0] + 1
   # Note: `lic mir` (lower_to_mir) sets these flags only from direct extern
   # callee names during lowering — the httpd→net→log cascade runs only in the
@@ -11749,9 +11790,18 @@ def mir_module(src: var ptr,  file_path: ptr,  tk: var array[131072, int],  ts: 
           if f3 != 0:
             var dup: int = 0
             var jj: int = 0
+            # Resolved imports use a ring of content buffers, so the same
+            # path can have different content pointers on repeated resolution.
+            # Deduplicate by canonical resolved path as well as pointer.
+            var new_path: ptr = li_rt_resolve_import_last_path()
             while jj < imp_n[0]:
               if imp_files[jj] == f3:
                 dup = 1
+              else:
+                var old_path: ptr = li_rt_import_path_get(jj)
+                if old_path != 0:
+                  if li_rt_str_eq(old_path, new_path) == 1:
+                    dup = 1
               jj = jj + 1
             if dup == 0:
               if imp_n[0] < 16:
@@ -11798,10 +11848,29 @@ def mir_module(src: var ptr,  file_path: ptr,  tk: var array[131072, int],  ts: 
     return 1
   var scan_i: int = 0
   while scan_i < imp_n[0]:
-    n[0] = 0
-    if lex_source(imp_files[scan_i], tk, ts, te, n, 0) == 0:
-      if mir_scan_rt_flags(imp_files[scan_i], tk, ts, te, n, ftmp, ptok, pex, pn) == 1:
-        return 1
+    var scan_path: ptr = li_rt_import_path_get(scan_i)
+    # std/runtime/seam.li is a declaration-only ABI manifest. Its names are
+    # not executable calls and must not contribute runtime-link flags; package
+    # bodies remain scanned normally.
+    if li_rt_str_prefix(imp_files[scan_i], "# Trusted runtime ABI") == 0:
+      # Package manifests select runtime modules at the module level. Keep
+      # this path-based mapping alongside call-name scanning so imported
+      # extern declarations remain correct even when their token stream is
+      # re-lexed from a different source buffer.
+      if scan_path != 0:
+        if li_rt_str_contains(scan_path, "/li-http/") == 1:
+          set32768(ftmp, 4086, 1)
+        if li_rt_str_contains(scan_path, "/li-net-httpd/") == 1:
+          set32768(ftmp, 4086, 1)
+          set32768(ftmp, 4087, 1)
+        if li_rt_str_contains(scan_path, "/li-net/") == 1:
+          set32768(ftmp, 4087, 1)
+        if li_rt_str_contains(scan_path, "/li-log/") == 1:
+          set32768(ftmp, 4088, 1)
+      n[0] = 0
+      if lex_source(imp_files[scan_i], tk, ts, te, n, 0) == 0:
+        if mir_scan_rt_flags(imp_files[scan_i], tk, ts, te, n, ftmp, ptok, pex, pn) == 1:
+          return 1
     scan_i = scan_i + 1
   n[0] = 0
   if lex_source(src, tk, ts, te, n, 0) == 1:
