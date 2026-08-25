@@ -122,7 +122,10 @@ bool compile_module(const Module& module, const std::string& output_path,
       cmd << " -x c \"" << rt_h2_path.string() << "\"";
     }
   }
-  if (std::filesystem::exists(rt_lig_path)) {
+  // LIG is a downstream package runtime. Keep it out of ordinary compiler
+  // builds; package builds opt in through LI_LINK_RUNTIME_LIG or LI_EXTRA_C.
+  const char* link_lig = std::getenv("LI_LINK_RUNTIME_LIG");
+  if (link_lig != nullptr && link_lig[0] == '1' && std::filesystem::exists(rt_lig_path)) {
     cmd << " -x c \"" << rt_lig_path.string() << "\"";
   }
   cmd << " -o \"" << output_path << "\"";

@@ -8764,19 +8764,50 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
                 var _is_first_arg: int = 0
                 if ai == 0:
                   _is_first_arg = 1
-                if _is_first_arg == 0 or mir_method_first_var(src, ts, te, pid, pp0, pvar) == 0:
-                  var _obj_arg_vi: int = mir_obj_find_var(src, ts, te, itmp, peek65536(darena, arec + 1), peek65536(darena, arec + 2))
-                  if _obj_arg_vi >= 0:
-                    obj_arg_type = _obj_arg_vi
+                # C++ parity: when the callee is known and its param is NOT
+                # object-typed, a whole-object arg stays a plain ident
+                # (e.g. require_hash(p) with generic H -> ARG ... p).
+                var _skip_obj_fallback: int = 0
+                if is_callproc == 1:
+                  if pid >= 0:
+                    if li_rt_preg_get(6, li_rt_preg_get(2, pid) + ai) != 6:
+                      _skip_obj_fallback = 1
+                    else:
+                      # Object-kind callee param: only flatten when the type
+                      # name actually resolves to a known object (C++ parity:
+                      # generic H / unresolved names pass plain idents).
+                      var soc: int = li_rt_preg_get(10, li_rt_preg_get(2, pid) + ai)
+                      if soc >= 1000:
+                        var stt: int = (soc - 1000) / 2
+                        if mir_obj_find_type(src, ts, te, itmp, peek_tk(ts, stt + 0), peek_tk(te, stt + 0)) < 0:
+                          _skip_obj_fallback = 1
+                if _skip_obj_fallback == 0:
+                  if _is_first_arg == 0 or mir_method_first_var(src, ts, te, pid, pp0, pvar) == 0:
+                    var _obj_arg_vi: int = mir_obj_find_var(src, ts, te, itmp, peek65536(darena, arec + 1), peek65536(darena, arec + 2))
+                    if _obj_arg_vi >= 0:
+                      obj_arg_type = _obj_arg_vi
               if obj_arg_type >= 0:
                 var obj_nf_arg: int = mir_obj_field_count(itmp, obj_arg_type)
                 var obj_fi_arg: int = 0
+                # C++ parity: is_var_ref = callee param's var flag (lower.cpp
+                # push_mir_args_for_object_value passes fp.type.is_var).
+                var obj_isvar_arg: int = 0
+                if is_callproc == 1:
+                  if pid >= 0:
+                    if li_rt_preg_get(6, li_rt_preg_get(2, pid) + ai) == 6:
+                      var oiv: int = li_rt_preg_get(10, li_rt_preg_get(2, pid) + ai)
+                      if oiv >= 1000:
+                        if (oiv - 1000) % 2 == 1:
+                          obj_isvar_arg = 1
+                      if oiv == 1:
+                        obj_isvar_arg = 1
                 while obj_fi_arg < obj_nf_arg:
                   set128(abuf, nab[0],5)
                   set128(abuf, nab[0] + 1,peek65536(darena, arec + 1))
                   set128(abuf, nab[0] + 2,peek65536(darena, arec + 2))
                   set128(abuf, nab[0] + 3,obj_fi_arg)
                   set128(aobj, nab[0],obj_arg_type)
+                  set128(aobj, nab[0] + 1,obj_isvar_arg)
                   nab[0] = nab[0] + 4
                   obj_fi_arg = obj_fi_arg + 1
               else:
@@ -8804,6 +8835,7 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
                     set128(abuf, nab[0] + 2,peek65536(darena, farg_base + 2))
                     set128(abuf, nab[0] + 3,farg_fi)
                     set128(aobj, nab[0],farg_ov)
+                    set128(aobj, nab[0] + 1,0)
                     nab[0] = nab[0] + 4
                   else:
                     if mir_lower_expr(darena,  dasp,  arec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
@@ -8950,7 +8982,7 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
                   var iai5: int = 0
                   if mir_obj_field_elems(itmp, peek128(aobj, bi + 0), peek128(abuf, bi + 3)) > 0:
                     iai5 = 1
-                  mir_arg_obj_line(src, peek128(abuf, bi + 1), peek128(abuf, bi + 2), itmp, peek128(aobj, bi + 0), peek128(abuf, bi + 3), iai5, 0)
+                  mir_arg_obj_line(src, peek128(abuf, bi + 1), peek128(abuf, bi + 2), itmp, peek128(aobj, bi + 0), peek128(abuf, bi + 3), iai5, peek128(aobj, bi + 1))
                 else:
                   mir_arg_line(src, 0, 0, 0, -1, peek128(abuf, bi + 1), 0, 2, 0, 0, 0, 0, 0)
       bi = bi + 4
@@ -11758,6 +11790,7 @@ def mir_module(src: var ptr,  file_path: ptr,  tk: var array[131072, int],  ts: 
   if lex_source(src,  tk,  ts,  te,  n, 0) == 1:
     return 1
   var has_async: int = peek32768(ftmp, 4091)
+  set32768(ftmp, 4091, 0)
   set32768(ftmp, 4086, 0)
   set32768(ftmp, 4087, 0)
   set32768(ftmp, 4088, 0)

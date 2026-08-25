@@ -28,6 +28,10 @@ li_phase "runtime net -Werror hygiene"
 chmod +x "$ROOT/scripts/check-runtime-net-werror.sh"
 "$ROOT/scripts/check-runtime-net-werror.sh"
 
+li_phase "compiler-only golden lowering"
+chmod +x "$ROOT/scripts/check-compiler-goldens.sh"
+"$ROOT/scripts/check-compiler-goldens.sh"
+
 li_phase "self-hosted front end (lexer + parser + AST + self-front-end + check + MIR parity)"
 chmod +x "$ROOT/scripts/check_li_parity.sh"
 "$ROOT/scripts/check_li_parity.sh"

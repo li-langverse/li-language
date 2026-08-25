@@ -646,7 +646,7 @@ int32_t li_rt_mir_literal(int32_t idx) {
  * walker registers the mangled name once (li_rt_mir_objname_add) and name
  * cells reference it by index (li_rt_mir_objname_out). */
 #define LI_RT_OBJNAME_MAX 512
-static const char* li_rt_objname_text = NULL;
+static const char* li_rt_objname_text[LI_RT_OBJNAME_MAX];
 static int32_t li_rt_objname_bs[LI_RT_OBJNAME_MAX];
 static int32_t li_rt_objname_be[LI_RT_OBJNAME_MAX];
 static int32_t li_rt_objname_fs[LI_RT_OBJNAME_MAX];
@@ -655,11 +655,9 @@ static int32_t li_rt_objname_n = 0;
 
 int32_t li_rt_mir_objname_add(const char* text, int32_t bs, int32_t be,
                               int32_t fs, int32_t fe) {
-  if (li_rt_objname_n == 0) {
-    li_rt_objname_text = text;
-  }
   for (int32_t i = 0; i < li_rt_objname_n; ++i) {
-    if (li_rt_objname_bs[i] == bs && li_rt_objname_be[i] == be &&
+    if (li_rt_objname_text[i] == text &&
+        li_rt_objname_bs[i] == bs && li_rt_objname_be[i] == be &&
         li_rt_objname_fs[i] == fs && li_rt_objname_fe[i] == fe) {
       return i;
     }
@@ -667,6 +665,7 @@ int32_t li_rt_mir_objname_add(const char* text, int32_t bs, int32_t be,
   if (li_rt_objname_n >= LI_RT_OBJNAME_MAX) {
     return 0;
   }
+  li_rt_objname_text[li_rt_objname_n] = text;
   li_rt_objname_bs[li_rt_objname_n] = bs;
   li_rt_objname_be[li_rt_objname_n] = be;
   li_rt_objname_fs[li_rt_objname_n] = fs;
@@ -681,19 +680,19 @@ int32_t li_rt_mir_objname_out(int32_t idx) {
     return 0;
   }
   fputs("__li_o_", stdout);
-  li_rt_mir_esc(li_rt_objname_text, li_rt_objname_bs[idx], li_rt_objname_be[idx]);
+  li_rt_mir_esc(li_rt_objname_text[idx], li_rt_objname_bs[idx], li_rt_objname_be[idx]);
   fputs("_", stdout);
-  li_rt_mir_esc(li_rt_objname_text, li_rt_objname_fs[idx], li_rt_objname_fe[idx]);
+  li_rt_mir_esc(li_rt_objname_text[idx], li_rt_objname_fs[idx], li_rt_objname_fe[idx]);
   return 0;
 }
 
-void li_rt_mir_objname_clear(void) { li_rt_objname_n = 0; li_rt_objname_text = NULL; }
+void li_rt_mir_objname_clear(void) { li_rt_objname_n = 0; }
 
 /* Proc-name registry for cross-file call resolution.
  * Stores one NUL-terminated name per proc ID (max 128 procs, 63 chars each).
  * Used by the self-hosted MIR walker so that imported proc names survive
  * token-buffer re-lexing across source files. */
-#define LI_RT_PNAME_MAX 128
+#define LI_RT_PNAME_MAX 512
 static char li_rt_pname_buf[LI_RT_PNAME_MAX * 64];
 static int32_t li_rt_pname_len[LI_RT_PNAME_MAX];
 static int32_t li_rt_pname_ext[LI_RT_PNAME_MAX];  /* is_extern flag */
@@ -737,6 +736,12 @@ int32_t li_rt_mir_pname_set_extern(int32_t pid, int32_t is_extern) {
 int32_t li_rt_mir_pname_is_extern(int32_t pid) {
   if (pid < 0 || pid >= LI_RT_PNAME_MAX) return 0;
   return li_rt_pname_ext[pid];
+}
+
+int32_t li_rt_mir_pname_print(int32_t pid) {
+  if (pid < 0 || pid >= LI_RT_PNAME_MAX) return 0;
+  fwrite(li_rt_pname_buf + pid * 64, 1, (size_t)li_rt_pname_len[pid], stdout);
+  return 0;
 }
 
 static int li_argc = 0;
