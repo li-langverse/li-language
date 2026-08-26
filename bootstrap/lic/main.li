@@ -175,6 +175,15 @@ extern def li_rt_mir_hold_flush_close() -> int
 extern def li_rt_mir_par_callee_register(pid: int, counter: int) -> int
   requires true
   ensures true
+extern def li_rt_mir_retname_store(pid: int, src: var ptr, s: int, e: int) -> int
+  requires true
+  ensures true
+extern def li_rt_mir_retname_hash(pid: int) -> int
+  requires true
+  ensures true
+extern def li_rt_mir_retname_len(pid: int) -> int
+  requires true
+  ensures true
 
 # ---------------- canonical AST dump (self-host milestone 3: tree parity) ----
 # The `ast <file>` subcommand emits an int-encoded canonical dump of the parse
@@ -6491,6 +6500,78 @@ def mir_cr_alloc_fields(src: var ptr,  ts: var array[131072, int],  te: var arra
     i_c = i_c + 1
   return 0
 
+# Emit the CallProc line for a call that returns an object: INS 8 with
+# ident = __li_o___cr<crid>, callee name, then the OBJ return layout. The cr
+# slot LocalAllocs are emitted by mir_cr_alloc_fields before this.
+def mir_cr_call_line(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], itmp: var array[4096, int],  crid: int,  cal_s: int,  cal_e: int,  obj_ti: int,  lastop: var array[1, int]) raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  li_rt_mir_str("INS")
+  li_rt_ast_space()
+  li_rt_ast_int(8)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_mir_str("__li_o___cr")
+  li_rt_ast_int(crid)
+  # str_value cell (empty), then callee name cell
+  li_rt_ast_space()
+  li_rt_ast_space()
+  li_rt_mir_esc(src, cal_s, cal_e)
+  # 3 empty name cells (lhs_ident, rhs_ident, label)
+  li_rt_ast_space()
+  li_rt_ast_space()
+  li_rt_ast_space()
+  # f18..f21
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(1)
+  # name cell 6 (empty)
+  li_rt_ast_space()
+  # f25..f36
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(1)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_nl()
+  # OBJ return layout
+  var nf_c2: int = mir_obj_field_count(itmp, obj_ti)
+  var fi_c2: int = 0
+  while fi_c2 < nf_c2:
+    mir_obj_line(src,  ts,  te,  itmp,  obj_ti,  fi_c2)
+    fi_c2 = fi_c2 + 1
+  lastop[0] = 8
+  return 0
+
 # Recursively emit LocalAlloc for a method-call write-back temp wb<N>,
 # flattening nested object fields: __li_o_wb<N>[_<parent>_]<leaf>.
 def mir_wb_alloc_fields(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], itmp: var array[4096, int],  crid: int,  type_idx: int,  p_s: int,  p_e: int) raises IO -> int
@@ -6766,6 +6847,25 @@ def mir_obj_find_type(src: var ptr, ts: var array[131072, int], te: var array[13
   var nobj: int = peek4096(itmp, 3000)
   var h: int = mir_name_hash(src, name_start, name_end)
   var nlen: int = name_end - name_start
+  var i: int = 0
+  while i < nobj:
+    if peek4096(itmp, 3701 + i) == h and peek4096(itmp, 3731 + i) == nlen:
+      return i
+    i = i + 1
+  return -1
+
+def mir_obj_find_rettype(itmp: var array[4096, int], pid: int) -> int
+  requires true
+  ensures result >= -1
+  decreases 0
+=
+  # Look up the object layout for a callee's return type via the retname
+  # registry (hash+len match, cross-file safe like mir_obj_find_type).
+  var h: int = li_rt_mir_retname_hash(pid)
+  var nlen: int = li_rt_mir_retname_len(pid)
+  if nlen == 0:
+    return -1
+  var nobj: int = peek4096(itmp, 3000)
   var i: int = 0
   while i < nobj:
     if peek4096(itmp, 3701 + i) == h and peek4096(itmp, 3731 + i) == nlen:
@@ -8918,23 +9018,44 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
       f8b[7] = peek65536(darena, rec + 2)
       f8b[8] = 1
       var rd: int = li_rt_preg_get(4, pid)
-      if rd == 0:
-        mir_ins_line(src,  f8b,  8,  0,  -1,  lastop)
-        mir_mk_name(darena,  rec,  2,  0,  0)
-      else:
-        var c8: int = tc[0]
-        tc[0] = c8 + 1
-        f8b[0] = c8
-        f8b[2] = 2
-        if rd == 2:
-          f8b[19] = 1
-          set32768(ftmp, c8 + 0,1)
+      if rd == 6:
+        # Callee returns an object: allocate __li_o___cr<N> slots, emit the
+        # CallProc with the cr ident and OBJ return layout, and mark the call
+        # result so `return` emits INS 4 (ReturnObject) + OBJ layout.
+        var robj_ti: int = -1
+        if pid >= 0:
+          robj_ti = mir_obj_find_rettype(itmp, pid)
+        if robj_ti >= 0:
+          var crid2: int = tc[0]
+          tc[0] = crid2 + 1
+          mir_cr_alloc_fields(src,  ts,  te,  itmp,  crid2,  robj_ti,  -1,  -1)
+          mir_cr_call_line(src,  ts,  te,  itmp,  crid2,  peek65536(darena, rec + 1),  peek65536(darena, rec + 2),  robj_ti,  lastop)
+          mir_mk_name(darena,  rec,  3,  crid2,  robj_ti)
         else:
-          if rd == 3 or rd == 4 or rd == 5:
-            f8b[20] = 1
-            set4096(itmp, c8 + 0,1)
-        mir_ins_line(src,  f8b,  8,  0,  -1,  lastop)
-        mir_mk_name(darena,  rec,  1,  c8,  0)
+          var c8: int = tc[0]
+          tc[0] = c8 + 1
+          f8b[0] = c8
+          f8b[2] = 2
+          mir_ins_line(src,  f8b,  8,  0,  -1,  lastop)
+          mir_mk_name(darena,  rec,  1,  c8,  0)
+      else:
+        if rd == 0:
+          mir_ins_line(src,  f8b,  8,  0,  -1,  lastop)
+          mir_mk_name(darena,  rec,  2,  0,  0)
+        else:
+          var c8: int = tc[0]
+          tc[0] = c8 + 1
+          f8b[0] = c8
+          f8b[2] = 2
+          if rd == 2:
+            f8b[19] = 1
+            set32768(ftmp, c8 + 0,1)
+          else:
+            if rd == 3 or rd == 4 or rd == 5:
+              f8b[20] = 1
+              set4096(itmp, c8 + 0,1)
+          mir_ins_line(src,  f8b,  8,  0,  -1,  lastop)
+          mir_mk_name(darena,  rec,  1,  c8,  0)
     else:
       var f7x: array[44, int]
       mir_fdef(f7x)
@@ -9863,19 +9984,86 @@ def mir_return(darena: var array[65536, int],  dasp: var array[1, int], src: var
                 if rk == 7 or rk == 4 or rk == 5 or rk == 11:
                   if mir_lower_expr(darena,  dasp,  rec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
                     return 1
-                  var f4: array[44, int]
-                  mir_fdef(f4)
-                  f4[0] = peek65536(darena, rec + 2)
-                  f4[2] = 2
-                  var rf4: int = retf_proc
-                  var ri4: int = reti64_proc
-                  if mir_desc_float(darena,  rec,  src,  ts,  te,  ftok,  nft,  ftmp,  fatok,  nfa, itmp) == 1:
-                    rf4 = 1
-                  if mir_rec_name_i64(darena,  rec,  src,  ts,  te,  itok,  nit,  itmp) == 1:
-                    ri4 = 1
-                  f4[19] = rf4
-                  f4[20] = ri4
-                  mir_ins_line(src,  f4,  3,  0,  -1,  lastop)
+                  # Object-returning call: lower_expr emitted cr slots + INS 8
+                  # + OBJ; now emit INS 4 (ReturnObject) with the cr ident and
+                  # the callee's return-object layout, matching the C++
+                  # append_return_object path.
+                  if peek65536(darena, rec + 0) == 8 and peek65536(darena, rec + 1) == 3:
+                    var crid4: int = peek65536(darena, rec + 2)
+                    var robj4: int = peek65536(darena, rec + 3)
+                    li_rt_mir_str("INS")
+                    li_rt_ast_space()
+                    li_rt_ast_int(4)
+                    li_rt_ast_space()
+                    li_rt_ast_int(0)
+                    li_rt_ast_space()
+                    li_rt_ast_int(0)
+                    li_rt_ast_space()
+                    li_rt_mir_str("__li_o___cr")
+                    li_rt_ast_int(crid4)
+                    # 5 empty name cells (str_value, callee, lhs, rhs, label)
+                    li_rt_ast_space()
+                    li_rt_ast_space()
+                    li_rt_ast_space()
+                    li_rt_ast_space()
+                    li_rt_ast_space()
+                    # f18..f21: bin_op, ret_is_float, ret_is_i64, index_is_literal (default 1)
+                    li_rt_ast_space()
+                    li_rt_ast_int(0)
+                    li_rt_ast_space()
+                    li_rt_ast_int(0)
+                    li_rt_ast_space()
+                    li_rt_ast_int(0)
+                    li_rt_ast_space()
+                    li_rt_ast_int(1)
+                    # name cell 6 (index_ident, empty)
+                    li_rt_ast_space()
+                    # f25..f36
+                    li_rt_ast_space()
+                    li_rt_ast_int(0)
+                    li_rt_ast_space()
+                    li_rt_ast_int(1)
+                    li_rt_ast_space()
+                    li_rt_ast_int(0)
+                    li_rt_ast_space()
+                    li_rt_ast_int(0)
+                    li_rt_ast_space()
+                    li_rt_ast_int(0)
+                    li_rt_ast_space()
+                    li_rt_ast_int(0)
+                    li_rt_ast_space()
+                    li_rt_ast_int(0)
+                    li_rt_ast_space()
+                    li_rt_ast_int(0)
+                    li_rt_ast_space()
+                    li_rt_ast_int(0)
+                    li_rt_ast_space()
+                    li_rt_ast_int(0)
+                    li_rt_ast_space()
+                    li_rt_ast_int(0)
+                    li_rt_ast_space()
+                    li_rt_ast_int(0)
+                    li_rt_ast_nl()
+                    lastop[0] = 4
+                    var nf5: int = mir_obj_field_count(itmp, robj4)
+                    var fi5: int = 0
+                    while fi5 < nf5:
+                      mir_obj_line(src,  ts,  te,  itmp,  robj4,  fi5)
+                      fi5 = fi5 + 1
+                  else:
+                    var f4: array[44, int]
+                    mir_fdef(f4)
+                    f4[0] = peek65536(darena, rec + 2)
+                    f4[2] = 2
+                    var rf4: int = retf_proc
+                    var ri4: int = reti64_proc
+                    if mir_desc_float(darena,  rec,  src,  ts,  te,  ftok,  nft,  ftmp,  fatok,  nfa, itmp) == 1:
+                      rf4 = 1
+                    if mir_rec_name_i64(darena,  rec,  src,  ts,  te,  itok,  nit,  itmp) == 1:
+                      ri4 = 1
+                    f4[19] = rf4
+                    f4[20] = ri4
+                    mir_ins_line(src,  f4,  3,  0,  -1,  lastop)
                 else:
                   var f5: array[44, int]
                   mir_fdef(f5)
@@ -11263,6 +11451,10 @@ def mir_collect_proc(src: var ptr,  tk: var array[131072, int],  ts: var array[1
   skip_newlines(tk,  n,  pi,  err)
   var ret: int = 8
   if accept_k(tk,  n,  pi,  err, 57) == 1:
+    var rt_tok2: int = -1
+    var rk3: int = cur_kind(tk,  n,  pi,  err)
+    if rk3 == 4 or rk3 == 47 or rk3 == 48:
+      rt_tok2 = pi[0]
     var ti2: array[6, int]
     if mir_type_info(src,  tk,  ts,  te,  n,  pi,  err,  ti2) == 1:
       return 1
@@ -11288,6 +11480,10 @@ def mir_collect_proc(src: var ptr,  tk: var array[131072, int],  ts: var array[1
                   ret = 5
                 else:
                   ret = 6
+                  # Store the return type name so the call-site lowering can
+                  # resolve this callee's object layout (C++ callee_ret_obj).
+                  if rt_tok2 >= 0:
+                    li_rt_mir_retname_store(pid, src, peek_tk(ts, rt_tok2 + 0), peek_tk(te, rt_tok2 + 0))
   li_rt_preg_set(4, pid, ret)
   skip_newlines(tk,  n,  pi,  err)
   mir_skip_raises(tk,  n,  pi,  err)

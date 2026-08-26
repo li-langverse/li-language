@@ -750,6 +750,46 @@ int32_t li_rt_mir_pname_print(int32_t pid) {
   return 0;
 }
 
+/* Return-type name registry (parallel to pname): stores the resolved return
+ * type name per proc so the call-site lowering can find the object layout of
+ * a callee that returns an object (C++ callee_ret_obj path). The name is
+ * copied at collect time, so it survives token-buffer re-lexing. */
+static char li_rt_retname_buf[LI_RT_PNAME_MAX * 64];
+static int32_t li_rt_retname_len[LI_RT_PNAME_MAX];
+
+int32_t li_rt_mir_retname_store(int32_t pid, const char* src, int32_t s, int32_t e) {
+  if (pid < 0 || pid >= LI_RT_PNAME_MAX || src == NULL) return 0;
+  int32_t len = e - s;
+  if (len > 63) len = 63;
+  if (len < 0) len = 0;
+  char* dst = li_rt_retname_buf + pid * 64;
+  for (int32_t i = 0; i < len; i++) dst[i] = src[s + i];
+  dst[len] = '\0';
+  li_rt_retname_len[pid] = len;
+  return 0;
+}
+
+int32_t li_rt_mir_retname_hash(int32_t pid) {
+  if (pid < 0 || pid >= LI_RT_PNAME_MAX) return 0;
+  const char* p = li_rt_retname_buf + pid * 64;
+  int32_t len = li_rt_retname_len[pid];
+  /* Must match the Li walker's mir_name_hash exactly: Li ints are 32-bit,
+   * so `h * 31 + c` wraps at int32 before `h % 2147483647` (C-style
+   * truncating mod). The itmp object registry stores these wrapped hashes,
+   * so a mismatched algorithm makes mir_obj_find_rettype miss every type. */
+  int32_t h = 0;
+  for (int32_t i = 0; i < len; i++) {
+    h = (int32_t)((int64_t)h * 31 + (int64_t)(unsigned char)p[i]);
+    h = h % 2147483647;
+  }
+  return h;
+}
+
+int32_t li_rt_mir_retname_len(int32_t pid) {
+  if (pid < 0 || pid >= LI_RT_PNAME_MAX) return 0;
+  return li_rt_retname_len[pid];
+}
+
 /* Parallel-for synthesized function name: prints `__li_par_<proc>_<counter>`,
  * matching the C++ lower_to_mir ParallelFor naming scheme. */
 int32_t li_rt_mir_par_name_print(int32_t pid, int32_t counter) {

@@ -63,6 +63,11 @@ int32_t li_rt_mir_pname_store(int32_t pid, const char* src, int32_t s, int32_t e
 int32_t li_rt_mir_pname_eq(int32_t pid, const char* src, int32_t s, int32_t e);
 int32_t li_rt_mir_pname_set_extern(int32_t pid, int32_t is_extern);
 int32_t li_rt_mir_pname_is_extern(int32_t pid);
+/* Return-type name registry: stores the resolved return type name per proc
+ * so object-returning callees resolve their object layout at call sites. */
+int32_t li_rt_mir_retname_store(int32_t pid, const char* src, int32_t s, int32_t e);
+int32_t li_rt_mir_retname_hash(int32_t pid);
+int32_t li_rt_mir_retname_len(int32_t pid);
 /* Parallel-for synthesized function name: `__li_par_<proc>_<counter>`. */
 int32_t li_rt_mir_par_name_print(int32_t pid, int32_t counter);
 int32_t li_rt_mir_par_counter_next(void);
