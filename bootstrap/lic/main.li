@@ -11082,9 +11082,16 @@ def mir_param_line(src: var ptr,  ts: var array[131072, int],  te: var array[131
   li_rt_ast_space()
   li_rt_ast_int(mc)
   li_rt_ast_space()
-  li_rt_ast_int(is_var)
+  if mx == 1:
+    # C++ lower_to_mir only sets is_var for plain fixed-size arrays; 2D
+    # matrix params keep is_var false (default MirParam).
+    li_rt_ast_int(0)
+  else:
+    li_rt_ast_int(is_var)
   li_rt_ast_nl()
-  return 0# Emit one flattened object parameter, e.g. Vec3 a -> __li_o_a_x.
+  return 0
+
+# Emit one flattened object parameter, e.g. Vec3 a -> __li_o_a_x.
 def mir_obj_param_line(src: var ptr, ts: var array[131072, int], te: var array[131072, int], itmp: var array[4096, int], type_idx: int, base_s: int, base_e: int, field_idx: int, is_var: int) raises IO -> int
   requires true
   ensures result == 0
@@ -11384,7 +11391,12 @@ def mir_proc(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
   li_rt_mir_hold_open()
   mir_fn_line(src,  ts,  te,  li_rt_preg_get(0, pid),  retf,  reti64,  retvoid,  retobj,  is_extern,  peek32768(ftmp, 4092),  peek32768(ftmp, 4091))
   if peek32768(ftmp, 4093) >= 0:
-    mir_dec_line(src,  ts,  te,  peek32768(ftmp, 4093),  peek32768(ftmp, 4094),  peek32768(ftmp, 4095),  0,  0)
+    if peek32768(ftmp, 4088) == 1:
+      if peek32768(ftmp, 4086) >= 0:
+        mir_dec_line(src, ts, te, peek32768(ftmp, 4086), 0, 0, 0, 0)
+      mir_dec_line(src, ts, te, peek32768(ftmp, 4093), 0, 0, 1, peek32768(ftmp, 4087))
+    else:
+      mir_dec_line(src,  ts,  te,  peek32768(ftmp, 4093),  peek32768(ftmp, 4094),  peek32768(ftmp, 4095),  0,  0)
   var j: int = 0
   while j < li_rt_preg_get(3, pid):
     var pi2: int = li_rt_preg_get(2, pid) + j
@@ -11481,11 +11493,17 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
   set32768(ftmp, 4093, -1)
   set32768(ftmp, 4094, 0)
   set32768(ftmp, 4095, 0)
+  set32768(ftmp, 4088, 0)
+  set32768(ftmp, 4087, 0)
+  set32768(ftmp, 4086, -1)
   while 1 == 1:
     set32768(ftmp, 4092, 0)
     set32768(ftmp, 4093, -1)
     set32768(ftmp, 4094, 0)
     set32768(ftmp, 4095, 0)
+    set32768(ftmp, 4088, 0)
+    set32768(ftmp, 4087, 0)
+    set32768(ftmp, 4086, -1)
     var k: int = cur_kind(tk,  n,  pi,  err)
     if k == 0:
       break
@@ -11545,6 +11563,10 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
       var dec_lanes: int = 0
       var dec_vectorized: int = 0
       var dec_no_vectorize: int = 0
+      var dec_parallel: int = 0
+      var dec_disjoint: int = 0
+      var dec_parallel_tok: int = -1
+      var dec_cpu_tok: int = -1
       # Check if decorator is vectorized
       if tok_is(src, ts, te, dec_name_tok + 0, "vectorized") == 1:
         dec_vectorized = 1
@@ -11559,6 +11581,19 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
             ai = ai + 1
       if tok_is(src, ts, te, dec_name_tok + 0, "no_vectorize") == 1:
         dec_no_vectorize = 1
+      # Decorator lists may contain @cpu followed by @parallel(...). Scan the
+      # complete list so the parallel DEC is retained rather than only the
+      # first decorator name.
+      var di: int = save0 + 1
+      while di < dpos:
+        if tok_is(src, ts, te, di, "parallel") == 1:
+          dec_parallel = 1
+          dec_parallel_tok = di
+        if tok_is(src, ts, te, di, "cpu") == 1:
+          dec_cpu_tok = di
+        if tok_is(src, ts, te, di, "disjoint") == 1:
+          dec_disjoint = 1
+        di = di + 1
       if tok_is(src, ts, te, dec_name_tok + 0, "async") == 1:
         set32768(ftmp, 4091, 1)
       pi[0] = save0
@@ -11568,7 +11603,14 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
       set32768(ftmp, 4092, dec_no_vectorize)
       set32768(ftmp, 4093, dec_name_tok)
       set32768(ftmp, 4094, dec_lanes)
-      set32768(ftmp, 4095, dec_vectorized)      if mode == 0:
+      set32768(ftmp, 4095, dec_vectorized)
+      set32768(ftmp, 4088, dec_parallel)
+      set32768(ftmp, 4087, dec_disjoint)
+      if dec_parallel_tok >= 0:
+        set32768(ftmp, 4093, dec_parallel_tok)
+      if dec_cpu_tok >= 0:
+        set32768(ftmp, 4086, dec_cpu_tok)
+      if mode == 0:
         if mir_collect_proc(src,  tk,  ts,  te,  n,  pi,  err,  0,  _pn, ptok,  pex,  pp0,  ppn,  pret,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  itmp,  pcount) == 1:
           return 1
         var _pns3: int = peek_tk(ts, li_rt_preg_get(0, _pn) + 0)
@@ -11795,7 +11837,7 @@ def mir_scan_rt_flags(src: var ptr,  tk: var array[131072, int],  ts: var array[
   skip_newlines(tk,  n,  pi2,  err2)
   while 1 == 1:
     var k: int = cur_kind(tk,  n,  pi2,  err2)
-    if k == 0 or k == 3:
+    if k == 0:
       break
     if k == 4:
       # Skip declaration names; only an identifier immediately followed by
@@ -12010,15 +12052,6 @@ def mir_module(src: var ptr,  file_path: ptr, tk: var array[131072, int],  ts: v
   var has_async: int = peek32768(ftmp, 4091)
   set32768(ftmp, 4091, 0)
   set32768(ftmp, 4086, 0)
-  # Apply the same runtime-module policy to the current source file that is
-  # already applied to resolved imports. C++ lowers a package module and its
-  # imported declarations as one MIR module, so li-http/li-net-httpd must set
-  # their header bits even when the command targets src/lib.li directly.
-  if li_rt_str_contains(li_rt_argv(2), "/li-http/") == 1:
-    set32768(ftmp, 4086, 1)
-  if li_rt_str_contains(li_rt_argv(2), "/li-net-httpd/") == 1:
-    set32768(ftmp, 4086, 1)
-    set32768(ftmp, 4087, 1)
   set32768(ftmp, 4087, 0)
   set32768(ftmp, 4088, 0)
   if mir_scan_rt_flags(src,  tk,  ts,  te,  n,  ftmp,  ptok,  pex,  pn) == 1:
