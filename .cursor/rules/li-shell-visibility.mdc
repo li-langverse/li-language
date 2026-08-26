@@ -46,14 +46,4 @@ echo "build exit=$?"
 echo "run_all exit=$?"
 ```
 
-## Local CI
-
-```bash
-./scripts/local-ci.sh --prepare-docker
-echo "prepare exit=$?"
-
-./scripts/local-ci.sh --docker
-echo "local_ci exit=$?"
-```
-
 Do not substitute log scraping for running the command where the agent and user can see it complete.

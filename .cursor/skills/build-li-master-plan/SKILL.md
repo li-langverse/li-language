@@ -103,6 +103,7 @@ No crates.io or Rust ecosystem checks — Li is not Rust.
 ## Additional resources
 
 - Subagent parallelism: use **dispatching-parallel-agents** when phase tasks are independent (e.g. lexer + diagnostics stubs).
+- Swarm health (ecosystem agents): **swarm-observer** skill + `li-cursor-agents` supervisor observer — hands-off retries; user not required per tick.
 - Long sessions: use **executing-plans** discipline (todos, verify each step).
 - After a phase gate: optionally use **finishing-a-development-branch** before merge/PR.
 - Phase 6 self-host changes: use **upgrade-li-from-cpp** (C++-first → port-to-Li discipline) and `scripts/check_li_parity.sh` for the full front-end parity gate in one command.

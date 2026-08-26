@@ -1,33 +1,29 @@
 ---
-description: Li surface syntax uses def, not proc, for function definitions
-globs: "**/*.li,std/**/*,packages/**/*.li,docs/language/**"
+description: Li ecosystem code and docs use def, never proc, for user-visible functions
 alwaysApply: true
 ---
 
-# Li definitions: use `def`, not `proc`
+# Li definitions: `def`, not `proc`
 
-## Required
+## Rule
 
-User-facing Li functions are declared with **`def`**:
+Across Li repos, agents must write and describe Li functions with **`def`**.
 
 ```nim
-def callee(x: int) -> int
-  requires x >= 0
-  ensures result == x
+def step_world(dt: float) -> int
+  requires dt > 0.0
+  ensures result == 0
   decreases 0
 =
-  return x
+  return 0
 ```
 
-## Forbidden in new code and docs
+## Forbidden
 
-- Bare **`proc`** for Li definitions (rejected by the compiler; use **`def`**).
-- Documentation or examples that teach `proc f(...)` as the primary Li syntax.
+- New Li examples, docs, tests, release notes, telemetry names, or APIs that introduce the word **`proc`** for functions.
+- New compatibility shims or aliases that teach `proc` as acceptable syntax.
+- Source-level vendor GPU strings such as `@gpu(vendor="cuda")`; backend selection belongs to `lig` config/runtime gates.
 
-## Allowed exception
+## Legacy boundary
 
-- **`extern proc`** for FFI/runtime stubs only (C ABI), with full `requires` / `ensures` / `decreases`.
-
-## Agents
-
-When writing `.li` files, release notes, or language docs, say **`def`** / **`extern proc`**. Do not introduce new `proc` examples unless documenting the rejection error.
+Existing compiler internals may still contain historical names while being migrated. Do not add more. If an emergency compiler/runtime FFI edit cannot avoid the legacy token, stop and document why in the PR.
