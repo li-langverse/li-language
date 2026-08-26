@@ -1,0 +1,66 @@
+
+type Particle = object
+  public px: float
+  public py: float
+  public pz: float
+  public vx: float
+  public vy: float
+  public vz: float
+  public life: float
+
+type Emitter = object
+  public rate: float
+  public burst: int
+def li_std_physics_particles_version() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+def emitter_tick(e: Emitter, dt: float) -> int
+  requires dt >= 0.0
+  ensures result >= 0
+  decreases 0
+=
+  if e.burst > 0:
+    return e.burst
+  return 0
+def nbody_pair_force(
+    ax: float, ay: float, bx: float, by: float,
+    g: float, mass: float, soft: float,
+    fx: float, fy: float) -> unit
+  requires g > 0.0
+  requires mass > 0.0
+  ensures result == 0
+  decreases 0
+=
+  return
+
+# Lennard-Jones force scalar (truncated at cutoff)
+def lj_force_scalar(r: float, epsilon: float, sigma: float, rc: float) -> float
+  requires r > 0.0
+  requires sigma > 0.0
+  requires rc > 0.0
+  ensures result >= 0.0
+  decreases 0
+=
+  if r >= rc:
+    return 0.0
+  var sr: float = sigma / r
+  var sr6: float = sr * sr * sr * sr * sr * sr
+  var sr12: float = sr6 * sr6
+  return 24.0 * epsilon * (2.0 * sr12 - sr6) / r
+def md_mini_step(
+    px: array[16, float], py: array[16, float], pz: array[16, float],
+    vx: array[16, float], vy: array[16, float], vz: array[16, float],
+    dt: float) -> unit
+  requires dt > 0.0
+  ensures result == 0
+  decreases 0
+=
+  var i: int = 0
+  while i < 16
+    px[i] = px[i] + vx[i] * dt
+    py[i] = py[i] + vy[i] * dt
+    pz[i] = pz[i] + vz[i] * dt
+    i = i + 1

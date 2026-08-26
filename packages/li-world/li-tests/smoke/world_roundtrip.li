@@ -1,0 +1,20 @@
+import world
+
+def main() raises Alloc, IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if world_format_version() != 1:
+    return 1
+  if world_roundtrip_ok_fields(1, 42, 7) != 1:
+    return 2
+  var line: str = world_serialize_fields(1, 42, 7)
+  var parsed: WorldSnapshot = world_parse_line(line)
+  if world_snapshot_fields_match_fields(1, 42, 7, parsed.name, parsed.tick, parsed.entity_count) != 1:
+    return 3
+  var buf: str = world_save_to_buffer_fields(1, 42, 7)
+  var loaded: WorldSnapshot = world_load_from_buffer(buf)
+  if world_snapshot_fields_match_fields(1, 42, 7, loaded.name, loaded.tick, loaded.entity_count) != 1:
+    return 4
+  return 0

@@ -1,0 +1,27 @@
+# G-bnd / P-bnd: refinement-typed array index — release LLVM must not call li_bounds_fail.
+type Index10 = {i: int | 0 <= i and i < 10}
+
+def read_at(a: array[10, int], i: Index10) -> int
+  requires true
+  ensures result == a[i]
+  decreases 0
+=
+  return a[i]
+
+def main() -> int
+  requires true
+  ensures result == 7
+  decreases 0
+=
+  var a: array[10, int]
+  a[0] = 1
+  a[1] = 2
+  a[2] = 3
+  a[3] = 4
+  a[4] = 5
+  a[5] = 6
+  a[6] = 7
+  a[7] = 0
+  a[8] = 0
+  a[9] = 0
+  return read_at(a, 6)

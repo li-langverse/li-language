@@ -1,0 +1,121 @@
+# Maps CWE classes to Li test obligations. Used by scripts/check-cve-coverage.sh.
+# Patterns with existing = true are covered by other li-tests suites.
+
+[[pattern]]
+cwe = "CWE-120"
+li_obligation = "compile_fail_or_proved_bound"
+suite = "cve_patterns"
+template = "cwe120_stack_buffer_oob.li"
+notes = "Classic stack buffer overflow via unchecked fixed array index"
+
+[[pattern]]
+cwe = "CWE-121"
+li_obligation = "compile_fail_or_proved_bound"
+suite = "cve_patterns"
+template = "cwe787_oob_index.li"
+notes = "Stack-based buffer overflow (constant index OOB)"
+
+[[pattern]]
+cwe = "CWE-122"
+li_obligation = "compile_fail_or_proved_bound"
+suite = "cve_patterns"
+template = "cwe787_dyn_index.li"
+notes = "Heap OOB analogue — dynamic int index without refinement"
+
+[[pattern]]
+cwe = "CWE-125"
+li_obligation = "compile_fail_or_proved_bound"
+suite = "cve_patterns"
+template = "cwe125_negative_index.li"
+notes = "Out-of-bounds read via negative constant index"
+
+[[pattern]]
+cwe = "CWE-787"
+li_obligation = "compile_fail_or_proved_bound"
+suite = "cve_patterns"
+template = "cwe787_oob_index.li"
+notes = "Out-of-bounds write — constant index past array end"
+
+[[pattern]]
+cwe = "CWE-788"
+li_obligation = "compile_fail_or_proved_bound"
+suite = "cve_patterns"
+template = "cwe787_oob_index.li"
+notes = "OOB write variant — same Li rejection as CWE-787"
+
+[[pattern]]
+cwe = "CWE-190"
+li_obligation = "fuzz_seed"
+suite = "security"
+template = "integer_literal_flood.li"
+notes = "Integer overflow class — lexer/parser stress"
+
+[[pattern]]
+cwe = "CWE-191"
+li_obligation = "fuzz_seed"
+suite = "security"
+template = "integer_literal_flood.li"
+notes = "Integer underflow class — numeric literal stress"
+
+[[pattern]]
+cwe = "CWE-415"
+li_obligation = "compile_fail"
+suite = "borrow"
+existing = true
+notes = "Double-free analogue — use-after-move rejected by borrowck"
+
+[[pattern]]
+cwe = "CWE-416"
+li_obligation = "compile_fail"
+suite = "borrow"
+existing = true
+notes = "Use-after-free analogue — borrowck move rules"
+
+[[pattern]]
+cwe = "CWE-134"
+li_obligation = "compile_fail"
+suite = "effects"
+existing = true
+notes = "Format-string class — extern IO must declare raises IO"
+
+[[pattern]]
+cwe = "CWE-78"
+li_obligation = "compile_reject_path"
+suite = "security"
+template = "codegen_path_injection.sh"
+notes = "OS command injection — lic build rejects shell metacharacters in paths"
+
+[[pattern]]
+cwe = "CWE-88"
+li_obligation = "compile_reject_path"
+suite = "security"
+template = "codegen_path_injection.sh"
+notes = "Argument injection via link command paths"
+
+[[pattern]]
+cwe = "CWE-362"
+li_obligation = "compile_fail"
+suite = "race_shared_memory"
+existing = true
+notes = "Race condition — parallel shared mutation rejected"
+
+[[pattern]]
+cwe = "CWE-366"
+li_obligation = "compile_fail"
+suite = "race_shared_memory"
+existing = true
+notes = "Race via overlapping parallel slices"
+
+[[pattern]]
+cwe = "CWE-676"
+li_obligation = "compile_fail"
+suite = "cve_patterns"
+template = "cwe676_extern_no_contract.li"
+notes = "Dangerous function seam — extern without contracts rejected"
+
+[[pattern]]
+cwe = "CWE-UNKNOWN"
+li_obligation = "compile_fail"
+suite = "prove_reject"
+existing = true
+notes = "Bare cast / Any / sorry — pillar-1 rejections"

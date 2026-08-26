@@ -1,0 +1,23 @@
+def make() -> array[4, int]
+  requires true
+  ensures true
+  decreases 0
+=
+  var out: array[4, int]
+  out[0] = 42
+  out[1] = 43
+  out[2] = 44
+  out[3] = 45
+  return out
+
+def main() raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var a: array[4, int] = make()
+  var i: int = 0
+  while i < 4:
+    print(a[i])
+    i = i + 1
+  return 0

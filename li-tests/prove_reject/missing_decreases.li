@@ -1,4 +1,4 @@
-proc loop() -> unit
+def loop() -> unit
   requires true
   ensures true
 =

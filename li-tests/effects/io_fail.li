@@ -1,6 +1,6 @@
-proc talk() -> unit
+def talk() -> unit
   requires true
   ensures true
   decreases 0
 =
-  echo 0
+  print(0)

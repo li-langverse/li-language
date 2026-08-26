@@ -1,0 +1,81 @@
+{
+  "status": "pass",
+  "native_pixels": true,
+  "verticals_native": 7,
+  "png_count": 7,
+  "png_dir": "/Users/julian/Documents/coding-projects/lic-ph-hw-wp3/docs/demo/media/native-verticals/png",
+  "requires_min_verticals": 2,
+  "note": "SDL verticals present host \u2014 not full li-studio-demo window",
+  "frames": [
+    {
+      "native_pixels": 1,
+      "profile_id": 1,
+      "slug": "game",
+      "slug_expected": "game",
+      "ppm": "/var/folders/w_/y53xpxrj38xg95dqty00hypw0000gn/T/tmp.qi4H3YCOpY/frame-000.ppm",
+      "width": 1920,
+      "height": 1080,
+      "backend": "cpu_framebuffer"
+    },
+    {
+      "native_pixels": 1,
+      "profile_id": 2,
+      "slug": "sim_rl",
+      "slug_expected": "sim_rl",
+      "ppm": "/var/folders/w_/y53xpxrj38xg95dqty00hypw0000gn/T/tmp.aR50AqT0u8/frame-000.ppm",
+      "width": 1920,
+      "height": 1080,
+      "backend": "cpu_framebuffer"
+    },
+    {
+      "native_pixels": 1,
+      "profile_id": 3,
+      "slug": "sim_automotive",
+      "slug_expected": "sim_automotive",
+      "ppm": "/var/folders/w_/y53xpxrj38xg95dqty00hypw0000gn/T/tmp.j2YNv2eSCf/frame-000.ppm",
+      "width": 1920,
+      "height": 1080,
+      "backend": "cpu_framebuffer"
+    },
+    {
+      "native_pixels": 1,
+      "profile_id": 4,
+      "slug": "sim_robotics",
+      "slug_expected": "sim_robotics",
+      "ppm": "/var/folders/w_/y53xpxrj38xg95dqty00hypw0000gn/T/tmp.6EntvxZ44M/frame-000.ppm",
+      "width": 1920,
+      "height": 1080,
+      "backend": "cpu_framebuffer"
+    },
+    {
+      "native_pixels": 1,
+      "profile_id": 5,
+      "slug": "sim_additive",
+      "slug_expected": "sim_additive",
+      "ppm": "/var/folders/w_/y53xpxrj38xg95dqty00hypw0000gn/T/tmp.bSNldWP3Iw/frame-000.ppm",
+      "width": 1920,
+      "height": 1080,
+      "backend": "cpu_framebuffer"
+    },
+    {
+      "native_pixels": 1,
+      "profile_id": 6,
+      "slug": "sim_scientific",
+      "slug_expected": "sim_scientific",
+      "ppm": "/var/folders/w_/y53xpxrj38xg95dqty00hypw0000gn/T/tmp.wh0BOUQS8D/frame-000.ppm",
+      "width": 1920,
+      "height": 1080,
+      "backend": "cpu_framebuffer"
+    },
+    {
+      "native_pixels": 1,
+      "profile_id": 7,
+      "slug": "sim_drug_design",
+      "slug_expected": "sim_drug_design",
+      "ppm": "/var/folders/w_/y53xpxrj38xg95dqty00hypw0000gn/T/tmp.ETHEsmSwHq/frame-000.ppm",
+      "width": 1920,
+      "height": 1080,
+      "backend": "cpu_framebuffer"
+    }
+  ]
+}

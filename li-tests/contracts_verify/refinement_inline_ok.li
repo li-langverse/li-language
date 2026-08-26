@@ -1,0 +1,13 @@
+def callee(x: {v: int | v >= 0}) -> int
+  requires true
+  ensures result == x
+  decreases 0
+=
+  return x
+
+def caller() -> int
+  requires true
+  ensures result == 3
+  decreases 0
+=
+  return callee(3)

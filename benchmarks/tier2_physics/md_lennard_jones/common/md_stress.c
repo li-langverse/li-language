@@ -60,35 +60,44 @@ typedef struct SoA {
 } SoA;
 
 static void init_fcc_liquid(SoA* s, double box, double temperature, Rng* rng) {
-  const int cells = (int)ceil(cbrt((double)STRESS_N));
-  const double spacing = box / (double)cells;
+  static const double basis[4][3] = {
+      {0.0, 0.0, 0.0}, {0.0, 0.5, 0.5}, {0.5, 0.0, 0.5}, {0.5, 0.5, 0.0}};
+  int ncell = 1;
+  while (4 * ncell * ncell * ncell < STRESS_N) {
+    ++ncell;
+  }
+  const double a = box / (double)ncell;
   int idx = 0;
-  for (int ix = 0; ix < cells; ++ix) {
-    for (int iy = 0; iy < cells; ++iy) {
-      for (int iz = 0; iz < cells; ++iz) {
-        if (idx >= STRESS_N) return;
-        s->px[idx] = ((double)ix + 0.5) * spacing;
-        s->py[idx] = ((double)iy + 0.5) * spacing;
-        s->pz[idx] = ((double)iz + 0.5) * spacing;
-        const double scale = sqrt(temperature);
-        s->vx[idx] = scale * rng_normal(rng);
-        s->vy[idx] = scale * rng_normal(rng);
-        s->vz[idx] = scale * rng_normal(rng);
-        ++idx;
+  for (int ix = 0; ix < ncell && idx < STRESS_N; ++ix) {
+    for (int iy = 0; iy < ncell && idx < STRESS_N; ++iy) {
+      for (int iz = 0; iz < ncell && idx < STRESS_N; ++iz) {
+        for (int b = 0; b < 4 && idx < STRESS_N; ++b) {
+          s->px[idx] = ((double)ix + basis[b][0]) * a;
+          s->py[idx] = ((double)iy + basis[b][1]) * a;
+          s->pz[idx] = ((double)iz + basis[b][2]) * a;
+          const double scale = sqrt(temperature);
+          s->vx[idx] = scale * rng_normal(rng);
+          s->vy[idx] = scale * rng_normal(rng);
+          s->vz[idx] = scale * rng_normal(rng);
+          ++idx;
+        }
       }
     }
   }
-  double px_sum = 0.0, py_sum = 0.0, pz_sum = 0.0;
+  double px_sum = 0.0, py_sum = 0.0, pz_sum = 0.0, ke = 0.0;
   for (int i = 0; i < STRESS_N; ++i) {
     px_sum += s->vx[i];
     py_sum += s->vy[i];
     pz_sum += s->vz[i];
+    ke += 0.5 * (s->vx[i] * s->vx[i] + s->vy[i] * s->vy[i] + s->vz[i] * s->vz[i]);
   }
   const double inv_n = 1.0 / (double)STRESS_N;
+  const double target = 1.5 * (double)STRESS_N * temperature;
+  const double vel_scale = ke > 1e-20 ? sqrt(target / ke) : 1.0;
   for (int i = 0; i < STRESS_N; ++i) {
-    s->vx[i] -= px_sum * inv_n;
-    s->vy[i] -= py_sum * inv_n;
-    s->vz[i] -= pz_sum * inv_n;
+    s->vx[i] = (s->vx[i] - px_sum * inv_n) * vel_scale;
+    s->vy[i] = (s->vy[i] - py_sum * inv_n) * vel_scale;
+    s->vz[i] = (s->vz[i] - pz_sum * inv_n) * vel_scale;
   }
 }
 

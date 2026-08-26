@@ -1,0 +1,199 @@
+
+# lig.present — swapchain create / present contracts (PH-HW HW-1).
+
+extern def li_rt_lig_wgpu_swapchain_create(viewport_w: int, viewport_h: int) -> int
+  requires viewport_w >= 0
+  requires viewport_h >= 0
+  ensures result >= 0
+  decreases viewport_w
+
+extern def li_rt_lig_wgpu_present_frame(swapchain_ok: int) -> int
+  requires swapchain_ok >= 0
+  requires swapchain_ok <= 1
+  ensures result >= 0
+  ensures result <= 1
+  decreases swapchain_ok
+
+extern def li_rt_lig_host_present_active() -> int
+  requires true
+  ensures result >= 0
+  ensures result <= 1
+  decreases 0
+
+extern def li_rt_lig_host_present_dt_ms() -> float
+  requires true
+  ensures result >= 0.0
+  decreases 0
+
+extern def li_rt_lig_host_native_pixels() -> int
+  requires true
+  ensures result >= 0
+  ensures result <= 1
+  decreases 0
+
+def li_std_lig_present_version() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+def lig_backend_webgpu() -> int
+  requires true
+  ensures result == 4
+  decreases 0
+=
+  return 4
+
+def lig_present_status_ok() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+def lig_present_status_fail() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return 0
+
+def lig_wgpu_smoke_status_pass() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+def lig_wgpu_smoke_status_fail() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return 0
+
+type LigSwapchain = object
+  public viewport_w: float
+  public viewport_h: float
+  public backend_id: int
+  public swapchain_ok: int
+  public adapter_ok: int
+  public surface_ok: int
+
+type LigPresentFrame = object
+  public frame_id: int
+  public presented: int
+  public native_pixels: int
+  public dt_ms: float
+
+type LigWgpuSmoke = object
+  public backend_id: int
+  public status: int
+  public adapter_ok: int
+  public surface_ok: int
+  public swapchain: LigSwapchain
+
+def lig_present_swapchain_create(vp_w: float, vp_h: float) -> LigSwapchain raises IO
+  requires vp_w >= 0.0
+  requires vp_h >= 0.0
+  ensures result.viewport_w == vp_w
+  ensures result.viewport_h == vp_h
+  ensures result.backend_id == lig_backend_webgpu()
+  decreases 0
+=
+  var out: LigSwapchain
+  out.viewport_w = vp_w
+  out.viewport_h = vp_h
+  out.backend_id = lig_backend_webgpu()
+  out.adapter_ok = 1
+  var iw: int = 0
+  var ih: int = 0
+  if vp_w > 0.0:
+    iw = 1
+  if vp_h > 0.0:
+    ih = 1
+  if vp_w >= 64.0:
+    iw = 1280
+  if vp_h >= 36.0:
+    ih = 720
+  out.swapchain_ok = li_rt_lig_wgpu_swapchain_create(iw, ih)
+  out.surface_ok = 0
+  if out.swapchain_ok == lig_present_status_ok():
+    out.surface_ok = 1
+  return out
+
+def lig_present_frame(swap: LigSwapchain, frame_id: int) -> LigPresentFrame raises IO
+  requires frame_id >= 0
+  requires swap.backend_id == lig_backend_webgpu()
+  ensures result.frame_id == frame_id
+  decreases frame_id
+=
+  var out: LigPresentFrame
+  out.frame_id = frame_id
+  out.dt_ms = li_rt_lig_host_present_dt_ms()
+  out.native_pixels = li_rt_lig_host_native_pixels()
+  out.presented = li_rt_lig_wgpu_present_frame(swap.swapchain_ok)
+  if li_rt_lig_host_present_active() != 1:
+    out.native_pixels = 0
+  return out
+
+def lig_present_host_active() -> int raises IO
+  requires true
+  ensures result >= 0
+  ensures result <= 1
+  decreases 0
+=
+  return li_rt_lig_host_present_active()
+
+def lig_present_host_dt_ms() -> float raises IO
+  requires true
+  ensures result >= 0.0
+  decreases 0
+=
+  return li_rt_lig_host_present_dt_ms()
+
+def lig_present_host_native_pixels_flag() -> int raises IO
+  requires true
+  ensures result >= 0
+  ensures result <= 1
+  decreases 0
+=
+  return li_rt_lig_host_native_pixels()
+
+def lig_wgpu_smoke_run() -> LigWgpuSmoke raises IO, Alloc
+  requires true
+  ensures result.adapter_ok == 1
+  ensures result.surface_ok >= 0
+  ensures result.surface_ok <= 1
+  decreases 0
+=
+  var s: LigWgpuSmoke
+  s.backend_id = lig_backend_webgpu()
+  s.swapchain = lig_present_swapchain_create(1280.0, 720.0)
+  s.adapter_ok = s.swapchain.adapter_ok
+  s.surface_ok = s.swapchain.surface_ok
+  s.status = lig_wgpu_smoke_status_fail()
+  if s.surface_ok == 1:
+    s.status = lig_wgpu_smoke_status_pass()
+  return s
+
+def lig_wgpu_smoke_passed(smoke: LigWgpuSmoke) -> int
+  requires true
+  ensures result >= 0
+  ensures result <= 1
+  decreases 0
+=
+  if smoke.status == lig_wgpu_smoke_status_pass():
+    if smoke.backend_id == lig_backend_webgpu():
+      if smoke.adapter_ok == 1:
+        return 1
+  return 0
+
+def lig_wgpu_smoke_surface_ready(smoke: LigWgpuSmoke) -> int
+  requires true
+  ensures result >= 0
+  ensures result <= 1
+  decreases 0
+=
+  return smoke.surface_ok

@@ -1,0 +1,20 @@
+[package]
+name = "li-aimd"
+version = "0.1.0"
+edition = "2026"
+license = "Apache-2.0 OR MIT"
+description = "Ab initio molecular dynamics (AIMD) — DFT-coupled MD energy-drift oracles, thermostatted integrators, and headless batch runners, as a standalone installable Li package."
+
+[dependencies]
+li-chem = { path = "../li-chem" }
+li-sim = { path = "../li-sim" }
+
+[package.metadata.li]
+min_lic = "0.1.0"
+import_name = "aimd"
+pkg_id = "PKG-li-aimd"
+
+[package.repository]
+url = "https://github.com/li-langverse/li-aimd"
+documentation = "https://li-langverse.github.io/li-language/ecosystem/li-aimd/"
+changelog = "https://github.com/li-langverse/li-aimd/blob/main/CHANGELOG.md"

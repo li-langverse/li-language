@@ -1,0 +1,762 @@
+{
+  "schema": "li_algo_registry_v1",
+  "count": 126,
+  "algorithms": [
+    {
+      "id": 1,
+      "name": "num_dot_axpy",
+      "family": "num",
+      "implemented_smoke": false
+    },
+    {
+      "id": 2,
+      "name": "num_matmul_naive",
+      "family": "num",
+      "implemented_smoke": false
+    },
+    {
+      "id": 3,
+      "name": "num_matmul_blocked",
+      "family": "num",
+      "implemented_smoke": false
+    },
+    {
+      "id": 4,
+      "name": "num_sparse_mv",
+      "family": "num",
+      "implemented_smoke": false
+    },
+    {
+      "id": 5,
+      "name": "num_cg",
+      "family": "num",
+      "implemented_smoke": false
+    },
+    {
+      "id": 6,
+      "name": "num_gmres",
+      "family": "num",
+      "implemented_smoke": false
+    },
+    {
+      "id": 7,
+      "name": "num_cholesky",
+      "family": "num",
+      "implemented_smoke": false
+    },
+    {
+      "id": 8,
+      "name": "num_eig_symmetric",
+      "family": "num",
+      "implemented_smoke": false
+    },
+    {
+      "id": 9,
+      "name": "num_fft_r2c",
+      "family": "num",
+      "implemented_smoke": false
+    },
+    {
+      "id": 10,
+      "name": "num_rng_pcg",
+      "family": "num",
+      "implemented_smoke": false
+    },
+    {
+      "id": 11,
+      "name": "num_integ_euler",
+      "family": "num",
+      "implemented_smoke": false
+    },
+    {
+      "id": 12,
+      "name": "num_integ_rk4",
+      "family": "num",
+      "implemented_smoke": false
+    },
+    {
+      "id": 13,
+      "name": "num_integ_verlet",
+      "family": "num",
+      "implemented_smoke": false
+    },
+    {
+      "id": 14,
+      "name": "num_integ_symplectic",
+      "family": "num",
+      "implemented_smoke": false
+    },
+    {
+      "id": 15,
+      "name": "num_integ_semi_implicit",
+      "family": "num",
+      "implemented_smoke": false
+    },
+    {
+      "id": 16,
+      "name": "num_root_newton",
+      "family": "num",
+      "implemented_smoke": false
+    },
+    {
+      "id": 17,
+      "name": "num_opt_bfgs",
+      "family": "num",
+      "implemented_smoke": false
+    },
+    {
+      "id": 18,
+      "name": "num_opt_line_search",
+      "family": "num",
+      "implemented_smoke": false
+    },
+    {
+      "id": 19,
+      "name": "num_quadrature_gauss",
+      "family": "num",
+      "implemented_smoke": false
+    },
+    {
+      "id": 101,
+      "name": "md_lj_cutoff_mic",
+      "family": "md",
+      "implemented_smoke": true
+    },
+    {
+      "id": 102,
+      "name": "md_integrator_verlet",
+      "family": "md",
+      "implemented_smoke": true
+    },
+    {
+      "id": 103,
+      "name": "md_energy_drift",
+      "family": "md",
+      "implemented_smoke": true
+    },
+    {
+      "id": 104,
+      "name": "md_oracle_external",
+      "family": "md",
+      "implemented_smoke": true
+    },
+    {
+      "id": 105,
+      "name": "md_neighbor_cell_list",
+      "family": "md",
+      "implemented_smoke": true
+    },
+    {
+      "id": 106,
+      "name": "md_neighbor_verlet_skin",
+      "family": "md",
+      "implemented_smoke": true
+    },
+    {
+      "id": 107,
+      "name": "md_integrator_leapfrog",
+      "family": "md",
+      "implemented_smoke": true
+    },
+    {
+      "id": 108,
+      "name": "md_thermostat_nose_hoover",
+      "family": "md",
+      "implemented_smoke": true
+    },
+    {
+      "id": 109,
+      "name": "md_thermostat_berendsen",
+      "family": "md",
+      "implemented_smoke": true
+    },
+    {
+      "id": 110,
+      "name": "md_barostat_parrinello_rahman",
+      "family": "md",
+      "implemented_smoke": true
+    },
+    {
+      "id": 111,
+      "name": "md_constraints_shake",
+      "family": "md",
+      "implemented_smoke": true
+    },
+    {
+      "id": 112,
+      "name": "md_constraints_rattle",
+      "family": "md",
+      "implemented_smoke": true
+    },
+    {
+      "id": 113,
+      "name": "md_longrange_ewald",
+      "family": "md",
+      "implemented_smoke": true
+    },
+    {
+      "id": 114,
+      "name": "md_longrange_pme",
+      "family": "md",
+      "implemented_smoke": true
+    },
+    {
+      "id": 115,
+      "name": "md_init_fcc_mb",
+      "family": "md",
+      "implemented_smoke": true
+    },
+    {
+      "id": 116,
+      "name": "nbody_pairwise_gravity",
+      "family": "md",
+      "implemented_smoke": true
+    },
+    {
+      "id": 117,
+      "name": "nbody_barnes_hut",
+      "family": "md",
+      "implemented_smoke": true
+    },
+    {
+      "id": 201,
+      "name": "pde_heat_explicit_2d",
+      "family": "pde",
+      "implemented_smoke": true
+    },
+    {
+      "id": 202,
+      "name": "pde_cfl_timestep",
+      "family": "pde",
+      "implemented_smoke": true
+    },
+    {
+      "id": 203,
+      "name": "pde_wave_1d_cfl",
+      "family": "pde",
+      "implemented_smoke": true
+    },
+    {
+      "id": 204,
+      "name": "pde_heat_implicit_jacobi",
+      "family": "pde",
+      "implemented_smoke": true
+    },
+    {
+      "id": 205,
+      "name": "cfd_fvm_face_flux",
+      "family": "pde",
+      "implemented_smoke": true
+    },
+    {
+      "id": 206,
+      "name": "cfd_simple",
+      "family": "pde",
+      "implemented_smoke": true
+    },
+    {
+      "id": 207,
+      "name": "cfd_piso",
+      "family": "pde",
+      "implemented_smoke": true
+    },
+    {
+      "id": 208,
+      "name": "cfd_pimple",
+      "family": "pde",
+      "implemented_smoke": true
+    },
+    {
+      "id": 209,
+      "name": "cfd_turbulence_k_epsilon",
+      "family": "pde",
+      "implemented_smoke": true
+    },
+    {
+      "id": 210,
+      "name": "cfd_turbulence_k_omega_sst",
+      "family": "pde",
+      "implemented_smoke": true
+    },
+    {
+      "id": 211,
+      "name": "fea_mesh_tri_tet",
+      "family": "pde",
+      "implemented_smoke": true
+    },
+    {
+      "id": 212,
+      "name": "fea_stiffness_assembly",
+      "family": "pde",
+      "implemented_smoke": true
+    },
+    {
+      "id": 213,
+      "name": "fea_gauss_quadrature",
+      "family": "pde",
+      "implemented_smoke": true
+    },
+    {
+      "id": 214,
+      "name": "fea_linear_elasticity",
+      "family": "pde",
+      "implemented_smoke": true
+    },
+    {
+      "id": 215,
+      "name": "fea_solver_direct",
+      "family": "pde",
+      "implemented_smoke": true
+    },
+    {
+      "id": 216,
+      "name": "fea_solver_iterative",
+      "family": "pde",
+      "implemented_smoke": true
+    },
+    {
+      "id": 301,
+      "name": "rigid_semi_implicit",
+      "family": "rigid",
+      "implemented_smoke": true
+    },
+    {
+      "id": 302,
+      "name": "rigid_broadphase_sap",
+      "family": "rigid",
+      "implemented_smoke": true
+    },
+    {
+      "id": 303,
+      "name": "rigid_broadphase_bvh",
+      "family": "rigid",
+      "implemented_smoke": true
+    },
+    {
+      "id": 304,
+      "name": "rigid_contact_solver",
+      "family": "rigid",
+      "implemented_smoke": true
+    },
+    {
+      "id": 305,
+      "name": "rigid_constraints",
+      "family": "rigid",
+      "implemented_smoke": true
+    },
+    {
+      "id": 401,
+      "name": "qm_gto_eval",
+      "family": "qm",
+      "implemented_smoke": false
+    },
+    {
+      "id": 402,
+      "name": "qm_overlap_integrals",
+      "family": "qm",
+      "implemented_smoke": false
+    },
+    {
+      "id": 403,
+      "name": "qm_kinetic_integrals",
+      "family": "qm",
+      "implemented_smoke": false
+    },
+    {
+      "id": 404,
+      "name": "qm_nuclear_attraction",
+      "family": "qm",
+      "implemented_smoke": false
+    },
+    {
+      "id": 405,
+      "name": "qm_eri_os",
+      "family": "qm",
+      "implemented_smoke": false
+    },
+    {
+      "id": 406,
+      "name": "qm_eri_screening",
+      "family": "qm",
+      "implemented_smoke": false
+    },
+    {
+      "id": 407,
+      "name": "qm_eri_density_fitting",
+      "family": "qm",
+      "implemented_smoke": false
+    },
+    {
+      "id": 408,
+      "name": "qm_hf_fock_build",
+      "family": "qm",
+      "implemented_smoke": false
+    },
+    {
+      "id": 409,
+      "name": "qm_hf_diis",
+      "family": "qm",
+      "implemented_smoke": false
+    },
+    {
+      "id": 410,
+      "name": "qm_hf_canonical_ortho",
+      "family": "qm",
+      "implemented_smoke": false
+    },
+    {
+      "id": 411,
+      "name": "qm_scf_solver",
+      "family": "qm",
+      "implemented_smoke": false
+    },
+    {
+      "id": 412,
+      "name": "qm_dft_xc_lda",
+      "family": "qm",
+      "implemented_smoke": false
+    },
+    {
+      "id": 413,
+      "name": "qm_dft_xc_gga",
+      "family": "qm",
+      "implemented_smoke": false
+    },
+    {
+      "id": 414,
+      "name": "qm_dft_xc_mgga",
+      "family": "qm",
+      "implemented_smoke": false
+    },
+    {
+      "id": 415,
+      "name": "qm_dft_grid_becke",
+      "family": "qm",
+      "implemented_smoke": false
+    },
+    {
+      "id": 416,
+      "name": "qm_dft_grid_lebedev",
+      "family": "qm",
+      "implemented_smoke": false
+    },
+    {
+      "id": 417,
+      "name": "qm_dft_hybrid_exchange",
+      "family": "qm",
+      "implemented_smoke": false
+    },
+    {
+      "id": 418,
+      "name": "qm_dft_scf_energy",
+      "family": "qm",
+      "implemented_smoke": false
+    },
+    {
+      "id": 419,
+      "name": "qm_grad_analytical",
+      "family": "qm",
+      "implemented_smoke": false
+    },
+    {
+      "id": 420,
+      "name": "qm_geom_opt_internal",
+      "family": "qm",
+      "implemented_smoke": false
+    },
+    {
+      "id": 421,
+      "name": "qm_geom_opt_bfgs",
+      "family": "qm",
+      "implemented_smoke": false
+    },
+    {
+      "id": 422,
+      "name": "qm_mp2",
+      "family": "qm",
+      "implemented_smoke": false
+    },
+    {
+      "id": 423,
+      "name": "qm_ccsd",
+      "family": "qm",
+      "implemented_smoke": false
+    },
+    {
+      "id": 424,
+      "name": "qm_tddft_casida",
+      "family": "qm",
+      "implemented_smoke": false
+    },
+    {
+      "id": 425,
+      "name": "qm_tddft_rpa",
+      "family": "qm",
+      "implemented_smoke": false
+    },
+    {
+      "id": 426,
+      "name": "qm_xtb_gfn",
+      "family": "qm",
+      "implemented_smoke": false
+    },
+    {
+      "id": 427,
+      "name": "qm_dispersion_d3",
+      "family": "qm",
+      "implemented_smoke": false
+    },
+    {
+      "id": 428,
+      "name": "qm_ecp",
+      "family": "qm",
+      "implemented_smoke": false
+    },
+    {
+      "id": 429,
+      "name": "qm_ase_calculator",
+      "family": "qm",
+      "implemented_smoke": false
+    },
+    {
+      "id": 430,
+      "name": "qm_property_dipole",
+      "family": "qm",
+      "implemented_smoke": false
+    },
+    {
+      "id": 431,
+      "name": "qm_property_freq",
+      "family": "qm",
+      "implemented_smoke": false
+    },
+    {
+      "id": 432,
+      "name": "qm_job_queue_io",
+      "family": "qm",
+      "implemented_smoke": false
+    },
+    {
+      "id": 501,
+      "name": "drug_litl_stages",
+      "family": "drug",
+      "implemented_smoke": false
+    },
+    {
+      "id": 502,
+      "name": "drug_docking_score_vina",
+      "family": "drug",
+      "implemented_smoke": false
+    },
+    {
+      "id": 503,
+      "name": "drug_docking_diffusion",
+      "family": "drug",
+      "implemented_smoke": false
+    },
+    {
+      "id": 504,
+      "name": "drug_ml_retrain_loop",
+      "family": "drug",
+      "implemented_smoke": false
+    },
+    {
+      "id": 505,
+      "name": "drug_fep_alchemical",
+      "family": "drug",
+      "implemented_smoke": false
+    },
+    {
+      "id": 511,
+      "name": "bio_rosetta_energy",
+      "family": "bio",
+      "implemented_smoke": false
+    },
+    {
+      "id": 512,
+      "name": "bio_rotamer_packing",
+      "family": "bio",
+      "implemented_smoke": false
+    },
+    {
+      "id": 513,
+      "name": "bio_proteinmpnn",
+      "family": "bio",
+      "implemented_smoke": false
+    },
+    {
+      "id": 514,
+      "name": "bio_rfdiffusion",
+      "family": "bio",
+      "implemented_smoke": false
+    },
+    {
+      "id": 521,
+      "name": "ml_mlp_forward",
+      "family": "ml",
+      "implemented_smoke": false
+    },
+    {
+      "id": 522,
+      "name": "ml_mlp_train_step",
+      "family": "ml",
+      "implemented_smoke": false
+    },
+    {
+      "id": 523,
+      "name": "ml_conv2d_forward",
+      "family": "ml",
+      "implemented_smoke": false
+    },
+    {
+      "id": 601,
+      "name": "am_plane_mesh_intersect",
+      "family": "am",
+      "implemented_smoke": false
+    },
+    {
+      "id": 602,
+      "name": "am_polygon_clip",
+      "family": "am",
+      "implemented_smoke": false
+    },
+    {
+      "id": 603,
+      "name": "am_slice_layers",
+      "family": "am",
+      "implemented_smoke": false
+    },
+    {
+      "id": 604,
+      "name": "am_offset_perimeters",
+      "family": "am",
+      "implemented_smoke": false
+    },
+    {
+      "id": 605,
+      "name": "am_infill_grid_lines",
+      "family": "am",
+      "implemented_smoke": false
+    },
+    {
+      "id": 606,
+      "name": "am_infill_gyroid",
+      "family": "am",
+      "implemented_smoke": false
+    },
+    {
+      "id": 607,
+      "name": "am_support_tree",
+      "family": "am",
+      "implemented_smoke": false
+    },
+    {
+      "id": 608,
+      "name": "am_toolpath_arcs",
+      "family": "am",
+      "implemented_smoke": false
+    },
+    {
+      "id": 609,
+      "name": "am_thermal_warp",
+      "family": "am",
+      "implemented_smoke": false
+    },
+    {
+      "id": 610,
+      "name": "am_export_gcode_3mf",
+      "family": "am",
+      "implemented_smoke": false
+    },
+    {
+      "id": 701,
+      "name": "viz_colormap",
+      "family": "viz",
+      "implemented_smoke": false
+    },
+    {
+      "id": 702,
+      "name": "viz_marching_cubes",
+      "family": "viz",
+      "implemented_smoke": false
+    },
+    {
+      "id": 703,
+      "name": "viz_resample",
+      "family": "viz",
+      "implemented_smoke": false
+    },
+    {
+      "id": 704,
+      "name": "viz_decimate",
+      "family": "viz",
+      "implemented_smoke": false
+    },
+    {
+      "id": 705,
+      "name": "viz_pipeline_graph",
+      "family": "viz",
+      "implemented_smoke": false
+    },
+    {
+      "id": 706,
+      "name": "viz_inspector_panels",
+      "family": "viz",
+      "implemented_smoke": false
+    },
+    {
+      "id": 707,
+      "name": "viz_linked_views",
+      "family": "viz",
+      "implemented_smoke": false
+    },
+    {
+      "id": 801,
+      "name": "robo_multibody_step",
+      "family": "robo",
+      "implemented_smoke": true
+    },
+    {
+      "id": 802,
+      "name": "robo_ik_jacobian",
+      "family": "robo",
+      "implemented_smoke": true
+    },
+    {
+      "id": 803,
+      "name": "robo_plan_rrt",
+      "family": "robo",
+      "implemented_smoke": true
+    },
+    {
+      "id": 804,
+      "name": "robo_plan_prm",
+      "family": "robo",
+      "implemented_smoke": true
+    },
+    {
+      "id": 805,
+      "name": "robo_traj_opt",
+      "family": "robo",
+      "implemented_smoke": true
+    },
+    {
+      "id": 901,
+      "name": "auto_bicycle_model",
+      "family": "auto",
+      "implemented_smoke": false
+    },
+    {
+      "id": 902,
+      "name": "auto_dyn_rk4",
+      "family": "auto",
+      "implemented_smoke": false
+    },
+    {
+      "id": 903,
+      "name": "auto_sensor_raycast",
+      "family": "auto",
+      "implemented_smoke": false
+    }
+  ]
+}

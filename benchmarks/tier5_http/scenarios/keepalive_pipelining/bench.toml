@@ -1,0 +1,22 @@
+name = "keepalive_pipelining"
+phase = "m1"
+enabled = true
+
+[server]
+kind = "static"
+document_root = "fixtures/static/1k"
+sendfile = true
+
+[verify]
+requests = [
+  { method = "GET", path = "/file.bin", expect_status = 200, body_len = 1024 },
+]
+
+[load]
+tool = "wrk"
+threads = 8
+connections = 200
+pipeline = 8
+
+[metrics]
+collect = ["rps", "p99_latency_ms"]

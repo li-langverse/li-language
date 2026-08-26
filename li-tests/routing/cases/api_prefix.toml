@@ -1,0 +1,14 @@
+[[case]]
+id = "health"
+request = { method = "GET", host = "api.example.com", path = "/health" }
+expect = { route = "get_health", action = "static" }
+
+[[case]]
+id = "chat_completions"
+request = { method = "POST", host = "api.example.com", path = "/v1/chat/completions" }
+expect = { route = "post_v1_wild", action = "proxy" }
+
+[[case]]
+id = "no_match"
+request = { method = "GET", host = "api.example.com", path = "/unknown" }
+expect = { status = 404 }

@@ -1,0 +1,18 @@
+{
+  "hooks": {
+    "afterFileEdit": [
+      {
+        "command": ".cursor/hooks/remind-stdlib-coverage.sh",
+        "matcher": "std/**"
+      }
+    ],
+    "stop": [
+      {
+        "command": ".cursor/hooks/session-audit.sh"
+      },
+      {
+        "command": ".cursor/hooks/open-pr-github.sh"
+      }
+    ]
+  }
+}

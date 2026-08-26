@@ -1,0 +1,3 @@
+[submodule "benchmarks/tier5_http/third_party/nginx"]
+	path = benchmarks/tier5_http/third_party/nginx
+	url = https://github.com/nginx/nginx.git

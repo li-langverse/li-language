@@ -1,0 +1,23 @@
+[package]
+name = "li-physics-core"
+version = "0.1.0"
+edition = "2026"
+license = "Apache-2.0 OR MIT"
+description = "Li package li-physics-core"
+
+[dependencies]
+li-math = { path = "../li-math" }
+li-math-numerics = { path = "../li-math-numerics" }
+# registry = "1.0.0"             # lip 8d+
+
+[package.metadata.li]
+github_repo = "li-physics-core"
+import_name = "physics.core"
+min_lic = "0.1.0"
+maintainer = "li-langverse"
+pkg_id = "PKG-li-physics-core"
+
+[package.repository]
+url = "https://github.com/li-langverse/li-physics-core"
+documentation = "https://li-langverse.github.io/li-language/ecosystem/li-physics-core/"
+changelog = "https://github.com/li-langverse/li-physics-core/blob/main/CHANGELOG.md"

@@ -1,0 +1,10 @@
+{
+  "schema": "ph-hw/lig-memory/v1",
+  "generated_utc": "2026-05-25T10:59:35Z",
+  "budget_mib": 512,
+  "peak_bytes": 150994944,
+  "peak_mib": 144,
+  "meets_budget": true,
+  "refuse_md_100k_after_1k_10k": true,
+  "source": "packages/lig/src/lib.li:lig_memory_tier_estimated_bytes"
+}

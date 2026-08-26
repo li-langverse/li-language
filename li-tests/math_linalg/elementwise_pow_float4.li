@@ -1,0 +1,14 @@
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var a: array[4, float]
+  var b: array[4, float]
+  var i: int = 0
+  while i < 4
+    a[i] = 2.0
+    b[i] = 3.0
+    i = i + 1
+  var c: array[4, float] = a ** b
+  return 0

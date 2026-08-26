@@ -1,0 +1,47 @@
+# Unit test — Module D: squared-distance bonds, bond counts, event detection.
+# The bond-count loop stays open (compile_open_ok); the pure scalars discharge
+# strictly, and the runtime asserts verify bond/event semantics on their own.
+import nanoreactor
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  # dist2 of (0,0,0)-(3,4,0) is 25
+  var d: float = nano_dist2(0.0, 0.0, 0.0, 3.0, 4.0, 0.0)
+  if d != 25.0:
+    return 1
+  # bonded at 2.25 <= 2.56; not bonded at 9.0
+  if nano_bonded(2.25, 2.56) != 1:
+    return 2
+  if nano_bonded(9.0, 2.56) != 0:
+    return 3
+  # event detection: bond-count change fires, same count doesn't
+  if nano_event_detected(2, 3) != 1:
+    return 4
+  if nano_event_detected(3, 2) != 1:
+    return 5
+  if nano_event_detected(3, 3) != 0:
+    return 6
+  # two atoms at distance 1.0 -> one bond under cutoff 2.56
+  var px: array[8, float]
+  var py: array[8, float]
+  var pz: array[8, float]
+  var i: int = 0
+  while i < 8
+    px[i] = 0.0
+    py[i] = 0.0
+    pz[i] = 0.0
+    i = i + 1
+  px[0] = 0.0
+  px[1] = 1.0
+  var b1: int = nano_bond_count(px, py, pz, 2, 2.56)
+  if b1 != 1:
+    return 7
+  # push them far apart -> zero bonds
+  px[1] = 5.0
+  var b2: int = nano_bond_count(px, py, pz, 2, 2.56)
+  if b2 != 0:
+    return 8
+  return 0

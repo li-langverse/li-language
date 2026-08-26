@@ -1,0 +1,13 @@
+id = "P-linalg-dot4-int-closed"
+kind = "lemma"
+field = "linalg"
+gap_id = "G-math"
+backlog_id = "P-linalg"
+statement = "Fixed 4-term int dot: return satisfies closed-form ensures witness."
+li_specimen = "li-tests/contracts_verify/linalg_dot4_int_closed.li"
+lean_thm = "vc_* (discharge_linalg_int_lean.sh)"
+lean_module = "build/generated/AutoVC.lean"
+proof_status = "proved"
+release_pin = "2026-05-25"
+release_lic = "dev"
+evidence = ["li-tests/tooling/discharge_linalg_int_lean.sh", "prove_lean_ok"]

@@ -1,0 +1,35 @@
+/* AUTO-GENERATED — do not edit. Run ./scripts/studio-ui-ux-generate-design-system.sh */
+:root {
+  --color-accent-amber: #ffb347;
+  --color-accent-cyan: #3dd6ff;
+  --color-accent-mint: #2ee6a8;
+  --color-accent-rose: #ff5c7a;
+  --color-accent-violet: #7c5cff;
+  --color-agent-error: #da3633;
+  --color-agent-idle: #8b949e;
+  --color-agent-running: #238636;
+  --color-bg-elevated: #161b22;
+  --color-bg-primary: #0d1117;
+  --color-border: #30363d;
+  --color-focus-ring: #3dd6ff;
+  --color-text-muted: #8b949e;
+  --color-text-primary: #e6edf3;
+  --color-viewport-grid: #21262d;
+  --motion-hover-transition-ms: 200;
+  --motion-panel-transition-ms: 100;
+  --semantic-command-palette-hint: ⌘K Command palette;
+  --semantic-mock-banner: MARKETING MOCK — HTML preview only\3b  native Li Studio uses li-ui/li-gui;
+  --spacing-dock-width-px: 56px;
+  --spacing-inspector-width-px: 320px;
+  --spacing-outliner-width-px: 200px;
+  --spacing-topbar-height-px: 44px;
+  --typography-dock-label-px: 9px;
+  --typography-mono: ui-monospace, monospace;
+  --typography-ui: Inter, system-ui, sans-serif;
+  --focus-ring: 0 0 0 2px var(--color-accent-cyan);
+  --mock-banner-bg: #3d1f00;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "vertical": "physics",
+  "entries": [
+    {
+      "id": "LEM-PHYS-001",
+      "status": "open",
+      "requires_axioms": [
+        "AX-PHYS-004"
+      ],
+      "li_file": "proof-db/physics/lemmas/energy_drift_bound.li",
+      "statement": "Energy drift <= rel_tol",
+      "bench_catalog": [
+        "md_lennard_jones"
+      ],
+      "li_tests": [
+        "li-tests/benchmarks/tier0_correctness/md_energy_single_step.li"
+      ]
+    },
+    {
+      "id": "LEM-PHYS-002",
+      "status": "open",
+      "requires_axioms": [
+        "AX-PHYS-005",
+        "AX-PHYS-003"
+      ],
+      "li_file": "proof-db/physics/lemmas/momentum_invariant.li",
+      "statement": "total_momentum() == 0",
+      "bench_catalog": [
+        "three_body",
+        "nbody_gravity"
+      ],
+      "li_tests": [
+        "li-tests/benchmarks/tier0_correctness/three_body_invariants.li"
+      ]
+    },
+    {
+      "id": "LEM-PHYS-003",
+      "status": "open",
+      "requires_axioms": [
+        "AX-PHYS-003"
+      ],
+      "li_file": "proof-db/physics/lemmas/force_reciprocity.li",
+      "statement": "f_ij + f_ji = 0",
+      "bench_catalog": [
+        "md_lennard_jones",
+        "nbody_gravity"
+      ],
+      "li_tests": []
+    },
+    {
+      "id": "LEM-PHYS-004",
+      "status": "proved",
+      "requires_axioms": [
+        "AX-PHYS-004",
+        "AX-PHYS-005"
+      ],
+      "li_file": "proof-db/physics/lemmas/numerical_targets_profile.li",
+      "statement": "NumericalTargets drift budgets",
+      "bench_catalog": [],
+      "li_tests": [
+        "li-tests/physics/profile_defaults.li"
+      ]
+    }
+  ]
+}

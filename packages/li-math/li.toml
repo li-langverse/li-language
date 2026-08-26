@@ -1,0 +1,21 @@
+[package]
+name = "li-math"
+version = "0.1.0"
+edition = "2026"
+license = "Apache-2.0 OR MIT"
+description = "Li package li-math"
+
+[dependencies]
+li-core = { path = "../li-core" }
+
+[package.metadata.li]
+github_repo = "li-math"
+import_name = "math"
+min_lic = "0.1.0"
+maintainer = "li-langverse"
+pkg_id = "PKG-li-math"
+
+[package.repository]
+url = "https://github.com/li-langverse/li-math"
+documentation = "https://li-langverse.github.io/li-language/ecosystem/li-math/"
+changelog = "https://github.com/li-langverse/li-math/blob/main/CHANGELOG.md"

@@ -1,0 +1,71 @@
+# Layer 2 native discharge demo (M-LEMMA-*): propositions `lic` closes without
+# Lean. The compiler's vc_prove engine discharges these by rewriting —
+# AC normalization of + and *, constant folding, distributivity, identity
+# rules, `and`/`or`/`not`/`implies` simplification — plus order transitivity
+# over assumed facts (`(a < b and b < c) -> a < c`).
+#
+# Every declaration below is a `theorem`/`lemma` (not an `axiom`): `lic build`
+# fails if the engine cannot close its proposition. Run `lic verify` on this
+# file to see `theorems_proved=` / `theorems_open=`.
+
+# --- commutative ring identities (ints) ---
+
+lemma add_comm_int(a: int, b: int) : a + b == b + a
+
+lemma add_assoc_int(a: int, b: int, c: int) : (a + b) + c == a + (b + c)
+
+lemma add_zero_int(a: int) : a + 0 == a
+
+lemma add_sub_cancel_int(a: int, b: int) : (a + b) - b == a
+
+lemma mul_comm_int(a: int, b: int) : a * b == b * a
+
+lemma mul_one_int(a: int) : a * 1 == a
+
+lemma mul_zero_int(a: int) : a * 0 == 0
+
+lemma mul_distrib_int(a: int, b: int, c: int) : a * (b + c) == a * b + a * c
+
+lemma mul_distrib_int2(a: int, b: int, c: int) : (a + b) * c == a * c + b * c
+
+# --- real-field identities (float stands in for R) ---
+
+lemma add_comm_float(a: float, b: float) : a + b == b + a
+
+lemma mul_distrib_float(a: float, b: float, c: float) : a * (b + c) == a * b + a * c
+
+# --- order (transitivity over assumed facts) ---
+
+theorem order_transitive_int(a: int, b: int, c: int) : (a < b and b < c) -> a < c
+
+theorem order_transitive_le(a: int, b: int, c: int) : (a <= b and b <= c) -> a <= c
+
+theorem order_irreflexive(a: int) : not (a < a)
+
+theorem order_antisym_via_le(a: int, b: int) : (a <= b and b <= a) -> a == b
+
+# --- linear integer arithmetic (Fourier-Motzkin) ---
+
+theorem add_lt_mono(a: int, b: int) : (a < b) -> a + 1 < b + 1
+
+theorem add_lt_mono_sum(a: int, b: int, c: int, d: int) : (a < b and c < d) -> a + c < b + d
+
+theorem lt_asym(a: int, b: int) : (a < b) -> not (b < a)
+
+theorem le_antisym_lia(a: int, b: int) : (a <= b and b <= a) -> a == b
+
+theorem cell_index_range(a: int, r: int, c: int) :
+  (0 <= r and r < 20 and 0 <= c and c < 10) -> 0 <= r * 10 + c and r * 10 + c < 200
+
+# --- boolean reasoning ---
+
+lemma not_not_eq(a: int) : not (not (a == a))
+
+lemma or_self(a: int) : (a < a) or (a == a)
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return 0

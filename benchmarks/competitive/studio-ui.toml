@@ -1,0 +1,92 @@
+# Studio UI/UX competitive bench registry (PH-UX).
+# Harness: ./scripts/bench-studio-viewport-perf.sh
+# Validate: python3 scripts/studio-ui-ux-verify-bench-registry.py
+# Agent: studio_ui_ux_builder plan loop
+
+[meta]
+version = 1
+updated = "2026-05-25"
+review_days_warn = 30
+schema = "li_studio_ui_bench_v1"
+
+[harness]
+script = "scripts/bench-studio-viewport-perf.sh"
+output_latest = "data/studio-ui-ux-plan-loop/latest-bench.json"
+output_competitive = "benchmarks/results/bench-studio-viewport-perf.json"
+memory_script = "scripts/profile-animate-memory.sh"
+memory_profile_latest = "data/studio-ui-ux-plan-loop/latest-memory-profile.json"
+
+[[hook]]
+id = "viewport_fps"
+package = "li-render"
+path = "packages/li-render/bench/viewport_fps.toml"
+gates = ["viewport_fps"]
+
+[[hook]]
+id = "wgpu_smoke"
+package = "lig"
+path = "packages/lig/bench/wgpu_smoke.toml"
+gates = []
+
+[[hook]]
+id = "panel_switch"
+package = "li-gui"
+path = "packages/li-gui/bench/panel_switch.toml"
+gates = ["panel_switch_ms"]
+
+[[hook]]
+id = "studio_compose"
+package = "li-studio"
+path = "packages/li-studio/bench/studio_compose.toml"
+gates = ["panel_switch_ms", "studio_load_ms"]
+
+[[hook]]
+id = "particle_tiers"
+package = "li-scene"
+path = "packages/li-scene/bench/particle_tiers.toml"
+gates = ["md_1k", "md_10k", "md_100k"]
+
+[[gate]]
+id = "viewport_fps"
+target = 60
+unit = "fps"
+compare = "meets_target"
+notes = "Sustained viewport; native HUD when available"
+
+[[gate]]
+id = "panel_switch_ms"
+target = 100
+unit = "ms"
+compare = "lte"
+notes = "Inspector/profile/palette panel transitions"
+
+[[gate]]
+id = "studio_load_ms"
+target = 2000
+unit = "ms"
+compare = "lte"
+notes = "Cold start to interactive shell"
+
+[[particle_tier]]
+id = "md_1k"
+particles = 1000
+fps_target = 60
+kernel = "md_lennard_jones"
+scene_hook = "packages/li-scene/bench/particle_tiers.toml"
+
+[[particle_tier]]
+id = "md_10k"
+particles = 10000
+fps_target = 60
+kernel = "md_lennard_jones"
+
+[[particle_tier]]
+id = "md_100k"
+particles = 100000
+fps_target = 30
+kernel = "md_lennard_jones"
+
+[[memory]]
+id = "animate_md_import"
+script = "scripts/profile-animate-memory.sh"
+warn_peak_mib = 512

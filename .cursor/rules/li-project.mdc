@@ -5,13 +5,15 @@ alwaysApply: true
 
 # Li project context
 
+**Strict by default:** Proof, security, and performance gates are **always on at maximum**. There is **no optional provability** — relax only via explicit `li.toml` `[gates]` or documented env downgrades. See `docs/ecosystem/strict-by-default.md` and `.cursor/rules/li-strict-by-default.mdc`.
+
 **Li — three pillars (strict priority):**
 
 1. **Mathematical provability** (Lean 4 kernel, mandatory contracts) — **#1, never compromised**
-2. **Easy syntax** (Nim-like, Python 3.14 − `Any`)
+2. **Easy syntax** (reads like prose — Python clarity, Nim layout; see `docs/language/philosophy.md`)
 3. **Fast execution** (LLVM, SIMD, OpenMP v1) — **only after proof**
 
-**Tradeoff rule:** provability wins. No feature ships if it cannot be proved in user code.
+**Tradeoff rule:** provability wins. No feature ships if it cannot be proved in user code. Contracts are **mandatory**, not opt-in.
 
 - `lic build` = proof certificate; `lic check` = IDE only
 - Forbidden: `Any`, `unsafe`, `sorry`, bare `cast`, unproved `parallel for`
@@ -27,6 +29,12 @@ alwaysApply: true
 | Master plan | `docs/superpowers/plans/2026-05-14-li-master-plan.md` |
 | **All tests** | `li-tests/manifest.toml` + `li-tests/run_all.sh` |
 | **Build skill** | `.cursor/skills/build-li-master-plan/SKILL.md` — autonomous phase execution |
+| **Strict by default** | `docs/ecosystem/strict-by-default.md` — proof, security, perf always on |
+| **Engineering gates** | `docs/ecosystem/engineering-standards.md` — functionality, security, performance (strict) |
+| **Vision / roadmap** | `docs/ecosystem/vision-and-roadmap.md` |
+| **Agent hooks** | `.cursor/hooks.json` + `.cursor/rules/li-ecosystem-gates.mdc` |
+| **Ecosystem / agents** | `docs/ecosystem/agent-coordination.md` — multi-agent + downstream pins |
+| **Org + packages** | `docs/ecosystem/governance.md`, `docs/ecosystem/language-evolution.md` |
 
 ## Implementation order
 

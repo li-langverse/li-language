@@ -1,0 +1,43 @@
+# Package-local tests — also register in monorepo li-tests/manifest.toml when integrated.
+
+[[tests]]
+suite = "unit"
+file = "unit/box_cycle.li"
+outcome = "verify_ok"
+note = "T-PKG-li-nanoreactor-box Module A: box/piston/thermal cycle"
+
+[[tests]]
+suite = "unit"
+file = "unit/potential.li"
+outcome = "verify_ok"
+note = "T-PKG-li-nanoreactor-potential Module B: LJ + Morse scalars"
+
+[[tests]]
+suite = "unit"
+file = "unit/integrator.li"
+outcome = "compile_open_ok"
+note = "T-PKG-li-nanoreactor-integrator Module C: velocity-Verlet + thermostat"
+
+[[tests]]
+suite = "unit"
+file = "unit/reaction.li"
+outcome = "compile_open_ok"
+note = "T-PKG-li-nanoreactor-reaction Module D: bonds + events"
+
+[[tests]]
+suite = "e2e"
+file = "e2e/water_dimer.li"
+outcome = "compile_open_ok"
+note = "T-PKG-li-nanoreactor-e2e-water-dimer full driver on water dimer"
+
+[[tests]]
+suite = "e2e"
+file = "e2e/methane.li"
+outcome = "compile_open_ok"
+note = "T-PKG-li-nanoreactor-e2e-methane full driver on methane"
+
+[[tests]]
+suite = "e2e"
+file = "e2e/h2_o2.li"
+outcome = "compile_open_ok"
+note = "T-PKG-li-nanoreactor-e2e-h2o2 full driver on H2+O2 reactive system"

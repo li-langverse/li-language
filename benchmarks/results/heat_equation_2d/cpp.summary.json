@@ -1,0 +1,27 @@
+{
+  "schema": "li_sim_summary_v1",
+  "benchmark": "heat_equation_2d",
+  "vertical_id": "pde_heat_2d",
+  "workload_class": "stub",
+  "lang": "cpp",
+  "variant": "reference_native",
+  "output_detail": "fields",
+  "ok": false,
+  "git_sha": "a081176",
+  "cpu_model": "",
+  "flags": "",
+  "params_digest": "sha256:a6869bd7c95d14f97fbe050c266f5b54d85d05f654e6271fd56c566d772766d6",
+  "metrics": {
+    "checksum": "0",
+    "stencil_checksum": 0.0
+  },
+  "invariants": {
+    "checksum_ok": false
+  },
+  "artifacts": {
+    "params": "benchmarks/tier2_physics/heat_equation_2d/params.toml",
+    "tier_f": "benchmarks/results/heat_equation_2d/fields/",
+    "tier_d": null
+  },
+  "updated": "2026-05-24T12:53:43Z"
+}

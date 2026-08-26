@@ -1,0 +1,41 @@
+import studio
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if li_std_studio_version() < 6:
+    return 1
+  if li_std_ui_studio_composables_version() < 5:
+    return 2
+  var idle: StudioShellCompose = studio_compose_shell(1280.0, 720.0, 0, 0, 0)
+  var loading: StudioShellCompose = studio_compose_shell_loading(1280.0, 720.0, 0, 0, 0, studio_shell_loading_on())
+  if loading.loading.shell_loading != studio_shell_loading_on():
+    return 3
+  if loading.loading.viewport_skeleton.w <= 0.0:
+    return 4
+  if loading.loading.inspector_field_skeleton.h <= 0.0:
+    return 5
+  var f_idle: PaintFrame = paint_frame_new()
+  var f_load: PaintFrame = paint_frame_new()
+  studio_paint_shell_chrome(f_idle, idle)
+  studio_paint_shell_chrome(f_load, loading)
+  studio_paint_shell_loading(f_load, loading.loading)
+  if f_load.cmd_count <= f_idle.cmd_count:
+    return 6
+  if studio_paint_shell_loading_cmds() != 4:
+    return 7
+  var compose: StudioShellCompose = studio_compose_shell(1280.0, 720.0, 0, 1, 1)
+  var timing: PanelSwitchTiming = studio_panel_switch_inspector(compose.panel, 42.0)
+  if compose.panel.active_region != studio_region_inspector():
+    return 8
+  if gui_panel_switch_within_budget(timing) != 1:
+    return 9
+  var fr: PaintFrame = paint_frame_new()
+  studio_paint_focus_ring_for_panel(fr, compose)
+  if fr.cmd_count != 1:
+    return 10
+  if fr.last_kind != paint_op_stroke_rect():
+    return 11
+  return 0

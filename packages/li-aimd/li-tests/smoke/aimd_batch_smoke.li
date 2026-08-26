@@ -1,0 +1,29 @@
+import aimd
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if aimd_batch_steps_valid(64) != 1:
+    return 1
+  if aimd_batch_steps_valid(32) != 0:
+    return 2
+  if aimd_batch_steps_valid(10001) != 0:
+    return 3
+  var batch: AimdBatchResult = aimd_batch_run(64)
+  if batch.ok != 1:
+    return 4
+  if batch.steps != 64:
+    return 5
+  if batch.checksum_ok != 1:
+    return 6
+  if batch.gpu_path != aimd_batch_gpu_path_select():
+    return 7
+  if batch.dft_stride != aimd_batch_dft_stride():
+    return 8
+  if batch.dft_calls < 1:
+    return 9
+  if batch.checksum <= 0.0:
+    return 10
+  return 0

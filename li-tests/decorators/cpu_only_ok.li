@@ -1,0 +1,7 @@
+@cpu
+def host_only() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return 0

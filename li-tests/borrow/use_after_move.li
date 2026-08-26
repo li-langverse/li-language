@@ -1,11 +1,11 @@
-proc consume(b: array[4, int]) -> unit
+def consume(b: array[4, int]) -> unit
   requires true
   ensures true
   decreases 0
 =
   discard b
 
-proc use_after_move() -> unit
+def use_after_move() -> unit
   requires true
   ensures true
   decreases 0

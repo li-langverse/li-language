@@ -1,0 +1,42 @@
+def li_std_physics_chem_version() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+def arrhenius_rate(k0: float, ea: float, temp: float, r_gas: float) -> float
+  requires k0 >= 0.0
+  requires temp > 0.0
+  requires r_gas > 0.0
+  ensures result == k0
+  decreases 0
+=
+  return k0
+def reactor_euler_step(
+    conc: array[4, float], rates: array[4, float], dt: float) -> unit
+  requires dt > 0.0
+  ensures true
+  decreases 0
+=
+  var i: int = 0
+  while i < 4
+    conc[i] = conc[i] + rates[i] * dt
+    if conc[i] < 0.0:
+      conc[i] = 0.0
+    i = i + 1
+def combustion_passive_step(
+    fuel: array[8, float], oxidizer: array[8, float],
+    temp: array[8, float], dt: float, burn_rate: float) -> unit
+  requires dt > 0.0
+  requires burn_rate >= 0.0
+  ensures true
+  decreases 0
+=
+  var i: int = 0
+  while i < 8
+    var burned: float = burn_rate * dt * fuel[i]
+    if burned > fuel[i]:
+      burned = fuel[i]
+    fuel[i] = fuel[i] - burned
+    temp[i] = temp[i] + burned
+    i = i + 1

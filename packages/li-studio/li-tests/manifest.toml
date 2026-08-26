@@ -1,0 +1,95 @@
+[[tests]]
+suite = "smoke"
+file = "smoke/builds.li"
+outcome = "verify_ok"
+note = "T-PKG-li-studio-smoke"
+
+[[tests]]
+suite = "smoke"
+file = "smoke/studio_timeline_playback.li"
+outcome = "compile_open_ok"
+note = "T-PKG-li-studio-timeline-playback UX-02"
+
+[[tests]]
+suite = "smoke"
+file = "smoke/studio_inspector_fields.li"
+outcome = "compile_open_ok"
+note = "T-PKG-li-studio-inspector-fields UX-03"
+
+[[tests]]
+suite = "smoke"
+file = "smoke/studio_compose_panels.li"
+outcome = "compile_open_ok"
+note = "T-PKG-li-studio-compose-panels"
+
+[[tests]]
+suite = "smoke"
+file = "smoke/studio_outliner.li"
+outcome = "compile_open_ok"
+note = "T-PKG-li-studio-outliner PH-GD-1"
+
+[[tests]]
+suite = "smoke"
+file = "smoke/studio_agent_chrome.li"
+outcome = "compile_open_ok"
+note = "T-PKG-li-studio-agent-chrome"
+
+[[tests]]
+suite = "smoke"
+file = "smoke/studio_empty_states.li"
+outcome = "compile_open_ok"
+note = "T-PKG-li-studio-empty-states"
+
+[[tests]]
+suite = "smoke"
+file = "smoke/studio_viewport_error.li"
+outcome = "compile_open_ok"
+note = "T-PKG-li-studio-viewport-error UX-08"
+
+[[tests]]
+suite = "smoke"
+file = "smoke/studio_command_palette.li"
+outcome = "compile_open_ok"
+note = "T-PKG-li-studio-command-palette-ux04"
+
+[[tests]]
+suite = "smoke"
+file = "smoke/studio_profile_roundtrip.li"
+outcome = "compile_open_ok"
+note = "T-PKG-li-studio-profile-roundtrip PH-UX-05 PH-SIM"
+
+[[tests]]
+suite = "smoke"
+file = "smoke/studio_sim_step_by_profile.li"
+outcome = "compile_open_ok"
+note = "PH-SIM vertical gap #4: studio_sim_step_hook game + sim_scientific"
+
+[[tests]]
+suite = "smoke"
+file = "smoke/studio_shell_loading.li"
+outcome = "compile_open_ok"
+note = "T-PKG-li-studio-shell-loading-ux10-ux11"
+
+[[tests]]
+suite = "smoke"
+file = "smoke/studio_shell_demo.li"
+outcome = "compile_open_ok"
+note = "T-PKG-li-studio-shell-demo PH-GD-1"
+
+[[tests]]
+suite = "smoke"
+file = "smoke/studio_mcp_tools.li"
+outcome = "compile_open_ok"
+note = "T-PKG-li-studio-mcp-tools PH-AGENT"
+
+[[tests]]
+suite = "smoke"
+file = "smoke/studio_mcp_extended.li"
+outcome = "compile_open_ok"
+note = "T-PKG-li-studio-mcp-extended PH-AGENT gap-6-7"
+
+
+[[test]]
+file = "smoke/studio_vertical_demo_env.li"
+tier = "smoke"
+note = "STUDIO_DEMO_PROFILE vertical demo frames + optional LIG_HOST_PRESENT"

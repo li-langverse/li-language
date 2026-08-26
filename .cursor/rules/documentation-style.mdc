@@ -30,6 +30,7 @@ Write for a skilled developer who is new to Li — not for a thesis committee.
 
 ## Naming
 
+- Follow [philosophy.md](../../docs/language/philosophy.md) — domain words, snake_case procs, readable imports
 - Say **Li** (the language) and **lic** (the compiler)
 - Link to canonical spec sections instead of duplicating large tables
 - Date major spec revisions; mark **Status:** Planning | Active | Deprecated

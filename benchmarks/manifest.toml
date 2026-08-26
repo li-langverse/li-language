@@ -1,0 +1,90 @@
+# Modular benchmark scope — map packages → benches, composables, hooks.
+# Resolve: python3 benchmarks/harness/bench_scope.py --package li-sim-scientific
+# Run:     ./scripts/bench-package.sh li-sim-scientific
+
+schema = "li_bench_manifest_v1"
+
+# --- Simulation / algorithms (goal-directed agent primary) ---
+
+[[package]]
+name = "li-sim"
+paths = ["packages/li-sim/"]
+composable = []
+benches = []
+hooks = ["algo_registry"]
+
+[[package]]
+name = "li-sim-scientific"
+paths = ["packages/li-sim-scientific/"]
+depends_on = ["li-sim", "li-physics-particles", "li-physics-rigid"]
+composable = ["composable/import_sim_scientific_run.li"]
+benches = ["md_lennard_jones", "heat_equation_2d"]
+hooks = ["sim_summary", "algo_registry"]
+
+# --- Physics (tier-2 kernels) ---
+
+[[package]]
+name = "li-physics-particles"
+paths = ["packages/li-physics-particles/"]
+benches = ["md_lennard_jones", "nbody_gravity", "three_body"]
+composable = []
+
+[[package]]
+name = "li-physics-rigid"
+paths = ["packages/li-physics-rigid/"]
+benches = ["double_pendulum"]
+composable = ["composable/import_physics_runtime.li"]
+
+[[package]]
+name = "li-physics-core"
+paths = ["packages/li-physics-core/"]
+benches = ["harmonic_oscillator_chain", "heat_equation_2d", "wave_equation_1d"]
+composable = []
+
+[[package]]
+name = "li-physics-fluids"
+paths = ["packages/li-physics-fluids/"]
+benches = ["advection_diffusion_2d", "sph_dam_break_2d"]
+composable = []
+
+[[package]]
+name = "li-physics-quantum"
+paths = ["packages/li-physics-quantum/"]
+benches = []
+hooks = ["algo_registry"]
+composable = []
+
+# --- Numerics (tier-1 micro) ---
+
+[[package]]
+name = "li-math-numerics"
+paths = ["packages/li-math-numerics/", "packages/li-math/"]
+benches = ["simd_dot", "matmul_naive", "matmul_blocked", "reduce_sum", "horner_pure_li"]
+composable = []
+
+[[package]]
+name = "li-math"
+paths = ["packages/li-math/"]
+depends_on = ["li-math-numerics"]
+benches = ["simd_dot", "horner_pure_li"]
+composable = []
+
+# --- Compiler / workspace (narrow canary when compiler/ changes) ---
+
+[[path_rule]]
+glob = "compiler/**"
+packages = ["lic"]
+benches = ["simd_dot"]
+hooks = ["tier0_li_tests"]
+
+[[path_rule]]
+glob = "benchmarks/harness/**"
+packages = ["lic"]
+benches = []
+hooks = ["bench_harness_smoke"]
+
+# Hook ids (implemented in bench_sim.py / scripts)
+#   algo_registry      — JSON schema + count
+#   sim_summary        — li-tests/tooling/sim_li_run_summary.sh + validate
+#   tier0_li_tests     — li-tests/run_all.sh tier0_correctness only (future)
+#   bench_harness_smoke — bench_scope self-check

@@ -8,16 +8,18 @@ alwaysApply: false
 
 **Unproved code does not compile.** No exceptions in user modules.
 
-## Every `proc`
+## Every function: `def` (not `proc`)
 
 ```nim
-proc f(x: int) -> int
+def f(x: int) -> int
   requires x > 0
   ensures result > 0
   decreases x
 =
   ...
 ```
+
+Bare `proc` is rejected. Use **`extern proc`** only for FFI stubs.
 
 ## Forbidden
 

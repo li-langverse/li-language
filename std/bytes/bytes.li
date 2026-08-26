@@ -1,0 +1,117 @@
+# std.bytes — wire-buffer primitives for httpd P0 (w0-bytes-io).
+# Reader/Writer hold cursor state only; buffers are passed at call sites (LLVM ABI).
+
+type Bytes = str
+type StringView = str
+
+type Reader = object
+  public pos: int
+
+type Writer = object
+  public len: int
+
+extern def bytes_len(b: var bytes) raises Alloc, IO -> int
+  requires true
+  ensures 0 <= result
+  decreases 0
+
+extern def bytes_slice(b: var bytes, off: int, n: int) raises Alloc, IO -> StringView
+  requires 0 <= off
+  requires 0 <= n
+  ensures stringview_len(result) == n
+  decreases 0
+
+extern def bytes_append(a: var bytes, b: var bytes) raises Alloc, IO -> bytes
+  requires true
+  ensures bytes_len(result) >= 0
+  decreases 0
+
+extern def bytes_byte_at(b: var bytes, off: int) raises IO -> int
+  requires 0 <= off
+  ensures 0 <= result
+  ensures result <= 255
+  decreases 0
+
+extern def bytes_push_byte(buf: var bytes, byte: int) raises Alloc, IO -> bytes
+  requires 0 <= byte
+  requires byte <= 255
+  ensures bytes_len(result) >= bytes_len(buf)
+  decreases 0
+
+def stringview_len(s: StringView) raises Alloc, IO -> int
+  requires true
+  ensures result == bytes_len(s)
+  decreases 0
+=
+  return bytes_len(s)
+
+def stringview_byte_at(s: StringView, off: int) raises Alloc, IO -> int
+  requires 0 <= off
+  ensures 0 <= result
+  ensures result <= 255
+  decreases 0
+=
+  return bytes_byte_at(s, off)
+
+def reader_new() raises Alloc -> Reader
+  requires true
+  ensures result.pos == 0
+  decreases 0
+=
+  var r: Reader
+  r.pos = 0
+  return r
+
+def reader_remaining(r: var Reader, buf: var bytes) raises Alloc, IO -> int
+  requires 0 <= r.pos
+  ensures 0 <= result
+  decreases 0
+=
+  return bytes_len(buf) - r.pos
+
+def reader_read_byte(r: var Reader, buf: var bytes) raises Alloc, IO -> int
+  requires reader_remaining(r, buf) > 0
+  ensures 0 <= result
+  ensures result <= 255
+  ensures r.pos == old(r.pos) + 1
+  decreases 1
+=
+  var b: int = bytes_byte_at(buf, r.pos)
+  r.pos = r.pos + 1
+  return b
+
+def reader_read_chunk(r: var Reader, buf: var bytes, n: int) raises Alloc, IO -> StringView
+  requires 0 < n
+  requires n <= reader_remaining(r, buf)
+  ensures stringview_len(result) == n
+  decreases 1
+=
+  var span: int = n
+  var chunk: StringView = bytes_slice(buf, r.pos, span)
+  r.pos = r.pos + n
+  return chunk
+
+def writer_new() raises Alloc -> Writer
+  requires true
+  ensures result.len == 0
+  decreases 0
+=
+  var w: Writer
+  w.len = 0
+  return w
+
+def writer_push_byte(w: var Writer, buf: var bytes, byte: int) raises Alloc, IO -> unit
+  requires 0 <= byte
+  requires byte <= 255
+  ensures w.len == old(w.len) + 1
+  decreases 0
+=
+  buf = bytes_push_byte(buf, byte)
+  w.len = w.len + 1
+
+def writer_len(w: Writer) raises Alloc -> int
+  requires true
+  ensures result == w.len
+  decreases 0
+=
+  return w.len

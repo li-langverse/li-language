@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "records": [
+    {
+      "id": "contracts_verify/discharge_trivial.li",
+      "spec": "proved",
+      "lean": "proved",
+      "mir_witness": "n/a",
+      "open_goals": 0
+    },
+    {
+      "id": "contracts_verify/discharge_const.li",
+      "spec": "proved",
+      "lean": "proved",
+      "mir_witness": "linked",
+      "open_goals": 0
+    },
+    {
+      "id": "contracts_verify/sqrt_open_bound.li",
+      "spec": "proved",
+      "lean": "open",
+      "mir_witness": "n/a",
+      "open_goals": 1,
+      "gap_id": "G-lean",
+      "failure_mode": "open_math"
+    },
+    {
+      "id": "contracts_verify/linalg_dot4_int_loop_open.li",
+      "spec": "open",
+      "lean": "open",
+      "mir_witness": "linked",
+      "open_goals": 2,
+      "gap_id": "G-vc",
+      "failure_mode": "open_math"
+    },
+    {
+      "id": "contracts_verify/witnessed_ensures_ident.li",
+      "spec": "proved",
+      "lean": "proved",
+      "mir_witness": "linked",
+      "open_goals": 0
+    }
+  ]
+}

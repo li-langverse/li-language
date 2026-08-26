@@ -1,8 +1,7 @@
 type Board = array[20, array[10, int]]
-
-proc oob(board: Board) -> int
+def oob(board: Board) -> int
   requires true
-  ensures true
+  ensures result == board[25][0]
   decreases 0
 =
   return board[25][0]

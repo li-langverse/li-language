@@ -1,0 +1,13 @@
+id = "P-float-sqrt-open-bound"
+kind = "lemma"
+field = "float"
+gap_id = "G-lean"
+backlog_id = "P-float"
+statement = "sqrt via Li.Discharge.sqrt_open_bound_spec."
+li_specimen = "li-tests/contracts_verify/sqrt_open_bound.li"
+lean_thm = "Li.Discharge.sqrt_open_bound_spec"
+lean_module = "docs/semantics/Discharge.lean"
+proof_status = "proved"
+release_pin = "2026-05-25"
+release_lic = "dev"
+evidence = ["contracts_discharge_corpus.sh --allow-open-vc"]

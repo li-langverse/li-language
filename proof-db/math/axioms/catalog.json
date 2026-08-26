@@ -1,0 +1,123 @@
+{
+  "version": 1,
+  "vertical": "math",
+  "entries": [
+    {
+      "id": "AX-MATH-PEANO-ZERO-NOT-SUCC",
+      "status": "axiomatic",
+      "family": "peano",
+      "statement": "Zero not successor",
+      "li_stub": "proof-db/math/axioms/peano_order.li",
+      "li_axiom": "peano_zero_not_succ",
+      "lean_stub": "proof-db/math/axioms/MathAxioms.lean#peano_zero_not_succ",
+      "source": {
+        "citation": "Peano 1889",
+        "url": "https://en.wikipedia.org/wiki/Peano_axioms"
+      }
+    },
+    {
+      "id": "AX-MATH-PEANO-SUCC-INJ",
+      "status": "axiomatic",
+      "family": "peano",
+      "statement": "succ injective",
+      "li_stub": "proof-db/math/axioms/peano_order.li",
+      "li_axiom": "peano_succ_injective",
+      "lean_stub": "proof-db/math/axioms/MathAxioms.lean#peano_succ_injective",
+      "source": {
+        "citation": "Peano 1889",
+        "url": "https://en.wikipedia.org/wiki/Peano_axioms"
+      }
+    },
+    {
+      "id": "AX-MATH-PEANO-IND",
+      "status": "axiomatic",
+      "family": "peano",
+      "statement": "induction",
+      "li_stub": "proof-db/math/axioms/peano_order.li",
+      "lean_stub": "proof-db/math/axioms/MathAxioms.lean#peano_induction",
+      "li_note": "Second-order (P : Nat -> Prop) — not expressible as a first-order li axiom until higher-order support lands; stays a Lean axiom.",
+      "source": {
+        "citation": "Peano 1889",
+        "url": "https://en.wikipedia.org/wiki/Peano_axioms"
+      }
+    },
+    {
+      "id": "AX-MATH-ORDER-TRICHOTOMY",
+      "status": "axiomatic",
+      "family": "order",
+      "statement": "trichotomy",
+      "li_stub": "proof-db/math/axioms/peano_order.li",
+      "li_axiom": "order_trichotomy_nat",
+      "lean_stub": "proof-db/math/axioms/MathAxioms.lean#order_trichotomy_nat",
+      "source": {
+        "citation": "Rudin Ch.1",
+        "url": "https://en.wikipedia.org/wiki/Peano_axioms"
+      }
+    },
+    {
+      "id": "AX-MATH-ORDER-ANTISYM",
+      "status": "axiomatic",
+      "family": "order",
+      "statement": "antisymmetry",
+      "li_stub": "proof-db/math/axioms/peano_order.li",
+      "li_axiom": "order_antisym",
+      "lean_stub": "proof-db/math/axioms/MathAxioms.lean#order_antisym",
+      "source": {
+        "citation": "Order axioms",
+        "url": "https://en.wikipedia.org/wiki/Peano_axioms"
+      }
+    },
+    {
+      "id": "AX-MATH-REAL-ADD-COMM",
+      "status": "axiomatic",
+      "family": "reals_field",
+      "statement": "add comm",
+      "li_stub": "proof-db/math/axioms/reals_field.li",
+      "li_axiom": "real_add_comm",
+      "lean_stub": "proof-db/math/axioms/MathAxioms.lean#real_add_comm",
+      "source": {
+        "citation": "Field axioms",
+        "url": "https://en.wikipedia.org/wiki/Peano_axioms"
+      }
+    },
+    {
+      "id": "AX-MATH-REAL-ADD-ASSOC",
+      "status": "axiomatic",
+      "family": "reals_field",
+      "statement": "add assoc",
+      "li_stub": "proof-db/math/axioms/reals_field.li",
+      "li_axiom": "real_add_assoc",
+      "lean_stub": "proof-db/math/axioms/MathAxioms.lean#real_add_assoc",
+      "source": {
+        "citation": "Field axioms",
+        "url": "https://en.wikipedia.org/wiki/Peano_axioms"
+      }
+    },
+    {
+      "id": "AX-MATH-REAL-MUL-DIST",
+      "status": "axiomatic",
+      "family": "reals_field",
+      "statement": "distrib",
+      "li_stub": "proof-db/math/axioms/reals_field.li",
+      "li_axiom": "real_mul_distrib",
+      "lean_stub": "proof-db/math/axioms/MathAxioms.lean#real_mul_distrib",
+      "source": {
+        "citation": "Field axioms",
+        "url": "https://en.wikipedia.org/wiki/Peano_axioms"
+      }
+    },
+    {
+      "id": "AX-MATH-REAL-MUL-ONE",
+      "status": "axiomatic",
+      "family": "reals_field",
+      "statement": "mul one",
+      "li_stub": "proof-db/math/axioms/reals_field.li",
+      "li_axiom": "real_mul_one",
+      "lean_stub": "proof-db/math/axioms/MathAxioms.lean#real_mul_one",
+      "source": {
+        "citation": "Field axioms",
+        "url": "https://en.wikipedia.org/wiki/Peano_axioms"
+      }
+    }
+  ]
+}

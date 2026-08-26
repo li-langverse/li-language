@@ -1,0 +1,27 @@
+# LEM-PHYS-004 — proved
+
+type NumericalTargets = object
+  public max_energy_drift: float
+  public max_momentum_drift: float
+  public target_fps: int
+
+def default_numerical_targets() -> NumericalTargets
+  requires true
+  ensures result.max_energy_drift == 0.001
+  ensures result.max_momentum_drift == 0.0001
+  ensures result.target_fps == 60
+  decreases 0
+=
+  var t: NumericalTargets
+  t.max_energy_drift = 0.001
+  t.max_momentum_drift = 0.0001
+  t.target_fps = 60
+  return t
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return 0
+

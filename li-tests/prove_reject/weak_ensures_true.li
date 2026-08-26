@@ -1,0 +1,6 @@
+def bad_gamma(v: float) -> float
+  requires v >= 0.0
+  ensures true
+  decreases 0
+=
+  return v + 1.0

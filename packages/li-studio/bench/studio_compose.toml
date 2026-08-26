@@ -1,0 +1,20 @@
+# li-studio bench hook — panel compose + switch budget (PH-UX panel_switch_ms < 100).
+[meta]
+package = "li-studio"
+hook_version = 1
+native_pixels = false
+compose_panels = ["dock", "timeline", "inspector"]
+
+[compose]
+bench_simulate_fn = "studio_compose_shell"
+default_w = 1920.0
+default_h = 1080.0
+panel_switch_budget_ms = 100
+
+[paint]
+dock_cmds = 2
+timeline_cmds = 3
+inspector_cmds_selected = 3
+viewport_cmds_empty = 3
+viewport_cmds_scene = 1
+inspector_cmds_empty = 4

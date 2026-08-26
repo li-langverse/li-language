@@ -1,15 +1,25 @@
 # Li Language Design Spec
 
+> **Strict by default:** Proof, security, and performance gates are always on at maximum. There is **no optional provability** — only explicit downgrades in `li.toml` or documented env. Policy: [Strict by default](../../ecosystem/strict-by-default.md). Contracts below are **mandatory**, not opt-in.
+
 **Date:** 2026-05-14 (rev. 5)  
 **Status:** Planning  
 **Milestone:** Tetris + proved physics kernels — **unproved code does not compile**
 **License:** Apache-2.0 OR MIT (open source)
 
+> **Implementation status:** Normative **target**. For what `lic` proves **today**, see [Provability gaps](../../verification/provability-gaps.md). Gaps are **compiler maturity**, not a user toggle to disable proof.
+
 ## Vision
 
 Li is an **open-source**, **compiled**, Nim-syntax language for HPC and scientific computing. Its reason to exist is **mathematical provability**: every shipped program is a theorem the **Lean 4 kernel** accepts — not a program we merely tested or type-checked.
 
-**Easy syntax** and **fast execution** are co-equal product goals, but **neither may weaken the proof gate**. If a feature cannot be made provable, it does not ship in user code.
+**Easy syntax** means code **does what it reads like it does** — influenced by Python’s readability ([PEP 20](https://peps.python.org/pep-0020/)): simple names, obvious control flow, pseudocode-friendly surface. See [Language philosophy](../../language/philosophy.md).
+
+**Fast execution** is a co-equal product goal, but **neither clarity nor speed may weaken the proof gate**. If a feature cannot be made provable, it does not ship in user code.
+
+## Composability (ecosystem principle)
+
+Substantial features (HTTP gateway, benchmark harness, package tooling) ship as **small, importable APIs** — `serve`, `stop`, `ready` (or domain-equivalent verbs) — in `src/lib.li`, not only as monolithic `main` binaries. Other Li programs and agents compose services by `import` without copy-paste. Composability does **not** relax the proof gate: exported lifecycle `def`s still require contracts and `lic build` discharge. See [composable-by-default.md](../../ecosystem/composable-by-default.md).
 
 ## The three pillars (priority order)
 
@@ -44,7 +54,7 @@ The **only** unproved surface is `docs/semantics/trusted.lean` (minimal `IO` + a
 Every compiling module must have:
 
 - [ ] Python 3.14 typing (no `Any`) + refinements where values carry predicates  
-- [ ] `requires` / `ensures` on every `proc`  
+- [ ] `requires` / `ensures` on every `def`  
 - [ ] `invariant` + `decreases` on every loop (`while`, `parallel for`)  
 - [ ] Memory safety via borrow rules (no UB in accepted programs)  
 - [ ] All proof obligations **discharged in Lean 4** (Coq-grade kernel, not SMT-only)  
@@ -59,10 +69,10 @@ Every compiling module must have:
 |-------------|----------------|
 | **Pillar 1 — Provability** | **Highest priority**; see checklist above; Lean 4 kernel is mandatory for `build` |
 | **Pillar 2 — Easy syntax** | Nim-like surface; Python 3.14 types; sugar elaborates to provable Core |
-| **Pillar 3 — Fast execution** | LLVM 18, SIMD, `parallel for` v1; no release binary without Pillar 1 |
+| **Pillar 3 — Fast execution** | LLVM 22, SIMD, `parallel for` v1; no release binary without Pillar 1 |
 | **Provable-only** | No compile without discharged Lean proofs; reject partial or untotal user code |
 | Python 3.14 type baseline | All relevant PEP constructs **except `Any`** and gradual escapes |
-| Nim-like syntax | Indentation, `proc`, `type`, `object`, `enum`, `import` |
+| Nim-like syntax | Indentation, `def`, `type`, `object`, `enum`, `import` |
 | **Mandatory contracts** | Every `proc` has specs; loops need `invariant` + `decreases` |
 | **Totality** | Non-terminating `proc` rejected unless effect is explicitly axiomatized (e.g. `IO` driver) |
 | **Lean 4 gate** | `lic build` ≡ typecheck + borrow + VC gen + Lean kernel OK |
@@ -83,7 +93,7 @@ Every compiling module must have:
 | **Typechecker** | C++ module `li_types/` | Python 3.14 + refinements + contract well-formedness |
 | **Verifier** | `li_verify/` + **Lean 4** | VC generation; Lean kernel checks proofs (Coq-level standard) |
 | **Middle-end** | Custom MIR (SSA) | Borrow lowering, **parallel regions**, simd, bounds |
-| **Backend** | **LLVM 18 only** | Single codegen path; HPC peak perf, vectorization, LTO |
+| **Backend** | **LLVM 22 only** | Single codegen path; HPC peak perf, vectorization, LTO |
 | **Incremental** | Per-module cache + thinLTO split | Fast rebuild; proof cache keyed by VC hash |
 | **Formal semantics** | **Lean 4** (canonical) | Core calculus, typing rules, contract semantics, MIR preservation |
 | **Runtime** | Minimal C (`li_rt.c`) | Panic, bounds, contract failure hooks in debug |
@@ -166,7 +176,7 @@ type Vec[T] = object
   data: ptr T
   len: int
 
-proc map[T, U](xs: list[T], f: proc(x: T) -> U) -> list[U] = ...
+def map[T, U](xs: list[T], f: proc(x: T) -> U) -> list[U] = ...
 ```
 
 - `TypeVar`, `TypeVarTuple`, `ParamSpec`, `Concatenate`, `Unpack` — all supported in checker
@@ -305,10 +315,10 @@ type Vec4f = simd[f32, 4]
 type Vec8f = simd[f32, 8]
 type Vec4i = simd[i32, 4]
 
-proc add(a, b: Vec4f) -> Vec4f =
+def add(a, b: Vec4f) -> Vec4f =
   return a + b   # elementwise; lowers to LLVM vector add
 
-proc dot(a, b: Vec4f) -> f32 =
+def dot(a, b: Vec4f) -> f32 =
   return horizontal_sum(a * b)
 ```
 
@@ -479,8 +489,8 @@ Structural dict type for APIs — compile-time field checking, lowered to `dict[
 
 ```nim
 type Hash = trait
-  proc hash(self: Self) -> u64
-  proc eq(self: Self, other: Self) -> bool
+  def hash(self: Self) -> u64
+  def eq(self: Self, other: Self) -> bool
 ```
 
 `dict`/`set` keys must implement `Hash` (nominal `object`/`enum` derive automatically; newtypes opt in).
@@ -691,7 +701,7 @@ Li combines **Python 3.14 types (minus `Any`)**, **mandatory Hoare contracts**, 
 |-------------|-------------------|
 | Well-typed (Python 3.14 subset) | Type error |
 | Borrow / memory safe | Borrow error |
-| `requires` / `ensures` on every `proc` | Spec error |
+| `requires` / `ensures` on every `def` | Spec error |
 | `invariant` + `decreases` on every loop | Totality error |
 | All VCs discharged in Lean 4 | **Compile rejected** |
 | `extern proc` | Must carry full contract; body trusted and listed in `trusted.lean` |
@@ -705,7 +715,7 @@ Li combines **Python 3.14 types (minus `Any`)**, **mandatory Hoare contracts**, 
 | `sorry`, `admit`, `assume` in user code | **Rejected** |
 | Bare `cast[T](e)` | **Rejected** — use `cast[T](e, proof)` |
 | `while` without `decreases` | **Rejected** |
-| `proc` without specs | **Rejected** |
+| `def` without specs | **Rejected** |
 | Unchecked overflow | **Rejected** |
 | Dynamic index without proof or refinement | **Rejected** |
 
@@ -719,17 +729,17 @@ The **only** unproved code is the minimal **trusted runtime** axiomatized in `do
 
 **All user `.li` modules** — including Tetris logic and physics kernels — must prove. The game **step function** is proved; the OS loop calls it via trusted `IO`.
 
-### Contract syntax (mandatory on every `proc`)
+### Contract syntax (mandatory on every `def`)
 
 ```nim
-proc sqrt(x: float) -> float
+def sqrt(x: float) -> float
   requires x >= 0.0
   ensures result >= 0.0
   ensures abs(result * result - x) < 1e-12
   decreases 0
 =
 
-proc verlet_step(
+def verlet_step(
     pos: var tensor[(N, 3), f64],
     vel: var tensor[(N, 3), f64],
     dt: f64
@@ -753,7 +763,7 @@ proc verlet_step(
 | `requires` | **Mandatory** precondition |
 | `ensures` | **Mandatory** postcondition (`result`, `old(e)`) |
 | `invariant` | **Mandatory** on every `while` |
-| `decreases` | **Mandatory** on every `proc` and `while` |
+| `decreases` | **Mandatory** on every `def` and `while` |
 | `assert` | Local VC — must close |
 | `axiom` | **Only** in `docs/semantics/trusted.lean`, never user modules |
 
@@ -763,7 +773,7 @@ proc verlet_step(
 type PosInt = {x: int | x > 0}
 type Index20 = {i: int | 0 <= i and i < 20}
 
-proc row(board: Board, i: Index20) -> array[10, Cell]
+def row(board: Board, i: Index20) -> array[10, Cell]
   ensures true
   decreases 0
 =

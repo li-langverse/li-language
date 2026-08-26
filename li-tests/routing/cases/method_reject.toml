@@ -1,0 +1,15 @@
+# Wrong HTTP method must not match a route (M1: method + path only).
+[[case]]
+id = "post_health_wrong_method"
+request = { method = "POST", host = "api.example.com", path = "/health" }
+expect = { status = 404 }
+
+[[case]]
+id = "delete_v1_wrong_method"
+request = { method = "DELETE", host = "api.example.com", path = "/v1/chat/completions" }
+expect = { status = 404 }
+
+[[case]]
+id = "get_v1_prefix_still_matches"
+request = { method = "GET", host = "api.example.com", path = "/v1/models" }
+expect = { route = "get_v1_wild", action = "proxy" }

@@ -1,6 +1,10 @@
 # Pure-Li horner loop — no LI_EXTRA_C; exercises BinOpFloat + while.
 
-proc main() -> int
+extern def li_rt_volatile_sink_f64(v: float) -> unit
+  requires true
+  ensures true
+
+def main() -> int
   requires true
   ensures result == 0
   decreases 0
@@ -11,4 +15,5 @@ proc main() -> int
   while i < 5000000
     acc = acc * x + 1.0
     i = i + 1
+  li_rt_volatile_sink_f64(acc)
   return 0

@@ -1,0 +1,12 @@
+---
+description: DEPRECATED — use li-pr-only.mdc (synced from roadmap agent-kit)
+alwaysApply: false
+---
+
+# Deprecated
+
+Auto-push to `main` is **removed**. Use **`li-pr-only.mdc`** (from `../roadmap` agent-kit):
+
+- Feature branch + PR
+- CI green + reviewer merge
+- `./scripts/sync-agent-kit.sh` after agent-kit updates

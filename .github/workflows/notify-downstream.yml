@@ -1,0 +1,28 @@
+name: notify-downstream
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Tag to announce (e.g. v0.1.0)
+        required: true
+permissions:
+  contents: read
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Notify downstream
+        env:
+          DISPATCH_PAT: ${{ secrets.LI_DOWNSTREAM_DISPATCH_TOKEN }}
+          VERSION: ${{ github.event.release.tag_name || github.event.inputs.version }}
+        run: |
+          if [[ -n "$DISPATCH_PAT" ]]; then
+            export GH_TOKEN="$DISPATCH_PAT"
+          else
+            echo "::warning::Set secret LI_DOWNSTREAM_DISPATCH_TOKEN for reliable cross-repo dispatch."
+            export GH_TOKEN="${{ github.token }}"
+          fi
+          ./.github/scripts/dispatch-upstream-release.sh lic-release

@@ -1,0 +1,6 @@
+n_particles = 256
+steps = 8_000
+box = 1.0
+smoothing_h = 0.08
+dt = 0.00025
+gravity = 9.81

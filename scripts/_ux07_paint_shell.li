@@ -1,0 +1,44 @@
+def studio_paint_viewport_empty(frame: var PaintFrame, viewport_empty: StudioViewportEmptyCompose) -> unit
+  requires frame.cmd_count >= 0
+  requires viewport_empty.empty_visible == 1
+  ensures frame.cmd_count == old(frame.cmd_count) + studio_paint_viewport_empty_cmds()
+  decreases 0
+=
+  frame.cmd_count = frame.cmd_count + studio_paint_viewport_empty_cmds()
+  frame.last_kind = paint_op_stroke_rect()
+  frame.last_rect = viewport_empty.frame_rect
+  frame.last_color = studio_color_border()
+  frame.last_kind = paint_op_fill_rect()
+  frame.last_rect = viewport_empty.title_rect
+  frame.last_color = studio_color_border()
+  frame.last_kind = paint_op_stroke_rect()
+  frame.last_rect = viewport_empty.cta_rect
+  frame.last_color = studio_color_border()
+
+def studio_paint_shell_chrome(frame: var PaintFrame, compose: StudioShellCompose) -> unit
+  requires frame.cmd_count >= 0
+  ensures frame.cmd_count == studio_shell_chrome_count_palette(compose.inspector.has_selection, compose.scene_entity_count, compose.agent.task_state, compose.palette.is_open)
+  decreases compose.agent.task_state
+=
+  frame.cmd_count = frame.cmd_count + studio_paint_dock_cmds()
+  frame.last_kind = paint_op_stroke_rect()
+  frame.last_rect = compose.dock.active_slot_rect
+  frame.last_color = studio_color_accent_cyan()
+  frame.cmd_count = frame.cmd_count + studio_paint_timeline_cmds()
+  frame.last_kind = paint_op_stroke_rect()
+  frame.last_rect = compose.timeline.playhead_rect
+  frame.last_color = studio_color_accent_amber()
+  studio_paint_inspector(frame, compose.inspector)
+  frame.cmd_count = frame.cmd_count + 1
+  frame.last_kind = paint_op_fill_rect()
+  frame.last_rect = compose.layout.topbar
+  frame.last_color = studio_color_bg_elevated()
+  if compose.scene_entity_count == 0:
+    studio_paint_viewport_empty(frame, compose.viewport_empty)
+  if compose.scene_entity_count > 0:
+    frame.cmd_count = frame.cmd_count + studio_paint_viewport_scene_cmds()
+    frame.last_kind = paint_op_viewport_grid()
+    frame.last_rect = compose.layout.viewport
+    frame.last_color = studio_color_accent_cyan()
+  studio_paint_agent(frame, compose.agent)
+  paint_studio_palette(frame, compose.palette)

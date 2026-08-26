@@ -1,0 +1,22 @@
+[package]
+name = "{{NAME}}"
+version = "0.1.0"
+edition = "2026"
+license = "Apache-2.0 OR MIT"
+description = "{{DESCRIPTION}}"
+
+[dependencies]
+
+[[bin]]
+name = "{{NAME}}"
+path = "src/main.li"
+
+[package.metadata.li]
+min_lic = "0.1.0"
+{{OFFICIAL_MAINTAINER_LINE}}
+{{OFFICIAL_PKG_ID_LINE}}
+
+[package.repository]
+url = "https://github.com/li-langverse/{{NAME}}"
+documentation = "https://li-langverse.github.io/li-language/ecosystem/{{NAME}}/"
+changelog = "https://github.com/li-langverse/{{NAME}}/blob/main/CHANGELOG.md"

@@ -1,0 +1,11 @@
+id = "T-GetElem"
+kind = "axiom"
+field = "trust"
+gap_id = "G-trust"
+statement = "Array indexing preservation axiom in trusted core (MIR → Lean bridge)."
+lean_module = "docs/semantics/Core.lean"
+lean_thm = "T-GetElem"
+proof_status = "axiomatic"
+release_pin = "2026-05-25"
+release_lic = "dev"
+evidence = ["docs/semantics/Core.lean"]

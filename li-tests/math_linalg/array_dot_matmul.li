@@ -1,0 +1,9 @@
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var x: array[4, float]
+  var y: array[4, float]
+  var s: float = x @ y
+  return 0

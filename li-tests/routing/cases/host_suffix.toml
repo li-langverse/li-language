@@ -1,0 +1,15 @@
+# Host is recorded in cases but ignored by M1 match_route (path + method only).
+[[case]]
+id = "health_other_host"
+request = { method = "GET", host = "cdn.other.net", path = "/health" }
+expect = { route = "get_health", action = "static" }
+
+[[case]]
+id = "health_empty_host"
+request = { method = "GET", host = "", path = "/health" }
+expect = { route = "get_health", action = "static" }
+
+[[case]]
+id = "chat_other_host"
+request = { method = "POST", host = "internal.corp", path = "/v1/chat/completions" }
+expect = { route = "post_v1_wild", action = "proxy" }

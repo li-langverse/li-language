@@ -1,0 +1,37 @@
+# Runnable li-nanoreactor example.
+#
+# Runs the full nanoreactor driver (thermal cycling + piston + velocity-Verlet
+# integration + bond-change reaction detection) on three common sample systems
+# and prints the resulting summary. Build & run:
+#
+#   lic build packages/li-nanoreactor/examples/nanoreactor_run.li \
+#       -o /tmp/nanoreactor --allow-open-vc --no-lean-verify
+#   /tmp/nanoreactor
+import nanoreactor
+
+def main() raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  print("li-nanoreactor: ab initio nanoreactor run")
+  var wd: NanoSystem = nano_system_water_dimer()
+  var r1: NanoRunResult = nano_run_cycles(wd, 4)
+  print("water dimer   steps=32 ok=")
+  print(r1.ok)
+  print("  events=")
+  print(r1.events)
+  var ch: NanoSystem = nano_system_methane()
+  var r2: NanoRunResult = nano_run_cycles(ch, 4)
+  print("methane       steps=32 ok=")
+  print(r2.ok)
+  print("  bonds=")
+  print(r2.final_bonds)
+  var ho: NanoSystem = nano_system_h2_o2()
+  var r3: NanoRunResult = nano_run_cycles(ho, 8)
+  print("h2 + o2       steps=64 ok=")
+  print(r3.ok)
+  print("  events=")
+  print(r3.events)
+  print("nanoreactor run complete")
+  return 0

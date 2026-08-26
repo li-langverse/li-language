@@ -1,0 +1,49 @@
+# Approved Studio design tokens (native li-ui + demo HTML).
+# Generator output: docs/design/studio-design-system.generated.md
+# Do not auto-overwrite this file — merge generator suggestions manually.
+
+[meta]
+name = "li-world-studio"
+version = 1
+style = "hud-sci-fi-ai-native"
+
+[color]
+bg_primary = "#0d1117"
+bg_elevated = "#161b22"
+border = "#30363d"
+text_primary = "#e6edf3"
+text_muted = "#8b949e"
+accent_cyan = "#3dd6ff"      # li-ui LI_CYAN family
+accent_violet = "#7c5cff"
+accent_mint = "#2ee6a8"
+accent_amber = "#ffb347"
+accent_rose = "#ff5c7a"
+agent_running = "#238636"
+agent_idle = "#8b949e"
+agent_error = "#da3633"
+focus_ring = "#3dd6ff"
+viewport_grid = "#21262d"
+
+[spacing]
+dock_width_px = 56
+outliner_width_px = 200
+topbar_height_px = 44
+inspector_width_px = 320
+
+[motion]
+panel_transition_ms = 100
+hover_transition_ms = 200
+
+[typography]
+ui = "Inter, system-ui, sans-serif"
+mono = "ui-monospace, monospace"
+dock_label_px = 9
+
+[semantic]
+mock_banner = "MARKETING MOCK — HTML preview only; native Li Studio uses li-ui/li-gui"
+command_palette_hint = "⌘K Command palette"
+
+[ph_ux]
+viewport_fps_target = 60
+panel_switch_ms_max = 100
+studio_load_ms_max = 2000

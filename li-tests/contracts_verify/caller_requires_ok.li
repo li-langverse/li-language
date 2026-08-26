@@ -1,0 +1,14 @@
+def callee(x: int) -> int
+  requires x >= 0
+  ensures result == x
+  decreases 0
+=
+  return x
+
+def caller() -> int
+  requires true
+  ensures result == 5
+  decreases 0
+=
+  callee(5)
+  return 5

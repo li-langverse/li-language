@@ -1,0 +1,16 @@
+import sim.robotics
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if li_sim_robotics_version() != 1:
+    return 1
+  if li_sim_robotics_profile_contract() != sim_contract_sim_robotics():
+    return 2
+  if li_sim_robotics_studio_profile_id() != 4:
+    return 3
+  if run_robotics_smoke() != 0:
+    return 4
+  return 0

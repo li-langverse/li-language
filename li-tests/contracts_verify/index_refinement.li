@@ -1,6 +1,6 @@
 type Index10 = {i: int | 0 <= i and i < 10}
 
-proc get(a: array[10, int], i: Index10) -> int
+def get(a: array[10, int], i: Index10) -> int
   requires true
   ensures result == a[i]
   decreases 0

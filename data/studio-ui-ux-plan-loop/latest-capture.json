@@ -1,0 +1,16 @@
+{
+  "iteration": "studio-ux-10-native-capture",
+  "artifact_dir": "/home/s4il0r/Documents/Cursor/li-langverse/li-cursor-agents/data/workspaces/li-langverse/lic/studio_ui_ux_builder-1779690286545/repo/data/studio-ui-ux-plan-loop/artifacts/iter-studio-ux-10-native-capture",
+  "repo": "li-langverse/lic",
+  "release_tag": "studio-ui-ux-progress",
+  "tracking_issue": null,
+  "issue_url": null,
+  "issue_comment_url": null,
+  "release_url": "https://github.com/li-langverse/lic/releases/tag/studio-ui-ux-progress",
+  "png_count": 23,
+  "upload_count": 0,
+  "has_reel": false,
+  "dry_run": true,
+  "native_pixels": false,
+  "capture_mode": "html_mock"
+}

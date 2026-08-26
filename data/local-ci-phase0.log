@@ -1,0 +1,3504 @@
+==> local-ci (native)
+check-version: ok (0.1.0)
+    ╭──────────────────────────────────────────╮
+    │  ░▒▓  Li  ·  prove · write · run fast  ▓▒░  │
+    ╰──────────────────────────────────────────╯
+
+
+▸ agent-kit sync check 
+agent-kit already up to date: 1.3.3+4c967a490601e84e
+
+▸ def syntax policy 
+check-li-def-syntax: ok under /home/s4il0r/Documents/Cursor/li-langverse/lic
+
+▸ build 
+-- Could NOT find LibEdit (missing: LibEdit_INCLUDE_DIRS LibEdit_LIBRARIES) 
+-- Could NOT find CURL (missing: CURL_LIBRARY CURL_INCLUDE_DIR) 
+-- Found LLVM 22.1.0
+-- Building with -fPIC
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/s4il0r/Documents/Cursor/li-langverse/lic/build
+ninja: no work to do.
+
+▸ stdlib coverage gate 
+check-stdlib-coverage: 22 std source file(s)
+check-stdlib-coverage: instrument li-tests/stdlib_coverage/build_std_decorators.li (imports std)
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (136ms)
+warning: ../../build/generated/AutoVC.lean:26:45: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+check-stdlib-coverage: ok (instrumented import harness; lit repo owns llvm-cov 100%)
+
+▸ generate AutoVC (2e) 
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (129ms)
+warning: ../../build/generated/AutoVC.lean:14:24: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+
+▸ semantics (2f lake + AutoVC strict) 
+Build completed successfully (3 jobs).
+check-autovc-open-goals: ok (no open Prop goals)
+
+▸ CVE / security gates 
+
+▸ security corpus 
+PASS parse deep_indent.li (exit 0)
+PASS check deep_indent.li (exit 1)
+PASS parse deeply_nested_calls.li (exit 0)
+PASS check deeply_nested_calls.li (exit 0)
+PASS parse empty.li (exit 0)
+PASS check empty.li (exit 0)
+PASS parse integer_literal_flood.li (exit 0)
+PASS check integer_literal_flood.li (exit 1)
+PASS parse invalid_utf8_strings.li (exit 0)
+PASS check invalid_utf8_strings.li (exit 1)
+PASS parse long_line_no_newline.li (exit 0)
+PASS check long_line_no_newline.li (exit 1)
+PASS parse many_tokens.li (exit 0)
+PASS check many_tokens.li (exit 1)
+PASS parse nested_parens.li (exit 1)
+PASS check nested_parens.li (exit 1)
+PASS parse pathological_generics.li (exit 0)
+PASS check pathological_generics.li (exit 0)
+PASS parse truncated_proc.li (exit 0)
+PASS check truncated_proc.li (exit 1)
+PASS parse unclosed_paren.li (exit 1)
+PASS check unclosed_paren.li (exit 1)
+PASS parse unclosed_string.li (exit 0)
+PASS check unclosed_string.li (exit 1)
+PASS parse huge_comment (exit 0)
+PASS check huge_comment (exit 0)
+--- run_security: pass=26 fail=0
+
+── li-tests ─────────────────────────────
+  ◆ 26 passed
+
+▸ stdlib_seal 
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (128ms)
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok stdlib_seal/ok_control.li
+PASS compile_fail stdlib_seal/shadow_echo.li
+PASS compile_fail stdlib_seal/shadow_list_type.li
+PASS compile_fail stdlib_seal/duplicate_proc.li
+PASS compile_fail stdlib_seal/shadow_std_symbol.li
+--- li-tests: pass=5 fail=0 skip=0
+
+── li-tests ─────────────────────────────
+  ◆ 5 passed
+
+▸ cve_patterns 
+PASS compile_fail cve_patterns/cwe787_oob_index.li
+PASS compile_fail cve_patterns/cwe125_negative_index.li
+PASS compile_fail cve_patterns/cwe120_stack_buffer_oob.li
+PASS compile_fail cve_patterns/cwe787_dyn_index.li
+PASS compile_fail cve_patterns/cwe676_extern_no_contract.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (127ms)
+warning: ../../build/generated/AutoVC.lean:12:28: unused variable `grid`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:12:51: unused variable `i`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:27: unused variable `grid`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:50: unused variable `i`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:60: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:29: unused variable `grid`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:52: unused variable `i`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok cve_patterns/good_bounded_index.li
+PASS compile_fail cve_patterns/historic_ariane5_narrowing.li
+PASS compile_fail cve_patterns/historic_goto_fail.li
+--- li-tests: pass=8 fail=0 skip=0
+
+── li-tests ─────────────────────────────
+  ◆ 8 passed
+
+▸ CVE catalog coverage 
+check-cve-coverage: ok (39 catalog entries, 16 CWE patterns)
+
+▸ historic bug registry 
+check-historic-bugs: ok (12 registered, 5 enforced with tests)
+
+▸ webserver vulnerability registry 
+check-webserver-bugs: ok (16 entries, 4 enforced, 7 partial, rest httpd_design/roadmap)
+
+▸ codegen path injection 
+PASS output path semicolon
+PASS output path subshell
+PASS LI_EXTRA_C pipe
+--- codegen_path_injection: fail=0 (Linux)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  GATE CLEAR  security (Linux) 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+▸ httpd config + routing (M1 prep) 
+== httpd config desugar (good) ==
+OK: 2 routes
+== routing overlap (same priority must reject) ==
+check-httpd-overlap-reject: ok
+== httpd config reject ==
+bad_route_key.toml: rejected OK
+path_traversal.toml: rejected OK
+== routing cases (Python oracle) ==
+OK health: get_health -> static:healthcheck
+OK chat_completions: post_v1_wild -> proxy:api
+OK no_match: no match
+== routing (Li compile + binary oracle) ==
+runtime/li_rt_net.c:670:26: warning: assigning to 'void *' from 'const char *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  670 |     iov[iovcnt].iov_base = ptr_i(a);
+      |                          ^ ~~~~~~~~
+runtime/li_rt_net.c:675:26: warning: assigning to 'void *' from 'const char *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  675 |     iov[iovcnt].iov_base = ptr_i(b);
+      |                          ^ ~~~~~~~~
+runtime/li_rt_net.c:788:10: warning: passing 'const char *' to parameter of type 'void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  788 |   memcpy(ptr_i(p), "not found", 9);
+      |          ^~~~~~~~
+/usr/include/string.h:43:39: note: passing argument to parameter '__dest' here
+   43 | extern void *memcpy (void *__restrict __dest, const void *__restrict __src,
+      |                                       ^
+runtime/li_rt_net.c:3695:29: warning: passing 'const char *' to parameter of type 'void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+ 3695 |   ssize_t n = read((int)fd, ptr_i(buf), (size_t)max_bytes);
+      |                             ^~~~~~~~~~
+/usr/include/unistd.h:371:38: note: passing argument to parameter '__buf' here
+  371 | extern ssize_t read (int __fd, void *__buf, size_t __nbytes) __wur
+      |                                      ^
+runtime/li_rt_net.c:3758:10: warning: passing 'const char *' to parameter of type 'void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+ 3758 |   memcpy(ptr_i(dst) + off, ptr_i(src), (size_t)n);
+      |          ^~~~~~~~~~~~~~~~
+/usr/include/string.h:43:39: note: passing argument to parameter '__dest' here
+   43 | extern void *memcpy (void *__restrict __dest, const void *__restrict __src,
+      |                                       ^
+runtime/li_rt_net.c:3766:20: warning: passing 'const char *' to parameter of type 'char *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+ 3766 |   int n = snprintf(ptr_i(buf), (size_t)cap,
+      |                    ^~~~~~~~~~
+/usr/include/stdio.h:378:39: note: passing argument to parameter '__s' here
+  378 | extern int snprintf (char *__restrict __s, size_t __maxlen,
+      |                                       ^
+runtime/li_rt_net.c:3964:29: warning: passing 'const char *' to parameter of type 'void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+ 3964 |   ssize_t r = recv((int)fd, ptr_i(buf), (size_t)cap, 0);
+      |                             ^~~~~~~~~~
+/usr/include/x86_64-linux-gnu/sys/socket.h:145:38: note: passing argument to parameter '__buf' here
+  145 | extern ssize_t recv (int __fd, void *__buf, size_t __n, int __flags);
+      |                                      ^
+7 warnings generated.
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (172ms)
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:40:43: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:42:42: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:43:42: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:44:44: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:46:73: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:53:33: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:53:70: unused variable `max_body`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:54:33: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:54:45: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:55:32: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:55:44: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:55:69: unused variable `max_body`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:56:32: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:56:44: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:57:34: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:57:46: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:57:71: unused variable `max_body`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:59:72: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:59:109: unused variable `max_body`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:60:72: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:60:84: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:68:37: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:80:43: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:92:42: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:104:45: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:105:45: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:108:77: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:110:76: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:112:76: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:119:39: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:119:54: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:121:38: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:121:53: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:122:38: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:122:53: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:123:40: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:123:55: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:125:71: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:125:86: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:132:41: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:134:40: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:135:40: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:136:42: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:138:71: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:158:31: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:158:46: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:160:30: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:160:45: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:161:30: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:161:45: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:162:32: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:162:47: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:164:61: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:164:76: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:173:36: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:174:36: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:184:35: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:186:34: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:187:34: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:188:36: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:190:69: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+skip Li routing binary run (HTTPD_SKIP_LI_ROUTING_BIN=1)
+== routing (Li serve_routed_once oracle) ==
+runtime/li_rt_net.c:670:26: warning: assigning to 'void *' from 'const char *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  670 |     iov[iovcnt].iov_base = ptr_i(a);
+      |                          ^ ~~~~~~~~
+runtime/li_rt_net.c:675:26: warning: assigning to 'void *' from 'const char *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  675 |     iov[iovcnt].iov_base = ptr_i(b);
+      |                          ^ ~~~~~~~~
+runtime/li_rt_net.c:788:10: warning: passing 'const char *' to parameter of type 'void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  788 |   memcpy(ptr_i(p), "not found", 9);
+      |          ^~~~~~~~
+/usr/include/string.h:43:39: note: passing argument to parameter '__dest' here
+   43 | extern void *memcpy (void *__restrict __dest, const void *__restrict __src,
+      |                                       ^
+runtime/li_rt_net.c:3695:29: warning: passing 'const char *' to parameter of type 'void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+ 3695 |   ssize_t n = read((int)fd, ptr_i(buf), (size_t)max_bytes);
+      |                             ^~~~~~~~~~
+/usr/include/unistd.h:371:38: note: passing argument to parameter '__buf' here
+  371 | extern ssize_t read (int __fd, void *__buf, size_t __nbytes) __wur
+      |                                      ^
+runtime/li_rt_net.c:3758:10: warning: passing 'const char *' to parameter of type 'void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+ 3758 |   memcpy(ptr_i(dst) + off, ptr_i(src), (size_t)n);
+      |          ^~~~~~~~~~~~~~~~
+/usr/include/string.h:43:39: note: passing argument to parameter '__dest' here
+   43 | extern void *memcpy (void *__restrict __dest, const void *__restrict __src,
+      |                                       ^
+runtime/li_rt_net.c:3766:20: warning: passing 'const char *' to parameter of type 'char *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+ 3766 |   int n = snprintf(ptr_i(buf), (size_t)cap,
+      |                    ^~~~~~~~~~
+/usr/include/stdio.h:378:39: note: passing argument to parameter '__s' here
+  378 | extern int snprintf (char *__restrict __s, size_t __maxlen,
+      |                                       ^
+runtime/li_rt_net.c:3964:29: warning: passing 'const char *' to parameter of type 'void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+ 3964 |   ssize_t r = recv((int)fd, ptr_i(buf), (size_t)cap, 0);
+      |                             ^~~~~~~~~~
+/usr/include/x86_64-linux-gnu/sys/socket.h:145:38: note: passing argument to parameter '__buf' here
+  145 | extern ssize_t recv (int __fd, void *__buf, size_t __n, int __flags);
+      |                                      ^
+7 warnings generated.
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (171ms)
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:28:43: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:30:42: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:31:42: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:32:44: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:34:73: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:41:33: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:41:70: unused variable `max_body`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:42:33: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:42:45: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:43:32: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:43:44: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:43:69: unused variable `max_body`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:44:32: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:44:44: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:45:34: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:45:46: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:45:71: unused variable `max_body`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:47:72: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:47:109: unused variable `max_body`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:48:72: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:48:84: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:56:37: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:68:43: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:80:42: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:92:45: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:93:45: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:96:77: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:98:76: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:100:76: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:107:39: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:107:54: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:109:38: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:109:53: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:110:38: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:110:53: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:111:40: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:111:55: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:113:71: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:113:86: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:120:41: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:122:40: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:123:40: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:124:42: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:126:71: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:146:31: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:146:46: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:148:30: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:148:45: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:149:30: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:149:45: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:150:32: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:150:47: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:152:61: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:152:76: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:161:36: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:162:36: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:172:35: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:174:34: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:175:34: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:176:36: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:178:69: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+== routing (Li TOML loader) ==
+runtime/li_rt_net.c:670:26: warning: assigning to 'void *' from 'const char *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  670 |     iov[iovcnt].iov_base = ptr_i(a);
+      |                          ^ ~~~~~~~~
+runtime/li_rt_net.c:675:26: warning: assigning to 'void *' from 'const char *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  675 |     iov[iovcnt].iov_base = ptr_i(b);
+      |                          ^ ~~~~~~~~
+runtime/li_rt_net.c:788:10: warning: passing 'const char *' to parameter of type 'void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  788 |   memcpy(ptr_i(p), "not found", 9);
+      |          ^~~~~~~~
+/usr/include/string.h:43:39: note: passing argument to parameter '__dest' here
+   43 | extern void *memcpy (void *__restrict __dest, const void *__restrict __src,
+      |                                       ^
+runtime/li_rt_net.c:3695:29: warning: passing 'const char *' to parameter of type 'void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+ 3695 |   ssize_t n = read((int)fd, ptr_i(buf), (size_t)max_bytes);
+      |                             ^~~~~~~~~~
+/usr/include/unistd.h:371:38: note: passing argument to parameter '__buf' here
+  371 | extern ssize_t read (int __fd, void *__buf, size_t __nbytes) __wur
+      |                                      ^
+runtime/li_rt_net.c:3758:10: warning: passing 'const char *' to parameter of type 'void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+ 3758 |   memcpy(ptr_i(dst) + off, ptr_i(src), (size_t)n);
+      |          ^~~~~~~~~~~~~~~~
+/usr/include/string.h:43:39: note: passing argument to parameter '__dest' here
+   43 | extern void *memcpy (void *__restrict __dest, const void *__restrict __src,
+      |                                       ^
+runtime/li_rt_net.c:3766:20: warning: passing 'const char *' to parameter of type 'char *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+ 3766 |   int n = snprintf(ptr_i(buf), (size_t)cap,
+      |                    ^~~~~~~~~~
+/usr/include/stdio.h:378:39: note: passing argument to parameter '__s' here
+  378 | extern int snprintf (char *__restrict __s, size_t __maxlen,
+      |                                       ^
+runtime/li_rt_net.c:3964:29: warning: passing 'const char *' to parameter of type 'void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+ 3964 |   ssize_t r = recv((int)fd, ptr_i(buf), (size_t)cap, 0);
+      |                             ^~~~~~~~~~
+/usr/include/x86_64-linux-gnu/sys/socket.h:145:38: note: passing argument to parameter '__buf' here
+  145 | extern ssize_t recv (int __fd, void *__buf, size_t __n, int __flags);
+      |                                      ^
+7 warnings generated.
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (180ms)
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:42:43: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:44:42: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:45:42: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:46:44: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:48:73: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:55:33: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:55:70: unused variable `max_body`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:56:33: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:56:45: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:57:32: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:57:44: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:57:69: unused variable `max_body`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:58:32: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:58:44: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:59:34: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:59:46: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:59:71: unused variable `max_body`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:61:72: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:61:109: unused variable `max_body`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:62:72: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:62:84: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:70:37: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:82:43: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:94:42: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:106:45: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:107:45: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:110:77: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:112:76: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:114:76: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:121:39: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:121:54: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:123:38: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:123:53: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:124:38: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:124:53: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:125:40: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:125:55: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:127:71: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:127:86: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:134:41: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:136:40: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:137:40: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:138:42: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:140:71: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:160:31: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:160:46: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:162:30: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:162:45: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:163:30: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:163:45: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:164:32: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:164:47: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:166:61: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:166:76: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:175:36: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:176:36: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:186:35: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:188:34: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:189:34: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:190:36: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:192:69: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+== validate-config (lic CLI) ==
+OK: 2 routes
+validate-config bad_route_key.toml: rejected OK
+validate-config path_traversal.toml: rejected OK
+== validate-httpd-config (Python M1 schema) ==
+validate-httpd-config: ok (/home/s4il0r/Documents/Cursor/li-langverse/lic/packages/li-net-httpd/examples/auth_bearer.toml)
+== explain-config (lic CLI + C/Python parity) ==
+/home/s4il0r/Documents/Cursor/li-langverse/lic/runtime/li_rt_net.c:670:26: warning: assigning to 'void *' from 'const char *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  670 |     iov[iovcnt].iov_base = ptr_i(a);
+      |                          ^ ~~~~~~~~
+/home/s4il0r/Documents/Cursor/li-langverse/lic/runtime/li_rt_net.c:675:26: warning: assigning to 'void *' from 'const char *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  675 |     iov[iovcnt].iov_base = ptr_i(b);
+      |                          ^ ~~~~~~~~
+/home/s4il0r/Documents/Cursor/li-langverse/lic/runtime/li_rt_net.c:788:10: warning: passing 'const char *' to parameter of type 'void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  788 |   memcpy(ptr_i(p), "not found", 9);
+      |          ^~~~~~~~
+/usr/include/string.h:43:39: note: passing argument to parameter '__dest' here
+   43 | extern void *memcpy (void *__restrict __dest, const void *__restrict __src,
+      |                                       ^
+/home/s4il0r/Documents/Cursor/li-langverse/lic/runtime/li_rt_net.c:3695:29: warning: passing 'const char *' to parameter of type 'void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+ 3695 |   ssize_t n = read((int)fd, ptr_i(buf), (size_t)max_bytes);
+      |                             ^~~~~~~~~~
+/usr/include/unistd.h:371:38: note: passing argument to parameter '__buf' here
+  371 | extern ssize_t read (int __fd, void *__buf, size_t __nbytes) __wur
+      |                                      ^
+/home/s4il0r/Documents/Cursor/li-langverse/lic/runtime/li_rt_net.c:3758:10: warning: passing 'const char *' to parameter of type 'void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+ 3758 |   memcpy(ptr_i(dst) + off, ptr_i(src), (size_t)n);
+      |          ^~~~~~~~~~~~~~~~
+/usr/include/string.h:43:39: note: passing argument to parameter '__dest' here
+   43 | extern void *memcpy (void *__restrict __dest, const void *__restrict __src,
+      |                                       ^
+/home/s4il0r/Documents/Cursor/li-langverse/lic/runtime/li_rt_net.c:3766:20: warning: passing 'const char *' to parameter of type 'char *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+ 3766 |   int n = snprintf(ptr_i(buf), (size_t)cap,
+      |                    ^~~~~~~~~~
+/usr/include/stdio.h:378:39: note: passing argument to parameter '__s' here
+  378 | extern int snprintf (char *__restrict __s, size_t __maxlen,
+      |                                       ^
+/home/s4il0r/Documents/Cursor/li-langverse/lic/runtime/li_rt_net.c:3964:29: warning: passing 'const char *' to parameter of type 'void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+ 3964 |   ssize_t r = recv((int)fd, ptr_i(buf), (size_t)cap, 0);
+      |                             ^~~~~~~~~~
+/usr/include/x86_64-linux-gnu/sys/socket.h:145:38: note: passing argument to parameter '__buf' here
+  145 | extern ssize_t recv (int __fd, void *__buf, size_t __n, int __flags);
+      |                                      ^
+7 warnings generated.
+check-httpd-explain-config: ok
+run_httpd_config: OK
+
+▸ E2E li-tests (full manifest) 
+PASS parse_ok lexer_parser/fib.li
+PASS parse_fail lexer_parser/invalid_indent.li
+PASS parse_ok lexer_parser/decorators_parse.li
+PASS parse_ok lexer_parser/async_await_parse.li
+PASS parse_ok lexer_parser/plus_minus_binop.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (122ms)
+warning: ../../build/generated/AutoVC.lean:14:28: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok decorators/cpu_only_ok.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (129ms)
+warning: ../../build/generated/AutoVC.lean:14:32: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:20:38: unused variable `i`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok decorators/parallel_with_disjoint.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (130ms)
+warning: ../../build/generated/AutoVC.lean:14:31: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS compile_ok decorators/parallel_def_disjoint_inherit.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (122ms)
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok decorators/vectorized_dot_ok.li
+FAIL verify_ok decorators/vectorized_dot_proc_ok.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [4/6] Replayed AutoVC
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok decorators/no_vectorize_dot_ok.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [4/6] Replayed AutoVC
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok decorators/vectorized_for_parse_ok.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [4/6] Replayed AutoVC
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok decorators/vectorized_for_scope_ok.li
+PASS compile_fail decorators/vectorized_lanes8_fail.li
+PASS compile_fail decorator_exploits/reserved_def_parallel.li
+PASS compile_fail decorator_exploits/typosquat_paralell.li
+PASS compile_fail decorator_exploits/single_segment_name.li
+PASS compile_fail decorator_exploits/missing_disjoint_at_parallel.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (131ms)
+warning: ../../build/generated/AutoVC.lean:13:22: unused variable `n`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:13:32: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok typecheck/fib.li
+PASS compile_fail typecheck/bad_array_index.li
+PASS compile_fail typecheck/bad_numeric_mix.li
+PASS compile_fail typecheck/bad_int_float_add.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (131ms)
+warning: ../../build/generated/AutoVC.lean:12:27: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:12:39: unused variable `b`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:26: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:38: unused variable `b`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:50: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:28: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:40: unused variable `b`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:24:27: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:24:37: unused variable `b`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:26: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:36: unused variable `b`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:46: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:29:28: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:29:38: unused variable `b`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:36:30: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:36:42: unused variable `y`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:38:29: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:38:41: unused variable `y`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:38:53: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:41:31: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:41:43: unused variable `y`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:50:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS compile_ok typecheck/scalar_width_ok.li
+PASS compile_fail typecheck/scalar_width_mix_fail.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (126ms)
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS compile_ok typecheck/literal_suffix_ok.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (129ms)
+warning: ../../build/generated/AutoVC.lean:15:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS compile_ok typecheck/binary_literal_ok.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (119ms)
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS compile_ok compile_ok/int_ne_literal.li
+PASS compile_fail prove_reject/uses_any.li
+PASS compile_fail prove_reject/uses_sorry.li
+PASS compile_fail prove_reject/missing_contracts.li
+PASS compile_fail prove_reject/missing_decreases.li
+PASS compile_fail prove_reject/bare_cast.li
+PASS compile_fail prove_reject/weak_ensures_true.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (131ms)
+warning: ../../build/generated/AutoVC.lean:13:27: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:13:39: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:16:27: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:16:39: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:19:29: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok contracts_verify/sqrt_contract.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (122ms)
+warning: ../../build/generated/AutoVC.lean:14:30: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:16:46: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_open_ok contracts_verify/sqrt_open_bound.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (130ms)
+warning: ../../build/generated/AutoVC.lean:12:23: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:12:44: unused variable `i`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:22: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:43: unused variable `i`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:53: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:24: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:45: unused variable `i`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok contracts_verify/index_refinement.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (133ms)
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:29: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:38:34: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:48:32: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:50:31: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:50:41: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:53:33: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok contracts_verify/discharge_trivial.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (125ms)
+warning: ../../build/generated/AutoVC.lean:14:30: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok contracts_verify/discharge_const.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (130ms)
+warning: ../../build/generated/AutoVC.lean:13:25: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:13:35: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:16:27: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:25:25: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok contracts_verify/caller_requires_ok.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (131ms)
+warning: ../../build/generated/AutoVC.lean:13:25: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:13:35: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:16:27: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:25:31: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok contracts_verify/caller_requires_local_ok.li
+PASS compile_fail contracts_verify/caller_requires_fail.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (125ms)
+warning: ../../build/generated/AutoVC.lean:13:31: unused variable `self`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:13:44: unused variable `amount`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:15:31: unused variable `self`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:16:30: unused variable `self`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:16:43: unused variable `amount`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:16:58: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:19:32: unused variable `self`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:19:45: unused variable `amount`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:28:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok contracts_verify/method_call_requires_ok.li
+PASS compile_fail contracts_verify/method_call_requires_fail.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (131ms)
+warning: ../../build/generated/AutoVC.lean:12:26: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:25: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:35: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:27: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:25: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok contracts_verify/refinement_call_ok.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [4/6] Replayed AutoVC
+warning: ../../build/generated/AutoVC.lean:12:26: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:25: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:35: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:27: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:25: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok contracts_verify/refinement_inline_ok.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (128ms)
+warning: ../../build/generated/AutoVC.lean:12:26: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:25: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:35: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:27: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:31: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok contracts_verify/refinement_local_ok.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (131ms)
+warning: ../../build/generated/AutoVC.lean:14:28: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok contracts_verify/refinement_init_ok.li
+PASS compile_fail contracts_verify/refinement_call_fail.li
+PASS compile_fail contracts_verify/refinement_init_fail.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (123ms)
+warning: ../../build/generated/AutoVC.lean:12:26: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:25: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:35: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:27: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:24:34: unused variable `n`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:33: unused variable `n`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:43: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:29:35: unused variable `n`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:31:45: unused variable `n`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:33:47: unused variable `n`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok contracts_verify/refinement_guard_ok.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (128ms)
+warning: ../../build/generated/AutoVC.lean:14:27: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok contracts_verify/extern_call_requires_ok.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (127ms)
+warning: ../../build/generated/AutoVC.lean:12:28: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:12:48: unused variable `b`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:27: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:47: unused variable `b`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:67: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:29: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:49: unused variable `b`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok contracts_verify/linalg_dot4_int_closed.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (131ms)
+warning: ../../build/generated/AutoVC.lean:12:28: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:27: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:47: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:29: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok contracts_verify/linalg_sum4_int_closed.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (128ms)
+warning: ../../build/generated/AutoVC.lean:12:36: unused variable `a00`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:12:48: unused variable `a01`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:12:60: unused variable `b00`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:12:72: unused variable `b10`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:35: unused variable `a00`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:47: unused variable `a01`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:59: unused variable `b00`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:71: unused variable `b10`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:83: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:37: unused variable `a00`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:49: unused variable `a01`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:61: unused variable `b00`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:73: unused variable `b10`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok contracts_verify/linalg_mat2_entry00_int_closed.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (130ms)
+warning: ../../build/generated/AutoVC.lean:26:45: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok contracts_verify/linalg_dot4_int_loop_open.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (129ms)
+warning: ../../build/generated/AutoVC.lean:14:24: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok contracts_verify/linalg_norm4_int_closed.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (124ms)
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok contracts_verify/linalg_axpy4_int_closed.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (126ms)
+warning: ../../build/generated/AutoVC.lean:12:28: unused variable `grid`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:12:51: unused variable `i`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:27: unused variable `grid`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:50: unused variable `i`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:60: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:29: unused variable `grid`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:52: unused variable `i`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok contracts_verify/linalg_dot4_float_closed.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (177ms)
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:28:43: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:30:42: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:31:42: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:32:44: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:34:73: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:41:33: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:41:70: unused variable `max_body`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:42:33: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:42:45: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:43:32: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:43:44: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:43:69: unused variable `max_body`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:44:32: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:44:44: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:45:34: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:45:46: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:45:71: unused variable `max_body`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:47:72: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:47:109: unused variable `max_body`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:48:72: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:48:84: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:56:37: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:68:43: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:80:42: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:92:45: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:93:45: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:96:77: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:98:76: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:100:76: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:107:39: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:107:54: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:109:38: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:109:53: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:110:38: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:110:53: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:111:40: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:111:55: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:113:71: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:113:86: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:120:41: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:122:40: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:123:40: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:124:42: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:126:71: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:146:31: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:146:46: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:148:30: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:148:45: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:149:30: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:149:45: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:150:32: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:150:47: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:152:61: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:152:76: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:161:36: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:162:36: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:172:35: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:174:34: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:175:34: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:176:36: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:178:69: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok contracts_verify/linalg_mat2_at2_float_closed.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [4/6] Replayed AutoVC
+warning: ../../build/generated/AutoVC.lean:12:32: unused variable `A`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:12:66: unused variable `B`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:31: unused variable `A`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:65: unused variable `B`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:99: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:33: unused variable `A`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:67: unused variable `B`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok contracts_verify/linalg_mat2_callproc_float_closed.li
+PASS compile_fail borrow/double_mut.li
+PASS compile_fail borrow/use_after_move.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (126ms)
+warning: ../../build/generated/AutoVC.lean:14:28: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok borrow/borrow_ok.li
+PASS compile_fail effects/alloc_fail.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (125ms)
+warning: ../../build/generated/AutoVC.lean:12:31: unused variable `xs`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:30: unused variable `xs`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:42: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:32: unused variable `xs`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok effects/alloc_ok.li
+PASS compile_fail effects/io_fail.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (130ms)
+warning: ../../build/generated/AutoVC.lean:14:32: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:20:38: unused variable `i`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok effects/io_ok.li
+PASS compile_fail race_shared_memory/shared_mut_write.li
+PASS compile_fail race_shared_memory/overlap_par_slice.li
+PASS compile_fail race_shared_memory/missing_disjoint_clause.li
+PASS compile_fail race_shared_memory/mut_capture_no_sync.li
+PASS compile_fail race_shared_memory/borrow_mut_across_iters.li
+PASS compile_fail race_shared_memory/false_disjoint_proof.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (121ms)
+warning: ../../build/generated/AutoVC.lean:14:31: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok race_shared_memory/good_disjoint_parallel.li
+FAIL verify_ok benchmarks/tier0_correctness/md_energy_single_step.li
+FAIL verify_ok benchmarks/tier0_correctness/float_binop.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (121ms)
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok benchmarks/tier0_correctness/three_body_invariants.li
+FAIL verify_ok generics/precision_real_alias.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (128ms)
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok generics/precision_generic_fn.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (129ms)
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok generics/identity.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (121ms)
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok generics/box_alias.li
+FAIL verify_ok generics/callable_param.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (127ms)
+warning: ../../build/generated/AutoVC.lean:13:22: unused variable `n`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:13:32: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok generics/protocol_sized_ok.li
+PASS compile_fail generics/return_mismatch.li
+PASS compile_fail generics/protocol_sized_fail.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (118ms)
+warning: ../../build/generated/AutoVC.lean:12:23: unused variable `xs`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:22: unused variable `xs`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:34: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:24: unused variable `xs`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok collections/list_param.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (135ms)
+warning: ../../build/generated/AutoVC.lean:12:27: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:12:39: unused variable `b`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:26: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:38: unused variable `b`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:50: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:28: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:40: unused variable `b`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:24:27: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:24:37: unused variable `b`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:26: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:36: unused variable `b`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:46: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:29:28: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:29:38: unused variable `b`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:36:30: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:36:42: unused variable `y`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:38:29: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:38:41: unused variable `y`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:38:53: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:41:31: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:41:43: unused variable `y`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:50:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok collections/dict_param.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (124ms)
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok collections/tuple_pair.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (123ms)
+warning: ../../build/generated/AutoVC.lean:13:27: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:13:39: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:16:27: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:16:39: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:19:29: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok collections/tuple_variadic.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (138ms)
+warning: ../../build/generated/AutoVC.lean:12:24: unused variable `p`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `p`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:34: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:25: unused variable `p`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok collections/named_tuple.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (132ms)
+warning: ../../build/generated/AutoVC.lean:12:23: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:12:44: unused variable `i`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:22: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:43: unused variable `i`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:53: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:24: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:45: unused variable `i`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok collections/typedict_ok.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (129ms)
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:29: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:38:34: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:48:32: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:50:31: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:50:41: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:53:33: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok collections/enum_ok.li
+PASS compile_fail collections/dict_arity_fail.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (118ms)
+warning: ../../build/generated/AutoVC.lean:14:30: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok runtime/extern_puts.li
+FAIL compile_ok runtime/bytes_len_slice_link.li
+FAIL compile_ok runtime/tcp_stub_link.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (127ms)
+warning: ../../build/generated/AutoVC.lean:13:25: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:13:35: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:16:27: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:25:25: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_open_ok runtime/argv_ptr_abi.li
+PASS compile_fail tetris/board_oob.li
+FAIL verify_ok ../bootstrap/lic/main.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (124ms)
+warning: ../../build/generated/AutoVC.lean:13:25: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:13:35: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:16:27: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:25:31: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok parallel_codegen/parallel_float_zero.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (121ms)
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok parallel_codegen/three_float_arrays_12.li
+FAIL verify_ok simd/simd_type_ok.li
+PASS compile_fail simd/bad_lanes.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (120ms)
+warning: ../../build/generated/AutoVC.lean:14:26: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS compile_ok effects/net_ok.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (133ms)
+warning: ../../build/generated/AutoVC.lean:15:26: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS compile_ok effects/net_forward_ok.li
+PASS compile_fail effects/net_missing_raises.li
+PASS compile_fail effects/async_missing_raises.li
+FAIL compile_ok effects/async_ok.li
+FAIL compile_ok async/await_codegen_ok.li
+PASS compile_fail effects/await_outside_async.li
+PASS compile_fail effects/async_keyword_missing_raises.li
+PASS compile_fail effects/bytes_need_alloc.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (127ms)
+warning: ../../build/generated/AutoVC.lean:26:45: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_open_ok composable/import_http_lib.li
+FAIL verify_open_ok composable/import_httpd_lib.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (125ms)
+warning: ../../build/generated/AutoVC.lean:14:24: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_open_ok composable/import_log_lib.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [4/6] Replayed AutoVC
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:28:30: unused variable `ts`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:28:41: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:28:56: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:28:69: unused variable `status`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:28:84: unused variable `bytes_out`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:30:29: unused variable `ts`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:30:40: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:30:55: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:30:68: unused variable `status`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:30:83: unused variable `bytes_out`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:33:31: unused variable `ts`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:33:42: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:33:57: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:33:70: unused variable `status`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:33:85: unused variable `bytes_out`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:35:58: unused variable `ts`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:35:69: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:35:84: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:35:97: unused variable `status`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:35:112: unused variable `bytes_out`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:42:31: unused variable `dir`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:44:30: unused variable `dir`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:47:32: unused variable `dir`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:49:55: unused variable `dir`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:69:35: unused variable `line`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:71:34: unused variable `line`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:72:34: unused variable `line`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:73:36: unused variable `line`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:75:61: unused variable `line`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_open_ok log/redact_bearer.li
+FAIL compile_ok composable/import_physics_relativity.li
+FAIL verify_ok composable/import_physics_runtime.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (129ms)
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok httpd/gate_placeholder.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (135ms)
+warning: ../../build/generated/AutoVC.lean:12:28: unused variable `grid`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:12:51: unused variable `i`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:27: unused variable `grid`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:50: unused variable `i`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:60: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:29: unused variable `grid`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:52: unused variable `i`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok httpd/reserved_wellknown_note.li
+FAIL verify_open_ok httpd/parse_request_smoke.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (179ms)
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:40:43: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:42:42: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:43:42: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:44:44: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:46:73: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:53:33: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:53:70: unused variable `max_body`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:54:33: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:54:45: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:55:32: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:55:44: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:55:69: unused variable `max_body`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:56:32: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:56:44: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:57:34: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:57:46: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:57:71: unused variable `max_body`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:59:72: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:59:109: unused variable `max_body`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:60:72: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:60:84: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:68:37: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:80:43: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:92:42: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:104:45: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:105:45: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:108:77: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:110:76: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:112:76: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:119:39: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:119:54: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:121:38: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:121:53: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:122:38: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:122:53: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:123:40: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:123:55: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:125:71: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:125:86: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:132:41: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:134:40: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:135:40: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:136:42: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:138:71: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:158:31: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:158:46: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:160:30: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:160:45: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:161:30: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:161:45: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:162:32: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:162:47: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:164:61: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:164:76: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:173:36: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:174:36: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:184:35: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:186:34: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:187:34: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:188:36: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:190:69: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_open_ok httpd/route_key_valid.li
+FAIL verify_open_ok httpd/serve_once_smoke.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [4/6] Replayed AutoVC
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:28:43: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:30:42: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:31:42: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:32:44: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:34:73: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:41:33: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:41:70: unused variable `max_body`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:42:33: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:42:45: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:43:32: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:43:44: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:43:69: unused variable `max_body`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:44:32: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:44:44: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:45:34: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:45:46: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:45:71: unused variable `max_body`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:47:72: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:47:109: unused variable `max_body`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:48:72: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:48:84: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:56:37: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:68:43: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:80:42: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:92:45: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:93:45: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:96:77: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:98:76: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:100:76: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:107:39: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:107:54: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:109:38: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:109:53: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:110:38: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:110:53: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:111:40: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:111:55: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:113:71: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:113:86: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:120:41: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:122:40: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:123:40: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:124:42: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:126:71: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:146:31: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:146:46: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:148:30: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:148:45: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:149:30: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:149:45: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:150:32: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:150:47: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:152:61: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:152:76: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:161:36: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:162:36: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:172:35: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:174:34: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:175:34: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:176:36: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:178:69: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_open_ok httpd/serve_routed_once.li
+FAIL verify_ok httpd/route_match_contract.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (189ms)
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:42:43: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:44:42: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:45:42: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:46:44: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:48:73: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:55:33: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:55:70: unused variable `max_body`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:56:33: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:56:45: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:57:32: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:57:44: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:57:69: unused variable `max_body`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:58:32: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:58:44: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:59:34: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:59:46: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:59:71: unused variable `max_body`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:61:72: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:61:109: unused variable `max_body`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:62:72: unused variable `buf`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:62:84: unused variable `max_header_block`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:70:37: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:82:43: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:94:42: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:106:45: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:107:45: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:110:77: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:112:76: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:114:76: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:121:39: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:121:54: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:123:38: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:123:53: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:124:38: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:124:53: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:125:40: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:125:55: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:127:71: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:127:86: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:134:41: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:136:40: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:137:40: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:138:42: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:140:71: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:160:31: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:160:46: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:162:30: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:162:45: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:163:30: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:163:45: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:164:32: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:164:47: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:166:61: unused variable `method`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:166:76: unused variable `path`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:175:36: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:176:36: unused variable `route_id`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:186:35: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:188:34: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:189:34: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:190:36: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:192:69: unused variable `key`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_open_ok routing/match_routes.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (123ms)
+warning: ../../build/generated/AutoVC.lean:14:28: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_open_ok routing/match_routes_toml.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (123ms)
+warning: ../../build/generated/AutoVC.lean:14:31: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok math_linalg/array_dot_matmul.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (128ms)
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok math_linalg/dot_float_arrays.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [4/6] Replayed AutoVC
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok math_linalg/elementwise_mul_float.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [4/6] Replayed AutoVC
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok math_linalg/elementwise_mul_float10.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [4/6] Replayed AutoVC
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS compile_ok math_linalg/broadcast_len1_add_float4.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [4/6] Replayed AutoVC
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS compile_ok math_linalg/broadcast_len1_mul_int4.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (126ms)
+warning: ../../build/generated/AutoVC.lean:13:22: unused variable `n`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:13:32: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok math_linalg/sum_elementwise_product.li
+PASS compile_fail math_linalg/elementwise_len_mismatch.li
+PASS compile_fail math_linalg/array_dot_mismatch.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (128ms)
+warning: ../../build/generated/AutoVC.lean:12:27: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:12:39: unused variable `b`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:26: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:38: unused variable `b`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:50: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:28: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:40: unused variable `b`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:24:27: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:24:37: unused variable `b`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:26: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:36: unused variable `b`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:46: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:29:28: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:29:38: unused variable `b`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:36:30: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:36:42: unused variable `y`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:38:29: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:38:41: unused variable `y`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:38:53: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:41:31: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:41:43: unused variable `y`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:50:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok math_linalg/matmul_2x3_ok.li
+PASS compile_fail math_linalg/matmul_dim_mismatch.li
+FAIL verify_ok math_linalg/array_sum.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (128ms)
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok math_linalg/norm_float4.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [4/6] Replayed AutoVC
+warning: ../../build/generated/AutoVC.lean:15:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok math_linalg/norm_int4_sq.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (129ms)
+warning: ../../build/generated/AutoVC.lean:12:28: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:12:38: unused variable `b`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:15:27: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:15:37: unused variable `b`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:15:47: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:29: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:39: unused variable `b`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok math_linalg/vec3_ops.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (129ms)
+warning: ../../build/generated/AutoVC.lean:13:27: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:13:39: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:16:27: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:16:39: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:19:29: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok math_linalg/elementwise_pow_float4.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (121ms)
+warning: ../../build/generated/AutoVC.lean:14:30: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:16:46: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok math_linalg/scale_float4.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (130ms)
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:29: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:38:34: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:48:32: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:50:31: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:50:41: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:53:33: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok math_linalg/axpy_float4.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (129ms)
+warning: ../../build/generated/AutoVC.lean:14:30: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok math_linalg/reductions/sum_float4.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (126ms)
+warning: ../../build/generated/AutoVC.lean:13:25: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:13:35: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:16:27: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:25:25: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok math_linalg/reductions/dot_via_sum_product.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (137ms)
+warning: ../../build/generated/AutoVC.lean:13:31: unused variable `self`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:13:44: unused variable `amount`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:15:31: unused variable `self`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:16:30: unused variable `self`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:16:43: unused variable `amount`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:16:58: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:19:32: unused variable `self`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:19:45: unused variable `amount`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:28:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok physics/profile_defaults.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (123ms)
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS compile_ok physics/three_body_mini.li
+FAIL verify_ok math_syntax/int_mod.li
+FAIL verify_ok math_syntax/int_floordiv.li
+FAIL verify_ok math_syntax/int_pow.li
+FAIL verify_ok stdlib_coverage/build_std_decorators.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (123ms)
+warning: ../../build/generated/AutoVC.lean:12:26: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:25: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:35: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:27: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:25: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok stdlib_seal/ok_control.li
+PASS compile_fail stdlib_seal/shadow_echo.li
+PASS compile_fail stdlib_seal/shadow_list_type.li
+PASS compile_fail stdlib_seal/duplicate_proc.li
+PASS compile_fail stdlib_seal/shadow_std_symbol.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [4/6] Replayed AutoVC
+warning: ../../build/generated/AutoVC.lean:12:26: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:25: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:35: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:27: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:25: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok encapsulation/def_syntax_ok.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (131ms)
+warning: ../../build/generated/AutoVC.lean:12:26: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:25: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:35: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:27: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:31: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok encapsulation/def_multiline_params.li
+PASS compile_fail encapsulation/proc_syntax_rejected.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (126ms)
+warning: ../../build/generated/AutoVC.lean:14:28: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok encapsulation/object_public_field.li
+FAIL verify_ok objects/object_field_smoke.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (131ms)
+warning: ../../build/generated/AutoVC.lean:12:26: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:25: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:35: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:27: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:24:34: unused variable `n`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:33: unused variable `n`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:43: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:29:35: unused variable `n`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:31:45: unused variable `n`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:33:47: unused variable `n`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok objects/object_copy_init.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (127ms)
+warning: ../../build/generated/AutoVC.lean:15:27: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok objects/object_return_call.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [4/6] Replayed AutoVC
+warning: ../../build/generated/AutoVC.lean:15:27: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok objects/object_whole_assign.li
+FAIL verify_ok objects/object_array_field_copy.li
+FAIL verify_ok objects/object_array_return_call.li
+FAIL verify_ok objects/object_mixed_scalar_array_return.li
+FAIL verify_ok objects/object_mixed_param_pass.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (127ms)
+warning: ../../build/generated/AutoVC.lean:14:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:40: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok encapsulation/import_parse.li
+PASS compile_fail encapsulation/private_field_access.li
+PASS compile_fail encapsulation/leak_imported_vault.li
+FAIL verify_ok encapsulation/def_method_call.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (126ms)
+warning: ../../build/generated/AutoVC.lean:12:29: unused variable `self`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:13:28: unused variable `self`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:13:41: unused variable `dt`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:13:54: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:16:30: unused variable `self`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:16:43: unused variable `dt`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:25:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok encapsulation/def_method_parse.li
+PASS compile_fail encapsulation/def_method_missing.li
+PASS compile_fail encapsulation/private_method_use.li
+FAIL verify_ok encapsulation/object_method_mutate.li
+FAIL verify_ok encapsulation/inheritance_subtype.li
+PASS compile_fail encapsulation/inheritance_layout.li
+PASS compile_fail encapsulation/override_mismatch.li
+FAIL verify_ok encapsulation/trait_hash_impl.li
+PASS compile_fail encapsulation/trait_missing_impl.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (129ms)
+warning: ../../build/generated/AutoVC.lean:14:24: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok modules/greeter/greeter.li
+FAIL verify_ok modules/import_std_decorators.li
+FAIL verify_ok modules/use_greeter.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (121ms)
+warning: ../../build/generated/AutoVC.lean:14:27: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok modules/use_positive.li
+PASS compile_fail cve_patterns/cwe787_oob_index.li
+PASS compile_fail cve_patterns/cwe125_negative_index.li
+PASS compile_fail cve_patterns/cwe120_stack_buffer_oob.li
+PASS compile_fail cve_patterns/cwe787_dyn_index.li
+PASS compile_fail cve_patterns/cwe676_extern_no_contract.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (130ms)
+warning: ../../build/generated/AutoVC.lean:12:28: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:12:48: unused variable `b`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:27: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:47: unused variable `b`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:67: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:29: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:49: unused variable `b`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS verify_ok cve_patterns/good_bounded_index.li
+PASS compile_fail cve_patterns/historic_ariane5_narrowing.li
+PASS compile_fail cve_patterns/historic_goto_fail.li
+lean: running lake in docs/semantics
+Build completed successfully (3 jobs).
+lean: typechecking generated AutoVC
+⚠ [5/6] Built AutoVC (126ms)
+warning: ../../build/generated/AutoVC.lean:12:28: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:27: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:14:47: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:17:29: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: ../../build/generated/AutoVC.lean:26:23: unused variable `result`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Build completed successfully (6 jobs).
+PASS compile_ok codegen/fp_numerically_stable.li
+--- li-tests: pass=163 fail=33 skip=0
+
+── li-tests ─────────────────────────────
+  ✕ 33 failed  · 163 passed

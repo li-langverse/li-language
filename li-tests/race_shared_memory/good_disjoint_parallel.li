@@ -1,6 +1,4 @@
-# POSITIVE CONTROL: disjoint tile writes — MUST compile when checker exists.
-
-proc good_parallel(grid: var array[64, array[64, f64]]) -> unit
+def good_parallel(grid: var array[64, array[64, f64]]) -> unit
   requires true
   ensures true
   decreases 0

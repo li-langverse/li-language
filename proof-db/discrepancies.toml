@@ -1,0 +1,15 @@
+[[discrepancy]]
+id = "example-spec-lean-sqrt"
+specimen = "contracts_verify/sqrt_open_bound.li"
+kind = "spec_vs_lean"
+status = "open"
+failure_mode = "open_math"
+description = "Float abs/sqrt ensures intentionally open; trusted Li.Discharge slice may show spec proved while strict lean sweep stays open."
+
+[[discrepancy]]
+id = "example-lean-mir-witness"
+specimen = "contracts_verify/witnessed_ensures_ident.li"
+kind = "lean_vs_mir"
+status = "accepted"
+failure_mode = "li_bug"
+description = "Template accepted row: triage mir_return_linked drift in vc_emit until witness telemetry matches Lean."

@@ -1,0 +1,15 @@
+# P-linalg: axpy post-condition on scalars — closed AutoVC (alpha*x + y).
+def axpy4_int(alpha: int, x: int, y: int) -> int
+  requires true
+  ensures result == alpha * x + y
+  decreases 0
+=
+  return alpha * x + y
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var z: int = axpy4_int(2, 3, 4)
+  return 0

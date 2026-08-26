@@ -1,0 +1,224 @@
+#!/usr/bin/env bash
+# Scaffold a Li package (library or binary) with li.toml per lip plan § A3.
+# Usage: ./scripts/li-new-package NAME [--kind library|binary] [--out DIR] [--workspace DIR] [--official] [--force] [--dry-run]
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+TPL="$ROOT/scripts/templates/package"
+
+usage() {
+  cat <<'EOF'
+Usage: li-new-package NAME [options]
+
+  NAME          Package name (kebab-case, e.g. li-math or my-tool)
+
+Options:
+  --kind KIND       library (default) or binary
+  --out DIR         Output directory (default: packages/NAME under ROOT)
+  --workspace DIR   Append NAME to DIR/li.toml [workspace].members
+  --import-name PATH  Ergonomic import (e.g. physics.foo) — sets github_repo + folder hint
+  --official        li-langverse maintainer + PKG id + org repo checklist
+  --force           Overwrite existing directory
+  --dry-run         Print actions only
+  -h, --help        This help
+
+Examples:
+  ./scripts/li-new-package li-demo --kind library
+  ./scripts/li-new-package my-cli --kind binary --official
+  ./scripts/li-new-package li-foo --out /tmp/li-foo --dry-run
+EOF
+}
+
+NAME=""
+KIND="library"
+OUT=""
+WORKSPACE=""
+IMPORT_NAME=""
+OFFICIAL=0
+FORCE=0
+DRY_RUN=0
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -h|--help) usage; exit 0 ;;
+    --kind) KIND="${2:?}"; shift 2 ;;
+    --out) OUT="${2:?}"; shift 2 ;;
+    --workspace) WORKSPACE="${2:?}"; shift 2 ;;
+    --import-name) IMPORT_NAME="${2:?}"; shift 2 ;;
+    --official) OFFICIAL=1; shift ;;
+    --force) FORCE=1; shift ;;
+    --dry-run) DRY_RUN=1; shift ;;
+    -*) echo "unknown option: $1" >&2; usage >&2; exit 1 ;;
+    *)
+      if [[ -z "$NAME" ]]; then
+        NAME="$1"
+        shift
+      else
+        echo "unexpected argument: $1" >&2; exit 1
+      fi
+      ;;
+  esac
+done
+
+if [[ -z "$NAME" && -z "$IMPORT_NAME" ]]; then
+  echo "error: NAME or --import-name required" >&2
+  usage >&2
+  exit 1
+fi
+
+if [[ -n "$IMPORT_NAME" && -z "$NAME" ]]; then
+  NAME="li-$(echo "$IMPORT_NAME" | tr '.' '-')"
+fi
+
+if [[ ! "$NAME" =~ ^[a-z][a-z0-9]*(-[a-z0-9]+)*$ ]]; then
+  echo "error: NAME must be kebab-case (e.g. li-math)" >&2
+  exit 1
+fi
+
+if [[ "$KIND" != "library" && "$KIND" != "binary" ]]; then
+  echo "error: --kind must be library or binary" >&2
+  exit 1
+fi
+
+if [[ -z "$OUT" ]]; then
+  OUT="$ROOT/packages/$NAME"
+else
+  OUT="$(cd "$(dirname "$OUT")" && pwd)/$(basename "$OUT")"
+fi
+
+if [[ -e "$OUT" ]]; then
+  if [[ "$FORCE" -ne 1 ]]; then
+    echo "error: $OUT exists (use --force)" >&2
+    exit 1
+  fi
+fi
+
+SNAKE="${NAME//-/_}"
+PKG_ID="PKG-${NAME}"
+DESCRIPTION="Li package $NAME"
+DATE="$(date +%Y-%m-%d)"
+MAINTAINER="(author)"
+OFFICIAL_MAINTAINER_LINE=""
+OFFICIAL_PKG_ID_LINE=""
+ENTRY="lib"
+if [[ "$KIND" == "binary" ]]; then
+  ENTRY="main"
+fi
+
+if [[ "$OFFICIAL" -eq 1 ]]; then
+  MAINTAINER="li-langverse"
+  OFFICIAL_MAINTAINER_LINE='maintainer = "li-langverse"'
+  OFFICIAL_PKG_ID_LINE="pkg_id = \"${PKG_ID}\""
+fi
+
+subst() {
+  local in="$1" out="$2"
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    echo "would write: $out"
+    return
+  fi
+  mkdir -p "$(dirname "$out")"
+  sed -e "s|{{NAME}}|$NAME|g" \
+      -e "s|{{DESCRIPTION}}|$DESCRIPTION|g" \
+      -e "s|{{PKG_ID}}|$PKG_ID|g" \
+      -e "s|{{SNAKE}}|$SNAKE|g" \
+      -e "s|{{DATE}}|$DATE|g" \
+      -e "s|{{MAINTAINER}}|$MAINTAINER|g" \
+      -e "s|{{ENTRY}}|$ENTRY|g" \
+      -e "s|{{OFFICIAL_MAINTAINER_LINE}}|$OFFICIAL_MAINTAINER_LINE|g" \
+      -e "s|{{OFFICIAL_PKG_ID_LINE}}|$OFFICIAL_PKG_ID_LINE|g" \
+      "$in" >"$out"
+}
+
+write_tree() {
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    echo "would create package at: $OUT"
+  else
+    mkdir -p "$OUT"
+  fi
+
+  subst "$TPL/$KIND/li.toml.template" "$OUT/li.toml"
+  if [[ "$KIND" == "library" ]]; then
+    subst "$TPL/library/src/lib.li.template" "$OUT/src/lib.li"
+  else
+    subst "$TPL/binary/src/main.li.template" "$OUT/src/main.li"
+  fi
+
+  for f in README.md PUBLISH.md CHANGELOG.md SECURITY.md .gitignore; do
+    subst "$TPL/common/${f}.template" "$OUT/$f"
+  done
+  subst "$TPL/common/docs/traceability.md.template" "$OUT/docs/traceability.md"
+  subst "$TPL/common/li-tests/manifest.toml.template" "$OUT/li-tests/manifest.toml"
+  subst "$TPL/common/li-tests/smoke/builds.li.template" "$OUT/li-tests/smoke/builds.li"
+  subst "$TPL/common/li-toolchain.toml.template" "$OUT/li-toolchain.toml"
+
+  if [[ "$OFFICIAL" -eq 1 ]]; then
+    local gh="$ROOT/scripts/templates/github-repo"
+    mkdir -p "$OUT/.github/workflows"
+    cp "$gh/ci.yml" "$OUT/.github/workflows/ci.yml"
+    cp "$gh/dependabot.yml" "$OUT/.github/dependabot.yml"
+    cp "$gh/ecosystem-upstream.yml" "$OUT/.github/workflows/ecosystem-upstream.yml"
+    cp "$gh/PULL_REQUEST_TEMPLATE.md" "$OUT/.github/PULL_REQUEST_TEMPLATE.md"
+  fi
+}
+
+write_tree
+
+if [[ -n "$IMPORT_NAME" && "$DRY_RUN" -eq 0 && -f "$OUT/li.toml" ]]; then
+  PYTHONPATH="$ROOT/scripts" python3 -c \
+    "from import_repo_names import patch_package_toml; from pathlib import Path; patch_package_toml(Path('$OUT/li.toml'), '$IMPORT_NAME')"
+fi
+
+append_workspace() {
+  local ws_dir="${WORKSPACE:-}"
+  if [[ -z "$ws_dir" ]]; then
+    return
+  fi
+  local ws_file="$ws_dir/li.toml"
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    echo "would append $NAME to $ws_file [workspace].members"
+    return
+  fi
+  if [[ ! -f "$ws_file" ]]; then
+    cat >"$ws_file" <<EOF
+[workspace]
+members = ["$NAME"]
+resolver = "path"
+EOF
+    echo "created $ws_file"
+    return
+  fi
+  if grep -q "\"$NAME\"" "$ws_file" 2>/dev/null; then
+    echo "workspace already lists $NAME"
+    return
+  fi
+  python3 "$ROOT/scripts/li-workspace-add-member.py" "$ws_file" "$NAME"
+  echo "updated workspace: $ws_file"
+}
+
+if [[ -n "$WORKSPACE" ]]; then
+  append_workspace
+elif [[ "$OUT" == "$ROOT/packages/"* ]]; then
+  WORKSPACE="$ROOT/packages"
+  append_workspace
+fi
+
+echo ""
+echo "Created package: $OUT"
+echo "  kind:      $KIND"
+echo "  PKG id:    $PKG_ID"
+echo ""
+echo "Next steps:"
+echo "  cd $OUT"
+echo "  lic check li-tests/smoke/builds.li   # from repo root with LIC set"
+if [[ "$OFFICIAL" -eq 1 ]]; then
+  echo ""
+  echo "Official package (li-langverse):"
+  echo "  ./scripts/ensure-package-ci.sh   # verifies .github/workflows/ci.yml"
+  echo "  gh repo create li-langverse/$NAME --public --description \"$DESCRIPTION\""
+  echo "  ./scripts/push-official-package-repo.sh $NAME --create  # uses github_repo from li.toml"
+  echo "  Add row to docs/ecosystem/official-packages.md"
+  echo "  roadmap: apply branch protection (required check: check)"
+fi
+echo ""
+echo "Docs: docs/guide/creating-packages.md"

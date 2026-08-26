@@ -1,0 +1,54 @@
+
+# M1 logging — redaction contract + trusted file seam (li_rt_log.c).
+
+extern def li_rt_log_redact_ok(in: str) -> int
+  requires true
+  ensures -1 <= result
+  ensures result <= 0
+  decreases 0
+
+extern def li_rt_log_set_dir(dir: str) raises IO
+  requires true
+  ensures true
+  decreases 0
+
+extern def li_rt_log_access_line(ts: str, method: str, path: str, status: int, bytes_out: int) raises IO
+  requires true
+  ensures true
+  decreases 0
+
+extern def li_rt_log_reopen() -> int
+  requires true
+  ensures -1 <= result
+  ensures result <= 0
+  decreases 0
+
+def log_access(ts: str, method: str, path: str, status: int, bytes_out: int) raises Alloc, IO
+  requires true
+  ensures true
+  decreases 0
+=
+  li_rt_log_access_line(ts, method, path, status, bytes_out)
+
+def log_set_dir(dir: str) raises Alloc, IO
+  requires true
+  ensures true
+  decreases 0
+=
+  li_rt_log_set_dir(dir)
+
+def log_reopen() raises IO -> int
+  requires true
+  ensures -1 <= result
+  ensures result <= 0
+  decreases 0
+=
+  return li_rt_log_reopen()
+
+def redact_selftest(line: str) raises Alloc, IO -> int
+  requires true
+  ensures -1 <= result
+  ensures result <= 0
+  decreases 0
+=
+  return li_rt_log_redact_ok(line)

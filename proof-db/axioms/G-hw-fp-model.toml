@@ -1,0 +1,9 @@
+id = "G-hw-fp-model"
+kind = "axiom"
+field = "float"
+gap_id = "G-hw"
+statement = "IEEE-style FP and hardware limits are not fully axiomatized in user proofs."
+proof_status = "axiomatic"
+release_pin = "2026-05-25"
+release_lic = "dev"
+evidence = ["docs/verification/provability-gaps.md"]

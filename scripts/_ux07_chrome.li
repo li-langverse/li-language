@@ -1,0 +1,33 @@
+def studio_shell_viewport_cmds(scene_entity_count: int) -> int
+  requires scene_entity_count >= 0
+  ensures result >= 1
+  ensures result <= 3
+  decreases scene_entity_count
+=
+  if scene_entity_count == 0:
+    return studio_paint_viewport_empty_cmds()
+  return studio_paint_viewport_scene_cmds()
+
+def studio_shell_chrome_count(has_selection: int, scene_entity_count: int, task_state: int) -> int
+  requires has_selection >= 0
+  requires has_selection <= 1
+  requires scene_entity_count >= 0
+  requires task_state >= studio_agent_task_idle()
+  requires task_state <= studio_agent_task_done()
+  ensures result >= studio_paint_compose_panels_count(has_selection)
+  decreases task_state
+=
+  return studio_shell_chrome_count_palette(has_selection, scene_entity_count, task_state, studio_palette_closed_flag())
+
+def studio_shell_chrome_count_palette(has_selection: int, scene_entity_count: int, task_state: int, palette_open: int) -> int
+  requires has_selection >= 0
+  requires has_selection <= 1
+  requires scene_entity_count >= 0
+  requires task_state >= studio_agent_task_idle()
+  requires task_state <= studio_agent_task_done()
+  requires palette_open >= studio_palette_closed_flag()
+  requires palette_open <= studio_palette_open_flag()
+  ensures result >= studio_paint_compose_panels_count(has_selection)
+  decreases task_state
+=
+  return studio_paint_compose_panels_count(has_selection) + 1 + studio_shell_viewport_cmds(scene_entity_count) + studio_paint_agent_cmds(task_state, studio_agent_context_none()) + studio_paint_palette_cmds(palette_open)

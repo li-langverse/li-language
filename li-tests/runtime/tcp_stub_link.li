@@ -1,0 +1,8 @@
+import net
+
+def main() raises Net, IO -> int
+  requires true
+  ensures result == 2
+  decreases 0
+=
+  return tcp_listen(8080)

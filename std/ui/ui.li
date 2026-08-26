@@ -1,0 +1,30 @@
+type Color = object
+  public r: float
+  public g: float
+  public b: float
+  public a: float
+
+type Rect = object
+  public x: float
+  public y: float
+  public w: float
+  public h: float
+
+def ui_tag() -> int
+  requires true
+  ensures result == 5
+  decreases 0
+=
+  return 5
+
+def color_white() -> Color
+  requires true
+  ensures result.r == 1.0 and result.g == 1.0 and result.b == 1.0 and result.a == 1.0
+  decreases 0
+=
+  var c: Color
+  c.r = 1.0
+  c.g = 1.0
+  c.b = 1.0
+  c.a = 1.0
+  return c

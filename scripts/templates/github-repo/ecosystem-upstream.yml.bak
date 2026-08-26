@@ -1,0 +1,26 @@
+# Notify maintainers when lic / lit / lip release (repository_dispatch from lic repo).
+name: ecosystem-upstream
+on:
+  repository_dispatch:
+    types: [lic-release, lit-release, lip-release]
+  workflow_dispatch:
+    inputs:
+      upstream:
+        description: Upstream repo that released
+        required: true
+        type: string
+      version:
+        description: New version tag
+        required: true
+        type: string
+
+jobs:
+  bump-toolchain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Record upstream release
+        run: |
+          echo "Upstream ${{ github.event.inputs.upstream || github.event.client_payload.repo }} \
+            released ${{ github.event.inputs.version || github.event.client_payload.version }}"
+          echo "Update li-toolchain.toml and li.lock in a follow-up PR."

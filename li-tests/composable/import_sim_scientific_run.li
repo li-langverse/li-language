@@ -1,0 +1,22 @@
+import sim
+import sim.scientific
+
+def smoke_sim_outputs() -> int
+  requires true
+  ensures result >= 0
+  ensures result <= 1
+  decreases 0
+=
+  var r1: SimRunResult = run_simulation(vertical_md_lennard_jones(), 0)
+  if run_result_ok(r1) != 1:
+    return 1
+  var r2: SimRunResult = run_algo(algo_pde_heat_explicit_2d(), 1)
+  if run_result_ok(r2) != 1:
+    return 1
+  var r3: SimRunResult = run_algo(algo_robo_multibody_step(), 0)
+  if run_result_ok(r3) != 1:
+    return 1
+  var r4: SimRunResult = run_algo(algo_qm_dft_scf_energy(), 0)
+  if run_result_ok(r4) != 1:
+    return 1
+  return 0

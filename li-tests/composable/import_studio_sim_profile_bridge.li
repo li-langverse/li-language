@@ -1,0 +1,19 @@
+import sim
+import studio
+
+def smoke_studio_sim_profile_bridge() -> int
+  requires true
+  ensures result >= 0
+  ensures result <= 1
+  decreases 0
+=
+  var cfg: StudioProjectConfig = studio_project_config_new(studio_profile_sim_additive())
+  var sess: SimSessionStub = sim_session_stub_default()
+  studio_apply_profile_to_sim(cfg, sess)
+  if sess.sim_contract_id != sim_contract_sim_additive():
+    return 1
+  if sess.output_detail != output_detail_fields():
+    return 1
+  if li_sim_profile_from_studio_id(studio_profile_sim_robotics()) != sim_contract_sim_robotics():
+    return 1
+  return 0

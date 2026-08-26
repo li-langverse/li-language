@@ -1,0 +1,11 @@
+import chem
+def main() raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if chem_lig_backend_auto() < 1:
+    return 1
+  if chem_dft_run_smoke() != chem_dft_energy_stub_hartree():
+    return 2
+  return 0

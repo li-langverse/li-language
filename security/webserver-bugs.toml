@@ -1,0 +1,206 @@
+# Web server / HTTP gateway vulnerability classes → Li language & httpd design.
+# Validated by scripts/check-webserver-bugs.sh (all OS, automated review).
+# Runtime exploit TOML vs nginx: planned in docs/superpowers/plans/2026-05-16-li-httpd-plan.md
+
+version = 1
+
+# --- Parser & protocol (CWE-444, CWE-400) ---
+
+[[bug]]
+id = "nginx-cve-2019-20372-smuggling"
+name = "HTTP request smuggling (nginx CL/TE)"
+year = 2019
+cwe = ["CWE-444"]
+nginx_cve = ["CVE-2019-20372"]
+root_cause = "Front-end and back-end disagree on request boundaries (duplicate CL, TE+CL)"
+li_language_today = "No HTTP parser in lic yet — memory/bounds rules apply to any future byte buffer"
+li_rule = "Single parse path; Result[Request, Reject]; ensures no duplicate Content-Length (httpd spec)"
+li_test = null
+httpd_phase = "M1"
+mitigation_status = "httpd_design"
+bench_exploit = "benchmarks/tier5_http/exploits/request_smuggling_cl_te.toml"
+
+[[bug]]
+id = "apache-cve-2023-25690-proxy"
+name = "Apache mod_proxy rewrite SSRF / ACL bypass"
+year = 2023
+cwe = ["CWE-918", "CWE-441"]
+nginx_cve = []
+apache_cve = ["CVE-2023-25690"]
+root_cause = "RewriteRule maps attacker-controlled input to proxy destination"
+li_language_today = "No user-controlled URL type; extern/IO gated by effects"
+li_rule = "Proxy targets are UpstreamId enum at validate-config — not runtime strings"
+li_test = "li-tests/effects/io_fail.li"
+httpd_phase = "M1"
+mitigation_status = "partial"
+note = "Effect system blocks undeclared IO; full SSRF prevention needs typed config (httpd)"
+
+[[bug]]
+id = "path-traversal-alias"
+name = "Static file path traversal (nginx alias)"
+year = 0
+cwe = ["CWE-22", "CWE-23"]
+nginx_cve = ["CVE-2001-0133", "CVE-2013-2070"]
+root_cause = "User path concatenated with document root without canonicalization"
+li_language_today = "No raw path string concat in stdlib yet; fixed array indices enforced"
+li_rule = "StaticRoot path is canonicalized at config validate; no alias DSL (httpd)"
+li_test = "li-tests/cve_patterns/cwe787_oob_index.li"
+httpd_phase = "M1"
+mitigation_status = "partial"
+bench_exploit = "benchmarks/tier5_http/exploits/path_traversal_encoded.toml"
+
+[[bug]]
+id = "pan-os-path-confusion-2025"
+name = "Path confusion between reverse proxies (PAN-OS class)"
+year = 2025
+cwe = ["CWE-22", "CWE-444"]
+root_cause = "Different URL decoding between nginx and Apache enables auth bypass"
+li_rule = "One HTTP parser in Li; percent-decoding done once with ensures on path invariants"
+li_test = null
+httpd_phase = "M1"
+mitigation_status = "httpd_design"
+
+# --- Memory in C parsers (overlaps historic registry) ---
+
+[[bug]]
+id = "http-parser-oob-read"
+name = "HTTP line/header buffer over-read"
+year = 0
+cwe = ["CWE-125", "CWE-787"]
+root_cause = "C parser trusts attacker Content-Length or missing bounds on line buffer"
+li_language_today = "Fixed arrays; constant/refinement index; compile-time OOB reject"
+li_rule = "parse_request requires buf.len <= limits.max_header_block"
+li_test = "li-tests/cve_patterns/cwe125_negative_index.li"
+mitigation_status = "enforced"
+
+[[bug]]
+id = "heartbleed-tls-record"
+name = "TLS heartbeat over-read (OpenSSL)"
+year = 2014
+cwe = ["CWE-125"]
+root_cause = "C TLS stack reads past buffer on malformed heartbeat"
+li_language_today = "TLS in trusted extern until li-tls; user .li cannot express raw record read"
+li_rule = "No bare extern without contracts; bounds tests for user buffers"
+li_test = "li-tests/cve_patterns/cwe125_negative_index.li"
+mitigation_status = "partial"
+
+# --- Header / response injection ---
+
+[[bug]]
+id = "crlf-header-injection"
+name = "CRLF injection in HTTP headers"
+year = 0
+cwe = ["CWE-113", "CWE-93"]
+root_cause = "User input embedded in response headers without sanitization"
+li_language_today = "t-string / LiteralString planned (PEP 750); generic str in headers not yet modeled"
+li_rule = "Header values from config literals only at M1; typed HeaderName/HeaderValue (httpd)"
+li_test = "li-tests/effects/io_fail.li"
+mitigation_status = "partial"
+note = "Undeclared echo/IO fails compile today; header types are httpd M1"
+
+[[bug]]
+id = "host-header-poisoning"
+name = "Host / X-Forwarded-Host cache poisoning"
+year = 0
+cwe = ["CWE-20"]
+root_cause = "Cache key includes attacker-controlled Host"
+li_rule = "forward_host enum (Origin | Fixed); no pass-through of client Host by default"
+li_test = null
+httpd_phase = "M1"
+mitigation_status = "httpd_design"
+
+# --- DoS ---
+
+[[bug]]
+id = "slowloris"
+name = "Slowloris (slow HTTP headers)"
+year = 2009
+cwe = ["CWE-400", "CWE-770"]
+root_cause = "Unbounded wait for complete headers without timeout proof"
+li_language_today = "while loops require decreases — unbounded loops rejected"
+li_rule = "parse_request decreases buf.len; connection timeouts required in Limits"
+li_test = "li-tests/prove_reject/missing_decreases.li"
+mitigation_status = "enforced"
+
+[[bug]]
+id = "large-body-dos"
+name = "Unbounded request body"
+year = 0
+cwe = ["CWE-400"]
+root_cause = "No max_body enforced while reading"
+li_rule = "ensures body_len <= limits.max_body; max_body required in config schema"
+li_test = "li-tests/cve_patterns/cwe787_dyn_index.li"
+mitigation_status = "partial"
+note = "Dynamic index rejection is analogue; body limits are httpd config + proof"
+
+# --- Concurrency ---
+
+[[bug]]
+id = "worker-race-shared-cache"
+name = "Race on shared connection cache between workers"
+year = 0
+cwe = ["CWE-362", "CWE-567"]
+root_cause = "Mutable shared structure without locking between threads"
+li_language_today = "parallel for requires disjoint proof; shared slot writes fail policy"
+li_rule = "Send/Sync on worker boundaries; borrowck on shared connection state"
+li_test = "li-tests/race_shared_memory/shared_mut_write.li"
+mitigation_status = "enforced"
+
+# --- Config / DSL footguns ---
+
+[[bug]]
+id = "nginx-if-rewrite-smuggling"
+name = "nginx if/rewrite location smuggling"
+year = 0
+cwe = ["CWE-444", "CWE-670"]
+root_cause = "Conditional rewrite changes interpretation mid-request"
+li_rule = "No if/rewrite DSL — static MatchExpr route table only"
+li_test = "li-tests/cve_patterns/historic_goto_fail.li"
+mitigation_status = "partial"
+note = "goto forbidden in .li; nginx if removed by httpd config design not parser"
+
+[[bug]]
+id = "dynamic-module-load"
+name = "nginx load_module / Lua arbitrary code"
+year = 0
+cwe = ["CWE-94", "CWE-829"]
+root_cause = "Server loads attacker-supplied .so or scripts"
+li_rule = "No dynamic modules; no eval; no include of external config"
+li_test = "li-tests/prove_reject/uses_any.li"
+mitigation_status = "partial"
+note = "Any forbidden; module loading is httpd policy at validate-config"
+
+[[bug]]
+id = "tls-disabled-public"
+name = "Cleartext listener on public interface"
+year = 0
+cwe = ["CWE-319", "CWE-295"]
+root_cause = "Misconfig exposes credentials on HTTP"
+li_rule = "listen refinement: tls required unless loopback address"
+li_test = null
+httpd_phase = "M1"
+mitigation_status = "httpd_design"
+
+# --- Build / ops seam ---
+
+[[bug]]
+id = "shellshock-env-cgi"
+name = "Shellshock via CGI environment"
+year = 2014
+cwe = ["CWE-78"]
+root_cause = "CGI passes attacker env vars to bash"
+li_language_today = "lic link rejects shell metacharacters; no CGI in httpd M1"
+li_rule = "No shell invocation on request path; LI_EXTRA_C path validation"
+li_test = "li-tests/security/codegen_path_injection.sh"
+mitigation_status = "enforced"
+
+[[bug]]
+id = "log-injection"
+name = "Log injection / forged log lines"
+year = 0
+cwe = ["CWE-117"]
+root_cause = "Unsanitized request fields written to access logs"
+li_rule = "li-log redaction contract; no raw client bytes in log line (httpd Tier G)"
+li_test = null
+httpd_phase = "M1.5"
+mitigation_status = "httpd_design"

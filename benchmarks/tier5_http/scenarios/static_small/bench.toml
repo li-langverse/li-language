@@ -1,0 +1,25 @@
+name = "static_small"
+phase = "m1"
+enabled = true
+
+[server]
+kind = "static"
+document_root = "fixtures/static/1k"
+sendfile = true
+
+[verify]
+requests = [
+  { method = "GET", path = "/file.bin", expect_status = 200, body_len = 1024 },
+]
+
+[load]
+tool = "wrk"
+threads = 8
+connections = 200
+
+[[load.sweep]]
+connections = [50, 200, 1000]
+variant_prefix = "c"
+
+[metrics]
+collect = ["rps", "p50_latency_ms", "p99_latency_ms"]

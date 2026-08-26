@@ -1,0 +1,29 @@
+# Unit test — Module B: pair potentials (LJ nonbonded + Morse reactive).
+# Pure scalars — contracts discharge strictly (verify_ok).
+import nanoreactor
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  # LJ: far beyond cutoff -> 0
+  if nano_lj_force(9.0, 0.5, 1.0, 2.56) != 0.0:
+    return 1
+  # LJ: exactly at cutoff -> 0 (r2 >= rc2)
+  if nano_lj_force(2.56, 0.5, 1.0, 2.56) != 0.0:
+    return 2
+  # LJ: inside cutoff -> strictly positive (repulsive wall)
+  if nano_lj_force(0.25, 0.5, 1.0, 2.56) <= 0.0:
+    return 3
+  # Morse: energy at r0 is the well bottom, bounded below by -de
+  var e: float = nano_morse_energy(1.0, 2.0, 1.0, 1.0)
+  if e < -2.0:
+    return 4
+  # Morse force is clamped to [-100, 100]
+  var f: float = nano_morse_force(0.1, 2.0, 1.0, 1.0)
+  if f > 100.0:
+    return 5
+  if f < -100.0:
+    return 6
+  return 0

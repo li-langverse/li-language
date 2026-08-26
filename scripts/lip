@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Delegates to li-langverse/lip when checked out beside lic.
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+for lip in "$ROOT/../lip/scripts/lip"; do
+  if [[ -x "$lip" ]]; then
+    exec "$lip" "$@"
+  fi
+done
+echo "lip: clone li-langverse/lip beside lic" >&2
+exit 1

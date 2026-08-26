@@ -1,0 +1,16 @@
+# Regression: extern def -> ptr must lower to full-width (E0360 if truncated to i32).
+extern def li_rt_argv_i(index: int) -> ptr
+  requires true
+  ensures true
+
+extern def li_rt_argc() -> int
+  requires true
+  ensures result >= 0
+
+def main() raises IO -> int
+  requires true
+  ensures result >= 0
+  decreases 0
+=
+  var _p: ptr = li_rt_argv_i(0)
+  return li_rt_argc()

@@ -1,0 +1,22 @@
+type Animal = object
+  public legs: int
+
+type Dog = object of Animal
+  public barks: int
+
+def read_legs(a: Animal) -> int
+  requires true
+  ensures result == a.legs
+  decreases 0
+=
+  return a.legs
+
+def main() -> int
+  requires true
+  ensures result == 4
+  decreases 0
+=
+  var d: Dog
+  d.legs = 4
+  d.barks = 1
+  return read_legs(d)

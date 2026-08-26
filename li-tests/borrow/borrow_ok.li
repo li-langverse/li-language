@@ -1,4 +1,4 @@
-proc ok(b: var array[4, int]) -> unit
+def ok(b: var array[4, int]) -> unit
   requires true
   ensures true
   decreases 0

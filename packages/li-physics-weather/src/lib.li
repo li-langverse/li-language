@@ -1,0 +1,70 @@
+def li_std_physics_weather_version() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+def advect_scalar_1d(
+    field: var array[8, float], wind: array[8, float], dt: float, dx: float) -> unit
+  requires dt > 0.0
+  requires dx > 0.0
+  ensures true
+  decreases 0
+=
+  var i: int = 0
+  while i < 8
+    field[i] = field[i] - wind[i] * dt / dx
+    i = i + 1
+
+def diffuse_step_cell(i: int) -> int
+  requires i >= 1
+  requires i <= 6
+  ensures result >= 1
+  ensures result <= 6
+  decreases 0
+=
+  return i
+
+def diffuse_explicit(
+    field: var array[8, float], kappa: float, dt: float, dx: float) -> unit
+  requires dt > 0.0
+  requires dx > 0.0
+  # The unrolled kernel writes exactly the interior cells 1..6 (boundaries 0
+  # and 7 untouched); each constant-index step stays within the interior.
+  ensures diffuse_step_cell(1) >= 1
+  ensures diffuse_step_cell(6) <= 6
+  ensures diffuse_step_cell(6) >= diffuse_step_cell(1)
+  decreases 0
+=
+  var inv_dx2: float = 1.0 / (dx * dx)
+  # Interior cells 1..6 with constant neighbor indices (compiler-safe).
+  var lap: float = field[2] - 2.0 * field[1] + field[0]
+  field[1] = field[1] + kappa * dt * lap * inv_dx2
+  lap = field[3] - 2.0 * field[2] + field[1]
+  field[2] = field[2] + kappa * dt * lap * inv_dx2
+  lap = field[4] - 2.0 * field[3] + field[2]
+  field[3] = field[3] + kappa * dt * lap * inv_dx2
+  lap = field[5] - 2.0 * field[4] + field[3]
+  field[4] = field[4] + kappa * dt * lap * inv_dx2
+  lap = field[6] - 2.0 * field[5] + field[4]
+  field[5] = field[5] + kappa * dt * lap * inv_dx2
+  lap = field[7] - 2.0 * field[6] + field[5]
+  field[6] = field[6] + kappa * dt * lap * inv_dx2
+
+def wind_index_in_bounds(ix: int) -> int
+  requires ix >= 0
+  requires ix < 8
+  ensures result >= 0
+  ensures result < 8
+  decreases 0
+=
+  return ix
+
+def sample_wind_at(wind_x: array[8, float], wind_y: array[8, float], ix: int) -> float
+  requires ix >= 0
+  requires ix < 8
+  ensures result == wind_x[ix]
+  decreases ix
+=
+  return wind_x[wind_index_in_bounds(ix)]

@@ -1,0 +1,20 @@
+[package]
+name = "li-nanoreactor"
+version = "0.1.0"
+edition = "2026"
+license = "Apache-2.0 OR MIT"
+description = "Ab initio nanoreactor — reactive MD box with thermal cycling and piston confinement for automated reaction discovery, as a standalone installable Li package."
+
+[dependencies]
+li-chem = { path = "../li-chem" }
+li-sim = { path = "../li-sim" }
+
+[package.metadata.li]
+min_lic = "0.1.0"
+import_name = "nanoreactor"
+pkg_id = "PKG-li-nanoreactor"
+
+[package.repository]
+url = "https://github.com/li-langverse/li-nanoreactor"
+documentation = "https://li-langverse.github.io/li-language/ecosystem/li-nanoreactor/"
+changelog = "https://github.com/li-langverse/li-nanoreactor/blob/main/CHANGELOG.md"

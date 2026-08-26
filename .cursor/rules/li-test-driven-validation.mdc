@@ -1,0 +1,58 @@
+---
+description: Merge review premise — pass/fail li-tests prove compiler capabilities; proofs come later
+alwaysApply: true
+---
+
+# Test-driven compiler validation (merge premise)
+
+**We review merges with testing.** A compiler change is not done until **programs that should pass** and **programs that should fail** both behave correctly in `li-tests/`.
+
+## Workflow (every compiler PR)
+
+1. **Name the capability** — master-plan phase (PH-2j, 7d-c, …) or `G-*` row in [provability-gaps.md](../../docs/verification/provability-gaps.md).
+2. **Add or extend `li-tests/`** — one `.li` per behavior; register in [manifest.toml](../../li-tests/manifest.toml).
+3. **Run evidence** — `LI_REPO_ROOT=$PWD cmake --build build && LI_REPO_ROOT=$PWD ./li-tests/run_all.sh`.
+4. **GHA quota** — run [li-local-ci](../../scripts/local-ci.sh) or benchmarks `local-ci-sweep.py --repo lic --pr N` before merge.
+5. **Do not merge** on “looks right” without green pass **and** fail rows.
+
+## Outcomes = contract
+
+| outcome | Proves today | Later (2f+) |
+|---------|----------------|---------------|
+| `compile_fail` + `expected_substr` | Parser/type/borrow/policy rejects bad code | Same obligation in Lean |
+| `compile_ok` / `verify_ok` | Build (+ contracts/AutoVC when enabled) | Full VC discharge |
+| `verify_open_ok` | Known open VC (documented) | Closes when proof lands |
+
+**Fail tests are first-class.** A capability without a **compile_fail** (or exploit) row is incomplete for security and encapsulation work.
+
+## Examples
+
+```toml
+# Should pass — locks behavior
+[[tests]]
+suite = "encapsulation"
+file = "encapsulation/def_method_call.li"
+outcome = "verify_ok"
+
+# Should fail — locks rejection
+[[tests]]
+suite = "encapsulation"
+file = "encapsulation/private_method_use.li"
+outcome = "compile_fail"
+expected_substr = "No function named"
+```
+
+## Proof path (master plan — not optional long-term)
+
+Today: tests prove **static gates** (types, borrow, policy, MIR, LLVM).  
+Target: **`lic build` + Lean** proves theorems; tests remain regression oracles.
+
+When adding proof surface, update **provability-gaps** in the **same PR** — see [li-release-notes.mdc](li-release-notes.mdc).
+
+## Anti-patterns
+
+- Merging with only manual smoke — add manifest rows.
+- Deleting fail tests to green CI — fix compiler or narrow `expected_substr`.
+- HTTPd-only validation for compiler phases — use `li-tests/`, not tier-5 alone.
+
+See also [li-tests.mdc](li-tests.mdc) for suite layout.

@@ -1,0 +1,50 @@
+
+extern def li_rt_sqrt(x: float) raises IO -> float
+  requires true
+  ensures true
+  decreases 0
+def li_std_physics_quantum_version() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+def norm_sq_1d(psi_re: array[8, float], psi_im: array[8, float]) -> float
+  requires true
+  ensures result >= 0.0
+  decreases 0
+=
+  var s: float = 0.0
+  var i: int = 0
+  while i < 8
+    s = s + psi_re[i] * psi_re[i] + psi_im[i] * psi_im[i]
+    i = i + 1
+  return s
+def normalize_1d(psi_re: array[8, float], psi_im: array[8, float]) raises IO -> unit
+  requires true
+  ensures true
+  decreases 0
+=
+  var n2: float = norm_sq_1d(psi_re, psi_im)
+  if n2 == 0.0:
+    return
+  var inv_n: float = 1.0 / li_rt_sqrt(n2)
+  var i: int = 0
+  while i < 8
+    psi_re[i] = psi_re[i] * inv_n
+    psi_im[i] = psi_im[i] * inv_n
+    i = i + 1
+def harmonic_potential_1d(x: float, k: float) -> float
+  requires k >= 0.0
+  ensures result == 0.5 * k * x * x
+  decreases 0
+=
+  return 0.5 * k * x * x
+def schrodinger_kinetic_diag(dx: float, mass: float) -> float
+  requires dx > 0.0
+  requires mass > 0.0
+  ensures result == hbar * hbar / (2.0 * mass * dx * dx)
+  decreases 0
+=
+  var hbar: float = 1.0
+  return hbar * hbar / (2.0 * mass * dx * dx)

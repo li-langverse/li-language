@@ -1,4 +1,4 @@
-proc add(x: int, y: int) -> int
+def add(x: int, y: int) -> int
   requires true
   ensures true
   decreases 0

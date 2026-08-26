@@ -1,0 +1,13 @@
+# Package-local tests — also register in monorepo li-tests/manifest.toml when integrated.
+
+[[tests]]
+suite = "smoke"
+file = "smoke/builds.li"
+outcome = "verify_ok"
+note = "T-PKG-li-std-scene-smoke"
+
+[[tests]]
+suite = "smoke"
+file = "smoke/md_particle_tiers.li"
+outcome = "verify_ok"
+note = "T-PKG-li-scene-md-particle-tiers"

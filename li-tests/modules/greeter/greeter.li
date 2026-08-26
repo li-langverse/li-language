@@ -1,0 +1,6 @@
+def greet() -> int
+  requires true
+  ensures result == 42
+  decreases 0
+=
+  return 42

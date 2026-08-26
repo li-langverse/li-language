@@ -1,0 +1,26 @@
+# Two routes overlap at the same priority — must fail validate (E0504 / ConfigError).
+[server]
+listen = "127.0.0.1:8080"
+host = "api.example.com"
+
+[limits]
+max_body = "1m"
+
+[upstreams.api]
+peers = ["http://127.0.0.1:3000"]
+
+[[routes]]
+name = "exact_api"
+priority = 0
+method = "GET"
+path = "/api"
+path_kind = "exact"
+action = "static:a"
+
+[[routes]]
+name = "prefix_api"
+priority = 0
+method = "GET"
+path = "/api"
+path_kind = "prefix"
+action = "static:b"

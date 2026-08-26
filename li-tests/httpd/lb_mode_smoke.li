@@ -1,0 +1,15 @@
+# M1 LB enum surface: round_robin / least_conn (C runtime, Li wrapper).
+import http
+
+def main() raises IO, Alloc -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if lb_mode_from_name("round_robin") != 0:
+    return 1
+  if lb_mode_from_name("least_conn") != 1:
+    return 2
+  if lb_mode_from_name("unknown") != 0:
+    return 3
+  return 0

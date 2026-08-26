@@ -1,0 +1,17 @@
+# Probabilistic Hoare oracle — prob-hoare P2 gate (Monte Carlo via lic build --prob-check).
+
+def mc_duplicate_draw_bound() -> int
+  requires true
+  ensures result == 0
+  prob_ensures duplicate_draw < 1e-3
+    given OsRngUniform
+    samples 8000
+=
+  return 0
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return mc_duplicate_draw_bound()

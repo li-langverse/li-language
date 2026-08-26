@@ -1,0 +1,25 @@
+# Elementwise vector ops: `c = a + b` lowers to ArrayBinOpF64 and
+# `sum(a)` lowers to ArraySumF64 (float array params, closed runtime).
+def vec_add_sum(a: array[4, float], b: array[4, float]) -> float
+  requires true
+  ensures result == 0.0
+  decreases 0
+=
+  var c: array[4, float]
+  c = a + b
+  return sum(a)
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var a: array[4, float]
+  var b: array[4, float]
+  var i: int = 0
+  while i < 4
+    a[i] = 1.0
+    b[i] = 2.0
+    i = i + 1
+  var s: float = vec_add_sum(a, b)
+  return 0

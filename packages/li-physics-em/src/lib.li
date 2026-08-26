@@ -1,0 +1,69 @@
+
+extern def li_rt_sqrt(x: float) raises IO -> float
+  requires true
+  ensures true
+  decreases 0
+def li_std_physics_em_version() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+def coulomb_force_scalar(q1: float, q2: float, r: float, k: float, soft: float) -> float
+  requires r > 0.0
+  requires soft >= 0.0
+  ensures result == k * q1 * q2 / r2
+  decreases 0
+=
+  var r2: float = r * r + soft * soft
+  return k * q1 * q2 / r2
+def fdtd_cfl_dt(dx: float, c: float, safety: float) -> float
+  requires dx > 0.0
+  requires c > 0.0
+  requires safety > 0.0
+  requires safety <= 1.0
+  ensures result == safety * dx / c
+  decreases 0
+=
+  return safety * dx / c
+def yee_update_ex_2d(
+    ex: var array[8, float], hz: array[8, float], dt: float, dx: float) -> unit
+  requires dt > 0.0
+  requires dx > 0.0
+  ensures true
+  decreases 0
+=
+  var step: float = dt / dx
+  ex[0] = ex[0] + step * (hz[1] - hz[0])
+  ex[1] = ex[1] + step * (hz[2] - hz[1])
+  ex[2] = ex[2] + step * (hz[3] - hz[2])
+  ex[3] = ex[3] + step * (hz[4] - hz[3])
+  ex[4] = ex[4] + step * (hz[5] - hz[4])
+  ex[5] = ex[5] + step * (hz[6] - hz[5])
+  ex[6] = ex[6] + step * (hz[7] - hz[6])
+def poisson_step_cell(i: int) -> int
+  requires i >= 1
+  requires i <= 6
+  ensures result >= 1
+  ensures result <= 6
+  decreases 0
+=
+  return i
+
+def poisson_jacobi_step(
+    phi: var array[8, float], rho: array[8, float], dx: float) -> unit
+  requires dx > 0.0
+  # The unrolled Jacobi kernel writes exactly the interior cells 1..6;
+  # each constant-index step stays within the interior (boundaries 0, 7).
+  ensures poisson_step_cell(1) >= 1
+  ensures poisson_step_cell(6) <= 6
+  ensures poisson_step_cell(6) >= poisson_step_cell(1)
+  decreases 0
+=
+  var inv_dx2: float = 1.0 / (dx * dx)
+  phi[1] = 0.25 * (phi[2] + phi[0] + rho[1] * inv_dx2)
+  phi[2] = 0.25 * (phi[3] + phi[1] + rho[2] * inv_dx2)
+  phi[3] = 0.25 * (phi[4] + phi[2] + rho[3] * inv_dx2)
+  phi[4] = 0.25 * (phi[5] + phi[3] + rho[4] * inv_dx2)
+  phi[5] = 0.25 * (phi[6] + phi[4] + rho[5] * inv_dx2)
+  phi[6] = 0.25 * (phi[7] + phi[6] + rho[6] * inv_dx2)

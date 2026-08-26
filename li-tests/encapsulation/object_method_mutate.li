@@ -1,0 +1,19 @@
+type Counter = object
+  public value: int
+
+def Counter_bump(self: var Counter) -> unit
+  requires true
+  ensures true
+  decreases 0
+=
+  self.value = self.value + 1
+
+def main() -> int
+  requires true
+  ensures result == 2
+  decreases 0
+=
+  var c: Counter
+  c.value = 1
+  c.bump()
+  return c.value

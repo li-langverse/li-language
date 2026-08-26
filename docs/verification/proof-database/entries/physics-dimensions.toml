@@ -1,0 +1,25 @@
+version = 1
+
+[[entry]]
+id = "P-AX-DIM-001"
+kind = "axiom"
+field = "physics"
+statement = "Dimensional homogeneity: only dimensionally consistent combinations are well-formed."
+proof_status = "open"
+gap_id = "G-physics"
+gap_kind = "proof_gap"
+lean_module = "docs/semantics/Discharge.lean"
+lean_thm = "Li.Discharge.dimensional_homogeneity_placeholder"
+last_verified_lic_commit = "a9542bfc"
+
+[[entry]]
+id = "P-AX-DIM-002"
+kind = "axiom"
+field = "physics"
+statement = "SI coherence: base quantities map to a consistent unit system (placeholder)."
+proof_status = "open"
+gap_id = "G-physics"
+gap_kind = "proof_gap"
+lean_module = "docs/semantics/Discharge.lean"
+lean_thm = "Li.Discharge.dimensional_homogeneity_placeholder"
+last_verified_lic_commit = "a9542bfc"

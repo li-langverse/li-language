@@ -1,0 +1,15 @@
+def callee(x: int) -> int
+  requires x >= 0
+  ensures result == x
+  decreases 0
+=
+  return x
+
+def caller_local() -> int
+  requires true
+  ensures result == 5
+  decreases 0
+=
+  var y: int = 5
+  callee(y)
+  return 5

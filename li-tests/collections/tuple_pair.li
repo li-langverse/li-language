@@ -1,4 +1,5 @@
-proc swap(t: tuple[int, str]) -> int
+def swap(t: tuple[int, str]) -> int
+  raises Alloc
   requires true
   ensures result == 0
   decreases 0

@@ -1,5 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Li">
-  <rect width="64" height="64" rx="14" fill="#0d1117"/>
-  <text x="32" y="42" text-anchor="middle" font-family="Inter, system-ui, sans-serif"
-        font-size="28" font-weight="700" fill="#58a6ff"></text>
+  <defs>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3dd6ff"/>
+      <stop offset="100%" stop-color="#7c5cff"/>
+    </linearGradient>
+    <radialGradient id="bg" cx="30%" cy="20%" r="80%">
+      <stop offset="0%" stop-color="#121826"/>
+      <stop offset="100%" stop-color="#05060a"/>
+    </radialGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
+  <rect x="4" y="4" width="56" height="56" rx="12" fill="none" stroke="url(#glow)" stroke-width="1.5" opacity="0.55"/>
+  <text x="32" y="43" text-anchor="middle" font-family="Space Grotesk, Inter, system-ui, sans-serif"
+        font-size="26" font-weight="700" fill="url(#glow)">理</text>
 </svg>

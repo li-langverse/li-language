@@ -1,0 +1,17 @@
+# Trusted Net seam: extern tcp_listen requires raises Net in user signatures.
+import std.runtime.seam
+
+def ping_listen(port: int) raises Net, IO -> int
+  requires 0 < port
+  requires port < 65536
+  ensures result >= 0
+  decreases 0
+=
+  return tcp_listen(port)
+
+def main() raises Net, IO -> int
+  requires true
+  ensures result == 2
+  decreases 0
+=
+  return ping_listen(8080)

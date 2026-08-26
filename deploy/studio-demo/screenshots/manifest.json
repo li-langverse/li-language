@@ -1,0 +1,15 @@
+{
+  "kind": "studio-marketing-mocks",
+  "native_product": false,
+  "capture_script": "capture.sh",
+  "mocks": [
+    { "file": "01-studio-workspace.html", "journey": "workspace_with_selection" },
+    { "file": "02-studio-empty-viewport.html", "journey": "empty_scene_and_inspector" },
+    { "file": "03-studio-agent-error.html", "journey": "agent_error_recovery" }
+  ],
+  "upload": {
+    "repo": "li-langverse/lic",
+    "release_tag": "studio-ui-ux-progress",
+    "tracking_issue_file": "data/studio-ui-ux-plan-loop/tracking-issue.txt"
+  }
+}

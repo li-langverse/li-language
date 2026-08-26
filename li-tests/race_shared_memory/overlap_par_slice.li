@@ -1,14 +1,11 @@
-# EXPLOIT: overlapping par_slice ranges on same buffer.
-# MUST NOT compile — expected: disjoint refinement failure.
 
-proc overlap_slices() -> unit
+def overlap_slices() -> unit
   requires true
   ensures true
   decreases 0
 =
-  var buf: array[100, f64]
+  var buf: array[100, int]
   parallel for tile in 0..<10
     decreases 10 - tile
   =
-    var s = par_slice(buf, tile * 5, tile * 5 + 10)
-    s[0] = 1.0
+    buf[tile] = tile

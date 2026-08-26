@@ -1,6 +1,6 @@
-proc bad[T](x: T) -> int
+def bad[T](x: T) -> int
   requires true
-  ensures true
+  ensures result == 0
   decreases 0
 =
   return x

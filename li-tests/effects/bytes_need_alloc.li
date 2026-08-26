@@ -1,0 +1,5 @@
+def use_bytes(b: bytes) -> int
+  requires true
+  ensures true
+=
+  return 0

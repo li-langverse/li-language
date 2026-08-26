@@ -1,0 +1,51 @@
+---
+description: Li reads like prose — Python-style simplicity, domain names, obvious behavior
+alwaysApply: true
+---
+
+# Readability philosophy (simplicity)
+
+Li is **correct first**, but user code should feel like **Python that keeps its promises**: what you read is what it does.
+
+## Core rule
+
+**Code should read like short prose.** A new reader can predict behavior from names and layout without hunting definitions.
+
+Inspired by Python ([PEP 20](https://peps.python.org/pep-0020/)): *Simple is better than complex. Readability counts. Explicit is better than implicit.*
+
+Full doc: `docs/language/philosophy.md` · Canonical casing: `docs/language/naming-conventions.md`
+
+## Naming
+
+| Kind | Style | Examples |
+|------|--------|----------|
+| **Import / package** | Domain dotted path | `import physics.runtime`, `import math` |
+| **GitHub repo** | `li-` + import (dots → hyphens) | `li-physics-runtime` |
+| **`def`** | snake_case **verb phrase** | `step_world`, `apply_gravity`, `load_scene` |
+| **type / object** (class name) | **PascalCase** `ClassName` | `PhysicsWorld`, `RigidBody`, `Vec3` |
+| **variable / field** | snake_case; scope-sized | `time_step`, `inv_mass`; `i` in tiny loops |
+| **bool** | `is_` / `has_` / `can_` | `is_stable`, `has_collision` |
+
+**Types:** PascalCase only (`RigidBody`). **Not** `rigid_body`, `physicsWorld`, or camelCase for type names.
+
+**Avoid in user-facing code:** `li_std_*`, `mgr`, `cfg`, `tmp` in public APIs, abbreviations that need a glossary.
+
+## Syntax habits
+
+- One obvious way per task (one loop shape with `decreases`, one parallel form with `disjoint`).
+- Contracts state plain promises: `requires dt > 0`, `ensures energy_drift < bound` — not cryptic ids.
+- Prefer explicit effects (`raises IO`) over hidden side channels.
+
+## Pseudocode test
+
+Before landing a sample or API: write one sentence of English, then check that the Li names are the same words in order. If not, rename.
+
+## Proof vs clarity
+
+Provability **does not** excuse opaque names. Refactor for readability; only then add or tighten contracts.
+
+## Do not
+
+- Sacrifice readable names for micro-optimization in docs or stdlib examples.
+- Introduce new import prefixes when `physics.*` / `math.*` / `ui` can carry the feature.
+- Copy C++/Java naming (`IProvider`, `CBody`, `getX()` everywhere) unless interoperating with extern C.

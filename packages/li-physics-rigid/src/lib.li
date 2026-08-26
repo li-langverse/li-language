@@ -1,0 +1,88 @@
+
+type RigidBody = object
+  public px: float
+  public py: float
+  public pz: float
+  public vx: float
+  public vy: float
+  public vz: float
+  public inv_mass: float
+  public radius: float
+
+type Contact = object
+  public body_a: int
+  public body_b: int
+  public depth: float
+def li_std_physics_rigid_version() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+def rigid_integrate_semi_implicit(b: var RigidBody, fx: float, fy: float, fz: float, dt: float) -> unit
+  requires dt > 0.0
+  ensures result == 0
+  decreases 0
+=
+  if b.inv_mass > 0.0:
+    b.vx = b.vx + fx * b.inv_mass * dt
+    b.vy = b.vy + fy * b.inv_mass * dt
+    b.vz = b.vz + fz * b.inv_mass * dt
+  b.px = b.px + b.vx * dt
+  b.py = b.py + b.vy * dt
+  b.pz = b.pz + b.vz * dt
+def aabb_overlap(
+    min_ax: float, min_ay: float, max_ax: float, max_ay: float,
+    min_bx: float, min_by: float, max_bx: float, max_by: float) -> int
+  requires true
+  ensures result >= 0
+  ensures result <= 1
+  decreases 0
+=
+  if max_ax < min_bx:
+    return 0
+  if max_bx < min_ax:
+    return 0
+  if max_ay < min_by:
+    return 0
+  if max_by < min_ay:
+    return 0
+  return 1
+def sphere_sphere_overlap(
+    ax: float, ay: float, az: float, ra: float,
+    bx: float, by: float, bz: float, rb: float) -> int
+  requires ra >= 0.0
+  requires rb >= 0.0
+  ensures result >= 0
+  ensures result <= 1
+  decreases 0
+=
+  var dx: float = bx - ax
+  var dy: float = by - ay
+  var dz: float = bz - az
+  var r: float = ra + rb
+  if dx * dx + dy * dy + dz * dz <= r * r:
+    return 1
+  return 0
+
+# One PGS iteration for normal impulse (scalar, 1D constraint)
+def pgs_resolve_normal(
+    vn: float, impulse: float, bias: float, mass_inv: float) -> float
+  requires mass_inv >= 0.0
+  ensures result == impulse + lambda_n
+  decreases 0
+=
+  var lambda_n: float = -(vn + bias) / mass_inv
+  if lambda_n < 0.0:
+    lambda_n = 0.0
+  return impulse + lambda_n
+def broadphase_cell_index(x: float, cell_size: float) -> int
+  requires cell_size > 0.0
+  ensures result == c
+  decreases 0
+=
+  var c: int = 0
+  if x >= 0.0:
+    c = 0
+  return c

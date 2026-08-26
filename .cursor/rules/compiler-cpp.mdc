@@ -19,7 +19,7 @@ One responsibility per library; Ninja should rebuild only changed libs.
 ## Style
 
 - **C++17**; no exceptions in hot paths; `std::expected` or `Result<T,E>` for errors
-- LLVM via direct C++ API (same major as system LLVM 18)
+- LLVM via direct C++ API (same major as system LLVM 22)
 - Mirror pipeline stages in the design spec: parse → check → MIR → LLVM IR
 
 ## Diagnostics

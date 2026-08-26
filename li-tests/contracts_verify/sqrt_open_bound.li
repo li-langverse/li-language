@@ -1,0 +1,12 @@
+# P-float: real sqrt call; abs(error) postcondition stays open until Float lemmas land.
+extern def li_rt_sqrt(x: float) -> float
+  requires true
+  ensures true
+  decreases 0
+
+def sqrt_open(x: float) raises IO -> float
+  requires x >= 0.0
+  ensures abs(result * result - x) < 1e-12
+  decreases 0
+=
+  return li_rt_sqrt(x)

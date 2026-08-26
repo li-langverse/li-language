@@ -1,0 +1,28 @@
+extern def tetris_open(width_px: int, height_px: int) -> ptr
+  requires width_px > 0 and height_px > 0
+  ensures true
+  decreases 0
+
+extern def tetris_poll_key(ctx: ptr) -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def tetris_begin_frame(ctx: ptr)
+  requires true
+  ensures true
+  decreases 0
+
+def run_game() raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var ctx: ptr = tetris_open(240, 480)
+  var running: int = 1
+  while running == 1:
+    var key: int = tetris_poll_key(ctx)
+    if key == -1:
+      running = 0
+    tetris_begin_frame(ctx)
+  return 0

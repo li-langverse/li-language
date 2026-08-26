@@ -1,0 +1,22 @@
+[package]
+name = "li-schema"
+version = "0.1.0"
+edition = "2026"
+license = "Apache-2.0 OR MIT"
+description = "SQL migration + OpenAPI subset for setup-censor SchemaCatalog"
+
+[dependencies]
+# path = { path = "../other" }   # lip 8b+
+# registry = "1.0.0"             # lip 8d+
+
+[package.metadata.li]
+github_repo = "li-schema"
+import_name = "schema"
+min_lic = "0.1.0"
+maintainer = "li-langverse"
+pkg_id = "PKG-li-schema"
+
+[package.repository]
+url = "https://github.com/li-langverse/li-schema"
+documentation = "https://li-langverse.github.io/li-language/ecosystem/li-schema/"
+changelog = "https://github.com/li-langverse/li-schema/blob/main/CHANGELOG.md"

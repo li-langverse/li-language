@@ -1,0 +1,22 @@
+[package]
+name = "li-core"
+version = "0.1.0"
+edition = "2026"
+license = "Apache-2.0 OR MIT"
+description = "Li package li-core"
+
+[dependencies]
+# path = { path = "../other" }   # lip 8b+
+# registry = "1.0.0"             # lip 8d+
+
+[package.metadata.li]
+github_repo = "li-core"
+import_name = "core"
+min_lic = "0.1.0"
+maintainer = "li-langverse"
+pkg_id = "PKG-li-core"
+
+[package.repository]
+url = "https://github.com/li-langverse/li-core"
+documentation = "https://li-langverse.github.io/li-language/ecosystem/li-core/"
+changelog = "https://github.com/li-langverse/li-core/blob/main/CHANGELOG.md"

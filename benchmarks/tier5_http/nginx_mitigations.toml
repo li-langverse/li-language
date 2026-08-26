@@ -1,0 +1,139 @@
+# Read-only nginx security checklist (oracle for li-httpd proofs/exploits).
+# Updated via benchmarks/harness/audit_nginx_src.py — no Li port tracking (no li_done).
+
+[audit]
+nginx_tag = "release-1.26.2"
+nginx_version = "1.26.2"
+changes_fixture = "fixtures/nginx-1.26.2-CHANGES.txt"
+submodule_path = "third_party/nginx"
+purpose = "read-only source + CHANGES audit; not vendored into Li packages"
+
+[[mitigation]]
+id = "duplicate_content_length"
+cve = ["CVE-2019-20372"]
+nginx_version_fixed = "1.17.7"
+src = "src/http/ngx_http_parse.c"
+symbol = "ngx_http_parse_header_line"
+notes = "reject duplicate Content-Length; CL+TE both present is an error"
+exploit = "exploits/duplicate_content_length.toml"
+li_invariant = "single parser rejects duplicate Content-Length"
+
+[[mitigation]]
+id = "client_header_timeout"
+cve = []
+nginx_version_fixed = "0.5.0"
+src = "src/http/ngx_http_request.c"
+symbol = "ngx_http_process_request_header"
+notes = "slowloris: client_header_timeout closes idle header readers"
+exploit = ""
+li_invariant = "header read bounded by configured timeout"
+
+[[mitigation]]
+id = "large_client_header_buffers"
+cve = ["CVE-2013-2028"]
+nginx_version_fixed = "1.5.6"
+src = "src/http/ngx_http_request.c"
+symbol = "ngx_http_process_request_line"
+notes = "oversized request line/headers rejected via large_client_header_buffers"
+exploit = ""
+li_invariant = "request line and header aggregate size capped"
+
+[[mitigation]]
+id = "client_max_body_size"
+cve = []
+nginx_version_fixed = "0.1.0"
+src = "src/http/ngx_http_request_body.c"
+symbol = "ngx_http_read_client_request_body"
+notes = "body size limited before buffering to disk/upstream"
+exploit = ""
+li_invariant = "body_len ≤ configured max before proxy"
+
+[[mitigation]]
+id = "request_smuggling_cl_te"
+cve = []
+nginx_version_fixed = "1.17.0"
+src = "src/http/ngx_http_parse.c"
+symbol = "ngx_http_parse_header_line"
+notes = "reject requests with both Content-Length and Transfer-Encoding"
+exploit = ""
+li_invariant = "mutually exclusive CL and TE on one request"
+
+[[mitigation]]
+id = "merge_slashes_path"
+cve = []
+nginx_version_fixed = "0.7.0"
+src = "src/http/ngx_http_core_module.c"
+symbol = "ngx_http_merge_slashes"
+notes = "normalize URI slashes; blocks some traversal via // and dot segments"
+exploit = ""
+li_invariant = "canonical path before static/proxy dispatch"
+
+[[mitigation]]
+id = "proxy_duplicate_headers"
+cve = []
+nginx_version_fixed = "1.7.5"
+src = "src/http/ngx_http_upstream.c"
+symbol = "ngx_http_upstream_process_headers"
+notes = "upstream duplicate Content-Length / TE rejected at proxy seam"
+exploit = ""
+li_invariant = "at most one Content-Length from upstream"
+
+[[mitigation]]
+id = "h2_rapid_reset"
+cve = ["CVE-2019-9511", "CVE-2019-9513", "CVE-2019-9516"]
+nginx_version_fixed = "1.17.6"
+src = "src/http/v2/ngx_http_v2.c"
+symbol = "ngx_http_v2_read_handler"
+notes = "HTTP/2 flood controls; stream reset rate limits (M2 gate)"
+exploit = ""
+li_invariant = "HTTP/2 stream creation and reset bounded"
+
+[[mitigation]]
+id = "tls_record_iv_unique"
+cve = ["CWE-330"]
+nginx_version_fixed = ""
+src = "src/event/ngx_event_openssl.c"
+symbol = "ngx_ssl_create_connection"
+notes = "OpenSSL RAND_bytes for record IV; Li Tier F BadRng inject via bench.toml"
+exploit = "exploits/rng_constant_bytes.toml"
+li_invariant = "AEAD IV unique per record under fixed key; BadRng must not yield valid duplicates"
+
+[[mitigation]]
+id = "rng_no_partial_read"
+cve = []
+nginx_version_fixed = ""
+src = "docs/superpowers/specs/li-rng.md"
+symbol = "fill_bytes"
+notes = "Li fill_bytes rejects partial read without error (no nginx port)"
+exploit = "exploits/rng_partial_fill.toml"
+li_invariant = "fill_bytes errors if fewer than requested bytes"
+
+[[mitigation]]
+id = "config_prng_tls_production_gate"
+cve = []
+nginx_version_fixed = ""
+src = "scripts/httpd_rng.py"
+symbol = "validate_rng_config"
+notes = "validate-config rejects prng-on-TLS for production profile"
+exploit = "exploits/rng_prng_on_tls_prod.toml"
+li_invariant = "HttpdConfig rejects mode=prng for TLS on production profile unless allow_insecure_rng"
+
+[[mitigation]]
+id = "prob_iv_collision_bound"
+cve = []
+nginx_version_fixed = ""
+src = "li-tests/rng/iv_collision_oracle.li"
+symbol = "mc_iv_collision_os"
+notes = "prob_ensures iv_collision < epsilon given OsRngUniform; BadRng fails MC"
+exploit = "exploits/rng_repeat_iv.toml"
+li_invariant = "prob_ensures iv_collision < epsilon given OsRngUniform"
+
+[[mitigation]]
+id = "dns_resolver_limits"
+cve = ["CVE-2021-23017", "CVE-2016-0747"]
+nginx_version_fixed = "1.9.13"
+src = "src/core/ngx_resolver.c"
+symbol = "ngx_resolver_create_name_query"
+notes = "resolver answer size and CNAME chain depth capped"
+exploit = ""
+li_invariant = "DNS response parsing bounded; no unbounded CNAME chains"

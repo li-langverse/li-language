@@ -1,0 +1,27 @@
+type Animal = object
+  public legs: int
+
+def Animal_speak(self: Animal) -> int
+  requires true
+  ensures result == self.legs
+  decreases 0
+=
+  return self.legs
+
+type Dog = object of Animal
+  public barks: int
+
+@override
+def Dog_speak(self: Dog) -> float
+  requires true
+  ensures true
+  decreases 0
+=
+  return 0.0
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return 0

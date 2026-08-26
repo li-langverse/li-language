@@ -1,0 +1,18 @@
+[package]
+name = "li-lig-present"
+version = "0.1.0"
+edition = "2026"
+license = "Apache-2.0 OR MIT"
+description = "Li GPU present layer — host present active, swapchain create, frame present (PH-HW WP3)"
+
+[package.metadata.li]
+github_repo = "li-lig-present"
+import_name = "lig.present"
+min_lic = "0.1.0"
+maintainer = "li-langverse"
+pkg_id = "PKG-li-lig-present"
+
+[package.repository]
+url = "https://github.com/li-langverse/li-lig-present"
+documentation = "https://li-langverse.github.io/li-language/ecosystem/li-lig-present/"
+changelog = "https://github.com/li-langverse/li-lig-present/blob/main/CHANGELOG.md"

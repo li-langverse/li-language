@@ -1,0 +1,5 @@
+{"id":"contracts_verify/discharge_trivial.li","spec":"proved","lean":"proved","mir_witness":"n/a","open_goals":0}
+{"id":"contracts_verify/discharge_const.li","spec":"proved","lean":"proved","mir_witness":"linked","open_goals":0}
+{"id":"contracts_verify/sqrt_open_bound.li","spec":"proved","lean":"proved","mir_witness":"n/a","open_goals":0,"gap_id":"G-lean"}
+{"id":"contracts_verify/linalg_dot4_int_loop_open.li","spec":"open","lean":"open","mir_witness":"linked","open_goals":2,"gap_id":"G-vc"}
+{"id":"contracts_verify/witnessed_ensures_ident.li","spec":"proved","lean":"proved","mir_witness":"linked","open_goals":0}

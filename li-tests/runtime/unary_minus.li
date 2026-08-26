@@ -1,0 +1,42 @@
+# Regression: `-x` on a general expression must lower to real negation.
+# The C++ parser previously dropped the minus for non-literal operands
+# (`-g()` compiled to `g()`), and the li_rt_ast_int(int64_t) ABI mismatch
+# zero-extended negative int extern args (4294967295 instead of -1).
+extern def li_rt_ast_int(v: int) -> int
+  requires true
+  ensures true
+
+def g() -> int
+  requires true
+  ensures result == 5
+  decreases 0
+=
+  return 5
+
+def h() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+def main() raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var x: int = -g()
+  if x != -5:
+    return 1
+  var y: int = -h()
+  if y != -1:
+    return 2
+  # negative value through an extern int arg must stay signed
+  li_rt_ast_int(-g())
+  li_rt_ast_int(-1)
+  var a: array[64, int]
+  a[0] = -1
+  li_rt_ast_int(a[0])
+  if a[0] != -1:
+    return 3
+  return 0

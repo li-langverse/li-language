@@ -1,0 +1,27 @@
+type NumericalTargets = object
+  public max_energy_drift: float
+  public target_fps: int
+
+type PhysicsProfile = object
+  public tier: int
+  public dt: float
+  public substeps: int
+  public targets: NumericalTargets
+
+def physics_tier_arcade() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return 0
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var p: PhysicsProfile
+  p.tier = physics_tier_arcade()
+  p.dt = 1.0 / 60.0
+  p.substeps = 1
+  return 0

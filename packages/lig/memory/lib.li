@@ -1,0 +1,24 @@
+# lig.memory — PH-HW HW-3 (canonical: packages/lig/src/lib.li).
+
+def lig_memory_budget_mib() -> int
+  requires true
+  ensures result == 512
+  decreases 0
+=
+  return 512
+
+def lig_alloc_within_budget(ledger: var LigMemoryLedger, bytes: int) -> int
+  requires bytes >= 0
+  ensures result >= 0
+  ensures result <= 1
+  decreases bytes
+=
+  if bytes == 0:
+    return 1
+  var cap: int = ledger.budget_mib * 1048576
+  if ledger.allocated_bytes + bytes > cap:
+    return 0
+  ledger.allocated_bytes = ledger.allocated_bytes + bytes
+  if ledger.allocated_bytes > ledger.peak_bytes:
+    ledger.peak_bytes = ledger.allocated_bytes
+  return 1

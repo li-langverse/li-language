@@ -1,0 +1,9 @@
+[n]
+value = 20
+
+[sim]
+dt = 0.0166667
+steps = 600
+
+[conservation]
+energy_drift_max = 0.05

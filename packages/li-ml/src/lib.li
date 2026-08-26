@@ -1,0 +1,8 @@
+import lig
+# li-ml (PH-HW WP4): use lig.kernel.matmul_f32 via LKIR + lig_backend_select_auto.
+def ml_lig_matmul_id() -> int
+  requires true
+  ensures result == lig_kernel_matmul_f32()
+  decreases 0
+=
+  return lig_kernel_matmul_f32()

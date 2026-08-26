@@ -1,0 +1,8 @@
+import std.runtime.seam
+
+def calls_listen_without_net(port: int) raises IO -> int
+  requires true
+  ensures result == tcp_listen(port)
+  decreases 0
+=
+  return tcp_listen(port)

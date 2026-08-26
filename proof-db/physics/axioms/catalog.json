@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "vertical": "physics",
+  "generated_at": "2026-05-25T00:00:00Z",
+  "entries": [
+    {
+      "id": "AX-PHYS-001",
+      "status": "target",
+      "family": "newton",
+      "statement": "Newton first law (inertia).",
+      "li_stub": "proof-db/physics/axioms/newton_laws.li",
+      "bench_catalog": [],
+      "bench_harness_note": "Kinematic baseline.",
+      "li_tests": []
+    },
+    {
+      "id": "AX-PHYS-002",
+      "status": "target",
+      "family": "newton",
+      "statement": "Newton second law: F = m a.",
+      "li_stub": "proof-db/physics/axioms/newton_laws.li",
+      "bench_catalog": [
+        "three_body",
+        "nbody_gravity"
+      ],
+      "bench_harness_note": "TIER2: three_body, nbody_gravity",
+      "li_tests": [
+        "li-tests/physics/three_body_mini.li"
+      ]
+    },
+    {
+      "id": "AX-PHYS-003",
+      "status": "target",
+      "family": "newton",
+      "statement": "Newton third law: equal and opposite pairwise forces.",
+      "li_stub": "proof-db/physics/axioms/newton_laws.li",
+      "bench_catalog": [
+        "md_lennard_jones",
+        "nbody_gravity"
+      ],
+      "bench_harness_note": "tier2_physics/md_lennard_jones, nbody_gravity",
+      "li_tests": []
+    },
+    {
+      "id": "AX-PHYS-004",
+      "status": "target",
+      "family": "conservation",
+      "statement": "Isolated system energy drift bounded.",
+      "li_stub": "proof-db/physics/axioms/conservation.li",
+      "bench_catalog": [
+        "md_lennard_jones",
+        "harmonic_oscillator_chain",
+        "wave_equation_1d"
+      ],
+      "bench_harness_note": "md_lennard_jones drift gate plan \u00a72c",
+      "li_tests": [
+        "li-tests/benchmarks/tier0_correctness/md_energy_single_step.li"
+      ]
+    },
+    {
+      "id": "AX-PHYS-005",
+      "status": "target",
+      "family": "conservation",
+      "statement": "Isolated system linear momentum invariant.",
+      "li_stub": "proof-db/physics/axioms/conservation.li",
+      "bench_catalog": [
+        "three_body",
+        "nbody_gravity"
+      ],
+      "bench_harness_note": "three_body, nbody_gravity",
+      "li_tests": [
+        "li-tests/benchmarks/tier0_correctness/three_body_invariants.li",
+        "li-tests/physics/profile_defaults.li"
+      ]
+    }
+  ]
+}

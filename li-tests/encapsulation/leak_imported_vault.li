@@ -1,0 +1,8 @@
+import vault_lib
+
+def leak(v: Vault) -> int
+  requires true
+  ensures result == v.secret
+  decreases 0
+=
+  return v.secret

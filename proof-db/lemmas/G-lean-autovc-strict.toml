@@ -1,0 +1,13 @@
+id = "G-lean-autovc-strict"
+kind = "lemma"
+field = "compiler"
+gap_id = "G-lean"
+backlog_id = "P-meta"
+statement = "Strict build: no open AutoVC Prop without _proved theorem."
+li_specimen = "li-tests/modules/greeter/greeter.li"
+lean_thm = "check-autovc-open-goals.sh"
+lean_module = "build/generated/AutoVC.lean"
+proof_status = "open"
+release_pin = "2026-05-25"
+release_lic = "dev"
+evidence = ["scripts/check-autovc-open-goals.sh", "scripts/ci.sh"]

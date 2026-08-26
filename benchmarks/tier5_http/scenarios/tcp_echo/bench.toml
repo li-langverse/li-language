@@ -1,0 +1,19 @@
+name = "tcp_echo"
+phase = "p0"
+enabled = false
+
+[server]
+kind = "tcp_echo"
+listen_port = 19090
+
+[verify]
+# Harness stub: scenario present for tier5 matrix; timing needs tcpkali (nightly).
+requests = []
+
+[load]
+tool = "tcpkali"
+threads = 4
+connections = 100
+
+[metrics]
+collect = ["conn_per_sec", "p50_latency_ms"]

@@ -6,6 +6,7 @@
 
 namespace li {
 
-bool emit_llvm_ir(const MirModule& mir, const std::string& out_path, std::string* error);
+bool emit_llvm_ir(const MirModule& mir, const std::string& out_path, int runtime_threads,
+                  std::string* error);
 
 }  // namespace li

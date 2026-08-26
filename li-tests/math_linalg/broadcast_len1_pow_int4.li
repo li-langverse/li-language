@@ -1,0 +1,18 @@
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var base: array[4, int]
+  base[0] = 2
+  base[1] = 2
+  base[2] = 2
+  base[3] = 2
+  var exp: array[1, int]
+  exp[0] = 3
+  var out: array[4, int] = base ** exp
+  if out[0] != 8:
+    return 1
+  if out[3] != 8:
+    return 2
+  return 0

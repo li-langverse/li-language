@@ -1,0 +1,25 @@
+[package]
+name = "li-scene"
+version = "0.1.0"
+edition = "2026"
+license = "Apache-2.0 OR MIT"
+description = "Li scene graph and entity transforms for games and simulation"
+
+[dependencies]
+li-math = { path = "../li-math" }
+
+[package.metadata.li]
+github_repo = "li-scene"
+import_name = "scene"
+min_lic = "0.1.0"
+maintainer = "li-langverse"
+pkg_id = "PKG-li-scene"
+
+[package.metadata.studio]
+particle_tiers_hook = "packages/li-scene/bench/particle_tiers.toml"
+md_kernel = "md_lennard_jones"
+
+[package.repository]
+url = "https://github.com/li-langverse/li-scene"
+documentation = "https://li-langverse.github.io/li-language/ecosystem/li-scene/"
+changelog = "https://github.com/li-langverse/li-scene/blob/main/CHANGELOG.md"

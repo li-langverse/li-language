@@ -1,4 +1,4 @@
-proc narrow(x: int) -> float
+def narrow(x: int) -> float
   requires true
   ensures true
   decreases 0

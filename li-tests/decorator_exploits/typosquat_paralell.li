@@ -1,0 +1,7 @@
+@my_paralell
+def apply_tile(tile: int) -> int
+  requires true
+  ensures result == tile
+  decreases 0
+=
+  return tile

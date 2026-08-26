@@ -1,0 +1,13 @@
+async def inner() raises Async -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+async def outer() raises Async -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return await inner()

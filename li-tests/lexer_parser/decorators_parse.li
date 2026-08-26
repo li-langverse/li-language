@@ -1,0 +1,14 @@
+@cpu
+@parallel(threads=auto, disjoint=disjoint_row)
+@vectorized(lanes=8)
+def decorated_kernel(x: array[8, float64]) -> float64
+  requires True
+=
+  var acc: float64 = 0.0
+  @parallel(disjoint=disjoint_elem)
+  parallel for i in 0..<8
+    requires disjoint_elem(i, x)
+    decreases 8 - i
+  =
+    acc = acc + x[i]
+  return acc

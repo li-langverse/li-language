@@ -1,0 +1,29 @@
+[[tests]]
+suite = "smoke"
+file = "smoke/builds.li"
+outcome = "verify_ok"
+note = "T-PKG-li-gui-smoke"
+
+[[tests]]
+suite = "smoke"
+file = "smoke/viewport_panel_switch.li"
+outcome = "compile_open_ok"
+note = "T-PKG-li-gui-viewport-panel-switch"
+
+[[tests]]
+suite = "smoke"
+file = "smoke/viewport_selection.li"
+outcome = "compile_open_ok"
+note = "T-PKG-li-gui-viewport-selection"
+
+[[tests]]
+suite = "smoke"
+file = "smoke/studio_keyboard.li"
+outcome = "compile_open_ok"
+note = "T-PKG-li-gui-studio-keyboard-ux09"
+
+[[tests]]
+suite = "smoke"
+file = "smoke/studio_keyboard_input_json.li"
+outcome = "compile_open_ok"
+note = "T-PKG-li-gui-studio-keyboard-input-json-ux09"

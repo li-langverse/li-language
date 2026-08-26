@@ -1,0 +1,91 @@
+# Tier-3 ecosystem: async/await codegen overhead (sync stub reactor).
+async def leaf() raises Async -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  return 1
+
+async def d1() raises Async -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  return await leaf()
+
+async def d2() raises Async -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  return await d1()
+
+async def d3() raises Async -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  return await d2()
+
+async def d4() raises Async -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  return await d3()
+
+async def d5() raises Async -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  return await d4()
+
+async def d6() raises Async -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  return await d5()
+
+async def d7() raises Async -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  return await d6()
+
+async def d8() raises Async -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  return await d7()
+
+async def d9() raises Async -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  return await d8()
+
+async def d10() raises Async -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  return await d9()
+
+async def run_chain() raises Async -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return await d10()
+
+def main() raises Async -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return run_chain()

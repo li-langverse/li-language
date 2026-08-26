@@ -1,0 +1,13 @@
+@cpu
+@parallel(disjoint=disjoint_elem)
+def par_def_only() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var buf: array[8, f64]
+  parallel for i in 0..<8
+    decreases 8 - i
+  =
+    buf[i] = 1.0
+  return 0

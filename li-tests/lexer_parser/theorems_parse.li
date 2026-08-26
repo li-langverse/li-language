@@ -1,0 +1,14 @@
+# theorem/lemma/axiom declarations — grammar smoke fixture (parse only)
+
+axiom peano_zero_not_succ(n: int) : not (n + 1 == 0)
+
+axiom peano_succ_injective(a: int, b: int) : (a + 1 == b + 1) -> a == b
+
+axiom order_trichotomy_nat(a: int, b: int) : (a < b) or (a == b) or (b < a)
+
+axiom order_antisym(a: int, b: int) : (a <= b and b <= a) -> a == b
+
+theorem add_comm_float(a: float, b: float) : a + b == b + a
+
+lemma order_transitive(a: int, b: int, c: int) :
+  (a < b and b < c) -> a < c

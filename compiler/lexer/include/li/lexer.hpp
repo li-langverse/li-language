@@ -21,6 +21,8 @@ class Lexer {
   char advance();
   void skip_whitespace_inline();
   bool lex_number(Token& out, bool is_float_start = false);
+  bool lex_binary_literal(Token& out);
+  void lex_literal_suffix(Token& out, bool is_float);
   bool lex_ident_or_keyword(Token& out);
   bool lex_string(Token& out);
   void push_token(Token t);

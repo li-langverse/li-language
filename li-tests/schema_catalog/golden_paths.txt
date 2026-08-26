@@ -1,0 +1,7 @@
+$.api_keys[*].token
+$.api_keys.token
+$.token
+$.users[*].password_hash
+$.users.password_hash
+$.password_hash
+$.choices[*].message.tool_calls[*].raw_stderr

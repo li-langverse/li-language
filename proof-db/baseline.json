@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "release_pin": "2026-05-25",
+  "proved_count": 6,
+  "total_count": 8,
+  "records": [
+    {
+      "id": "AutoVC.vc_greet_decreases_0_proved",
+      "status": "proved",
+      "source": "autovc",
+      "file": "build/generated/AutoVC.lean"
+    },
+    {
+      "id": "AutoVC.vc_greet_ensures_0_proved",
+      "status": "proved",
+      "source": "autovc",
+      "file": "build/generated/AutoVC.lean"
+    },
+    {
+      "id": "AutoVC.vc_greet_requires_0_proved",
+      "status": "proved",
+      "source": "autovc",
+      "file": "build/generated/AutoVC.lean"
+    },
+    {
+      "id": "Li.Discharge.discharge_corpus_placeholder",
+      "status": "placeholder",
+      "source": "discharge",
+      "file": "docs/semantics/Discharge.lean"
+    },
+    {
+      "id": "Li.Discharge.dot4_int_loop_eval_spec",
+      "status": "proved",
+      "source": "discharge",
+      "file": "docs/semantics/Discharge.lean"
+    },
+    {
+      "id": "Li.Discharge.mat2_at2_float_spec_proved",
+      "status": "proved",
+      "source": "discharge",
+      "file": "docs/semantics/Discharge.lean"
+    },
+    {
+      "id": "Li.Discharge.sqrt_open_bound_placeholder",
+      "status": "placeholder",
+      "source": "discharge",
+      "file": "docs/semantics/Discharge.lean"
+    },
+    {
+      "id": "Li.core_stub_ok",
+      "status": "proved",
+      "source": "core",
+      "file": "docs/semantics/Core.lean"
+    }
+  ]
+}

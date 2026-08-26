@@ -7,12 +7,15 @@ This directory holds the **canonical mathematical definition** of Li Core and th
 | File | Role |
 |------|------|
 | `trusted.lean` | **Only** unproved axioms (`IO`, extern hooks) — audited, minimal |
-| `Core.lean` (planned) | Typing rules, contract semantics, `decreases` |
+| `Core.lean` | Phase **2f** stub (`core_stub_ok`); full rules planned |
 | `MIR.lean` (planned) | Preservation lemmas for lowering |
+| [`proof-db/`](../../proof-db/README.md) | Standard lemma registry + `ProofDB.lean` |
 
 ## Rule
 
 User `.li` modules may **not** add axioms. If it is not provable from `Core` + lemmas, it does not compile.
+
+**Today:** `Core.lean` is a **stub**; every `lic build` writes `build/generated/AutoVC.lean` (typed contract Props). Default `lic build` runs `lake build AutoVC` when Lean 4 is installed (`--no-lean-verify` to skip). Kernel discharge of all ensures is not yet wired. See **[Provability gaps](../verification/provability-gaps.md)** (**G-lean**, **G-trust**, **G-vc**).
 
 ## Building
 

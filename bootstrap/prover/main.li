@@ -1,0 +1,1218 @@
+# Li native proof engine — Layer 3 self-host (bootstrap/prover/main.li)
+#
+# The rewriting half of the discharge engine, written in li. `lic` serializes
+# each `theorem`/`lemma` proposition (int-encoded pre-order tree, comma
+# separated) as one argv entry, runs this binary, and reads one verdict per
+# line (1 = proved by rewriting, 0 = open). The linear-integer-arithmetic
+# half (Fourier-Motzkin) stays a compiler builtin, like `omega` in Lean.
+#
+# Node encoding (kind, size, ...):
+#   0 INT value       1 VAR index       2 ADD   3 SUB   4 MUL   5 DIV
+#   6 LT   7 LE   8 GT   9 GE  10 EQ  11 NE  12 AND  13 OR  14 NOT  15 IMP
+#  16 TRUE 17 FALSE    18 ATOM atom-id (opaque subexpr / float literal)
+# size = total ints of the subtree (kind + size + payload + children).
+#
+# Canonical forms (flat, self-delimiting, compare via cmp_canon):
+#   const   [0, value]
+#   atom    [1, key]            (key = var index, or atom-id + 100)
+#   product [3, n, f1..fn]      (factors are consts/atoms)
+#   sum     [2, n, s,tlen,t, ..] (n terms: sign, length, canon product/const)
+
+extern def li_rt_argc() -> int
+  requires true
+  ensures true
+extern def li_rt_argv(i: int) -> ptr
+  requires true
+  ensures true
+extern def li_rt_str_byte_at(s: ptr, i: int) -> int
+  requires true
+  ensures true
+extern def li_rt_str_len(s: ptr) -> int
+  requires true
+  ensures true
+
+type Pos2048 = {p: int | 0 <= p and p < 2048}
+type Pos64 = {p: int | 0 <= p and p < 64}
+
+def peek2048(buf: var array[2048, int], p: Pos2048) -> int
+  requires true
+  ensures result == buf[p]
+  decreases 0
+=
+  return buf[p]
+
+def set2048(buf: var array[2048, int], p: Pos2048, v: int) -> int
+  requires true
+  ensures result == v
+  decreases 0
+=
+  buf[p] = v
+  return v
+
+def peek64(buf: var array[64, int], p: Pos64) -> int
+  requires true
+  ensures result == buf[p]
+  decreases 0
+=
+  return buf[p]
+
+def set64(buf: var array[64, int], p: Pos64, v: int) -> int
+  requires true
+  ensures result == v
+  decreases 0
+=
+  buf[p] = v
+  return v
+
+type Pos512 = {p: int | 0 <= p and p < 512}
+
+def peek512(buf: var array[512, int], p: Pos512) -> int
+  requires true
+  ensures result == buf[p]
+  decreases 0
+=
+  return buf[p]
+
+def set512(buf: var array[512, int], p: Pos512, v: int) -> int
+  requires true
+  ensures result == v
+  decreases 0
+=
+  buf[p] = v
+  return v
+
+# ---------------------------------------------------------------- parsing --
+
+def parse_into(s: ptr, buf: var array[2048, int]) -> int
+  requires true
+  ensures result >= 0
+  decreases 0
+=
+  var len: int = li_rt_str_len(s)
+  var i: int = 0
+  var pos: int = 0
+  var cur: int = 0
+  var neg: int = 0
+  var in_num: int = 0
+  while i < len:
+    var c: int = li_rt_str_byte_at(s, i + 0)
+    if c == 44:
+      if in_num == 1:
+        if neg == 1:
+          cur = 0 - cur
+        set2048(buf, pos + 0, cur + 0)
+        pos = pos + 1
+        cur = 0
+        neg = 0
+        in_num = 0
+    if c >= 48 and c <= 57:
+      cur = cur * 10 + (c - 48)
+      in_num = 1
+    if c == 45:
+      neg = 1
+    i = i + 1
+  if in_num == 1:
+    if neg == 1:
+      cur = 0 - cur
+    set2048(buf, pos + 0, cur + 0)
+    pos = pos + 1
+  return pos
+
+def node_size(buf: var array[2048, int], p: int) -> int
+  requires true
+  ensures result >= 2
+  decreases 0
+=
+  return peek2048(buf, p + 1)
+
+def right_child(buf: var array[2048, int], p: int) -> int
+  requires true
+  ensures result > p
+  decreases 0
+=
+  return p + 2 + node_size(buf, p + 2)
+
+def copy_node(buf: var array[2048, int], src: int, dst: var array[2048, int], d: int) -> int
+  requires true
+  ensures result >= d
+  decreases 0
+=
+  var sz: int = node_size(buf, src + 0)
+  var i: int = 0
+  while i < sz:
+    set2048(dst, d + i, peek2048(buf, src + i))
+    i = i + 1
+  return d + sz
+
+# --------------------------------------------------------- expansion ------
+
+def distribute_into(work: var array[2048, int], a: int, b: int, w: int, rem: int) -> int
+  requires rem >= 0
+  ensures result >= 0
+  decreases rem
+=
+  if rem == 0:
+    set2048(work, w + 0, 4)
+    set2048(work, w + 1, 4)
+    set2048(work, w + 2, 0)
+    set2048(work, w + 3, 1)
+    set2048(work, w + 4, 1)
+    return 5
+  var ak: int = peek2048(work, a + 0)
+  var bk: int = peek2048(work, b + 0)
+  if ak == 2 or ak == 3:
+    var s1: int = distribute_into(work, a + 2, b + 0, w + 2, rem - 1)
+    var s2: int = distribute_into(work, right_child(work, a + 0), b + 0, w + 2 + s1, rem - 1)
+    set2048(work, w + 0, ak + 0)
+    set2048(work, w + 1, 2 + s1 + s2)
+    return peek2048(work, w + 1)
+  if bk == 2 or bk == 3:
+    var s1: int = distribute_into(work, a + 0, b + 2, w + 2, rem - 1)
+    var s2: int = distribute_into(work, a + 0, right_child(work, b + 0), w + 2 + s1, rem - 1)
+    set2048(work, w + 0, bk + 0)
+    set2048(work, w + 1, 2 + s1 + s2)
+    return peek2048(work, w + 1)
+  var asz: int = node_size(work, a + 0)
+  var bsz: int = node_size(work, b + 0)
+  set2048(work, w + 0, 4)
+  set2048(work, w + 1, 2 + asz + bsz)
+  var i: int = 0
+  while i < asz:
+    set2048(work, w + 2 + i, peek2048(work, a + i))
+    i = i + 1
+  i = 0
+  while i < bsz:
+    set2048(work, w + 2 + asz + i, peek2048(work, b + i))
+    i = i + 1
+  return peek2048(work, w + 1)
+
+def expand_into(buf: var array[2048, int], p: int, work: var array[2048, int], w: int, rem: int) -> int
+  requires rem >= 0
+  ensures result >= 0
+  decreases rem
+=
+  if rem == 0:
+    set2048(work, w + 0, 18)
+    set2048(work, w + 1, 3)
+    set2048(work, w + 2, 0)
+    return 3
+  var k: int = peek2048(buf, p + 0)
+  if k == 2 or k == 3:
+    var l: int = expand_into(buf, p + 2, work, w + 2, rem - 1)
+    var r: int = expand_into(buf, right_child(buf, p + 0), work, w + 2 + l, rem - 1)
+    set2048(work, w + 0, k + 0)
+    set2048(work, w + 1, 2 + l + r)
+    return peek2048(work, w + 1)
+  if k == 4:
+    var l: int = expand_into(buf, p + 2, work, w + 2, rem - 1)
+    var r: int = expand_into(buf, right_child(buf, p + 0), work, w + 2 + l, rem - 1)
+    var csz: int = l + r
+    var si: int = 0
+    while si < csz:
+      set2048(work, 1024 + si, peek2048(work, w + 2 + si))
+      si = si + 1
+    return distribute_into(work, 1024, 1024 + l, w + 0, rem - 1)
+  if k == 5:
+    var l: int = expand_into(buf, p + 2, work, w + 2, rem - 1)
+    var r: int = expand_into(buf, right_child(buf, p + 0), work, w + 2 + l, rem - 1)
+    set2048(work, w + 0, 5)
+    set2048(work, w + 1, 2 + l + r)
+    return peek2048(work, w + 1)
+  var csz: int = copy_node(buf, p + 0, work, w + 0)
+  return csz - w
+
+# ------------------------------------------------------------ canonical ---
+
+def cmp_canon(cb: var array[2048, int], a: int, b: int, rem: int) -> int
+  requires rem >= 0
+  ensures result >= -1
+  ensures result <= 1
+  decreases rem
+=
+  if rem == 0:
+    return 0
+  var ka: int = peek2048(cb, a + 0)
+  var kb: int = peek2048(cb, b + 0)
+  if ka < kb:
+    return -1
+  if ka > kb:
+    return 1
+  if ka == 0:
+    if peek2048(cb, a + 1) < peek2048(cb, b + 1):
+      return -1
+    if peek2048(cb, a + 1) > peek2048(cb, b + 1):
+      return 1
+    return 0
+  if ka == 1:
+    if peek2048(cb, a + 1) < peek2048(cb, b + 1):
+      return -1
+    if peek2048(cb, a + 1) > peek2048(cb, b + 1):
+      return 1
+    return 0
+  if ka == 3:
+    var ma: int = peek2048(cb, a + 1)
+    var mb: int = peek2048(cb, b + 1)
+    if ma < mb:
+      return -1
+    if ma > mb:
+      return 1
+    var i: int = 0
+    while i < ma:
+      var c: int = cmp_canon(cb, a + 2 + i * 2, b + 2 + i * 2, rem - 1)
+      if c != 0:
+        return c
+      i = i + 1
+    return 0
+  var na: int = peek2048(cb, a + 1)
+  var nb: int = peek2048(cb, b + 1)
+  if na < nb:
+    return -1
+  if na > nb:
+    return 1
+  var pa: int = a + 2
+  var pb: int = b + 2
+  var i: int = 0
+  while i < na:
+    if peek2048(cb, pa + 0) < peek2048(cb, pb + 0):
+      return -1
+    if peek2048(cb, pa + 0) > peek2048(cb, pb + 0):
+      return 1
+    var ta: int = peek2048(cb, pa + 1)
+    var tb: int = peek2048(cb, pb + 1)
+    if ta < tb:
+      return -1
+    if ta > tb:
+      return 1
+    var c: int = cmp_canon(cb, pa + 2, pb + 2, rem - 1)
+    if c != 0:
+      return c
+    pa = pa + 2 + ta
+    pb = pb + 2 + tb
+    i = i + 1
+  return 0
+
+def canon_product(buf: var array[2048, int], p: int, cb: var array[2048, int], w: int) -> int
+  requires true
+  ensures result >= 2
+  decreases 0
+=
+  var ftype: array[64, int]
+  var fval: array[64, int]
+  var nf: int = 0
+  var const_acc: int = 1
+  var zero: int = 0
+  var stack: array[64, int]
+  var sp: int = 1
+  set64(stack, 0, p + 0)
+  while sp > 0:
+    var cur: int = peek64(stack, sp - 1)
+    sp = sp - 1
+    var k: int = peek2048(buf, cur + 0)
+    if k == 4:
+      set64(stack, sp + 0, cur + 2)
+      sp = sp + 1
+      set64(stack, sp + 0, right_child(buf, cur + 0))
+      sp = sp + 1
+    if k == 0:
+      var v: int = peek2048(buf, cur + 2)
+      if v == 0:
+        zero = 1
+      if v != 1:
+        const_acc = const_acc * v
+    if k == 1:
+      set64(ftype, nf + 0, 1)
+      set64(fval, nf + 0, peek2048(buf, cur + 2))
+      nf = nf + 1
+    if k == 18:
+      set64(ftype, nf + 0, 1)
+      set64(fval, nf + 0, peek2048(buf, cur + 2) + 100)
+      nf = nf + 1
+    if k == 5:
+      set64(ftype, nf + 0, 1)
+      set64(fval, nf + 0, 200 + peek2048(buf, cur + 2))
+      nf = nf + 1
+  if zero == 1:
+    set2048(cb, w + 0, 0)
+    set2048(cb, w + 1, 0)
+    return 2
+  if const_acc != 1:
+    set64(ftype, nf + 0, 0)
+    set64(fval, nf + 0, const_acc + 0)
+    nf = nf + 1
+  if nf == 0:
+    set2048(cb, w + 0, 0)
+    set2048(cb, w + 1, 1)
+    return 2
+  var i: int = 0
+  while i < nf:
+    var j: int = i + 1
+    while j < nf:
+      var ti: int = peek64(ftype, i + 0)
+      var vi: int = peek64(fval, i + 0)
+      var tj: int = peek64(ftype, j + 0)
+      var vj: int = peek64(fval, j + 0)
+      if tj < ti or (tj == ti and vj < vi):
+        set64(ftype, i + 0, tj + 0)
+        set64(fval, i + 0, vj + 0)
+        set64(ftype, j + 0, ti + 0)
+        set64(fval, j + 0, vi + 0)
+      j = j + 1
+    i = i + 1
+  if nf == 1:
+    set2048(cb, w + 0, peek64(ftype, 0))
+    set2048(cb, w + 1, peek64(fval, 0))
+    return 2
+  set2048(cb, w + 0, 3)
+  set2048(cb, w + 1, nf + 0)
+  i = 0
+  while i < nf:
+    set2048(cb, w + 2 + i * 2, peek64(ftype, i + 0))
+    set2048(cb, w + 2 + i * 2 + 1, peek64(fval, i + 0))
+    i = i + 1
+  return 2 + nf * 2
+
+def sum_term_canon(buf: var array[2048, int], p: int, cb: var array[2048, int], w: int) -> int
+  requires true
+  ensures result >= 2
+  decreases 0
+=
+  var k: int = peek2048(buf, p + 0)
+  if k == 0:
+    set2048(cb, w + 0, 0)
+    set2048(cb, w + 1, peek2048(buf, p + 2))
+    return 2
+  if k == 1:
+    set2048(cb, w + 0, 1)
+    set2048(cb, w + 1, peek2048(buf, p + 2))
+    return 2
+  if k == 18:
+    set2048(cb, w + 0, 1)
+    set2048(cb, w + 1, peek2048(buf, p + 2) + 100)
+    return 2
+  return canon_product(buf, p + 0, cb, w + 0)
+
+def canon_arith(buf: var array[2048, int], p: int, cb: var array[2048, int], w: int,
+                td: var array[2048, int], td_start: int) raises IO -> int
+  requires true
+  ensures result >= 2
+  decreases 0
+=
+  var tsign: array[64, int]
+  var tstart: array[64, int]
+  var tsize: array[64, int]
+  var td_cur: int = td_start
+  var nt: int = 0
+  var const_sum: int = 0
+  var stack: array[64, int]
+  var ssign: array[64, int]
+  var sp: int = 1
+  set64(stack, 0, p + 0)
+  set64(ssign, 0, 1)
+  while sp > 0:
+    var cur: int = peek64(stack, sp - 1)
+    var sign: int = peek64(ssign, sp - 1)
+    sp = sp - 1
+    var k: int = peek2048(buf, cur + 0)
+    if k == 2 or k == 3:
+      set64(stack, sp + 0, cur + 2)
+      set64(ssign, sp + 0, sign + 0)
+      sp = sp + 1
+      set64(stack, sp + 0, right_child(buf, cur + 0))
+      set64(ssign, sp + 0, sign + 0)
+      if k == 3:
+        set64(ssign, sp + 0, 0 - sign)
+      sp = sp + 1
+    if k == 0:
+      var delta: int = peek2048(buf, cur + 2)
+      if sign == -1:
+        delta = 0 - delta
+      const_sum = const_sum + delta
+    if k == 1:
+      set64(tsign, nt + 0, sign + 0)
+      set64(tstart, nt + 0, td_cur + 0)
+      set2048(td, td_cur + 0, 1)
+      set2048(td, td_cur + 1, peek2048(buf, cur + 2))
+      set64(tsize, nt + 0, 2)
+      td_cur = td_cur + 2
+      nt = nt + 1
+    if k == 18:
+      set64(tsign, nt + 0, sign + 0)
+      set64(tstart, nt + 0, td_cur + 0)
+      set2048(td, td_cur + 0, 1)
+      set2048(td, td_cur + 1, peek2048(buf, cur + 2) + 100)
+      set64(tsize, nt + 0, 2)
+      td_cur = td_cur + 2
+      nt = nt + 1
+    if k == 4 or k == 5:
+      set64(tsign, nt + 0, sign + 0)
+      set64(tstart, nt + 0, td_cur + 0)
+      var sz: int = sum_term_canon(buf, cur + 0, td, td_cur + 0)
+      set64(tsize, nt + 0, sz + 0)
+      td_cur = td_cur + sz
+      nt = nt + 1
+  var i: int = 0
+  while i < nt:
+    var j: int = i + 1
+    while j < nt:
+      if peek64(tsign, j + 0) != 0 and peek64(tsign, i + 0) != 0:
+        var eq: int = 0
+        if peek64(tsize, i + 0) == peek64(tsize, j + 0):
+          eq = 1
+          var t: int = 0
+          while t < peek64(tsize, i + 0):
+            if peek2048(td, peek64(tstart, i + 0) + t) != peek2048(td, peek64(tstart, j + 0) + t):
+              eq = 0
+            t = t + 1
+        if eq == 1:
+          var ns: int = peek64(tsign, i + 0) + peek64(tsign, j + 0)
+          set64(tsign, i + 0, ns + 0)
+          set64(tsign, j + 0, 0)
+          if ns == 0:
+            set64(tsign, i + 0, 0)
+      j = j + 1
+    i = i + 1
+  var kept: array[64, int]
+  var kept_sign: array[64, int]
+  var nk: int = 0
+  i = 0
+  while i < nt:
+    if peek64(tsign, i + 0) != 0:
+      set64(kept, nk + 0, i + 0)
+      set64(kept_sign, nk + 0, peek64(tsign, i + 0))
+      nk = nk + 1
+    i = i + 1
+  var kk: int = 1
+  while kk < nk:
+    var cur_term: int = peek64(kept, kk + 0)
+    var cur_sig: int = peek64(kept_sign, kk + 0)
+    var t: int = 0
+    while t < peek64(tsize, cur_term + 0):
+      set2048(cb, w + t, peek2048(td, peek64(tstart, cur_term + 0) + t))
+      t = t + 1
+    var pcur: int = kk - 1
+    var stop: int = 0
+    while pcur >= 0 and stop == 0:
+      var pa: int = peek64(kept, pcur + 0)
+      var c: int = cmp_canon(td, peek64(tstart, cur_term + 0), peek64(tstart, pa + 0), 200)
+      if c < 0:
+        set64(kept, pcur + 1, peek64(kept, pcur + 0))
+        set64(kept_sign, pcur + 1, peek64(kept_sign, pcur + 0))
+        pcur = pcur - 1
+      if c >= 0:
+        stop = 1
+    set64(kept, pcur + 1, cur_term + 0)
+    set64(kept_sign, pcur + 1, cur_sig + 0)
+    kk = kk + 1
+  if nk == 1 and const_sum == 0:
+    var only: int = peek64(kept, 0)
+    t = 0
+    while t < peek64(tsize, only + 0):
+      set2048(cb, w + t, peek2048(td, peek64(tstart, only + 0) + t))
+      t = t + 1
+    if peek64(kept_sign, 0) == -1:
+      set2048(cb, w + 0, 0)
+      set2048(cb, w + 1, 0 - peek2048(cb, w + 1))
+    return peek64(tsize, only + 0)
+  if nk == 0:
+    set2048(cb, w + 0, 0)
+    set2048(cb, w + 1, const_sum + 0)
+    return 2
+  set2048(cb, w + 0, 2)
+  var nsum: int = 0
+  if const_sum != 0:
+    nsum = 1
+  nsum = nsum + nk
+  set2048(cb, w + 1, nsum + 0)
+  var cpos: int = w + 2
+  if const_sum != 0:
+    var sv: int = const_sum
+    set2048(cb, cpos + 0, 1)
+    if sv < 0:
+      sv = 0 - sv
+      set2048(cb, cpos + 0, -1)
+    set2048(cb, cpos + 1, 2)
+    set2048(cb, cpos + 2, 0)
+    set2048(cb, cpos + 3, sv + 0)
+    cpos = cpos + 4
+  i = 0
+  while i < nk:
+    set2048(cb, cpos + 0, peek64(kept_sign, i + 0))
+    set2048(cb, cpos + 1, peek64(tsize, peek64(kept, i + 0)))
+    var t: int = 0
+    while t < peek64(tsize, peek64(kept, i + 0)):
+      set2048(cb, cpos + 2 + t, peek2048(td, peek64(tstart, peek64(kept, i + 0)) + t))
+      t = t + 1
+    cpos = cpos + 2 + peek64(tsize, peek64(kept, i + 0))
+    i = i + 1
+  return cpos - w
+
+def canon_node(buf: var array[2048, int], p: int, cb: var array[2048, int], w: int,
+               work: var array[2048, int], rem: int) raises IO -> int
+  requires rem >= 0
+  ensures result >= 2
+  decreases rem
+=
+  var k: int = peek2048(buf, p + 0)
+  if k == 0:
+    set2048(cb, w + 0, 0)
+    set2048(cb, w + 1, peek2048(buf, p + 2))
+    return 2
+  if k == 1:
+    set2048(cb, w + 0, 1)
+    set2048(cb, w + 1, peek2048(buf, p + 2))
+    return 2
+  if k == 18:
+    set2048(cb, w + 0, 1)
+    set2048(cb, w + 1, peek2048(buf, p + 2) + 100)
+    return 2
+  if k == 5:
+    var lk: int = peek2048(buf, p + 2)
+    var rk: int = peek2048(buf, right_child(buf, p + 0))
+    if rk == 0 and peek2048(buf, right_child(buf, p + 0) + 2) == 1:
+      return canon_node(buf, p + 2, cb, w + 0, work, rem - 1)
+    if lk == 0 and peek2048(buf, p + 4) == 0:
+      set2048(cb, w + 0, 0)
+      set2048(cb, w + 1, 0)
+      return 2
+  if k == 2 or k == 3 or k == 4 or k == 5:
+    var ex: int = expand_into(buf, p + 0, work, 0, rem + 0)
+    var res: int = canon_arith(work, 0, cb, w + 0, work, ex + 0)
+    return res
+  set2048(cb, w + 0, 1)
+  set2048(cb, w + 1, 300 + k)
+  return 2
+
+# ------------------------------------------------------------- discharge --
+
+def reachable(fr: int, to: int, need_strict: int, efrom: var array[64, int],
+              eto: var array[64, int], estrict: var array[64, int], ne_cnt: var array[1, int]) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  var seen: array[64, int]
+  var sst: array[64, int]
+  var n_seen: int = 0
+  var q: array[64, int]
+  var qst: array[64, int]
+  var qh: int = 0
+  var qt: int = 1
+  set64(q, 0, fr + 0)
+  set64(qst, 0, 0)
+  set64(seen, 0, fr + 0)
+  set64(sst, 0, 0)
+  n_seen = 1
+  var ne: int = ne_cnt[0]
+  while qh < qt:
+    var cur: int = peek64(q, qh + 0)
+    var cur_st: int = peek64(qst, qh + 0)
+    qh = qh + 1
+    if cur == to:
+      if need_strict == 0 or cur_st == 1:
+        return 1
+    var i: int = 0
+    while i < ne:
+      if peek64(efrom, i + 0) == cur:
+        var st: int = cur_st
+        if peek64(estrict, i + 0) == 1:
+          st = 1
+        var dup: int = 0
+        var j: int = 0
+        while j < n_seen:
+          if peek64(seen, j + 0) == peek64(eto, i + 0) and peek64(sst, j + 0) == st:
+            dup = 1
+          j = j + 1
+        if dup == 0:
+          set64(seen, n_seen + 0, peek64(eto, i + 0))
+          set64(sst, n_seen + 0, st + 0)
+          n_seen = n_seen + 1
+          set64(q, qt + 0, peek64(eto, i + 0))
+          set64(qst, qt + 0, st + 0)
+          qt = qt + 1
+      i = i + 1
+  return 0
+
+def has_eq(a: int, b: int, ea: var array[64, int], eb: var array[64, int],
+           neq_cnt: var array[1, int]) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  var neq: int = neq_cnt[0]
+  var i: int = 0
+  while i < neq:
+    if peek64(ea, i + 0) == a and peek64(eb, i + 0) == b:
+      return 1
+    if peek64(ea, i + 0) == b and peek64(eb, i + 0) == a:
+      return 1
+    i = i + 1
+  return 0
+
+def atom_key(buf: var array[2048, int], p: int) -> int
+  requires true
+  ensures result >= -1
+  decreases 0
+=
+  var k: int = peek2048(buf, p + 0)
+  if k == 1:
+    return peek2048(buf, p + 2)
+  if k == 18:
+    return peek2048(buf, p + 2) + 100
+  return -1
+
+def adopt_conjuncts(buf: var array[2048, int], p: int, efrom: var array[64, int],
+                   eto: var array[64, int], estrict: var array[64, int], ne_cnt: var array[1, int],
+                   ea: var array[64, int], eb: var array[64, int], neq_cnt: var array[1, int],
+                   lia: var array[512, int], lia_n: var array[1, int]) -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var k: int = peek2048(buf, p + 0)
+  if k == 12:
+    var r: int = adopt_conjuncts(buf, p + 2, efrom, eto, estrict, ne_cnt, ea, eb, neq_cnt, lia, lia_n)
+    r = adopt_conjuncts(buf, right_child(buf, p + 0), efrom, eto, estrict, ne_cnt, ea, eb, neq_cnt, lia, lia_n)
+    return 0
+  if k == 6 or k == 7 or k == 8 or k == 9 or k == 10 or k == 11:
+    var ak: int = atom_key(buf, p + 2)
+    var bk: int = atom_key(buf, right_child(buf, p + 0))
+    var rp2: int = right_child(buf, p + 0)
+    if ak >= 0 and bk >= 0:
+      if k == 10:
+        if has_eq(ak + 0, bk + 0, ea, eb, neq_cnt) == 0:
+          set64(ea, neq_cnt[0], ak + 0)
+          set64(eb, neq_cnt[0], bk + 0)
+          neq_cnt[0] = neq_cnt[0] + 1
+        var eq1: int = lia_con_from_diff(buf, p + 2, rp2 + 0, 0, lia, lia_n[0])
+        if eq1 == 1:
+          lia_n[0] = lia_n[0] + 1
+        var eq2: int = lia_con_from_diff(buf, rp2 + 0, p + 2, 0, lia, lia_n[0])
+        if eq2 == 1:
+          lia_n[0] = lia_n[0] + 1
+      if k == 6:
+        set64(efrom, ne_cnt[0], ak + 0)
+        set64(eto, ne_cnt[0], bk + 0)
+        set64(estrict, ne_cnt[0], 1)
+        ne_cnt[0] = ne_cnt[0] + 1
+        var lt1: int = lia_con_from_diff(buf, p + 2, rp2 + 0, -1, lia, lia_n[0])
+        if lt1 == 1:
+          lia_n[0] = lia_n[0] + 1
+      if k == 7:
+        set64(efrom, ne_cnt[0], ak + 0)
+        set64(eto, ne_cnt[0], bk + 0)
+        set64(estrict, ne_cnt[0], 0)
+        ne_cnt[0] = ne_cnt[0] + 1
+        var le1: int = lia_con_from_diff(buf, p + 2, rp2 + 0, 0, lia, lia_n[0])
+        if le1 == 1:
+          lia_n[0] = lia_n[0] + 1
+      if k == 8:
+        set64(efrom, ne_cnt[0], bk + 0)
+        set64(eto, ne_cnt[0], ak + 0)
+        set64(estrict, ne_cnt[0], 1)
+        ne_cnt[0] = ne_cnt[0] + 1
+        var gt1: int = lia_con_from_diff(buf, rp2 + 0, p + 2, -1, lia, lia_n[0])
+        if gt1 == 1:
+          lia_n[0] = lia_n[0] + 1
+      if k == 9:
+        set64(efrom, ne_cnt[0], bk + 0)
+        set64(eto, ne_cnt[0], ak + 0)
+        set64(estrict, ne_cnt[0], 0)
+        ne_cnt[0] = ne_cnt[0] + 1
+        var ge1: int = lia_con_from_diff(buf, rp2 + 0, p + 2, 0, lia, lia_n[0])
+        if ge1 == 1:
+          lia_n[0] = lia_n[0] + 1
+  return 0
+
+# ------------------------------------------------------- LIA (FM) half ----
+# Constraints live in `lia` as 16-int slots: [n, k1, c1, k2, c2, ..., rhs].
+# A constraint is Σ c_i · x_i <= rhs. `lia_n[0]` is the constraint count.
+
+def lia_lin(buf: var array[2048, int], p: int, ck: var array[64, int], cv: var array[64, int],
+            n: var array[1, int], kc: var array[1, int], fac: int) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  var k: int = peek2048(buf, p + 0)
+  if k == 0:
+    kc[0] = kc[0] + peek2048(buf, p + 2) * fac
+    return 1
+  if k == 1:
+    var key: int = peek2048(buf, p + 2)
+    var f: int = 0
+    var j: int = 0
+    while j < n[0]:
+      if peek64(ck, j + 0) == key:
+        f = 1
+        set64(cv, j + 0, peek64(cv, j + 0) + fac)
+      j = j + 1
+    if f == 0:
+      set64(ck, n[0], key)
+      set64(cv, n[0], fac + 0)
+      n[0] = n[0] + 1
+    return 1
+  if k == 2:
+    var r1: int = lia_lin(buf, p + 2, ck, cv, n, kc, fac + 0)
+    var r2: int = lia_lin(buf, right_child(buf, p + 0), ck, cv, n, kc, fac + 0)
+    if r1 == 0 or r2 == 0:
+      return 0
+    return 1
+  if k == 3:
+    var r1: int = lia_lin(buf, p + 2, ck, cv, n, kc, fac + 0)
+    var r2: int = lia_lin(buf, right_child(buf, p + 0), ck, cv, n, kc, 0 - fac)
+    if r1 == 0 or r2 == 0:
+      return 0
+    return 1
+  if k == 4:
+    var lk: int = peek2048(buf, p + 2)
+    var rp: int = right_child(buf, p + 0)
+    var rk: int = peek2048(buf, rp + 0)
+    if lk == 0 and (rk == 0 or rk == 1 or rk == 2 or rk == 3):
+      var cst: int = peek2048(buf, p + 4)
+      return lia_lin(buf, rp + 0, ck, cv, n, kc, fac * cst)
+    if rk == 0 and (lk == 0 or lk == 1 or lk == 2 or lk == 3):
+      var cst: int = peek2048(buf, rp + 2)
+      return lia_lin(buf, p + 2, ck, cv, n, kc, fac * cst)
+    return 0
+  return 0
+
+def lia_con_from_diff(buf: var array[2048, int], lp: int, rp: int, upper: int,
+                      lia: var array[512, int], ci: int) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  var ck: array[64, int]
+  var cv: array[64, int]
+  var n: array[1, int]
+  var kc: array[1, int]
+  n[0] = 0
+  kc[0] = 0
+  var r1: int = lia_lin(buf, lp + 0, ck, cv, n, kc, 1)
+  var r2: int = lia_lin(buf, rp + 0, ck, cv, n, kc, -1)
+  if r1 == 0 or r2 == 0:
+    return 0
+  if n[0] > 7:
+    return 0
+  var base: int = ci * 16
+  set512(lia, base + 0, n[0] + 0)
+  var j: int = 0
+  while j < n[0]:
+    set512(lia, base + 1 + j * 2, peek64(ck, j + 0))
+    set512(lia, base + 2 + j * 2, peek64(cv, j + 0))
+    j = j + 1
+  set512(lia, base + 15, upper - kc[0])
+  return 1
+
+# Exact Fourier-Motzkin feasibility: returns 1 iff the constraint system is
+# infeasible (no real solution, hence no integer solution).
+def lia_infeasible(lia: var array[512, int], ncon: var array[1, int]) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  var n: int = ncon[0]
+  var nlia: array[512, int]
+  var uppers: array[64, int]
+  var lowers: array[64, int]
+  var loop: int = 1
+  var guard: int = 0
+  while loop == 1 and guard < 64:
+    var i: int = 0
+    var bad: int = 0
+    while i < n:
+      if peek512(lia, i * 16 + 0) == 0 and peek512(lia, i * 16 + 15) < 0:
+        bad = 1
+      i = i + 1
+    if bad == 1:
+      return 1
+    var x: int = -1
+    var xf: int = 0
+    i = 0
+    while i < n and xf == 0:
+      if peek512(lia, i * 16 + 0) > 0:
+        x = peek512(lia, i * 16 + 1)
+        xf = 1
+      i = i + 1
+    if xf == 0:
+      return 0
+    var nn: int = 0
+    var ucnt: int = 0
+    var lcnt: int = 0
+    i = 0
+    while i < n:
+      var cx: int = 0
+      var j: int = 0
+      while j < peek512(lia, i * 16 + 0):
+        if peek512(lia, i * 16 + 1 + j * 2) == x:
+          cx = peek512(lia, i * 16 + 2 + j * 2)
+        j = j + 1
+      if cx > 0:
+        set64(uppers, ucnt, i)
+        ucnt = ucnt + 1
+      if cx < 0:
+        set64(lowers, lcnt, i)
+        lcnt = lcnt + 1
+      if cx == 0:
+        var b: int = nn * 16
+        var t: int = 0
+        while t < 16:
+          set512(nlia, b + t, peek512(lia, i * 16 + t))
+          t = t + 1
+        nn = nn + 1
+      i = i + 1
+    if ucnt > 0 and lcnt > 0:
+      var ui: int = 0
+      while ui < ucnt:
+        var u: int = peek64(uppers, ui + 0)
+        var cu: int = 0
+        var ju: int = 0
+        while ju < peek512(lia, u * 16 + 0):
+          if peek512(lia, u * 16 + 1 + ju * 2) == x:
+            cu = peek512(lia, u * 16 + 2 + ju * 2)
+          ju = ju + 1
+        var li2: int = 0
+        while li2 < lcnt:
+          var l: int = peek64(lowers, li2 + 0)
+          var aa: int = 0
+          var jl: int = 0
+          while jl < peek512(lia, l * 16 + 0):
+            if peek512(lia, l * 16 + 1 + jl * 2) == x:
+              aa = 0 - peek512(lia, l * 16 + 2 + jl * 2)
+            jl = jl + 1
+          var nb: int = nn * 16
+          set512(nlia, nb + 0, 0)
+          var ncn: int = 0
+          jl = 0
+          while jl < peek512(lia, l * 16 + 0):
+            var lk2: int = peek512(lia, l * 16 + 1 + jl * 2)
+            if lk2 != x:
+              var nv: int = cu * peek512(lia, l * 16 + 2 + jl * 2)
+              var m: int = 0
+              var mf: int = 0
+              while m < ncn:
+                if peek512(nlia, nb + 1 + m * 2) == lk2:
+                  set512(nlia, nb + 2 + m * 2, peek512(nlia, nb + 2 + m * 2) + nv)
+                  mf = 1
+                m = m + 1
+              if mf == 0:
+                set512(nlia, nb + 1 + ncn * 2, lk2)
+                set512(nlia, nb + 2 + ncn * 2, nv)
+                ncn = ncn + 1
+            jl = jl + 1
+          ju = 0
+          while ju < peek512(lia, u * 16 + 0):
+            var uk2: int = peek512(lia, u * 16 + 1 + ju * 2)
+            if uk2 != x:
+              var nv2: int = aa * peek512(lia, u * 16 + 2 + ju * 2)
+              var m: int = 0
+              var mf: int = 0
+              while m < ncn:
+                if peek512(nlia, nb + 1 + m * 2) == uk2:
+                  set512(nlia, nb + 2 + m * 2, peek512(nlia, nb + 2 + m * 2) + nv2)
+                  mf = 1
+                m = m + 1
+              if mf == 0:
+                set512(nlia, nb + 1 + ncn * 2, uk2)
+                set512(nlia, nb + 2 + ncn * 2, nv2)
+                ncn = ncn + 1
+            ju = ju + 1
+          set512(nlia, nb + 0, ncn + 0)
+          var rv: int = aa * peek512(lia, u * 16 + 15) + cu * peek512(lia, l * 16 + 15)
+          set512(nlia, nb + 15, rv)
+          if ncn == 0 and rv < 0:
+            return 1
+          nn = nn + 1
+          li2 = li2 + 1
+        ui = ui + 1
+    var copy_i: int = 0
+    while copy_i < nn * 16:
+      set512(lia, copy_i + 0, peek512(nlia, copy_i + 0))
+      copy_i = copy_i + 1
+    n = nn
+    guard = guard + 1
+  return 0
+
+def eval_cmp(buf: var array[2048, int], p: int, cb: var array[2048, int], work: var array[2048, int],
+             rem: int, efrom: var array[64, int], eto: var array[64, int],
+             estrict: var array[64, int], ne_cnt: var array[1, int],
+             ea: var array[64, int], eb: var array[64, int], neq_cnt: var array[1, int],
+                   lia: var array[512, int], lia_n: var array[1, int]) raises IO -> int
+  requires rem >= 0
+  ensures result == 0 or result == 1 or result == 2
+  decreases rem
+=
+  if rem == 0:
+    return 2
+  var k: int = peek2048(buf, p + 0)
+  var lp: int = p + 2
+  var rp: int = right_child(buf, p + 0)
+  if peek2048(buf, lp + 0) == 0 and peek2048(buf, rp + 0) == 0:
+    var lv: int = peek2048(buf, lp + 2)
+    var rv: int = peek2048(buf, rp + 2)
+    if k == 6:
+      if lv < rv:
+        return 1
+      return 0
+    if k == 7:
+      if lv <= rv:
+        return 1
+      return 0
+    if k == 8:
+      if lv > rv:
+        return 1
+      return 0
+    if k == 9:
+      if lv >= rv:
+        return 1
+      return 0
+    if k == 10:
+      if lv == rv:
+        return 1
+      return 0
+    if lv != rv:
+      return 1
+    return 0
+  var ls: int = canon_node(buf, lp + 0, cb, 0, work, rem + 0)
+  var rs: int = canon_node(buf, rp + 0, cb, ls + 0, work, rem + 0)
+  var same: int = 0
+  if ls == rs:
+    same = 1
+    var i: int = 0
+    while i < ls:
+      if peek2048(cb, i + 0) != peek2048(cb, ls + i):
+        same = 0
+      i = i + 1
+  if same == 1:
+    if k == 6 or k == 8 or k == 11:
+      return 0
+    if k == 7 or k == 9 or k == 10:
+      return 1
+    return 2
+  var ak: int = atom_key(buf, lp + 0)
+  var bk: int = atom_key(buf, rp + 0)
+  if ak < 0 or bk < 0:
+    return 2
+  if k == 10:
+    if has_eq(ak + 0, bk + 0, ea, eb, neq_cnt) == 1:
+      return 1
+    var both: int = reachable(ak + 0, bk + 0, 0, efrom, eto, estrict, ne_cnt)
+    if both == 1:
+      both = reachable(bk + 0, ak + 0, 0, efrom, eto, estrict, ne_cnt)
+    if both == 1:
+      return 1
+    var sv10: int = lia_n[0]
+    var ok10a: int = lia_con_from_diff(buf, lp + 0, rp + 0, -1, lia, sv10 + 0)
+    var inf10a: int = 0
+    if ok10a == 1:
+      lia_n[0] = sv10 + 1
+      inf10a = lia_infeasible(lia, lia_n)
+      lia_n[0] = sv10
+    var ok10b: int = lia_con_from_diff(buf, rp + 0, lp + 0, -1, lia, sv10 + 0)
+    var inf10b: int = 0
+    if ok10b == 1:
+      lia_n[0] = sv10 + 1
+      inf10b = lia_infeasible(lia, lia_n)
+      lia_n[0] = sv10
+    if inf10a == 1 and inf10b == 1:
+      return 1
+    return 2
+  if k == 11:
+    var dir: int = reachable(ak + 0, bk + 0, 1, efrom, eto, estrict, ne_cnt)
+    if dir == 0:
+      dir = reachable(bk + 0, ak + 0, 1, efrom, eto, estrict, ne_cnt)
+    if dir == 1:
+      return 1
+    var sv11: int = lia_n[0]
+    var ok11a: int = lia_con_from_diff(buf, lp + 0, rp + 0, 0, lia, sv11 + 0)
+    var ok11b: int = 0
+    if ok11a == 1:
+      ok11b = lia_con_from_diff(buf, rp + 0, lp + 0, 0, lia, sv11 + 1)
+    if ok11a == 1 and ok11b == 1:
+      lia_n[0] = sv11 + 2
+      var inf11: int = lia_infeasible(lia, lia_n)
+      lia_n[0] = sv11
+      if inf11 == 1:
+        return 1
+    lia_n[0] = sv11
+    return 2
+  if k == 6:
+    if reachable(ak + 0, bk + 0, 1, efrom, eto, estrict, ne_cnt) == 1:
+      return 1
+    var sv6: int = lia_n[0]
+    var ok6a: int = lia_con_from_diff(buf, rp + 0, lp + 0, 0, lia, sv6 + 0)
+    var inf6: int = 0
+    if ok6a == 1:
+      lia_n[0] = sv6 + 1
+      inf6 = lia_infeasible(lia, lia_n)
+      lia_n[0] = sv6
+    if inf6 == 1:
+      return 1
+    var ok6b: int = lia_con_from_diff(buf, lp + 0, rp + 0, -1, lia, sv6 + 0)
+    if ok6b == 1:
+      lia_n[0] = sv6 + 1
+      var inf6b: int = lia_infeasible(lia, lia_n)
+      lia_n[0] = sv6
+      if inf6b == 1:
+        return 0
+    return 2
+  if k == 7:
+    if reachable(ak + 0, bk + 0, 0, efrom, eto, estrict, ne_cnt) == 1:
+      return 1
+    var sv7: int = lia_n[0]
+    var ok7a: int = lia_con_from_diff(buf, rp + 0, lp + 0, -1, lia, sv7 + 0)
+    var inf7: int = 0
+    if ok7a == 1:
+      lia_n[0] = sv7 + 1
+      inf7 = lia_infeasible(lia, lia_n)
+      lia_n[0] = sv7
+    if inf7 == 1:
+      return 1
+    var ok7b: int = lia_con_from_diff(buf, lp + 0, rp + 0, 0, lia, sv7 + 0)
+    if ok7b == 1:
+      lia_n[0] = sv7 + 1
+      var inf7b: int = lia_infeasible(lia, lia_n)
+      lia_n[0] = sv7
+      if inf7b == 1:
+        return 0
+    return 2
+  if k == 8:
+    if reachable(bk + 0, ak + 0, 1, efrom, eto, estrict, ne_cnt) == 1:
+      return 1
+    var sv8: int = lia_n[0]
+    var ok8a: int = lia_con_from_diff(buf, lp + 0, rp + 0, 0, lia, sv8 + 0)
+    var inf8: int = 0
+    if ok8a == 1:
+      lia_n[0] = sv8 + 1
+      inf8 = lia_infeasible(lia, lia_n)
+      lia_n[0] = sv8
+    if inf8 == 1:
+      return 1
+    var ok8b: int = lia_con_from_diff(buf, rp + 0, lp + 0, -1, lia, sv8 + 0)
+    if ok8b == 1:
+      lia_n[0] = sv8 + 1
+      var inf8b: int = lia_infeasible(lia, lia_n)
+      lia_n[0] = sv8
+      if inf8b == 1:
+        return 0
+    return 2
+  var sv9: int = lia_n[0]
+  var ok9a: int = lia_con_from_diff(buf, lp + 0, rp + 0, -1, lia, sv9 + 0)
+  var inf9: int = 0
+  if ok9a == 1:
+    lia_n[0] = sv9 + 1
+    inf9 = lia_infeasible(lia, lia_n)
+    lia_n[0] = sv9
+  if inf9 == 1:
+    return 1
+  if reachable(bk + 0, ak + 0, 0, efrom, eto, estrict, ne_cnt) == 1:
+    return 1
+  var ok9b: int = lia_con_from_diff(buf, rp + 0, lp + 0, 0, lia, sv9 + 0)
+  if ok9b == 1:
+    lia_n[0] = sv9 + 1
+    var inf9b: int = lia_infeasible(lia, lia_n)
+    lia_n[0] = sv9
+    if inf9b == 1:
+      return 0
+  return 2
+
+def eval_bool(buf: var array[2048, int], p: int, cb: var array[2048, int], work: var array[2048, int],
+              rem: int, efrom: var array[64, int], eto: var array[64, int],
+              estrict: var array[64, int], ne_cnt: var array[1, int],
+              ea: var array[64, int], eb: var array[64, int], neq_cnt: var array[1, int],
+                   lia: var array[512, int], lia_n: var array[1, int]) raises IO -> int
+  requires rem >= 0
+  ensures result == 0 or result == 1 or result == 2
+  decreases rem
+=
+  if rem == 0:
+    return 2
+  var k: int = peek2048(buf, p + 0)
+  if k == 16:
+    return 1
+  if k == 17:
+    return 0
+  if k == 0:
+    if peek2048(buf, p + 2) != 0:
+      return 1
+    return 0
+  if k == 14:
+    var v: int = eval_bool(buf, p + 2, cb, work, rem - 1, efrom, eto, estrict, ne_cnt, ea, eb, neq_cnt, lia, lia_n)
+    if v == 1:
+      return 0
+    if v == 0:
+      return 1
+    return 2
+  if k == 12:
+    var l: int = eval_bool(buf, p + 2, cb, work, rem - 1, efrom, eto, estrict, ne_cnt, ea, eb, neq_cnt, lia, lia_n)
+    if l == 0:
+      return 0
+    var r: int = eval_bool(buf, right_child(buf, p + 0), cb, work, rem - 1, efrom, eto, estrict, ne_cnt, ea, eb, neq_cnt, lia, lia_n)
+    if r == 0:
+      return 0
+    if l == 1 and r == 1:
+      return 1
+    return 2
+  if k == 13:
+    var l: int = eval_bool(buf, p + 2, cb, work, rem - 1, efrom, eto, estrict, ne_cnt, ea, eb, neq_cnt, lia, lia_n)
+    if l == 1:
+      return 1
+    var r: int = eval_bool(buf, right_child(buf, p + 0), cb, work, rem - 1, efrom, eto, estrict, ne_cnt, ea, eb, neq_cnt, lia, lia_n)
+    if r == 1:
+      return 1
+    if l == 0 and r == 0:
+      return 0
+    return 2
+  if k == 15:
+    var a: int = eval_bool(buf, p + 2, cb, work, rem - 1, efrom, eto, estrict, ne_cnt, ea, eb, neq_cnt, lia, lia_n)
+    if a == 0:
+      return 1
+    if a == 1:
+      return eval_bool(buf, right_child(buf, p + 0), cb, work, rem - 1, efrom, eto, estrict, ne_cnt, ea, eb, neq_cnt, lia, lia_n)
+    var save_edges: int = ne_cnt[0]
+    var save_eqs: int = neq_cnt[0]
+    var save_lia: int = lia_n[0]
+    var r2: int = adopt_conjuncts(buf, p + 2, efrom, eto, estrict, ne_cnt, ea, eb, neq_cnt, lia, lia_n)
+    r2 = eval_bool(buf, right_child(buf, p + 0), cb, work, rem - 1, efrom, eto, estrict, ne_cnt, ea, eb, neq_cnt, lia, lia_n)
+    ne_cnt[0] = save_edges
+    neq_cnt[0] = save_eqs
+    lia_n[0] = save_lia
+    return r2
+  if k == 6 or k == 7 or k == 8 or k == 9 or k == 10 or k == 11:
+    return eval_cmp(buf, p + 0, cb, work, rem - 1, efrom, eto, estrict, ne_cnt, ea, eb, neq_cnt, lia, lia_n)
+  return 2
+
+# ---------------------------------------------------------------- driver --
+
+def main() raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var n: int = li_rt_argc()
+  var idx: int = 1
+  var buf: array[2048, int]
+  var cb: array[2048, int]
+  var work: array[2048, int]
+  var efrom: array[64, int]
+  var eto: array[64, int]
+  var estrict: array[64, int]
+  var ne_cnt: array[1, int]
+  var ea: array[64, int]
+  var eb: array[64, int]
+  var neq_cnt: array[1, int]
+  var lia: array[512, int]
+  var lia_n: array[1, int]
+  while idx < n:
+    var s: ptr = li_rt_argv(idx + 0)
+    var len: int = parse_into(s, buf)
+    ne_cnt[0] = 0
+    neq_cnt[0] = 0
+    lia_n[0] = 0
+    var v: int = eval_bool(buf, 0, cb, work, 200, efrom, eto, estrict, ne_cnt, ea, eb, neq_cnt, lia, lia_n)
+    if v == 1:
+      print(1)
+    if v != 1:
+      print(0)
+    idx = idx + 1
+  return 0

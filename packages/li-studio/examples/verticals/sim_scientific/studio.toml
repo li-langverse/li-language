@@ -1,0 +1,4 @@
+# World Studio vertical example — profile: sim_scientific
+
+[engine]
+profile = "sim_scientific"

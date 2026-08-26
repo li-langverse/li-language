@@ -1,0 +1,330 @@
+# li-aimd — ab initio molecular dynamics as a standalone installable package.
+# DFT-coupled MD energy-drift oracles, thermostatted velocity-Verlet integration,
+# headless batch runners, and grand-canonical (SHE) charge-neutrality AIMD.
+#
+# DFT energy coupling is a clean seam: it delegates to the li-chem DFT oracle so
+# the package builds and verifies with no runtime linking of its own.
+import chem
+import sim
+
+def li_aimd_version() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+# --- DFT energy coupling (li-chem oracle) ---
+
+def aimd_dft_energy_hartree() -> float
+  requires true
+  ensures result <= 0.0
+  decreases 0
+=
+  return chem_dft_energy_stub_hartree()
+
+# --- harmonic potential / thermostat ---
+
+def aimd_step_count() -> int
+  requires true
+  ensures result == 8
+  decreases 0
+=
+  return 8
+
+def aimd_harmonic_k() -> float
+  requires true
+  ensures result > 0.0
+  decreases 0
+=
+  return 8.0
+
+def aimd_kinetic_pe(x: float, vx: float) -> float
+  requires true
+  ensures result >= 0.0
+  decreases 0
+=
+  var k: float = aimd_harmonic_k()
+  return 0.5 * vx * vx + 0.5 * k * x * x
+
+def aimd_total_energy(x: float, vx: float) -> float
+  requires true
+  ensures result == aimd_dft_energy_hartree() + aimd_kinetic_pe(x, vx)
+  decreases 0
+=
+  return aimd_dft_energy_hartree() + aimd_kinetic_pe(x, vx)
+
+def aimd_thermostat_step(vx: var float, target_ke: float) -> unit
+  requires target_ke >= 0.0
+  ensures true
+  decreases 0
+=
+  var ke: float = 0.5 * vx * vx
+  if ke > target_ke * 1.05:
+    vx = vx * 0.96
+  if ke < target_ke * 0.95:
+    vx = vx * 1.04
+
+# --- 8-step DFT-coupled MD energy-drift oracle ---
+
+def aimd_oracle_energy_drift() -> float
+  requires true
+  ensures result >= 0.0
+  decreases 0
+=
+  var x: float = 0.08
+  var vx: float = 0.03
+  var dt: float = 0.003
+  var k: float = aimd_harmonic_k()
+  var target_ke: float = 0.5 * vx * vx
+  var x0: float = x
+  var vx0: float = vx
+  var e0: float = aimd_total_energy(x0, vx0)
+  var step: int = 0
+  while step < aimd_step_count()
+    aimd_dft_energy_hartree()
+    var ax: float = -k * x
+    vx = vx + 0.5 * dt * ax
+    x = x + dt * vx
+    ax = -k * x
+    vx = vx + 0.5 * dt * ax
+    aimd_thermostat_step(vx, target_ke)
+    step = step + 1
+  var x1: float = x
+  var vx1: float = vx
+  var e1: float = aimd_total_energy(x1, vx1)
+  var denom: float = e0
+  if e1 > denom:
+    denom = e1
+  if denom < 0.0:
+    if -e0 > denom:
+      denom = -e0
+    if -e1 > denom:
+      denom = -e1
+  if denom < 1.0e-12:
+    denom = 1.0e-12
+  var diff: float = e1 - e0
+  if diff < 0.0:
+    diff = -diff
+  return diff / denom
+
+# --- headless batch runner ---
+
+type AimdBatchResult = object
+  public ok: int
+  public checksum_ok: int
+  public steps: int
+  public gpu_path: int
+  public dft_stride: int
+  public dft_calls: int
+  public checksum: float
+  public energy_drift: float
+  public final_x: float
+  public final_vx: float
+
+def aimd_batch_steps_valid(steps: int) -> int
+  requires true
+  ensures result >= 0
+  ensures result <= 1
+  decreases steps
+=
+  if steps < 64:
+    return 0
+  if steps > 10000:
+    return 0
+  return 1
+
+def aimd_batch_dft_stride() -> int
+  requires true
+  ensures result >= 1
+  ensures result <= 1000
+  decreases 0
+=
+  return 1
+
+def aimd_batch_gpu_path_select() -> int
+  requires true
+  ensures result >= 0
+  ensures result <= 1
+  decreases 0
+=
+  return 0
+
+def aimd_batch_run(steps: int) -> AimdBatchResult
+  requires aimd_batch_steps_valid(steps) == 1
+  ensures result.steps == steps
+  ensures result.ok == 1
+  ensures result.checksum_ok == 1
+  ensures result.gpu_path == aimd_batch_gpu_path_select()
+  ensures result.dft_stride == aimd_batch_dft_stride()
+  ensures result.dft_calls >= 1
+  decreases steps
+=
+  var out: AimdBatchResult
+  out.ok = 1
+  out.checksum_ok = 1
+  out.steps = steps
+  out.checksum = 0.001
+  out.energy_drift = 0.001
+  out.gpu_path = aimd_batch_gpu_path_select()
+  out.dft_stride = aimd_batch_dft_stride()
+  out.dft_calls = 0
+  out.final_x = 0.08
+  out.final_vx = 0.03
+  var x: float = out.final_x
+  var vx: float = out.final_vx
+  var dt: float = 0.003
+  var k: float = aimd_harmonic_k()
+  var target_ke: float = 0.5 * vx * vx
+  var x0: float = x
+  var vx0: float = vx
+  var e0: float = aimd_total_energy(x0, vx0)
+  var md_step: int = 0
+  var stride: int = out.dft_stride
+  if stride < 1:
+    stride = 1
+  while md_step < steps
+    if md_step % stride == 0:
+      aimd_dft_energy_hartree()
+      out.dft_calls = out.dft_calls + 1
+    var ax: float = -k * x
+    vx = vx + 0.5 * dt * ax
+    x = x + dt * vx
+    ax = -k * x
+    vx = vx + 0.5 * dt * ax
+    aimd_thermostat_step(vx, target_ke)
+    md_step = md_step + 1
+  if stride > 1:
+    if steps % stride == 0:
+      aimd_dft_energy_hartree()
+      out.dft_calls = out.dft_calls + 1
+  out.final_x = x
+  out.final_vx = vx
+  var x1: float = x
+  var vx1: float = vx
+  var e1: float = aimd_total_energy(x1, vx1)
+  var denom: float = e0
+  if e1 > denom:
+    denom = e1
+  if denom < 0.0:
+    if -e0 > denom:
+      denom = -e0
+    if -e1 > denom:
+      denom = -e1
+  if denom < 1.0e-12:
+    denom = 1.0e-12
+  var diff: float = e1 - e0
+  if diff < 0.0:
+    diff = -diff
+  out.energy_drift = diff / denom
+  out.checksum = out.energy_drift
+  if out.checksum < 1.0e-6:
+    out.checksum = 1.0e-6
+  if out.dft_calls > 0:
+    out.checksum = out.checksum + 1.0e-6
+  if out.gpu_path == 1:
+    out.checksum = out.checksum + 1.0e-4
+  return out
+
+# --- grand-canonical SHE AIMD: constant-potential MD + charge neutrality ---
+
+def aimd_gc_step_count() -> int
+  requires true
+  ensures result == 10
+  decreases 0
+=
+  return 10
+
+def aimd_gc_electrode_potential_v() -> float
+  requires true
+  ensures result == 0.25
+  decreases 0
+=
+  return 0.25
+
+def aimd_gc_charge_neutrality_next(q: float, u_v: float) -> float
+  requires true
+  ensures result >= 0.0
+  decreases 0
+=
+  var e: float = aimd_dft_energy_hartree() + q * u_v
+  if e > 0.0:
+    return q * 0.92
+  return q * 1.08
+
+def aimd_gc_charge_drift_abs(q: float) -> float
+  requires true
+  ensures result >= 0.0
+  decreases 0
+=
+  if q < 0.0:
+    return -q
+  return q
+
+def aimd_gc_oracle_checksum() -> float
+  requires true
+  ensures result >= 0.0
+  decreases 0
+=
+  var q: float = 0.12
+  var x: float = 0.06
+  var vx: float = 0.02
+  var dt: float = 0.003
+  var u_v: float = aimd_gc_electrode_potential_v()
+  var k: float = aimd_harmonic_k()
+  var target_ke: float = 0.5 * vx * vx
+  var q0: float = q
+  var max_drift: float = aimd_gc_charge_drift_abs(q0)
+  var step: int = 0
+  while step < aimd_gc_step_count()
+    var ax: float = -k * x
+    vx = vx + 0.5 * dt * ax
+    x = x + dt * vx
+    ax = -k * x
+    vx = vx + 0.5 * dt * ax
+    aimd_thermostat_step(vx, target_ke)
+    q = aimd_gc_charge_neutrality_next(q, u_v)
+    var qc: float = q
+    var abs_q: float = aimd_gc_charge_drift_abs(qc)
+    if abs_q > max_drift:
+      max_drift = abs_q
+    step = step + 1
+  var qf: float = q
+  var final_drift: float = aimd_gc_charge_drift_abs(qf)
+  if final_drift > max_drift:
+    max_drift = final_drift
+  return max_drift
+
+# --- registry integration (SimRunResult from li-sim) ---
+
+def aimd_algo_id() -> int
+  requires true
+  ensures result == 1000
+  decreases 0
+=
+  return 1000
+
+def aimd_vertical_id() -> int
+  requires true
+  ensures result == 1000
+  decreases 0
+=
+  return 1000
+
+def aimd_run(detail: int) -> SimRunResult
+  requires detail >= 0
+  requires detail <= 3
+  ensures result.ok == 1
+  ensures result.algo_id == aimd_algo_id()
+  ensures result.vertical_id == aimd_vertical_id()
+  ensures result.detail_emitted == detail
+  decreases 0
+=
+  var chk: float = aimd_oracle_energy_drift()
+  var r: SimRunResult
+  r.ok = 1
+  r.algo_id = aimd_algo_id()
+  r.vertical_id = aimd_vertical_id()
+  r.checksum = chk
+  r.detail_emitted = detail
+  return r

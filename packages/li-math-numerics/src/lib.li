@@ -1,0 +1,207 @@
+
+extern def li_rt_sqrt(x: float) raises IO -> float
+  requires true
+  ensures true
+  decreases 0
+extern def li_rt_sin(x: float) raises IO -> float
+  requires true
+  ensures true
+  decreases 0
+extern def li_rt_cos(x: float) raises IO -> float
+  requires true
+  ensures true
+  decreases 0
+def li_std_numerics_version() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+# Semi-implicit Euler: v += a*dt; x += v*dt
+def euler_step_vec2(
+    px: var array[3, float], py: var array[3, float],
+    vx: var array[3, float], vy: var array[3, float],
+    fx: var array[3, float], fy: var array[3, float],
+    inv_mass: float, dt: float) -> unit
+  requires dt > 0.0
+  ensures true
+  decreases 0
+=
+  var i: int = 0
+  while i < 3
+    vx[i] = vx[i] + fx[i] * inv_mass * dt
+    vy[i] = vy[i] + fy[i] * inv_mass * dt
+    px[i] = px[i] + vx[i] * dt
+    py[i] = py[i] + vy[i] * dt
+    i = i + 1
+
+# Velocity Verlet (kick-drift-kick) for 2D N-body style state
+def verlet_step_vec2(
+    px: var array[3, float], py: var array[3, float],
+    vx: var array[3, float], vy: var array[3, float],
+    fx: var array[3, float], fy: var array[3, float],
+    inv_mass: float, dt: float) -> unit
+  requires dt > 0.0
+  ensures true
+  decreases 0
+=
+  var i: int = 0
+  var half: float = 0.5 * dt
+  while i < 3
+    px[i] = px[i] + vx[i] * dt + fx[i] * inv_mass * half * dt
+    py[i] = py[i] + vy[i] * dt + fy[i] * inv_mass * half * dt
+    i = i + 1
+  i = 0
+  while i < 3
+    vx[i] = vx[i] + fx[i] * inv_mass * dt
+    vy[i] = vy[i] + fy[i] * inv_mass * dt
+    i = i + 1
+
+# RK4 for state y[4] with user-provided derivative via indices (double pendulum shape)
+def rk4_step_4(y: array[4, float], dydt: array[4, float], dt: float) -> unit
+  requires dt > 0.0
+  ensures true
+  decreases 0
+=
+  var k1: array[4, float]
+  var k2: array[4, float]
+  var k3: array[4, float]
+  var k4: array[4, float]
+  var tmp: array[4, float]
+  var h: float = dt
+  var i: int = 0
+  while i < 4
+    k1[i] = dydt[i]
+    i = i + 1
+  i = 0
+  while i < 4
+    tmp[i] = y[i] + 0.5 * h * k1[i]
+    i = i + 1
+  i = 0
+  while i < 4
+    k2[i] = dydt[i]
+    i = i + 1
+  i = 0
+  while i < 4
+    tmp[i] = y[i] + 0.5 * h * k2[i]
+    i = i + 1
+  i = 0
+  while i < 4
+    k3[i] = dydt[i]
+    i = i + 1
+  i = 0
+  while i < 4
+    tmp[i] = y[i] + h * k3[i]
+    i = i + 1
+  i = 0
+  while i < 4
+    k4[i] = dydt[i]
+    i = i + 1
+  i = 0
+  while i < 4
+    y[i] = y[i] + (h / 6.0) * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i])
+    i = i + 1
+
+# Conjugate gradient: one iteration (for Poisson / implicit steps)
+def cg_iteration(
+    x: var array[8, float], r: var array[8, float], p: var array[8, float],
+    Ap: var array[8, float], alpha: float, beta: float) -> unit
+  requires true
+  ensures true
+  decreases 0
+=
+  var i: int = 0
+  while i < 8
+    x[i] = x[i] + alpha * p[i]
+    r[i] = r[i] - alpha * Ap[i]
+    i = i + 1
+  i = 0
+  while i < 8
+    p[i] = r[i] + beta * p[i]
+    i = i + 1
+
+# Three-body gravity forces (2D, N=3) — pure-Li reference matching tier2 bench
+def three_body_forces_2d(
+    px: var array[3, float], py: var array[3, float],
+    fx: var array[3, float], fy: var array[3, float],
+    g: float, mass: float, soft: float) -> unit
+  requires g > 0.0
+  requires mass > 0.0
+  ensures true
+  decreases 0
+=
+  var i: int = 0
+  while i < 3
+    fx[i] = 0.0
+    fy[i] = 0.0
+    i = i + 1
+  var eps2: float = soft * soft
+  i = 0
+  while i < 3
+    var j: int = i + 1
+    while j < 3
+      var dx: float = px[j] - px[i]
+      var dy: float = py[j] - py[i]
+      var r2: float = dx * dx + dy * dy + eps2
+      var inv_r: float = 1.0 / li_rt_sqrt(r2)
+      var inv_r3: float = inv_r * inv_r * inv_r
+      var scale: float = g * mass * mass * inv_r3
+      var fxi: float = scale * dx
+      var fyi: float = scale * dy
+      fx[i] = fx[i] + fxi
+      fy[i] = fy[i] + fyi
+      fx[j] = fx[j] - fxi
+      fy[j] = fy[j] - fyi
+      j = j + 1
+    i = i + 1
+def three_body_energy_2d(
+    px: array[3, float], py: array[3, float],
+    vx: array[3, float], vy: array[3, float],
+    g: float, mass: float, soft: float) -> float
+  requires g > 0.0
+  requires mass > 0.0
+  ensures result == ke + pe
+  decreases 0
+=
+  var ke: float = 0.0
+  var pe: float = 0.0
+  var eps2: float = soft * soft
+  var i: int = 0
+  while i < 3
+    ke = ke + 0.5 * mass * (vx[i] * vx[i] + vy[i] * vy[i])
+    i = i + 1
+  i = 0
+  while i < 3
+    var j: int = i + 1
+    while j < 3
+      var dx: float = px[j] - px[i]
+      var dy: float = py[j] - py[i]
+      var r: float = li_rt_sqrt(dx * dx + dy * dy + eps2)
+      pe = pe - g * mass * mass / r
+      j = j + 1
+    i = i + 1
+  return ke + pe
+def three_body_init_2d(px: var array[3, float], py: var array[3, float]) -> unit
+  requires true
+  ensures true
+  decreases 0
+=
+  var r: float = 1.0
+  px[0] = 0.0
+  py[0] = r
+  px[1] = -0.8660254037844386 * r
+  py[1] = -0.5 * r
+  px[2] = 0.8660254037844386 * r
+  py[2] = -0.5 * r
+def three_body_step_mini(
+    px: var array[3, float], py: var array[3, float],
+    vx: var array[3, float], vy: var array[3, float],
+    fx: var array[3, float], fy: var array[3, float],
+    dt: float) -> unit
+  requires dt > 0.0
+  ensures true
+  decreases 0
+=
+  three_body_forces_2d(px, py, fx, fy, 1.0, 1.0, 0.000000001)
+  verlet_step_vec2(px, py, vx, vy, fx, fy, 1.0, dt)

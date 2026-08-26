@@ -1,0 +1,41 @@
+import gui
+
+# Fixed mock matching studio_shell_input_probe JSON:
+# {"key_cmd_k":1,"key_digit":3,"key_escape":0,...} — host maps JSON → InputState each frame.
+
+def input_from_probe_mock_cmd_k_digit_3() -> InputState
+  requires true
+  ensures result.key_cmd_k == 1
+  ensures result.key_digit == 3
+  ensures result.key_escape == 0
+  decreases 0
+=
+  var s: InputState = input_default()
+  s.key_cmd_k = 1
+  s.key_digit = 3
+  return s
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if li_std_gui_version() < 3:
+    return 1
+  var panel: GuiPanelState = gui_panel_state_new()
+  var mock: InputState = input_from_probe_mock_cmd_k_digit_3()
+  if mock.key_cmd_k != 1:
+    return 2
+  if mock.key_digit != 3:
+    return 3
+  if gui_handle_studio_key(panel, mock) != studio_key_action_palette_toggle():
+    return 4
+  if panel.palette_open != studio_palette_open_flag():
+    return 5
+  var focus: InputState = input_default()
+  focus.key_digit = 3
+  if gui_handle_studio_key(panel, focus) != studio_key_action_region_focus():
+    return 6
+  if panel.active_region != studio_region_inspector():
+    return 7
+  return 0

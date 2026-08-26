@@ -1,0 +1,61 @@
+# M1.5 agent gateway oracle — stream limits, OTel traceparent, SSE content-type (C runtime).
+# Config via LI_REPO_ROOT fixture (CallProc string path ABI is not reliable for load_config).
+import http
+
+extern def li_rt_httpd_parse_duration_sec(raw: str) -> int
+  requires true
+  ensures -1 <= result
+
+extern def li_rt_httpd_m15_stream_idle_sec() -> int
+  requires true
+  ensures 0 <= result
+
+extern def li_rt_httpd_m15_stream_max_sec() -> int
+  requires true
+  ensures 0 <= result
+
+extern def li_rt_httpd_m15_concurrent_streams() -> int
+  requires true
+  ensures 0 <= result
+
+extern def li_rt_httpd_route_requires_traceparent(route_id: int) -> int
+  requires 0 <= route_id
+  requires route_id <= 64
+  ensures 0 <= result
+  ensures result <= 1
+
+extern def li_rt_httpd_is_sse_content_type(ctype: str) -> int
+  requires true
+  ensures 0 <= result
+  ensures result <= 1
+
+extern def li_rt_httpd_traceparent_selftest() -> int
+  requires true
+  ensures -1 <= result
+  ensures result <= 0
+
+def main() raises IO, Alloc -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if load_routes_from_m15_agent_fixture() != 0:
+    return 1
+  if li_rt_httpd_parse_duration_sec("120s") != 120:
+    return 2
+  if li_rt_httpd_m15_stream_idle_sec() != 120:
+    return 3
+  if li_rt_httpd_m15_stream_max_sec() != 600:
+    return 4
+  if li_rt_httpd_m15_concurrent_streams() != 100:
+    return 5
+  var rid: int = match_route("POST", "/v1/chat/completions")
+  if rid <= 0:
+    return 6
+  if li_rt_httpd_route_requires_traceparent(rid) != 1:
+    return 7
+  if li_rt_httpd_is_sse_content_type("text/event-stream") != 1:
+    return 8
+  if li_rt_httpd_traceparent_selftest() != 0:
+    return 9
+  return 0
