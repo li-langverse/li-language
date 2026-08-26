@@ -51,6 +51,10 @@ int32_t li_rt_mir_objname_add(const char* text, int32_t bs, int32_t be,
                               int32_t fs, int32_t fe);
 int32_t li_rt_mir_objname_out(int32_t idx);
 void li_rt_mir_objname_clear(void);
+/* Synthesized literal name registry (parallel-for callee cells). */
+int32_t li_rt_mir_synth_name_add(const char* text);
+/* Build and register `__li_par_<proc>_<counter>`; returns the cell index. */
+int32_t li_rt_mir_par_callee_register(int32_t pid, int32_t counter);
 /* Proc-name registry for cross-file call resolution in the self-hosted MIR walker.
  * Each collected proc's name is stored by pid; mir_proc_find can look up
  * whether a call-site name matches any collected proc without needing the
@@ -59,6 +63,14 @@ int32_t li_rt_mir_pname_store(int32_t pid, const char* src, int32_t s, int32_t e
 int32_t li_rt_mir_pname_eq(int32_t pid, const char* src, int32_t s, int32_t e);
 int32_t li_rt_mir_pname_set_extern(int32_t pid, int32_t is_extern);
 int32_t li_rt_mir_pname_is_extern(int32_t pid);
+/* Parallel-for synthesized function name: `__li_par_<proc>_<counter>`. */
+int32_t li_rt_mir_par_name_print(int32_t pid, int32_t counter);
+int32_t li_rt_mir_par_counter_next(void);
+void li_rt_mir_par_counter_reset(void);
+/* MIR output hold buffers for parallel-for reordering (par fns replay first). */
+int32_t li_rt_mir_hold_open(void);
+int32_t li_rt_mir_hold_swap(int32_t which);
+int32_t li_rt_mir_hold_flush_close(void);
 const char* li_rt_resolve_import(const char* file_path, const char* module);
 /* Return the path that was last successfully resolved by li_rt_resolve_import. */
 const char* li_rt_resolve_import_last_path(void);

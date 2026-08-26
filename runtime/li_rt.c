@@ -679,11 +679,22 @@ int32_t li_rt_mir_objname_out(int32_t idx) {
   if (idx < 0 || idx >= li_rt_objname_n) {
     return 0;
   }
+  /* Synthesized-name entries (be < 0) print verbatim; used for parallel-for
+   * callee cells whose text is not a mangled object field. */
+  if (li_rt_objname_be[idx] < 0) {
+    fputs(li_rt_objname_text[idx], stdout);
+    return 0;
+  }
   fputs("__li_o_", stdout);
   li_rt_mir_esc(li_rt_objname_text[idx], li_rt_objname_bs[idx], li_rt_objname_be[idx]);
   fputs("_", stdout);
   li_rt_mir_esc(li_rt_objname_text[idx], li_rt_objname_fs[idx], li_rt_objname_fe[idx]);
   return 0;
+}
+
+/* Register a fully synthesized name (e.g. __li_par_main_0) for a callee cell. */
+int32_t li_rt_mir_synth_name_add(const char* text) {
+  return li_rt_mir_objname_add(text, 0, -1, 0, 0);
 }
 
 void li_rt_mir_objname_clear(void) { li_rt_objname_n = 0; }
@@ -719,11 +730,6 @@ int32_t li_rt_mir_pname_eq(int32_t pid, const char* src, int32_t s, int32_t e) {
   for (int32_t i = 0; i < len; i++) {
     if (stored[i] != src[s + i]) return 0;
   }
-  if (len == 19) {
-    fprintf(stderr, "PNAME_EQ_MATCH pid=%d ext=%d name=", pid, li_rt_pname_ext[pid]);
-    fwrite(src + s, 1, (size_t)len, stderr);
-    fprintf(stderr, "\n");
-  }
   return 1;
 }
 
@@ -741,6 +747,100 @@ int32_t li_rt_mir_pname_is_extern(int32_t pid) {
 int32_t li_rt_mir_pname_print(int32_t pid) {
   if (pid < 0 || pid >= LI_RT_PNAME_MAX) return 0;
   fwrite(li_rt_pname_buf + pid * 64, 1, (size_t)li_rt_pname_len[pid], stdout);
+  return 0;
+}
+
+/* Parallel-for synthesized function name: prints `__li_par_<proc>_<counter>`,
+ * matching the C++ lower_to_mir ParallelFor naming scheme. */
+int32_t li_rt_mir_par_name_print(int32_t pid, int32_t counter) {
+  fputs("__li_par_", stdout);
+  if (pid >= 0 && pid < LI_RT_PNAME_MAX) {
+    fwrite(li_rt_pname_buf + pid * 64, 1, (size_t)li_rt_pname_len[pid], stdout);
+  }
+  printf("_%d", (int)counter);
+  return 0;
+}
+
+static int32_t li_rt_par_counter = 0;
+
+int32_t li_rt_mir_par_counter_next(void) {
+  const int32_t v = li_rt_par_counter;
+  li_rt_par_counter += 1;
+  return v;
+}
+
+void li_rt_mir_par_counter_reset(void) { li_rt_par_counter = 0; }
+
+/* Build `__li_par_<proc>_<counter>` from the pname registry and register it
+ * as a synthesized callee-cell name; returns the cell index. */
+int32_t li_rt_mir_par_callee_register(int32_t pid, int32_t counter) {
+  char tmp[128];
+  int32_t plen = 0;
+  if (pid >= 0 && pid < LI_RT_PNAME_MAX) {
+    plen = li_rt_pname_len[pid];
+    if (plen > 48) plen = 48;
+  }
+  int n = snprintf(tmp, sizeof(tmp), "__li_par_%.*s_%d",
+                   (int)plen,
+                   (pid >= 0 && pid < LI_RT_PNAME_MAX) ? li_rt_pname_buf + pid * 64 : "",
+                   (int)counter);
+  if (n <= 0) return 0;
+  return li_rt_mir_synth_name_add(strdup(tmp));
+}
+
+/* MIR hold buffers: the C++ lowerer pushes each `parallel for` synthesized
+ * function into module.functions while lowering its enclosing procedure, so
+ * the dump shows __li_par_* functions BEFORE the enclosing FN. The streaming
+ * self-hosted walker emits text in walk order, so it captures both streams in
+ * memory buffers (0 = enclosing proc text, 1 = par fn text) and replays par
+ * first. Only procs that actually contain a parallel-for pay for buffering. */
+static FILE* li_rt_hold_real = NULL;
+static FILE* li_rt_hold_fp[2] = {NULL, NULL};
+static char* li_rt_hold_buf[2] = {NULL, NULL};
+static size_t li_rt_hold_len[2] = {0, 0};
+
+int32_t li_rt_mir_hold_open(void) {
+  if (li_rt_hold_real == NULL) {
+    fflush(stdout);
+    li_rt_hold_real = stdout;
+    li_rt_hold_fp[0] = open_memstream(&li_rt_hold_buf[0], &li_rt_hold_len[0]);
+    li_rt_hold_fp[1] = open_memstream(&li_rt_hold_buf[1], &li_rt_hold_len[1]);
+    stdout = li_rt_hold_fp[0];
+  }
+  return 0;
+}
+
+int32_t li_rt_mir_hold_swap(int32_t which) {
+  if (li_rt_hold_real == NULL) return 1;
+  fflush(stdout);
+  stdout = (which == 1) ? li_rt_hold_fp[1] : li_rt_hold_fp[0];
+  return 0;
+}
+
+int32_t li_rt_mir_hold_flush_close(void) {
+  if (li_rt_hold_real == NULL) return 0;
+  fflush(stdout);
+  FILE* real = li_rt_hold_real;
+  fclose(li_rt_hold_fp[0]);
+  fclose(li_rt_hold_fp[1]);
+  /* Par functions replay before the enclosing procedure's text. */
+  if (li_rt_hold_buf[1] != NULL) {
+    fwrite(li_rt_hold_buf[1], 1, li_rt_hold_len[1], real);
+  }
+  if (li_rt_hold_buf[0] != NULL) {
+    fwrite(li_rt_hold_buf[0], 1, li_rt_hold_len[0], real);
+  }
+  fflush(real);
+  free(li_rt_hold_buf[0]);
+  free(li_rt_hold_buf[1]);
+  li_rt_hold_buf[0] = NULL;
+  li_rt_hold_buf[1] = NULL;
+  li_rt_hold_len[0] = 0;
+  li_rt_hold_len[1] = 0;
+  li_rt_hold_fp[0] = NULL;
+  li_rt_hold_fp[1] = NULL;
+  li_rt_hold_real = NULL;
+  stdout = real;
   return 0;
 }
 

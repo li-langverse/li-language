@@ -154,6 +154,27 @@ extern def li_rt_mir_pname_set_extern(pid: int,  is_extern: int) -> int
 extern def li_rt_mir_pname_is_extern(pid: int) -> int
   requires true
   ensures result == 0 or result == 1
+extern def li_rt_mir_par_name_print(pid: int, counter: int) -> int
+  requires true
+  ensures true
+extern def li_rt_mir_par_counter_next() -> int
+  requires true
+  ensures true
+extern def li_rt_mir_par_counter_reset() -> int
+  requires true
+  ensures true
+extern def li_rt_mir_hold_open() -> int
+  requires true
+  ensures true
+extern def li_rt_mir_hold_swap(which: int) -> int
+  requires true
+  ensures true
+extern def li_rt_mir_hold_flush_close() -> int
+  requires true
+  ensures true
+extern def li_rt_mir_par_callee_register(pid: int, counter: int) -> int
+  requires true
+  ensures true
 
 # ---------------- canonical AST dump (self-host milestone 3: tree parity) ----
 # The `ast <file>` subcommand emits an int-encoded canonical dump of the parse
@@ -9064,6 +9085,128 @@ def mir_name_cells(darena: var array[65536, int],  rec: int,  f: var array[44, i
     set40(f, off + 2,1)
   return 0
 
+# Parallel-for lowering (Layer 5 parity): C++ lower_to_mir pushes a
+# synthesized `__li_par_<proc>_<counter>` function (one i64 param = the loop
+# iteration var), lowers the body into it, appends an implicit return, and
+# emits an OmpParallelFor (INS 42) dispatch in the caller. The par FN replays
+# before the enclosing FN via the runtime hold buffers.
+def mir_parallel(darena: var array[65536, int],  dasp: var array[1, int], src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  itok: var array[4096, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[512, int],  nfa: var array[1, int], matok: var array[512, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], retf_proc: int,  reti64_proc: int, lhead: var array[32, int],  lexit: var array[32, int],  nlp: var array[1, int]) raises IO -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  var par_c: int = li_rt_mir_par_counter_next()
+  var par_pid: int = peek32768(ftmp, 4090)
+  set32768(ftmp, 4089, 1)
+  li_rt_mir_hold_swap(1)
+  # FN __li_par_<proc>_<counter> 0 0 0 0 0 0 0 (returns_void)
+  li_rt_mir_str("FN")
+  li_rt_ast_space()
+  li_rt_mir_par_name_print(par_pid, par_c)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_nl()
+  # PARAM <iter> 0 0 1 0 0 0 0 0 0 (is_i64)
+  pi[0] = pi[0] + 1
+  if cur_kind(tk,  n,  pi,  err) != 26:
+    err[0] = 1
+    return 1
+  pi[0] = pi[0] + 1
+  if cur_kind(tk,  n,  pi,  err) == 0 or cur_kind(tk,  n,  pi,  err) == 1:
+    err[0] = 1
+    return 1
+  var it_s: int = peek_tk(ts, pi[0])
+  var it_e: int = peek_tk(te, pi[0])
+  li_rt_mir_str("PARAM")
+  li_rt_ast_space()
+  li_rt_ast_text(src, it_s, it_e)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(1)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_nl()
+  pi[0] = pi[0] + 1
+  if tok_is(src, ts, te, pi[0], "in") == 1:
+    pi[0] = pi[0] + 1
+  # Range bounds: literal ints only (corpus shape); skip the .. / ..< tokens.
+  if cur_kind(tk,  n,  pi,  err) != 5:
+    err[0] = 1
+    return 1
+  var st_v: int = li_rt_mir_int(src, peek_tk(ts, pi[0]), peek_tk(te, pi[0]))
+  pi[0] = pi[0] + 1
+  var guard_r: int = 0
+  while cur_kind(tk,  n,  pi,  err) != 5:
+    pi[0] = pi[0] + 1
+    guard_r = guard_r + 1
+    if guard_r > 4 or cur_kind(tk,  n,  pi,  err) == 0 or cur_kind(tk,  n,  pi,  err) == 1:
+      err[0] = 1
+      return 1
+  var en_v: int = li_rt_mir_int(src, peek_tk(ts, pi[0]), peek_tk(te, pi[0]))
+  pi[0] = pi[0] + 1
+  # Contract lines between the header and `=` are not lowered. They live in
+  # their own indented block, so INDENT/DEDENT markers frame them.
+  var done_c: int = 0
+  while done_c == 0:
+    skip_newlines(tk,  n,  pi,  err)
+    var ckp: int = cur_kind(tk,  n,  pi,  err)
+    if ckp == 2 or ckp == 3:
+      pi[0] = pi[0] + 1
+      continue
+    if ckp == 41 or ckp == 42 or ckp == 43 or ckp == 44 or ckp == 45:
+      parse_contract(src,  tk,  ts,  te,  n,  pi,  err, 0)
+      continue
+    done_c = 1
+  expect_k(tk,  n,  pi,  err, 58)
+  skip_newlines(tk,  n,  pi,  err)
+  # Lower the body into the par FN (fresh label stack, shared temp counter).
+  var save_nlp: int = nlp[0]
+  nlp[0] = 0
+  lastop[0] = -1
+  if mir_stmts(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  retf_proc,  reti64_proc,  lhead,  lexit,  nlp) == 1:
+    return 1
+  # append_implicit_return parity: the par FN always ends with INS 0.
+  var fpar0: array[44, int]
+  mir_fdef(fpar0)
+  mir_ins_line(src,  fpar0,  0,  0,  -1,  lastop)
+  nlp[0] = save_nlp
+  set32768(ftmp, 4089, 0)
+  li_rt_mir_hold_swap(0)
+  # OmpParallelFor dispatch in the enclosing proc.
+  var f42: array[44, int]
+  mir_fdef(f42)
+  f42[6] = li_rt_mir_par_callee_register(par_pid, par_c)
+  f42[8] = 4
+  f42[27] = en_v
+  mir_ins_line(src,  f42,  42,  st_v,  -1,  lastop)
+  skip_newlines(tk,  n,  pi,  err)
+  return 0
+
 def mir_stmts(darena: var array[65536, int],  dasp: var array[1, int], src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  itok: var array[4096, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[512, int],  nfa: var array[1, int], matok: var array[512, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], retf_proc: int,  reti64_proc: int, lhead: var array[32, int],  lexit: var array[32, int],  nlp: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
@@ -9145,6 +9288,8 @@ def mir_stmt(darena: var array[65536, int],  dasp: var array[1, int], src: var p
   if k == 30:
     return mir_return(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar,  retf_proc,  reti64_proc,  lhead,  lexit,  nlp)
   if k == 4:
+    if tok_is(src, ts, te, pi[0], "parallel") == 1:
+      return mir_parallel(darena, dasp, src, tk, ts, te, n, pi, err, tc, lastop, ftok, nft, ftmp, itok, nit, itmp, fatok, nfa, matok, nmat, ptok, pex, pp0, ppn, pret, pn, ptok2, pty, pelems, pef, pei, pvar, retf_proc, reti64_proc, lhead, lexit, nlp)
     if tok_is(src,  ts,  te,  pi[0],  "discard") == 1:
       pi[0] = pi[0] + 1
       skip_newlines(tk,  n,  pi,  err)
@@ -10393,8 +10538,24 @@ def mir_assign(darena: var array[65536, int],  dasp: var array[1, int],  lrec: i
     var fid: int = -1
     if fa == 1:
       if peek65536(darena, rrec + 0) == 1:
-        f[26] = 1
-        fid = peek65536(darena, rrec + 1)
+        if peek32768(ftmp, 4089) == 1:
+          # Parallel-body context: C++ lowers with a fresh float_names set,
+          # so float literals materialize into a fresh __tN (INS 28) and the
+          # array store references the temp by name (INS 10).
+          var pnum: int = tc[0]
+          tc[0] = pnum + 1
+          var ftp: array[44, int]
+          mir_fdef(ftp)
+          ftp[0] = pnum
+          ftp[2] = 5
+          mir_ins_line(src,  ftp,  28,  0,  peek65536(darena, rrec + 1),  lastop)
+          f[26] = 0
+          f[12] = pnum
+          f[14] = 5
+          op = 10
+        else:
+          f[26] = 1
+          fid = peek65536(darena, rrec + 1)
       else:
         if peek65536(darena, rrec + 0) == 3:
           f[26] = 0
@@ -11133,7 +11294,7 @@ def mir_collect_proc(src: var ptr,  tk: var array[131072, int],  ts: var array[1
   parse_block(src,  tk,  ts,  te,  n,  pi,  err, 0)
   return 0
 
-def mir_proc(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  is_extern: int,  pid: int, tc: var array[1, int],  lastop: var array[1, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  itok: var array[4096, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[512, int],  nfa: var array[1, int], matok: var array[512, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], pmx: var array[512, int],  pmc: var array[512, int]) -> int
+def mir_proc(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  is_extern: int,  pid: int, tc: var array[1, int],  lastop: var array[1, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  itok: var array[4096, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[512, int],  nfa: var array[1, int], matok: var array[512, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], pmx: var array[512, int],  pmc: var array[512, int]) raises IO -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -11216,6 +11377,11 @@ def mir_proc(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
       ret_obj_ti = mir_obj_find_type(src, ts, te, itmp, peek_tk(ts, rt_tok2 + 0), peek_tk(te, rt_tok2 + 0))
       if ret_obj_ti >= 0:
         retobj = 1
+  set32768(ftmp, 4090, pid)
+  # Hold-buffer this proc's output: if the body contains `parallel for`, its
+  # synthesized __li_par_* function text must replay BEFORE this FN header
+  # (C++ push-order parity). Passthrough otherwise.
+  li_rt_mir_hold_open()
   mir_fn_line(src,  ts,  te,  li_rt_preg_get(0, pid),  retf,  reti64,  retvoid,  retobj,  is_extern,  peek32768(ftmp, 4092),  peek32768(ftmp, 4091))
   if peek32768(ftmp, 4093) >= 0:
     mir_dec_line(src,  ts,  te,  peek32768(ftmp, 4093),  peek32768(ftmp, 4094),  peek32768(ftmp, 4095),  0,  0)
@@ -11267,6 +11433,7 @@ def mir_proc(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
   lastop[0] = -1
   if is_extern == 1:
     skip_newlines(tk,  n,  pi,  err)
+    li_rt_mir_hold_flush_close()
     return 0
   expect_k(tk,  n,  pi,  err, 58)
   var is_async_proc: int = peek32768(ftmp, 4091)
@@ -11285,6 +11452,7 @@ def mir_proc(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
   var dasp: array[1, int]
   dasp[0] = 0
   if mir_stmts(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  retf,  reti64,  lhead,  lexit,  nlp) == 1:
+    li_rt_mir_hold_flush_close()
     return 1
   if lastop[0] < 0:
     var f0: array[44, int]
@@ -11295,6 +11463,7 @@ def mir_proc(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
       var f0b: array[44, int]
       mir_fdef(f0b)
       mir_ins_line(src,  f0b,  0,  0,  -1,  lastop)
+  li_rt_mir_hold_flush_close()
   return 0
 
 def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  mode: int, tc: var array[1, int],  lastop: var array[1, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  itok: var array[4096, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[512, int],  nfa: var array[1, int], matok: var array[512, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], pmx: var array[512, int],  pmc: var array[512, int], pcount: var array[1, int]) raises IO -> int
@@ -11663,13 +11832,31 @@ def mir_scan_rt_flags(src: var ptr,  tk: var array[131072, int],  ts: var array[
   # codegen path, so we do NOT apply it here.
   return 0
 
-def mir_module(src: var ptr,  file_path: ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int]) raises IO -> int
+# Count `parallel for` statements in the currently-lexed token stream. The
+# C++ lower_to_mir pushes one __li_par_* function per parallel-for, so the
+# MIR header function count is procs + parallel count and uses_openmp = 1.
+def mir_count_parallel(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int]) -> int
+  requires true
+  ensures result >= 0
+  decreases 0
+=
+  var cnt: int = 0
+  var i: int = 1
+  while i < n[0]:
+    if peek_tk(tk, i) == 26:
+      if tok_is(src, ts, te, i - 1, "parallel") == 1:
+        cnt = cnt + 1
+    i = i + 1
+  return cnt
+
+def mir_module(src: var ptr,  file_path: ptr, tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int]) raises IO -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
 =
   var tc: array[1, int]
   tc[0] = 0
+  var par_total: int = 0
   var lastop: array[1, int]
   lastop[0] = -1
   var ftok: array[4096, int]
@@ -11859,15 +12046,20 @@ def mir_module(src: var ptr,  file_path: ptr,  tk: var array[131072, int],  ts: 
       if lex_source(imp_files[scan_i], tk, ts, te, n, 0) == 0:
         if mir_scan_rt_flags(imp_files[scan_i], tk, ts, te, n, ftmp, ptok, pex, pn) == 1:
           return 1
+        par_total = par_total + mir_count_parallel(imp_files[scan_i], tk, ts, te, n)
     scan_i = scan_i + 1
   n[0] = 0
   if lex_source(src, tk, ts, te, n, 0) == 1:
     return 1
+  par_total = par_total + mir_count_parallel(src, tk, ts, te, n)
   li_rt_mir_str("MIR")
   li_rt_ast_space()
-  li_rt_ast_int(pn[0])
+  li_rt_ast_int(pn[0] + par_total)
   li_rt_ast_space()
-  li_rt_ast_int(0)
+  if par_total > 0:
+    li_rt_ast_int(1)
+  else:
+    li_rt_ast_int(0)
   li_rt_ast_space()
   li_rt_ast_int(has_async)
   li_rt_ast_space()
@@ -11882,6 +12074,7 @@ def mir_module(src: var ptr,  file_path: ptr,  tk: var array[131072, int],  ts: 
   pi[0] = 0
   err[0] = 0
   pcount[0] = 0
+  li_rt_mir_par_counter_reset()
   if mir_walk(src,  tk,  ts,  te,  n,  pi,  err,  1, tc,  lastop,  ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar,  pmx,  pmc,  pcount) == 1:
     return 1
   # ---- Emit imports (re-lex each import; mir_proc reads from C globals) ----
