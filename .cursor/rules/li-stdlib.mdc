@@ -1,0 +1,21 @@
+---
+description: Standard library — 100% coverage, seal, proofs
+globs: std/**/*
+alwaysApply: false
+---
+
+# std/ (standard library)
+
+## Coverage
+
+**100% line coverage** required for all shipped `std/**/*.li`. Run `scripts/check-stdlib-coverage.sh` after changes (when `lic --coverage-instrument` is available).
+
+Every public export needs a `li-tests/` fixture. No `sorry`. Uncovered lines need a tracked **G-*** id in `docs/verification/provability-gaps.md`.
+
+## Seal
+
+User code cannot shadow prelude or std exports. After adding exports, run `scripts/gen-stdlib-manifest.sh`. See `docs/superpowers/specs/2026-05-16-li-stdlib-seal.md`.
+
+## Gates
+
+Same as `li-ecosystem-gates.mdc`: functionality, security, performance — std is security-critical surface for httpd and crypto.

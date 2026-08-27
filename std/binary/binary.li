@@ -1,0 +1,8 @@
+# Bit-packed values for quantized weights and masks (not byte strings — use `bytes`).
+
+def binary_tag() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1

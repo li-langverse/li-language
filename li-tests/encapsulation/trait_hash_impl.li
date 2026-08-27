@@ -1,0 +1,28 @@
+type Hash = trait
+  def hash(self: Self) -> int
+
+type Point = object
+  public x: int
+
+def Point_hash(self: Point) -> int
+  requires true
+  ensures result >= 0
+  decreases 0
+=
+  return 42
+
+def require_hash[H: Hash](p: H) -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return 0
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var p: Point
+  p.x = 1
+  return require_hash(p)

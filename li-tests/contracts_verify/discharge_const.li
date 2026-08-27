@@ -1,0 +1,6 @@
+def const_seven() -> int
+  requires true
+  ensures result == 7
+  decreases 0
+=
+  return 7

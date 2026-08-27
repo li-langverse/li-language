@@ -1,0 +1,7 @@
+def bad() -> float
+  requires true
+  ensures true
+  decreases 0
+=
+  var x: simd[f64, 16] = __li_simd_splat_f64(1.0)
+  return 0.0

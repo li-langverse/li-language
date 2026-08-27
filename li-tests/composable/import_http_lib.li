@@ -1,0 +1,8 @@
+import http
+
+def main() raises Alloc, IO -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return http_is_get_method_line("GET")

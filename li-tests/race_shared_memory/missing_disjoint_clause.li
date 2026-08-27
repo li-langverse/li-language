@@ -1,0 +1,11 @@
+
+def no_disjoint_proof() -> unit
+  requires true
+  ensures true
+  decreases 0
+=
+  var grid: array[64, array[64, f64]]
+  parallel for i in 0..<64
+    decreases 64 - i
+  =
+    grid[i][0] = grid[i][0] + 1.0

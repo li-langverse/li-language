@@ -1,0 +1,42 @@
+type LigCustomTargetDescriptor = object
+  public lab_id: int
+  public manifest_hash: int
+  public driver_signed: int
+  public lkir_version: int
+def lig_custom_lab_id_fpga() -> int
+  requires true
+  ensures result == 5
+  decreases 0
+=
+  return 5
+def lig_custom_target_descriptor(lab_id: int) -> LigCustomTargetDescriptor
+  requires lab_id >= 0
+  ensures result.lab_id == lab_id
+  ensures result.lkir_version == 2
+  decreases lab_id
+=
+  var d: LigCustomTargetDescriptor
+  d.lab_id = lab_id
+  d.manifest_hash = 0
+  d.driver_signed = 0
+  d.lkir_version = 2
+  if lab_id == lig_custom_lab_id_fpga():
+    d.manifest_hash = 20260525
+  return d
+def lig_custom_load_signed_driver(descriptor: LigCustomTargetDescriptor) -> int
+  requires descriptor.lkir_version >= 1
+  ensures result == 0
+  decreases descriptor.lab_id
+=
+  return 0
+def lig_custom_target_ready(descriptor: LigCustomTargetDescriptor) -> int
+  requires true
+  ensures result >= 0
+  ensures result <= 1
+  decreases descriptor.lab_id
+=
+  if lig_custom_load_signed_driver(descriptor) != 0:
+    return 0
+  if descriptor.lab_id != lig_custom_lab_id_fpga():
+    return 0
+  return 1

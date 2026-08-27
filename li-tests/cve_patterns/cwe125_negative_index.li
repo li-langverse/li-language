@@ -1,0 +1,7 @@
+# CWE-125: out-of-bounds read — negative constant index (Heartbleed / OOB read class).
+def read_before_start(buf: array[16, int]) -> int
+  requires true
+  ensures result == buf[-1]
+  decreases 0
+=
+  return buf[-1]

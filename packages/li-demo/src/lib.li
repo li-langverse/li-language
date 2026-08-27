@@ -1,0 +1,6 @@
+def li_demo_version() -> int
+  requires true
+  ensures result == 3
+  decreases 0
+=
+  return 3

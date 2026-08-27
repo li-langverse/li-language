@@ -1,0 +1,9 @@
+def loop() -> unit
+  requires true
+  ensures true
+=
+  var i = 0
+  while i < 10
+    invariant i >= 0
+  =
+    i += 1

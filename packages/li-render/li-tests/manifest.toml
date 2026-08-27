@@ -1,0 +1,17 @@
+[[tests]]
+suite = "smoke"
+file = "smoke/builds.li"
+outcome = "verify_ok"
+note = "T-PKG-li-render-smoke"
+
+[[tests]]
+suite = "smoke"
+file = "smoke/viewport_fps_counter.li"
+outcome = "compile_open_ok"
+note = "T-PKG-li-render-fps-counter"
+
+[[tests]]
+suite = "smoke"
+file = "smoke/scene_md_particles.li"
+outcome = "compile_open_ok"
+note = "T-PKG-li-render-scene-md-particles"

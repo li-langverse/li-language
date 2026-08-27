@@ -1,0 +1,8 @@
+import core
+ def sum_range(n:int)->int
+ requires n>=0
+ ensures result>=0
+ decreases n
+=
+ if n<=0: return 0
+ return n+sum_range(n-1)

@@ -1,0 +1,18 @@
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var s: array[1, int]
+  s[0] = 3
+  var v: array[4, int]
+  v[0] = 2
+  v[1] = 2
+  v[2] = 2
+  v[3] = 2
+  var w: array[4, int] = s * v
+  if w[0] != 6:
+    return 1
+  if w[3] != 6:
+    return 2
+  return 0

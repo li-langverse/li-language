@@ -1,0 +1,48 @@
+---
+description: Ergonomic Li imports — physics.relativity not li_std_physics_relativity
+alwaysApply: true
+---
+
+# Easy imports and naming
+
+## User-facing code
+
+Write imports and docs with **short dotted modules**:
+
+```li
+import physics.relativity
+import physics.runtime
+import math
+import ui
+import scene
+import io
+import csv
+```
+
+**Do not** use `li_std_*` or `li-std-*` kebab names in examples, GAME_DEV guides, or new tests unless testing legacy resolution.
+
+## Std tree
+
+| Ergonomic | Std path | Package (monorepo) |
+|-----------|----------|---------------------|
+| `physics.relativity` | `std.physics.relativity` | `li-std-physics-relativity` |
+| `physics.runtime` | `std.physics.runtime` | `li-std-physics-runtime` |
+| `math` | `std.math` | `li-std-math` |
+| `math.numerics` | `std.math.numerics` | `li-std-numerics` |
+| `ui` | `std.ui` | `li-std-ui` |
+| `scene` | `std.scene` | `li-std-scene` |
+
+Full table: `docs/language/import-style.md`
+
+## New packages
+
+1. Run `./scripts/li-new-package li-std-physics-foo --official`
+2. Add `import_name = "physics.foo"` under `[package.metadata.li]` (or run `scripts/apply-import-names.py`)
+3. Add `std/physics/foo.li` facade (tag `def` export or re-export)
+4. Register in `packages/li.toml` workspace `members`
+
+## Agents
+
+- Refactor docs/samples to ergonomic imports when touching a file
+- Prefer extending `easy_std_module()` in `import_resolve.cpp` over new top-level prefixes
+- Keep **one concern per module** — `physics.em` not `physics.em_fdtd_waveguide`

@@ -1,0 +1,43 @@
+type Pos2048 = {p: int | 0 <= p and p < 2048}
+
+def peek2048(buf: var array[2048, int], p: Pos2048) -> int
+  requires true
+  ensures result == buf[p]
+  decreases 0
+=
+  return buf[p]
+
+def set2048(buf: var array[2048, int], p: Pos2048, v: int) -> int
+  requires true
+  ensures result == v
+  decreases 0
+=
+  buf[p] = v
+  return v
+
+def poke(buf: var array[2048, int], td: var array[2048, int]) raises IO -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  var w: int = peek2048(td, 0)
+  set2048(td, 8, 1)
+  set2048(td, 9, 99)
+  print(5)
+  var b8: int = peek2048(buf, 8)
+  print(b8)
+  var b9: int = peek2048(buf, 9)
+  print(b9)
+  var t8: int = peek2048(td, 8)
+  print(t8)
+  return w
+
+def main() raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var arr: array[2048, int]
+  var r: int = poke(arr, arr)
+  print(r)
+  return 0

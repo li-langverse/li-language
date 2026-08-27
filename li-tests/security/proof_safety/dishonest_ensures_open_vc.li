@@ -1,0 +1,7 @@
+# Security: postcondition must be provable. Returning 0 when ensures says 1
+# creates an open proof obligation that lic build must catch.
+def main() -> int
+  requires true
+  ensures result == 1
+=
+  return 0

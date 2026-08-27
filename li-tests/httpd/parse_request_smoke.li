@@ -1,0 +1,9 @@
+import http
+import net
+
+def main() raises Net, IO, Alloc -> int
+  requires true
+  ensures result == 24
+  decreases 0
+=
+  return parse_request("GET / HTTP/1.1\r\n\r\n", 8192, 1048576) + net_tag()

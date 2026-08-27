@@ -1,0 +1,4 @@
+[[trap]]
+id = "oob"
+li_source = "li-tests/typecheck/bad_array_index.li"
+li_expect = "reject"

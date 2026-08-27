@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1920, height=1080" />
+  <title>Li World Studio — empty viewport (marketing mock)</title>
+  <link rel="stylesheet" href="studio-tokens.css" />
+  <link rel="stylesheet" href="studio-mock-chrome.css" />
+  <link rel="stylesheet" href="studio-agent-mock.css" />
+  <style>
+    * { box-sizing: border-box; }
+    body { width: 1920px; height: 1080px; margin: 0; background: var(--color-bg-primary); color: var(--color-text-primary); font-family: var(--typography-ui); overflow: hidden; }
+    .mock-banner { position: absolute; top: 0; left: 0; right: 0; z-index: 100; background: var(--mock-banner-bg, #3d1f00); color: #ffdf9e; font-size: 11px; text-align: center; padding: 4px 8px; border-bottom: 1px solid var(--color-accent-amber); }
+    .shell { position: absolute; inset: 24px 0 0 0; }
+    .dock { position: absolute; left: 0; top: 0; bottom: 0; width: var(--spacing-dock-width-px); background: var(--color-bg-elevated); border-right: 1px solid var(--color-border); display: flex; flex-direction: column; align-items: center; padding: 10px 4px; gap: 6px; }
+    .dock button { width: 36px; height: 36px; border: 1px solid var(--color-border); border-radius: 6px; background: transparent; color: var(--color-text-muted); cursor: pointer; }
+    .topbar { position: absolute; left: var(--shell-left-px); right: 0; top: 0; height: var(--spacing-topbar-height-px); background: var(--color-bg-elevated); border-bottom: 1px solid var(--color-border); display: flex; align-items: center; gap: 16px; padding: 0 16px; }
+    .viewport { position: absolute; left: var(--shell-left-px); top: var(--spacing-topbar-height-px); right: var(--spacing-inspector-width-px); bottom: 220px; background: var(--color-bg-primary); border-right: 1px solid var(--color-border); display: flex; align-items: center; justify-content: center; }
+    .viewport-empty { text-align: center; max-width: 420px; padding: 32px; border: 2px dashed var(--color-border); border-radius: 12px; color: var(--color-text-muted); }
+    .timeline { position: absolute; left: var(--shell-left-px); right: var(--spacing-inspector-width-px); bottom: 0; height: 180px; background: var(--color-bg-elevated); border-top: 1px solid var(--color-border); padding: 12px 16px; }
+    .inspector { position: absolute; right: 0; top: var(--spacing-topbar-height-px); width: var(--spacing-inspector-width-px); bottom: 0; background: var(--color-bg-elevated); border-left: 1px solid var(--color-border); padding: 16px; }
+  </style>
+</head>
+<body>
+  <div class="mock-banner" role="note">MARKETING MOCK — HTML preview only; native Li Studio uses li-ui/li-gui</div>
+  <div class="shell">
+    <nav class="dock" aria-label="Tools">
+      <div class="dock-item"><button type="button" title="Select">◇</button><span class="dock-label">Select</span></div>
+      <div class="dock-item"><button type="button" title="Move">✥</button><span class="dock-label">Move</span></div>
+    </nav>
+    <aside class="outliner" aria-label="Scene hierarchy"><h2>Outliner</h2><div class="outliner-empty">No scene nodes — open a project to populate the hierarchy.</div></aside>
+    <header class="topbar"><strong>Li World Studio</strong><span class="cmd-hint">⌘K Command palette</span></header>
+    <main class="viewport"><div class="viewport-empty"><strong>No scene loaded</strong>Open a project to begin.</div></main>
+    <div class="agent-block" data-mode="idle" aria-label="Agent copilot">
+      <div class="agent-strip">
+        <div class="agent-invoke">
+          <input class="agent-task-input" type="text" placeholder="Describe a task for the agent…" aria-label="Agent task" />
+          <button type="button" class="agent-send">Send</button>
+          <span class="agent-status is-idle">Idle — describe a task to start</span>
+          <a class="agent-mcp-hint" href="../../docs/game-dev/studio-mcp-tools.md">MCP · Cursor</a>
+        </div>
+      </div>
+    </div>
+    <section class="timeline"><strong>Timeline</strong></section>
+    <aside class="inspector"><h2>Inspector</h2><div class="outliner-empty">Nothing selected.</div></aside>
+  </div>
+  <script src="studio-agent-mock.js"></script>
+</body>
+</html>

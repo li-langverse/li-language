@@ -1,0 +1,152 @@
+# Famous software failures mapped to Li language rules (OS-ready).
+# Review: automated via scripts/check-historic-bugs.sh on every OS in CI.
+# Human review: when adding a row or changing li_rule / mitigation_status.
+
+version = 1
+
+# --- Memory & bounds (C kernel / OpenSSL class) ---
+
+[[bug]]
+id = "heartbleed-2014"
+name = "OpenSSL Heartbleed"
+year = 2014
+cwe = ["CWE-125"]
+root_cause = "Out-of-bounds read on attacker-controlled length (C, no proof)"
+li_rule = "Fixed arrays + constant or refinement index; OOB is compile error"
+li_test = "li-tests/cve_patterns/cwe125_negative_index.li"
+os_relevance = "Any networked kernel/userspace parser must not trust lengths without proof"
+mitigation_status = "enforced"
+
+[[bug]]
+id = "cloudbleed-2017"
+name = "Cloudflare Cloudbleed"
+year = 2017
+cwe = ["CWE-125"]
+root_cause = "Buffer overread in HTML parser leaking adjacent memory"
+li_rule = "Same as Heartbleed — bounds are static or proved"
+li_test = "li-tests/cve_patterns/cwe125_negative_index.li"
+os_relevance = "HTTP/gateway stacks in user space"
+mitigation_status = "enforced"
+
+[[bug]]
+id = "ghost-2015"
+name = "glibc GHOST (gethostbyname)"
+year = 2015
+cwe = ["CWE-787"]
+root_cause = "Heap overflow in C library DNS helper"
+li_rule = "No unbounded C string APIs in user .li; extern requires contracts"
+li_test = "li-tests/cve_patterns/cwe676_extern_no_contract.li"
+os_relevance = "libc seam is trusted + ASan until ported to Li"
+mitigation_status = "partial"
+
+# --- Command / environment injection ---
+
+[[bug]]
+id = "shellshock-2014"
+name = "GNU Bash Shellshock"
+year = 2014
+cwe = ["CWE-78"]
+root_cause = "Attacker-controlled env vars executed as code via /bin/bash"
+li_rule = "lic link rejects shell metacharacters in paths; no user shell invocation in language"
+li_test = "li-tests/security/codegen_path_injection.sh"
+os_relevance = "OS must not pass untrusted env through shell when invoking tools"
+mitigation_status = "enforced"
+
+# --- Concurrency / kernel races ---
+
+[[bug]]
+id = "dirty-cow-2016"
+name = "Linux Dirty COW"
+year = 2016
+cwe = ["CWE-362"]
+root_cause = "Race on shared writable mapping in kernel"
+li_rule = "parallel for requires proved disjointness; shared slot writes rejected"
+li_test = "li-tests/race_shared_memory/shared_mut_write.li"
+os_relevance = "Core for Li kernel threads mutating shared page tables / buffers"
+mitigation_status = "partial"
+
+[[bug]]
+id = "therac-25-1985"
+name = "Therac-25"
+year = 1985
+cwe = ["CWE-362", "CWE-366"]
+root_cause = "Reused racey control code; concurrent state without proper exclusion"
+li_rule = "No data races in proved parallel regions; borrow rules on shared state"
+li_test = "li-tests/race_shared_memory/mut_capture_no_sync.li"
+os_relevance = "Device drivers and real-time control loops"
+mitigation_status = "partial"
+
+# --- Integer / conversion ---
+
+[[bug]]
+id = "ariane-5-1996"
+name = "Ariane 5 flight 501"
+year = 1996
+cwe = ["CWE-190", "CWE-681"]
+root_cause = "Narrowing float→int conversion overflow; dead code left enabled; no handler"
+li_rule = "No bare cast; narrowing needs cast[T](e, proof); loops need decreases"
+li_test = "li-tests/cve_patterns/historic_ariane5_narrowing.li"
+os_relevance = "Sensor fusion, timers, and fixed-width registers in kernel"
+mitigation_status = "enforced"
+
+[[bug]]
+id = "knight-capital-2012"
+name = "Knight Capital"
+year = 2012
+cwe = ["CWE-190"]
+root_cause = "Integer/order flag confusion after deploy; untested dead path activated"
+li_rule = "Totality + decreases on loops; no sorry; contracts on state transitions (roadmap)"
+li_test = "li-tests/prove_reject/missing_decreases.li"
+os_relevance = "Scheduling / priority inversion in OS services"
+mitigation_status = "partial"
+
+# --- Control flow / TLS ---
+
+[[bug]]
+id = "goto-fail-2014"
+name = "Apple SSL goto fail"
+year = 2014
+cwe = ["CWE-670"]
+root_cause = "Duplicate goto bypassed certificate verification (C, manual control flow)"
+li_rule = "goto forbidden; structured if/while with mandatory contracts"
+li_test = "li-tests/cve_patterns/historic_goto_fail.li"
+os_relevance = "Crypto verify paths in kernel TLS (future)"
+mitigation_status = "enforced"
+
+# --- Speculative / hardware (document only) ---
+
+[[bug]]
+id = "spectre-meltdown-2018"
+name = "Spectre / Meltdown"
+year = 2018
+cwe = ["CWE-362"]
+root_cause = "CPU speculative execution side channels — not a source-level bug"
+li_rule = "Document hardware trust boundary; kernel uses fences/IBRS at trusted layer"
+li_test = null
+os_relevance = "Li OS must map isolation to hardware mitigations in trusted code"
+mitigation_status = "trusted_only"
+
+# --- OS architecture (Firefly / microkernel lesson) ---
+
+[[bug]]
+id = "serenity-firefly-os"
+name = "Project Serenity Firefly (research OS)"
+year = 2023
+cwe = []
+root_cause = "Mainstream C kernels accumulate memory-safety CVEs; Rust/alternate languages reduce UB"
+li_rule = "Li user/kernel code is proof-gated; C only at audited extern/runtime seam"
+li_test = null
+os_relevance = "Informed Li OS direction: proved .li drivers, minimal li_rt, no pervasive C UB"
+mitigation_status = "design"
+note = "Firefly is a design precedent, not a single CVE. Contrast with app-level Firefly III IDOR."
+
+[[bug]]
+id = "firefly-iii-idor-2024"
+name = "Firefly III API IDOR (app layer)"
+year = 2024
+cwe = ["CWE-639"]
+root_cause = "Missing authorization check on REST handler (application logic)"
+li_rule = "Capability / Send-Sync on handles (roadmap); not a memory-safety language issue"
+li_test = null
+os_relevance = "OS services still need authz proofs separate from memory safety"
+mitigation_status = "roadmap"

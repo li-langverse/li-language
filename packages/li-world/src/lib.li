@@ -1,0 +1,201 @@
+
+# li-world — PH-GD-2 text save/load scaffold (no scene graph / studio integration yet).
+# `WorldSnapshot.name` is a stub name-slot id (0=default, 1=arena); wire line uses text tokens.
+
+type WorldSnapshot = object
+  public name: int
+  public tick: int
+  public entity_count: int
+
+extern def li_rt_world_format_version() -> int
+  requires true
+  ensures result >= 1
+  decreases 0
+
+extern def li_rt_world_serialize_slot(name_slot: int, tick: int, entity_count: int) -> str
+  requires name_slot >= 0
+  requires name_slot <= 1
+  requires tick >= 0
+  requires entity_count >= 0
+  ensures true
+  decreases tick
+
+extern def li_rt_world_parse_line(line: str) -> int
+  requires true
+  ensures 0 <= result
+  ensures result <= 1
+  decreases 0
+
+extern def li_rt_world_parsed_name_slot() -> int
+  requires true
+  ensures 0 <= result
+  ensures result <= 1
+  decreases 0
+
+extern def li_rt_world_parsed_tick() -> int
+  requires true
+  ensures result >= 0
+  decreases 0
+
+extern def li_rt_world_parsed_entity_count() -> int
+  requires true
+  ensures result >= 0
+  decreases 0
+
+extern def li_rt_world_snapshot_eq_fields(an: int, at: int, ae: int, bn: int, bt: int, be: int) -> int
+  requires true
+  ensures 0 <= result
+  ensures result <= 1
+  decreases at
+
+extern def li_rt_world_roundtrip_fields(name_slot: int, tick: int, entity_count: int) -> int
+  requires name_slot >= 0
+  requires name_slot <= 1
+  requires tick >= 0
+  requires entity_count >= 0
+  ensures 0 <= result
+  ensures result <= 1
+  decreases tick
+
+def world_format_version() raises IO -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return li_rt_world_format_version()
+
+def world_name_slot_default() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return 0
+
+def world_name_slot_arena() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+def world_snapshot_valid(s: WorldSnapshot) -> int
+  requires true
+  ensures 0 <= result
+  ensures result <= 1
+  decreases s.tick
+=
+  if s.tick < 0:
+    return 0
+  if s.entity_count < 0:
+    return 0
+  if s.name < 0:
+    return 0
+  if s.name > 1:
+    return 0
+  return 1
+
+def world_snapshot_default() -> WorldSnapshot
+  requires true
+  ensures result.name == 0
+  ensures result.tick == 0
+  ensures result.entity_count == 0
+  ensures world_snapshot_valid(result) == 1
+  decreases 0
+=
+  var s: WorldSnapshot
+  s.name = 0
+  s.tick = 0
+  s.entity_count = 0
+  return s
+
+def world_serialize_fields(name_slot: int, tick: int, entity_count: int) raises Alloc, IO -> str
+  requires 0 <= name_slot
+  requires name_slot <= 1
+  requires tick >= 0
+  requires entity_count >= 0
+  ensures world_format_version() == 1
+  decreases tick
+=
+  return li_rt_world_serialize_slot(name_slot, tick, entity_count)
+
+def world_serialize(snapshot: WorldSnapshot) raises Alloc, IO -> str
+  requires world_snapshot_valid(snapshot) == 1
+  ensures world_format_version() == 1
+  decreases snapshot.tick
+=
+  return world_serialize_fields(snapshot.name, snapshot.tick, snapshot.entity_count)
+
+def world_parse_line(line: str) raises Alloc, IO -> WorldSnapshot
+  requires true
+  ensures world_snapshot_valid(result) == 1
+  ensures result.tick >= 0
+  ensures result.entity_count >= 0
+  decreases 0
+=
+  var ok: int = li_rt_world_parse_line(line)
+  var s: WorldSnapshot
+  if ok != 1:
+    return world_snapshot_default()
+  s.name = li_rt_world_parsed_name_slot()
+  s.tick = li_rt_world_parsed_tick()
+  s.entity_count = li_rt_world_parsed_entity_count()
+  return s
+
+def world_save_to_buffer_fields(name_slot: int, tick: int, entity_count: int) raises Alloc, IO -> str
+  requires 0 <= name_slot
+  requires name_slot <= 1
+  requires tick >= 0
+  requires entity_count >= 0
+  ensures world_format_version() == 1
+  decreases tick
+=
+  return li_rt_world_serialize_slot(name_slot, tick, entity_count)
+
+def world_save_to_buffer(snapshot: WorldSnapshot) raises Alloc, IO -> str
+  requires world_snapshot_valid(snapshot) == 1
+  ensures world_format_version() == 1
+  decreases snapshot.tick
+=
+  return world_save_to_buffer_fields(snapshot.name, snapshot.tick, snapshot.entity_count)
+
+def world_load_from_buffer(buf: str) raises Alloc, IO -> WorldSnapshot
+  requires true
+  ensures world_snapshot_valid(result) == 1
+  decreases 0
+=
+  return world_parse_line(buf)
+
+def world_snapshot_fields_match_fields(an: int, at: int, ae: int, bn: int, bt: int, be: int) raises IO -> int
+  requires true
+  ensures 0 <= result
+  ensures result <= 1
+  decreases at
+=
+  return li_rt_world_snapshot_eq_fields(an, at, ae, bn, bt, be)
+
+def world_snapshot_fields_match(a: WorldSnapshot, b: WorldSnapshot) raises IO -> int
+  requires true
+  ensures 0 <= result
+  ensures result <= 1
+  decreases a.tick
+=
+  return li_rt_world_snapshot_eq_fields(a.name, a.tick, a.entity_count, b.name, b.tick, b.entity_count)
+
+def world_roundtrip_ok_fields(name_slot: int, tick: int, entity_count: int) raises IO -> int
+  requires 0 <= name_slot
+  requires name_slot <= 1
+  requires tick >= 0
+  requires entity_count >= 0
+  ensures 0 <= result
+  ensures result <= 1
+  decreases tick
+=
+  return li_rt_world_roundtrip_fields(name_slot, tick, entity_count)
+
+def world_roundtrip_ok(snapshot: WorldSnapshot) raises IO -> int
+  requires world_snapshot_valid(snapshot) == 1
+  ensures 0 <= result
+  ensures result <= 1
+  decreases snapshot.tick
+=
+  return li_rt_world_roundtrip_fields(snapshot.name, snapshot.tick, snapshot.entity_count)

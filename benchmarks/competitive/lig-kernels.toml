@@ -1,0 +1,180 @@
+# Multi-vendor timing registry for `lig` (PH-HW WP1 schema).
+# cuda / hip / metal = "N/A" until LIG_EMIT_CUDA=1 LIG_EMIT_HIP=1 LIG_EMIT_METAL=1
+# Timed CPU pilot: benchmarks/results/lig-lkir-matmul.json
+
+[meta]
+version = 1
+package = "lig"
+vendor_na_until_emit = "cuda,hip,metal"
+emit_env_cuda = "LIG_EMIT_CUDA=1"
+emit_env_hip = "LIG_EMIT_HIP=1"
+emit_env_metal = "LIG_EMIT_METAL=1"
+
+[[kernel]]
+id = "lig.kernel.matmul_f32"
+bench_name = "matmul_f32"
+lkir = "lkir/matmul_f32.li"
+validity_ref = "cpu"
+workload_class = "stub"
+cpu = ""
+cuda = "N/A"
+hip = "N/A"
+metal = "N/A"
+custom_lab = ""
+
+[[kernel]]
+id = "lig.kernel.matmul_f64"
+bench_name = "matmul_f64"
+lkir = "lkir/matmul_tile_f64.lkir"
+validity_ref = "cpu"
+workload_class = "stub"
+cpu = ""
+cuda = "N/A"
+hip = "N/A"
+metal = "N/A"
+custom_lab = ""
+
+[[kernel]]
+id = "lig.kernel.dot_f32"
+bench_name = "dot_f32"
+lkir = "lkir/dot_warp.lkir"
+validity_ref = "cpu"
+workload_class = "stub"
+cpu = ""
+cuda = "N/A"
+hip = "N/A"
+metal = "N/A"
+custom_lab = ""
+
+[[kernel]]
+id = "lig.kernel.reduce_sum_f32"
+bench_name = "reduce_sum_f32"
+lkir = "lkir/reduce_sum.lkir"
+validity_ref = "cpu"
+workload_class = "stub"
+cpu = ""
+cuda = "N/A"
+hip = "N/A"
+metal = "N/A"
+custom_lab = ""
+
+[[kernel]]
+id = "lig.kernel.md_force_short"
+bench_name = "md_force_short"
+lkir = "lkir/md_lj_short.lkir"
+validity_ref = "cpu"
+workload_class = "stub"
+cpu = ""
+cuda = "N/A"
+hip = "N/A"
+metal = "N/A"
+custom_lab = ""
+
+[[kernel]]
+id = "lig.kernel.md_force_full"
+bench_name = "md_force_full"
+lkir = "lkir/md_lj_full.lkir"
+validity_ref = "cpu"
+workload_class = "stub"
+cpu = ""
+cuda = "N/A"
+hip = "N/A"
+metal = "N/A"
+custom_lab = ""
+
+[[kernel]]
+id = "lig.kernel.heat_stencil_2d_f32"
+bench_name = "heat_stencil_2d"
+lkir = "lkir/heat_2d.lkir"
+validity_ref = "cpu"
+workload_class = "stub"
+cpu = ""
+cuda = "N/A"
+hip = "N/A"
+metal = "N/A"
+custom_lab = ""
+
+[[kernel]]
+id = "lig.kernel.sph_density_f32"
+bench_name = "sph_density"
+lkir = "lkir/sph_density.lkir"
+validity_ref = "cpu"
+workload_class = "stub"
+cpu = ""
+cuda = "N/A"
+hip = "N/A"
+metal = "N/A"
+custom_lab = ""
+
+[[kernel]]
+id = "lig.kernel.horner_f32"
+bench_name = "horner_f32"
+lkir = "lkir/horner.lkir"
+validity_ref = "cpu"
+workload_class = "stub"
+cpu = ""
+cuda = "N/A"
+hip = "N/A"
+metal = "N/A"
+custom_lab = ""
+
+[[kernel]]
+id = "lig.kernel.mlp_forward_f32"
+bench_name = "mlp_forward_f32"
+lkir = "lkir/mlp_tile.lkir"
+validity_ref = "cpu"
+workload_class = "stub"
+cpu = ""
+cuda = "N/A"
+hip = "N/A"
+metal = "N/A"
+custom_lab = ""
+
+[[kernel]]
+id = "lig.kernel.memcpy_h2d_f32"
+bench_name = "memcpy_h2d"
+lkir = "lkir/memcpy.lkir"
+validity_ref = "cpu"
+workload_class = "stub"
+cpu = ""
+cuda = "N/A"
+hip = "N/A"
+metal = "N/A"
+custom_lab = ""
+
+[[kernel]]
+id = "lig.kernel.memcpy_d2h_f32"
+bench_name = "memcpy_d2h"
+lkir = "lkir/memcpy.lkir"
+validity_ref = "cpu"
+workload_class = "stub"
+cpu = ""
+cuda = "N/A"
+hip = "N/A"
+metal = "N/A"
+custom_lab = ""
+
+[[kernel]]
+id = "lig.kernel.quat_rotate_vec3"
+bench_name = "quat_rotate_vec3"
+lkir = "lkir/quat_rotate.lkir"
+validity_ref = "cpu"
+workload_class = "stub"
+cpu = ""
+cuda = "N/A"
+hip = "N/A"
+metal = "N/A"
+custom_lab = ""
+
+[[kernel]]
+id = "lig.kernel.present_blit_rgba8"
+bench_name = "present_blit_rgba8"
+lkir = "lkir/blit.lkir"
+validity_ref = "cpu"
+workload_class = "stub"
+cpu = ""
+cuda = "N/A"
+hip = "N/A"
+metal = "N/A"
+custom_lab = ""
+

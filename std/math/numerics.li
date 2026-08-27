@@ -1,0 +1,10 @@
+# Numerics policy: correct per published spec first, then fast.
+# Goldens: benchmarks/harness/reference.py, scripts/verify-math-physics-goldens.sh
+# Report: docs/numerics/benchmark-fastmath-dce-2026-05-22.md
+
+def math_numerics_std_tag() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1

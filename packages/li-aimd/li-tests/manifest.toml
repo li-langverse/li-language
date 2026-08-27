@@ -1,0 +1,19 @@
+# Package-local tests — also register in monorepo li-tests/manifest.toml when integrated.
+
+[[tests]]
+suite = "smoke"
+file = "smoke/builds.li"
+outcome = "verify_ok"
+note = "T-PKG-li-aimd-smoke"
+
+[[tests]]
+suite = "smoke"
+file = "smoke/aimd_oracle_smoke.li"
+outcome = "compile_open_ok"
+note = "AIMD DFT-coupled MD energy-drift oracle + GC charge-neutrality oracle"
+
+[[tests]]
+suite = "smoke"
+file = "smoke/aimd_batch_smoke.li"
+outcome = "compile_open_ok"
+note = "AIMD headless batch runner (steps valid, stride, dft_calls, checksum)"

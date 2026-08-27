@@ -1,0 +1,30 @@
+type Vec3 = object
+  public x: float
+  public y: float
+  public z: float
+
+def unit_vec() -> Vec3
+  requires true
+  ensures result.x == 1.0
+  decreases 0
+=
+  var v: Vec3
+  v.x = 1.0
+  v.y = 0.0
+  v.z = 0.0
+  return v
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var a: Vec3
+  a.x = 1.0
+  a.y = 2.0
+  a.z = 3.0
+  var b: Vec3
+  b = a
+  var c: Vec3
+  c = unit_vec()
+  return 0

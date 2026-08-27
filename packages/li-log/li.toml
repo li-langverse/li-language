@@ -1,0 +1,22 @@
+[package]
+name = "li-log"
+version = "0.1.0"
+edition = "2026"
+license = "Apache-2.0 OR MIT"
+description = "RFC3339 logging, rotation, redact-by-default access/audit"
+
+[dependencies]
+# path = { path = "../other" }   # lip 8b+
+# registry = "1.0.0"             # lip 8d+
+
+[package.metadata.li]
+github_repo = "li-log"
+import_name = "log"
+min_lic = "0.1.0"
+maintainer = "li-langverse"
+pkg_id = "PKG-li-log"
+
+[package.repository]
+url = "https://github.com/li-langverse/li-log"
+documentation = "https://li-langverse.github.io/li-language/ecosystem/li-log/"
+changelog = "https://github.com/li-langverse/li-log/blob/main/CHANGELOG.md"

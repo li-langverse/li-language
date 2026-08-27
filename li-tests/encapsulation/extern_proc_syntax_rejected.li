@@ -1,0 +1,4 @@
+extern proc ffi_old() -> int
+  requires true
+  ensures true
+  decreases 0

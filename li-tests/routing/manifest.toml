@@ -1,0 +1,11 @@
+# Table-driven match_route cases (Python oracle: scripts/httpd_match.py).
+config = "../httpd/fixtures/routing.toml"
+
+[[cases]]
+file = "cases/api_prefix.toml"
+
+[[cases]]
+file = "cases/method_reject.toml"
+
+[[cases]]
+file = "cases/host_suffix.toml"

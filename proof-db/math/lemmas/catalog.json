@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "id": "L-MATH-ADD-COMM",
+      "status": "target",
+      "requires_axioms": [
+        "AX-MATH-REAL-ADD-COMM"
+      ],
+      "li_file": "proof-db/math/lemmas/add_commutative.li"
+    },
+    {
+      "id": "L-MATH-ORDER-TRANS",
+      "status": "target",
+      "requires_axioms": [
+        "AX-MATH-ORDER-TRICHOTOMY",
+        "AX-MATH-ORDER-ANTISYM"
+      ],
+      "li_file": "proof-db/math/lemmas/order_transitive.li"
+    },
+    {
+      "id": "L-MATH-MUL-DIST-INST",
+      "status": "target",
+      "requires_axioms": [
+        "AX-MATH-REAL-MUL-DIST"
+      ],
+      "li_file": "proof-db/math/lemmas/mul_distrib_instance.li"
+    }
+  ]
+}

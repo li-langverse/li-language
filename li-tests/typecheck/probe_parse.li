@@ -1,0 +1,82 @@
+extern def li_rt_argc() -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def li_rt_argv(i: int) -> ptr
+  requires true
+  ensures true
+  decreases 0
+
+extern def li_rt_str_len(s: ptr) -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def li_rt_str_byte_at(s: ptr, i: int) -> int
+  requires true
+  ensures true
+  decreases 0
+
+def peek2048(buf: var array[2048, int], p: Pos2048) -> int
+  requires true
+  ensures result == buf[p]
+  decreases 0
+=
+  return buf[p]
+
+def set2048(buf: var array[2048, int], p: Pos2048, v: int) -> int
+  requires true
+  ensures result == v
+  decreases 0
+=
+  buf[p] = v
+  return v
+
+type Pos2048 = {p: int | 0 <= p and p < 2048}
+
+def parse_into(s: ptr, buf: var array[2048, int]) -> int
+  requires true
+  ensures result >= 0
+  decreases 0
+=
+  var len: int = li_rt_str_len(s)
+  var i: int = 0
+  var pos: int = 0
+  var cur: int = 0
+  var neg: int = 0
+  var in_num: int = 0
+  while i < len:
+    var c: int = li_rt_str_byte_at(s, i + 0)
+    if c == 44:
+      if in_num == 1:
+        if neg == 1:
+          cur = 0 - cur
+        set2048(buf, pos + 0, cur + 0)
+        pos = pos + 1
+        cur = 0
+        neg = 0
+        in_num = 0
+    if c >= 48 and c <= 57:
+      cur = cur * 10 + (c - 48)
+      in_num = 1
+    if c == 45:
+      neg = 1
+    i = i + 1
+  if in_num == 1:
+    if neg == 1:
+      cur = 0 - cur
+    set2048(buf, pos + 0, cur + 0)
+    pos = pos + 1
+  return pos
+
+def main() raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var s: ptr = li_rt_argv(1)
+  var buf: array[2048, int]
+  var len: int = parse_into(s, buf)
+  print(len)
+  return 0

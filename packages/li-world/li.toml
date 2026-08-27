@@ -1,0 +1,18 @@
+[package]
+name = "li-world"
+version = "0.1.0"
+edition = "2026"
+license = "Apache-2.0 OR MIT"
+description = "Li game world snapshot — text line save/load (PH-GD-2 scaffold)"
+
+[package.metadata.li]
+github_repo = "li-world"
+import_name = "world"
+min_lic = "0.1.0"
+maintainer = "li-langverse"
+pkg_id = "PKG-li-world"
+
+[package.repository]
+url = "https://github.com/li-langverse/li-world"
+documentation = "https://li-langverse.github.io/li-language/ecosystem/li-world/"
+changelog = "https://github.com/li-langverse/li-world/blob/main/CHANGELOG.md"

@@ -1,0 +1,11 @@
+[[tests]]
+suite = "smoke"
+file = "smoke/builds.li"
+outcome = "verify_ok"
+note = "T-PKG-lig-smoke"
+
+[[tests]]
+suite = "smoke"
+file = "smoke/lig_device_probe.li"
+outcome = "compile_open_ok"
+note = "T-PKG-lig-device-probe"

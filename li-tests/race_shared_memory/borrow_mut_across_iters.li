@@ -1,0 +1,12 @@
+
+def borrow_race(buf: var array[256, f64]) -> unit
+  requires true
+  ensures true
+  decreases 0
+=
+  parallel for i in 0..<256
+    requires disjoint_elem(i, buf)
+    decreases 256 - i
+  =
+    borrow mut b = buf
+    b[i] = b[i] + 1.0

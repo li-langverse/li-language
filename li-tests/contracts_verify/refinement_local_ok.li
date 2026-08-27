@@ -1,0 +1,16 @@
+type NonNeg = {x: int | x >= 0}
+
+def callee(x: NonNeg) -> int
+  requires true
+  ensures result == x
+  decreases 0
+=
+  return x
+
+def caller_local() -> int
+  requires true
+  ensures result == 5
+  decreases 0
+=
+  var y: int = 5
+  return callee(y)

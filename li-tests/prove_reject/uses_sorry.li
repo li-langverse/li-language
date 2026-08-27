@@ -1,0 +1,7 @@
+def bad() -> int
+  requires true
+  ensures true
+  decreases 0
+= proof
+    sorry
+  qed

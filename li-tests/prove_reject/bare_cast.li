@@ -1,0 +1,6 @@
+def narrow(x: int) -> float
+  requires true
+  ensures true
+  decreases 0
+=
+  return cast[float](x)

@@ -1,0 +1,42 @@
+---
+description: Developer-friendly documentation style for Li
+globs: docs/**/*.md,README.md,CONTRIBUTING.md
+alwaysApply: false
+---
+
+# Documentation style
+
+Write for a skilled developer who is new to Li — not for a thesis committee.
+
+## Voice
+
+- Use **complete sentences** and plain language; avoid telegraphic bullet chains
+- Explain **why** before **how** when introducing a design choice
+- Prefer short sections with clear headings over one long wall of text
+- Use tables and diagrams when they reduce ambiguity (pipelines, type lists, phases)
+
+## Structure (every major doc)
+
+1. One-sentence **what this page is for**
+2. **Prerequisites** or links to prior reading
+3. **Content** with runnable examples where possible
+4. **Related links** at the end
+
+## Code in docs
+
+- Show full, copy-pasteable commands (no `...` omissions in shell blocks)
+- Label language on fenced blocks: ` ```nim ` for Li surface syntax
+- Pair “good” examples with one “fails at compile time” example when teaching types
+
+## Naming
+
+- Follow [philosophy.md](../../docs/language/philosophy.md) — domain words, snake_case procs, readable imports
+- Say **Li** (the language) and **lic** (the compiler)
+- Link to canonical spec sections instead of duplicating large tables
+- Date major spec revisions; mark **Status:** Planning | Active | Deprecated
+
+## Anti-patterns
+
+- Walls of identifiers without prose
+- Duplicating the full numeric/data-structure roadmaps — link to the design spec
+- Promising timelines without pointing to the master plan phase map

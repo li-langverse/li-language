@@ -1,0 +1,17 @@
+def add2(
+    a: int,
+    b: int) -> int
+  requires true
+  ensures result == a + b
+  decreases 0
+=
+  return a + b
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if add2(1, 2) != 3:
+    return 1
+  return 0

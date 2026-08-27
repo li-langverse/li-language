@@ -1,0 +1,112 @@
+# Competitive HPC intelligence registry (source of truth).
+# Agents: read before benchmark/SIMD/parallel/tier-2 changes.
+# Workflow: .cursor/skills/hpc-competitive-review/SKILL.md
+# Validate: ./scripts/check-hpc-competitive.sh
+
+[meta]
+version = 1
+registry_review_days_warn = 90
+updated = "2026-05-16"
+
+# track: watch | bench_tier0 | bench_tier1 | bench_tier2
+# csv_lang: column in benchmarks/results/latest.csv (must match bench.py LANGS when bench_*)
+
+[[ecosystem]]
+id = "cpp_openmp"
+track = "bench_tier2"
+repo_url = "https://github.com/llvm/llvm-project"
+compare = ["md_lennard_jones", "matmul_blocked", "simd_dot", "three_body", "heat_2d"]
+csv_lang = "cpp"
+kernel_honesty = "reference_native"
+last_reviewed = "2026-05-16"
+notes = "C++/Clang drivers under benchmarks/tier*/cpp; -O3 -march=native in harness."
+
+[[ecosystem]]
+id = "rust_ndarray_rayon"
+track = "bench_tier2"
+repo_url = "https://github.com/rust-lang/rust"
+compare = ["md_lennard_jones", "matmul_blocked", "simd_dot", "reduce_sum"]
+csv_lang = "rust"
+kernel_honesty = "shared_c_kernel"
+last_reviewed = "2026-05-16"
+notes = "Rust drivers link same C core as cpp via LI_EXTRA_C pattern in harness."
+
+[[ecosystem]]
+id = "julia"
+track = "bench_tier2"
+repo_url = "https://github.com/JuliaLang/julia"
+compare = ["md_lennard_jones", "matmul_blocked", "three_body"]
+csv_lang = "julia"
+kernel_honesty = "shared_c_kernel"
+last_reviewed = "2026-05-16"
+notes = "Julia wrappers over shared C kernels; optional on CI (ci-bench skips if missing)."
+
+[[ecosystem]]
+id = "li"
+track = "bench_tier2"
+repo_url = "https://github.com/li-langverse/lic"
+compare = ["md_lennard_jones", "horner_pure_li", "simd_dot", "three_body"]
+csv_lang = "li"
+kernel_honesty = "mixed"
+last_reviewed = "2026-05-16"
+notes = "Label pure_li vs shared_c_kernel per benchmarks/results/README.md; parallel only with Lean proof."
+
+[[ecosystem]]
+id = "python_numpy"
+track = "watch"
+repo_url = "https://github.com/numpy/numpy"
+compare = ["matmul_blocked", "mlp_forward"]
+csv_lang = ""
+kernel_honesty = "blas_labeled"
+last_reviewed = "2026-05-16"
+notes = "Tier-3 ML only; never compare naive Python to SIMD li without BLAS label."
+
+[[ecosystem]]
+id = "chapel"
+track = "watch"
+repo_url = "https://github.com/chapel-lang/chapel"
+compare = ["md_lennard_jones", "matmul_blocked"]
+csv_lang = ""
+kernel_honesty = "n/a"
+last_reviewed = "2026-05-16"
+notes = "HPC PGAS reference; manual release-note review quarterly."
+
+[[ecosystem]]
+id = "kokkos"
+track = "watch"
+repo_url = "https://github.com/kokkos/kokkos"
+compare = ["md_lennard_jones", "heat_2d"]
+csv_lang = ""
+kernel_honesty = "n/a"
+last_reviewed = "2026-05-16"
+notes = "Performance portability; watch Kokkos 4 OpenMP/SYCL backends."
+
+[[ecosystem]]
+id = "sycl_dpcpp"
+track = "watch"
+repo_url = "https://github.com/intel/llvm"
+compare = ["simd_dot", "matmul_blocked"]
+csv_lang = ""
+kernel_honesty = "n/a"
+last_reviewed = "2026-05-16"
+notes = "SYCL/oneAPI; GPU offload out of scope until Li device story exists."
+
+[[ecosystem]]
+id = "zig"
+track = "watch"
+repo_url = "https://github.com/ziglang/zig"
+compare = ["simd_dot", "reduce_sum"]
+csv_lang = ""
+kernel_honesty = "n/a"
+last_reviewed = "2026-05-16"
+notes = "Manual comptime/SIMD patterns; no harness column yet."
+
+[[ecosystem]]
+id = "openmp_spec"
+track = "bench_tier0"
+repo_url = "https://github.com/llvm/llvm-project/tree/main/openmp"
+compare = ["tier0_correctness", "race_shared_memory"]
+csv_lang = ""
+kernel_honesty = "n/a"
+last_reviewed = "2026-05-16"
+notes = "Tier-0 stability + race rejects gate CI; not wall-time competitive."

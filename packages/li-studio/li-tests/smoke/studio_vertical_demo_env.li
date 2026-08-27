@@ -1,0 +1,16 @@
+import studio
+
+def main() -> int raises IO
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if li_std_studio_version() < 6:
+    return 1
+  var game: int = studio_profile_game()
+  var rl: int = studio_profile_sim_rl()
+  if studio_vertical_demo_frame(game, 0) != 0:
+    return 10
+  if studio_vertical_demo_frame(rl, 1) != 0:
+    return 20
+  return 0

@@ -1,0 +1,34 @@
+# li-rng — deterministic Prng + OsRng uniform contract (httpd plan rng-concepts).
+# Trusted OS fill: extern only in this package; user code uses RngSource adapters.
+
+type Prng = object
+  state: int
+
+type Csprng = object
+  label: int
+
+# LCG step (bench-aligned); pure — no raises Rng until effect lands (use IO at seam).
+def prng_seed(p: var Prng, seed: int) -> unit
+  requires true
+  ensures p.state == seed
+  decreases 0
+=
+  p.state = seed
+
+def prng_next(p: var Prng) -> int
+  requires true
+  ensures p.state != 0
+  decreases 0
+=
+  p.state = p.state * 6364136223846793005 + 1
+  return p.state
+
+# OsCSPRNG: li_rt_rng_fill_bytes (getrandom) — runtime seam in li_rt_rng.c (G-runtime follow-up).
+# Uniform contract: docs/semantics/Probability.lean OsRngUniform + prob_ensures given OsRngUniform.
+
+def li_rng_version() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1

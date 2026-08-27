@@ -1,0 +1,14 @@
+import log
+
+def main() raises Alloc, IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var bad: str = "Authorization: Bearer supersecret tail"
+  if redact_selftest(bad) != 0:
+    return 1
+  var sk: str = "upstream sk-live-abc123xyz done"
+  if redact_selftest(sk) != 0:
+    return 2
+  return 0

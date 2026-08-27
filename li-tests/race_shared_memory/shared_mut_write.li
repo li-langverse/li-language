@@ -1,0 +1,11 @@
+
+def race() -> unit
+  requires true
+  ensures true
+  decreases 0
+=
+  var buf: array[1024, int]
+  parallel for i in 0..<1024
+    decreases 1024 - i
+  =
+    buf[0] = buf[0] + 1

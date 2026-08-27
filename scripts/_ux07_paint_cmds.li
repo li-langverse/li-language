@@ -1,0 +1,38 @@
+def studio_paint_inspector_empty_cmds() -> int
+  requires true
+  ensures result == 4
+  decreases 0
+=
+  return 4
+
+def studio_paint_inspector_selected_cmds() -> int
+  requires true
+  ensures result == 3
+  decreases 0
+=
+  return 3
+
+def studio_paint_inspector_cmds(has_selection: int) -> int
+  requires has_selection >= 0
+  requires has_selection <= 1
+  ensures result >= 3
+  ensures result <= 4
+  decreases has_selection
+=
+  if has_selection == 0:
+    return studio_paint_inspector_empty_cmds()
+  return studio_paint_inspector_selected_cmds()
+
+def studio_paint_viewport_empty_cmds() -> int
+  requires true
+  ensures result == 3
+  decreases 0
+=
+  return 3
+
+def studio_paint_viewport_scene_cmds() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1

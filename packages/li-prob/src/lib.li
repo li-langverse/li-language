@@ -1,0 +1,15 @@
+# li-prob — Monte Carlo estimators and prob_ensures discharge helpers (P2).
+
+def li_prob_version() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+def prob_default_samples() -> int
+  requires true
+  ensures result == 10000
+  decreases 0
+=
+  return 10000

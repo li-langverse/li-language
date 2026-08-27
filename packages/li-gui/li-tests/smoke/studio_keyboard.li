@@ -1,0 +1,37 @@
+import gui
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if li_std_gui_version() < 3:
+    return 1
+  var panel: GuiPanelState = gui_panel_state_new()
+  var idle: InputState = input_default()
+  if gui_handle_studio_key(panel, idle) != studio_key_action_none():
+    return 2
+  var open_palette: InputState = input_default()
+  open_palette.key_cmd_k = 1
+  if gui_handle_studio_key(panel, open_palette) != studio_key_action_palette_toggle():
+    return 3
+  if panel.palette_open != studio_palette_open_flag():
+    return 4
+  var close_palette: InputState = input_default()
+  close_palette.key_escape = 1
+  if gui_handle_studio_key(panel, close_palette) != studio_key_action_palette_close():
+    return 5
+  if panel.palette_open != studio_palette_closed_flag():
+    return 6
+  var focus_inspector: InputState = input_default()
+  focus_inspector.key_digit = 3
+  if gui_handle_studio_key(panel, focus_inspector) != studio_key_action_region_focus():
+    return 7
+  if panel.active_region != studio_region_inspector():
+    return 8
+  var bind: StudioKeyBinding = gui_studio_key_binding(studio_key_binding_digit_timeline())
+  if bind.target_region != studio_region_timeline():
+    return 9
+  if bind.focus_digit != 4:
+    return 10
+  return 0

@@ -1,0 +1,73 @@
+# Pure-Li three-body mini kernel (library-aligned, reduced steps for CI).
+
+extern def li_rt_sqrt(x: float) -> float
+  requires true
+  ensures true
+  decreases 0
+
+def three_body_forces(
+    px: array[3, float], py: array[3, float],
+    fx: array[3, float], fy: array[3, float]) -> unit
+  requires true
+  ensures true
+  decreases 0
+=
+  var i: int = 0
+  while i < 3
+    fx[i] = 0.0
+    fy[i] = 0.0
+    i = i + 1
+  var g: float = 1.0
+  var mass: float = 1.0
+  var soft: float = 0.000000001
+  var eps2: float = soft * soft
+  i = 0
+  while i < 3
+    var j: int = i + 1
+    while j < 3
+      var dx: float = px[j] - px[i]
+      var dy: float = py[j] - py[i]
+      var r2: float = dx * dx + dy * dy + eps2
+      var inv_r: float = 1.0 / li_rt_sqrt(r2)
+      var inv_r3: float = inv_r * inv_r * inv_r
+      var scale: float = g * mass * mass * inv_r3
+      var fxi: float = scale * dx
+      var fyi: float = scale * dy
+      fx[i] = fx[i] + fxi
+      fy[i] = fy[i] + fyi
+      fx[j] = fx[j] - fxi
+      fy[j] = fy[j] - fyi
+      j = j + 1
+    i = i + 1
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var px: array[3, float]
+  var py: array[3, float]
+  var vx: array[3, float]
+  var vy: array[3, float]
+  var fx: array[3, float]
+  var fy: array[3, float]
+  px[0] = 0.0
+  py[0] = 1.0
+  px[1] = -0.8660254037844386
+  py[1] = -0.5
+  px[2] = 0.8660254037844386
+  py[2] = -0.5
+  var step: int = 0
+  while step < 1000
+    three_body_forces(px, py, fx, fy)
+    var i: int = 0
+    var dt: float = 0.01
+    while i < 3
+      vx[i] = vx[i] + fx[i] * dt
+      vy[i] = vy[i] + fy[i] * dt
+      px[i] = px[i] + vx[i] * dt
+      py[i] = py[i] + vy[i] * dt
+      i = i + 1
+    step = step + 1
+  return 0
+

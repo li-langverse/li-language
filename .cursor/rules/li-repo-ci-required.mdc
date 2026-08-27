@@ -1,0 +1,40 @@
+---
+description: Every li-langverse org repo and official package must ship GitHub Actions ci.yml before merge.
+globs:
+  - packages/**
+  - .github/**
+alwaysApply: false
+---
+
+# CI required on org repos and official packages
+
+## Official packages (`packages/<name>/`)
+
+Before merging any official package (has `PUBLISH.md` + `PKG-*`):
+
+1. **Must exist:** `.github/workflows/ci.yml` (job name `check`)
+2. Scaffold via `./scripts/li-new-package NAME --official` (copies template) or `./scripts/ensure-package-ci.sh`
+3. Mirror push: `./scripts/push-official-package-repo.sh NAME` only after CI file exists
+
+## New GitHub org repos
+
+**Forbidden:** `gh repo create li-langverse/...` without committing `ci.yml` in the first PR.
+
+Use package template from `scripts/templates/github-repo/ci.yml` or copy from `li-std-core` mirror.
+
+## Branch protection
+
+`roadmap/scripts/org-branch-protection.json` requires context **`check`** for package mirrors. After adding CI, run (human/token):
+
+```bash
+cd roadmap && ./scripts/apply-org-branch-protection.sh li-std-core ...
+```
+
+## Audit
+
+```bash
+# benchmarks checkout
+python3 scripts/ensure-org-repo-ci.py
+```
+
+Do not mark a repo "official" in `official-packages.md` until `ensure-org-repo-ci.py` reports OK.

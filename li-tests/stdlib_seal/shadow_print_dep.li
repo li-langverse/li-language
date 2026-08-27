@@ -1,0 +1,6 @@
+def print(x: int) -> int
+  requires true
+  ensures result == x
+  decreases 0
+=
+  return x

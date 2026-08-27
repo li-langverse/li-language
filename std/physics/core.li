@@ -1,0 +1,9 @@
+# Physics kernels: tier-2 uses benchmarks/harness/verify.py invariants.
+# Small goldens: li-tests/physics/golden_*.li + verify-math-physics-goldens.sh
+
+def physics_core_std_tag() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1

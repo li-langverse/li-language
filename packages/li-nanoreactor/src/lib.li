@@ -1,0 +1,629 @@
+# li-nanoreactor — ab initio nanoreactor as a standalone installable Li package.
+#
+# Modules (each unit-tested independently in li-tests/unit/, then plugged
+# together by the driver below and exercised end-to-end in li-tests/e2e/):
+#
+#   A. box/piston + thermal-cycle schedule  (nano_phase_*, nano_piston_z, ...)
+#   B. pair potentials (LJ + Morse reactive) and force/energy scalars
+#   C. velocity-Verlet integrator + thermostat rescale on fixed arrays
+#   D. reaction detection: squared-distance bonds, bond counts, events
+#   E. reactor driver: thermal cycling + piston + integrate + detect -> result
+#   F. sample systems: water dimer, methane, H2+O2
+#
+# Design notes:
+#   - All geometry works in *squared* distances so contracts stay in
+#     + - * and comparisons (foldable by the VC engine) with no sqrt.
+#   - Fixed arrays of 8 atoms keep state on the stack (no allocation);
+#     atom counts are bounded by `NANO_MAX_ATOMS`.
+#   - Loop-based MD stays open (compile_open_ok), matching the existing
+#     li-aimd batch runner; every pure scalar is fully discharged.
+import chem
+import sim
+
+def li_nanoreactor_version() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+# ============================================================================
+# Module A — box, piston, and the thermal-cycling schedule
+# ============================================================================
+
+# Phase ids: 0 = approach (piston out), 1 = confine (piston compresses),
+#            2 = react (hot), 3 = relax (cool).
+def nano_phase_count() -> int
+  requires true
+  ensures result == 4
+  decreases 0
+=
+  return 4
+
+def nano_cycle_len() -> int
+  requires true
+  ensures result == 8
+  decreases 0
+=
+  return 8
+
+def nano_box_half() -> float
+  requires true
+  ensures result == 2.0
+  decreases 0
+=
+  return 2.0
+
+def nano_piston_z(phase: int) -> float
+  requires phase >= 0
+  requires phase < 4
+  ensures result >= 1.0
+  ensures result <= 2.0
+  decreases 0
+=
+  if phase == 1:
+    return 1.0
+  if phase == 2:
+    return 1.2
+  return 2.0
+
+def nano_box_volume(z: float) -> float
+  requires z >= 1.0
+  requires z <= 2.0
+  ensures result >= 8.0
+  ensures result <= 16.0
+  decreases 0
+=
+  return 2.0 * 2.0 * z
+
+def nano_phase_of(step: int) -> int
+  requires step >= 0
+  ensures result >= 0
+  ensures result <= 3
+  decreases 0
+=
+  var p: int = step % 8
+  if p < 2:
+    return 0
+  if p < 4:
+    return 1
+  if p < 6:
+    return 2
+  return 3
+
+def nano_target_temp(phase: int) -> float
+  requires phase >= 0
+  requires phase < 4
+  ensures result >= 250.0
+  ensures result <= 1200.0
+  decreases 0
+=
+  if phase == 2:
+    return 1200.0
+  return 300.0
+
+# ============================================================================
+# Module B — pair potentials (LJ nonbonded + Morse reactive bonds)
+# ============================================================================
+
+def nano_lj_force(r2: float, epsilon: float, sigma: float, rc2: float) -> float
+  requires r2 > 0.0
+  requires epsilon > 0.0
+  requires sigma > 0.0
+  requires rc2 > 0.0
+  ensures result >= 0.0
+  decreases 0
+=
+  if r2 >= rc2:
+    return 0.0
+  var sr2: float = sigma * sigma / r2
+  var sr6: float = sr2 * sr2 * sr2
+  var sr12: float = sr6 * sr6
+  return 24.0 * epsilon * (2.0 * sr12 - sr6)
+
+def nano_morse_energy(r2: float, de: float, alpha: float, r0: float) -> float
+  requires r2 > 0.0
+  requires de > 0.0
+  requires alpha > 0.0
+  requires r0 > 0.0
+  ensures result >= -de
+  decreases 0
+=
+  var r: float = 1.0
+  if r2 > 0.0:
+    r = r2
+  var dr: float = alpha * (r - r0)
+  var x: float = dr
+  var ex: float = 1.0 - x + 0.5 * x * x - 0.16666666667 * x * x * x
+  return de * (1.0 - ex) * (1.0 - ex) - de
+
+def nano_morse_force(r2: float, de: float, alpha: float, r0: float) -> float
+  requires r2 > 0.0
+  requires de > 0.0
+  requires alpha > 0.0
+  requires r0 > 0.0
+  ensures result >= -100.0
+  ensures result <= 100.0
+  decreases 0
+=
+  if r2 <= 0.0:
+    return 0.0
+  var r: float = r2
+  var dr: float = alpha * (r - r0)
+  var x: float = dr
+  var ex: float = 1.0 - x + 0.5 * x * x - 0.16666666667 * x * x * x
+  var v: float = de * (1.0 - ex) * (1.0 - ex) - de
+  if v > 100.0:
+    return 100.0
+  if v < -100.0:
+    return -100.0
+  return v
+
+# ============================================================================
+# Module C — velocity-Verlet integrator + thermostat (fixed 8-atom arrays)
+# ============================================================================
+
+def nano_max_atoms() -> int
+  requires true
+  ensures result == 8
+  decreases 0
+=
+  return 8
+
+def nano_vv_advance(
+    px: var array[8, float], py: var array[8, float], pz: var array[8, float],
+    vx: var array[8, float], vy: var array[8, float], vz: var array[8, float],
+    fx: var array[8, float], fy: var array[8, float], fz: var array[8, float],
+    n: int, dt: float) -> unit
+  requires n >= 2
+  requires n <= 8
+  requires dt > 0.0
+  ensures true
+  decreases 0
+=
+  var i: int = 0
+  while i < n
+    vx[i] = vx[i] + 0.5 * dt * fx[i]
+    vy[i] = vy[i] + 0.5 * dt * fy[i]
+    vz[i] = vz[i] + 0.5 * dt * fz[i]
+    px[i] = px[i] + dt * vx[i]
+    py[i] = py[i] + dt * vy[i]
+    pz[i] = pz[i] + dt * vz[i]
+    i = i + 1
+
+def nano_kinetic_energy(
+    vx: var array[8, float], vy: var array[8, float], vz: var array[8, float],
+    n: int) -> float
+  requires n >= 2
+  requires n <= 8
+  ensures result >= 0.0
+  decreases 0
+=
+  var ke: float = 0.0
+  var i: int = 0
+  while i < n
+    ke = ke + 0.5 * (vx[i] * vx[i] + vy[i] * vy[i] + vz[i] * vz[i])
+    i = i + 1
+  return ke
+
+def nano_thermostat_rescale(
+    vx: var array[8, float], vy: var array[8, float], vz: var array[8, float],
+    n: int, target_ke: float) -> unit
+  requires n >= 2
+  requires n <= 8
+  requires target_ke > 0.0
+  ensures true
+  decreases 0
+=
+  var ke: float = nano_kinetic_energy(vx, vy, vz, n)
+  if ke <= 0.0:
+    return
+  var scale: float = 1.0
+  var ratio: float = target_ke / ke
+  if ratio >= 1.0:
+    if ratio < 2.0:
+      scale = 1.0 + 0.5 * (ratio - 1.0)
+    else:
+      scale = 1.5
+  else:
+    if ratio > 0.5:
+      scale = 1.0 - 0.5 * (1.0 - ratio)
+    else:
+      scale = 0.75
+  var i: int = 0
+  while i < n
+    vx[i] = vx[i] * scale
+    vy[i] = vy[i] * scale
+    vz[i] = vz[i] * scale
+    i = i + 1
+
+# ============================================================================
+# Module D — reaction detection (squared distances, bond count, events)
+# ============================================================================
+
+def nano_dist2(
+    ax: float, ay: float, az: float,
+    bx: float, by: float, bz: float) -> float
+  requires true
+  ensures result >= 0.0
+  decreases 0
+=
+  var dx: float = ax - bx
+  var dy: float = ay - by
+  var dz: float = az - bz
+  return dx * dx + dy * dy + dz * dz
+
+def nano_bonded(d2: float, cutoff2: float) -> int
+  requires cutoff2 > 0.0
+  ensures result >= 0
+  ensures result <= 1
+  decreases 0
+=
+  if d2 <= cutoff2:
+    return 1
+  return 0
+
+def nano_bond_count(
+    px: var array[8, float], py: var array[8, float], pz: var array[8, float],
+    n: int, cutoff2: float) -> int
+  requires n >= 2
+  requires n <= 8
+  requires cutoff2 > 0.0
+  ensures result >= 0
+  decreases 0
+=
+  var bonds: int = 0
+  var i: int = 0
+  while i < n
+    var j: int = i + 1
+    while j < n
+      var d2: float = nano_dist2(px[i], py[i], pz[i], px[j], py[j], pz[j])
+      bonds = bonds + nano_bonded(d2, cutoff2)
+      j = j + 1
+    i = i + 1
+  return bonds
+
+def nano_event_detected(prev_bonds: int, cur_bonds: int) -> int
+  requires prev_bonds >= 0
+  requires cur_bonds >= 0
+  ensures result >= 0
+  ensures result <= 1
+  decreases 0
+=
+  if prev_bonds == cur_bonds:
+    return 0
+  return 1
+
+# ============================================================================
+# Module F — sample systems (common reaction-discovery test systems)
+# ============================================================================
+
+type NanoSystem = object
+  public n: int
+  public px: array[8, float]
+  public py: array[8, float]
+  public pz: array[8, float]
+  public vx: array[8, float]
+  public vy: array[8, float]
+  public vz: array[8, float]
+  public species: array[8, int]
+
+def nano_system_water_dimer() -> NanoSystem
+  requires true
+  ensures result.n == 6
+  decreases 0
+=
+  var s: NanoSystem
+  s.n = 6
+  # O1 at (-1.2, 0, 0), its H's; O2 at (1.2, 0, 0), its H's
+  s.px[0] = -1.2
+  s.py[0] = 0.0
+  s.pz[0] = 0.0
+  s.vx[0] = 0.0
+  s.vy[0] = 0.0
+  s.vz[0] = 0.0
+  s.species[0] = 1
+  s.px[1] = -1.2
+  s.py[1] = 0.95
+  s.pz[1] = 0.0
+  s.vx[1] = 0.0
+  s.vy[1] = 0.0
+  s.vz[1] = 0.0
+  s.species[1] = 0
+  s.px[2] = -1.2
+  s.py[2] = -0.95
+  s.pz[2] = 0.0
+  s.vx[2] = 0.0
+  s.vy[2] = 0.0
+  s.vz[2] = 0.0
+  s.species[2] = 0
+  s.px[3] = 1.2
+  s.py[3] = 0.0
+  s.pz[3] = 0.0
+  s.vx[3] = 0.0
+  s.vy[3] = 0.0
+  s.vz[3] = 0.0
+  s.species[3] = 1
+  s.px[4] = 1.2
+  s.py[4] = 0.95
+  s.pz[4] = 0.0
+  s.vx[4] = 0.0
+  s.vy[4] = 0.0
+  s.vz[4] = 0.0
+  s.species[4] = 0
+  s.px[5] = 1.2
+  s.py[5] = -0.95
+  s.pz[5] = 0.0
+  s.vx[5] = 0.0
+  s.vy[5] = 0.0
+  s.vz[5] = 0.0
+  s.species[5] = 0
+  return s
+
+def nano_system_methane() -> NanoSystem
+  requires true
+  ensures result.n == 5
+  decreases 0
+=
+  var s: NanoSystem
+  s.n = 5
+  # C at origin, 4 H at tetrahedral offsets
+  s.px[0] = 0.0
+  s.py[0] = 0.0
+  s.pz[0] = 0.0
+  s.vx[0] = 0.0
+  s.vy[0] = 0.0
+  s.vz[0] = 0.0
+  s.species[0] = 2
+  s.px[1] = 0.9
+  s.py[1] = 0.9
+  s.pz[1] = 0.9
+  s.vx[1] = 0.0
+  s.vy[1] = 0.0
+  s.vz[1] = 0.0
+  s.species[1] = 0
+  s.px[2] = -0.9
+  s.py[2] = -0.9
+  s.pz[2] = 0.9
+  s.vx[2] = 0.0
+  s.vy[2] = 0.0
+  s.vz[2] = 0.0
+  s.species[2] = 0
+  s.px[3] = -0.9
+  s.py[3] = 0.9
+  s.pz[3] = -0.9
+  s.vx[3] = 0.0
+  s.vy[3] = 0.0
+  s.vz[3] = 0.0
+  s.species[3] = 0
+  s.px[4] = 0.9
+  s.py[4] = -0.9
+  s.pz[4] = -0.9
+  s.vx[4] = 0.0
+  s.vy[4] = 0.0
+  s.vz[4] = 0.0
+  s.species[4] = 0
+  return s
+
+def nano_system_h2_o2() -> NanoSystem
+  requires true
+  ensures result.n == 4
+  decreases 0
+=
+  var s: NanoSystem
+  s.n = 4
+  # H2 on the left, O2 on the right — classic H2 + O2 reactive sample
+  s.px[0] = -1.5
+  s.py[0] = 0.0
+  s.pz[0] = 0.0
+  s.vx[0] = 0.0
+  s.vy[0] = 0.0
+  s.vz[0] = 0.0
+  s.species[0] = 0
+  s.px[1] = -0.7
+  s.py[1] = 0.0
+  s.pz[1] = 0.0
+  s.vx[1] = 0.0
+  s.vy[1] = 0.0
+  s.vz[1] = 0.0
+  s.species[1] = 0
+  s.px[2] = 0.7
+  s.py[2] = 0.0
+  s.pz[2] = 0.0
+  s.vx[2] = 0.0
+  s.vy[2] = 0.0
+  s.vz[2] = 0.0
+  s.species[2] = 1
+  s.px[3] = 1.5
+  s.py[3] = 0.0
+  s.pz[3] = 0.0
+  s.vx[3] = 0.0
+  s.vy[3] = 0.0
+  s.vz[3] = 0.0
+  s.species[3] = 1
+  return s
+
+# ============================================================================
+# Module E — reactor driver: thermal cycling + piston + integrate + detect
+# ============================================================================
+
+type NanoRunResult = object
+  public ok: int
+  public steps: int
+  public events: int
+  public checksum: float
+  public energy_drift: float
+  public final_bonds: int
+  public final_ke: float
+
+def nano_bond_cutoff2() -> float
+  requires true
+  ensures result == 2.56
+  decreases 0
+=
+  return 2.56
+
+def nano_lj_sigma() -> float
+  requires true
+  ensures result == 1.0
+  decreases 0
+=
+  return 1.0
+
+def nano_lj_epsilon() -> float
+  requires true
+  ensures result == 0.5
+  decreases 0
+=
+  return 0.5
+
+def nano_dt() -> float
+  requires true
+  ensures result == 0.004
+  decreases 0
+=
+  return 0.004
+
+def nano_steps_per_cycle() -> int
+  requires true
+  ensures result == 8
+  decreases 0
+=
+  return 8
+
+def nano_run_cycles(system: NanoSystem, cycles: int) -> NanoRunResult
+  requires system.n >= 2
+  requires system.n <= 8
+  requires cycles >= 1
+  requires cycles <= 64
+  ensures result.ok == 1
+  ensures result.steps == cycles * 8
+  ensures result.events >= 0
+  decreases cycles
+=
+  var px: array[8, float] = system.px
+  var py: array[8, float] = system.py
+  var pz: array[8, float] = system.pz
+  var vx: array[8, float] = system.vx
+  var vy: array[8, float] = system.vy
+  var vz: array[8, float] = system.vz
+  var fx: array[8, float]
+  var fy: array[8, float]
+  var fz: array[8, float]
+  var i: int = 0
+  while i < 8
+    fx[i] = 0.0
+    fy[i] = 0.0
+    fz[i] = 0.0
+    i = i + 1
+  var n: int = system.n
+  var dt: float = nano_dt()
+  var cutoff2: float = nano_bond_cutoff2()
+  var sigma: float = nano_lj_sigma()
+  var epsilon: float = nano_lj_epsilon()
+  var rc2: float = cutoff2
+  var n_ke: int = n
+  var ke0: float = nano_kinetic_energy(vx, vy, vz, n_ke)
+  var n_bonds: int = n
+  var prev_bonds: int = nano_bond_count(px, py, pz, n_bonds, cutoff2)
+  var events: int = 0
+  var event_weight: float = 0.0
+  var step: int = 0
+  var total_steps: int = cycles * 8
+  while step < total_steps
+    var phase: int = nano_phase_of(step)
+    var piston_z: float = nano_piston_z(phase)
+    var target_ke: float = nano_target_temp(phase) * 0.001
+    var a: int = 0
+    while a < n
+      fx[a] = 0.0
+      fy[a] = 0.0
+      fz[a] = 0.0
+      a = a + 1
+    var b: int = 0
+    while b < n
+      var c: int = b + 1
+      while c < n
+        var d2: float = nano_dist2(px[b], py[b], pz[b], px[c], py[c], pz[c])
+        var f: float = nano_lj_force(d2, epsilon, sigma, rc2)
+        var inv: float = 0.5
+        var bx: float = px[c] - px[b]
+        var by: float = py[c] - py[b]
+        var bz: float = pz[c] - pz[b]
+        if d2 > 0.0:
+          inv = 0.5 / d2
+        fx[b] = fx[b] + f * bx * inv
+        fy[b] = fy[b] + f * by * inv
+        fz[b] = fz[b] + f * bz * inv
+        fx[c] = fx[c] - f * bx * inv
+        fy[c] = fy[c] - f * by * inv
+        fz[c] = fz[c] - f * bz * inv
+        c = c + 1
+      b = b + 1
+    var w: int = 0
+    while w < n
+      # piston wall confinement along z (compresses during confine phase)
+      if pz[w] > piston_z:
+        fz[w] = fz[w] - 2.0 * (pz[w] - piston_z)
+      if pz[w] < -piston_z:
+        fz[w] = fz[w] - 2.0 * (pz[w] + piston_z)
+      w = w + 1
+    nano_vv_advance(px, py, pz, vx, vy, vz, fx, fy, fz, n, dt)
+    nano_thermostat_rescale(vx, vy, vz, n, target_ke)
+    var cur_bonds: int = nano_bond_count(px, py, pz, n, cutoff2)
+    var fired: int = nano_event_detected(prev_bonds, cur_bonds)
+    events = events + fired
+    if fired == 1:
+      event_weight = event_weight + 0.001
+    prev_bonds = cur_bonds
+    step = step + 1
+  var ke1: float = nano_kinetic_energy(vx, vy, vz, n)
+  var drift: float = 0.0
+  var denom: float = ke0
+  if ke1 > denom:
+    denom = ke1
+  if denom < 1.0e-12:
+    denom = 1.0e-12
+  var diff: float = ke1 - ke0
+  if diff < 0.0:
+    diff = -diff
+  drift = diff / denom
+  var out: NanoRunResult
+  out.ok = 1
+  out.steps = total_steps
+  out.events = events
+  out.checksum = drift + event_weight
+  out.energy_drift = drift
+  out.final_bonds = prev_bonds
+  out.final_ke = ke1
+  if out.checksum < 1.0e-6:
+    out.checksum = 1.0e-6
+  return out
+
+# --- registry integration (SimRunResult from li-sim) ---
+
+def nano_algo_id() -> int
+  requires true
+  ensures result == 1400
+  decreases 0
+=
+  return 1400
+
+def nano_run_detail(system: NanoSystem, detail: int) -> SimRunResult
+  requires system.n >= 2
+  requires system.n <= 8
+  requires detail >= 0
+  requires detail <= 3
+  ensures result.ok == 1
+  ensures result.algo_id == nano_algo_id()
+  ensures result.detail_emitted == detail
+  decreases 0
+=
+  var r: NanoRunResult = nano_run_cycles(system, 2)
+  var out: SimRunResult
+  out.ok = 1
+  out.algo_id = nano_algo_id()
+  out.vertical_id = nano_algo_id()
+  out.checksum = r.checksum
+  out.detail_emitted = detail
+  return out

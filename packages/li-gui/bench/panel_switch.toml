@@ -1,0 +1,33 @@
+# Bench harness hook — read by scripts/bench-studio-viewport-perf.sh
+# PH-UX: panel_switch_ms < 100 (simulate transitions from gui_panel_switch_to).
+
+[meta]
+hook_version = 1
+package = "li-gui"
+native_pixels = false
+budget_ms = 100
+bench_simulate_fn = "gui_panel_switch_budget_ms"
+
+[[transition]]
+from_region = "viewport"
+to_region = "inspector"
+elapsed_ms = 42.0
+within_budget = true
+
+[[transition]]
+from_region = "inspector"
+to_region = "timeline"
+elapsed_ms = 88.0
+within_budget = true
+
+[[transition]]
+from_region = "timeline"
+to_region = "palette"
+elapsed_ms = 150.0
+within_budget = false
+
+[bench]
+sample_count = 3
+worst_elapsed_ms = 150.0
+best_elapsed_ms = 42.0
+median_elapsed_ms = 88.0

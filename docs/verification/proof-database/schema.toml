@@ -1,0 +1,14 @@
+# Proof database schema (v1)
+[schema]
+version = 1
+entries_root = "docs/verification/proof-database/entries"
+corpus_root = "proof-db/lemmas"
+
+[entry_types.axiom]
+required = ["id", "kind", "field", "statement", "proof_status", "lean_module", "last_verified_lic_commit"]
+
+[entry_types.lemma]
+required = ["id", "kind", "field", "statement", "proof_status", "lean_module", "last_verified_lic_commit"]
+
+[proof_status]
+values = ["proved", "open", "discrepancy", "axiomatic"]

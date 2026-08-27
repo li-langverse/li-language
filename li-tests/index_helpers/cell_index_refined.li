@@ -1,0 +1,33 @@
+# Refinement-typed index helper (index-helper rule + LIA).
+#
+# cell_index takes refinement-typed params so its range claim is honest:
+# the same arithmetic the game invariant needs. The `cell_index_range`
+# theorem in proof-db/math/lemmas/ring_discharge.li proves
+# `0 <= r*10+c and r*10+c < 200` from the bounds by Fourier-Motzkin.
+#
+# This fixture's own ensures VC stays open (the VC model carries the
+# refinement bounds as a TYPE, not as a Prop hypothesis), so it builds
+# with --allow-open-vc: verify_open_ok in the manifest.
+
+type Index10 = {c: int | 0 <= c and c < 10}
+type Index20 = {r: int | 0 <= r and r < 20}
+
+def cell_index(col: Index10, row: Index20) -> int
+  requires true
+  ensures result == row * 10 + col
+  ensures result >= 0 and result < 200
+  decreases 0
+=
+  return row * 10 + col
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var board: array[200, int]
+  board[cell_index(5, 7)] = 1
+  board[cell_index(0, 0)] = 2
+  if board[cell_index(5, 7)] == 1:
+    board[cell_index(9, 19)] = 3
+  return 0

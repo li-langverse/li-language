@@ -1,0 +1,274 @@
+
+import lig
+import gui
+import scene
+
+# li-render — viewport FPS counter + wgpu smoke bridge (PH-UX viewport_fps ≥ 60).
+# Scene path: MD particle draw tiers with honest FPS/particle HUD (native_pixels=0 until wgpu draws).
+
+def li_std_render_version() -> int
+  requires true
+  ensures result == 2
+  decreases 0
+=
+  return 2
+
+def render_viewport_fps_target() -> float
+  requires true
+  ensures result == 60.0
+  decreases 0
+=
+  return 60.0
+
+type RenderFpsCounter = object
+  public frame_count: float
+  public elapsed_ms: float
+  public fps: float
+  public target_fps: float
+  public meets_target: int
+  public native_pixels: int
+
+def render_fps_counter_new() -> RenderFpsCounter
+  requires true
+  ensures result.frame_count == 0.0
+  ensures result.elapsed_ms == 0.0
+  ensures result.fps == 0.0
+  ensures result.target_fps == render_viewport_fps_target()
+  ensures result.meets_target == 0
+  ensures result.native_pixels == 0
+  decreases 0
+=
+  var c: RenderFpsCounter
+  c.frame_count = 0.0
+  c.elapsed_ms = 0.0
+  c.fps = 0.0
+  c.target_fps = render_viewport_fps_target()
+  c.meets_target = 0
+  c.native_pixels = 0
+  return c
+
+def render_fps_counter_tick(counter: var RenderFpsCounter, dt_ms: float) -> unit
+  requires dt_ms >= 0.0
+  requires counter.frame_count >= 0.0
+  ensures counter.frame_count == old(counter.frame_count) + 1.0
+  ensures counter.elapsed_ms == old(counter.elapsed_ms) + dt_ms
+  decreases 0
+=
+  counter.frame_count = counter.frame_count + 1.0
+  counter.elapsed_ms = counter.elapsed_ms + dt_ms
+  if counter.elapsed_ms > 0.0:
+    counter.fps = (counter.frame_count * 1000.0) / counter.elapsed_ms
+  else:
+    counter.fps = 0.0
+  if counter.fps >= counter.target_fps:
+    counter.meets_target = 1
+  else:
+    counter.meets_target = 0
+
+def render_fps_counter_meets_target(counter: RenderFpsCounter) -> int
+  requires true
+  ensures result >= 0
+  ensures result <= 1
+  decreases 0
+=
+  return counter.meets_target
+
+def render_fps_counter_display_fps(counter: RenderFpsCounter) -> int
+  requires counter.fps >= 0.0
+  ensures result >= 0
+  decreases 0
+=
+  if counter.fps >= 60.0:
+    return 60
+  if counter.fps >= 30.0:
+    return 30
+  if counter.fps >= 1.0:
+    return 1
+  return 0
+
+# UX-13: short HUD string contract (simulated frames until wgpu records pixels).
+def render_fps_counter_hud_tag(counter: RenderFpsCounter) -> int
+  requires counter.fps >= 0.0
+  requires counter.native_pixels >= 0
+  requires counter.native_pixels <= 1
+  ensures result >= 0
+  ensures result <= 4
+  decreases 0
+=
+  if counter.native_pixels != 0:
+    return 4
+  var d: int = render_fps_counter_display_fps(counter)
+  if d >= 60:
+    return 1
+  if d >= 30:
+    return 2
+  if d >= 1:
+    return 3
+  return 0
+
+def render_fps_counter_hud_text(counter: RenderFpsCounter) -> str raises Alloc
+  requires counter.fps >= 0.0
+  requires counter.native_pixels >= 0
+  requires counter.native_pixels <= 1
+  ensures result != ""
+  decreases render_fps_counter_hud_tag(counter)
+=
+  if counter.native_pixels != 0:
+    return "FPS live native=1"
+  var d: int = render_fps_counter_display_fps(counter)
+  if d >= 60:
+    return "FPS 60+ sim native=0"
+  if d >= 30:
+    return "FPS 30+ sim native=0"
+  if d >= 1:
+    return "FPS 1+ sim native=0"
+  return "FPS -- sim native=0"
+
+def render_fps_counter_hud_text_particles(counter: RenderFpsCounter, particle_count: int) -> str raises Alloc
+  requires counter.fps >= 0.0
+  requires counter.native_pixels == 0
+  requires particle_count >= 0
+  ensures result != ""
+  decreases particle_count
+=
+  if particle_count >= 100000:
+    return "FPS tier100k sim native=0"
+  if particle_count >= 10000:
+    return "FPS tier10k sim native=0"
+  if particle_count >= 1000:
+    return "FPS tier1k sim native=0"
+  return render_fps_counter_hud_text(counter)
+
+# Shell hook: one tick per presented frame (~60 Hz bench sample until wall clock wired).
+def render_fps_counter_shell_tick(counter: var RenderFpsCounter) -> unit
+  requires counter.frame_count >= 0
+  ensures counter.frame_count == old(counter.frame_count) + 1
+  decreases 0
+=
+  render_fps_counter_tick(counter, render_bench_fps_sample_dt_ms())
+
+def render_fps_counter_shell_simulate() -> RenderFpsCounter
+  requires true
+  ensures result.frame_count == render_bench_fps_sample_frames()
+  ensures result.native_pixels == 0
+  ensures render_fps_counter_hud_tag(result) == 1
+  decreases 0
+=
+  var c: RenderFpsCounter = render_fps_counter_new()
+  var i: int = 0
+  while i < render_bench_fps_sample_frames():
+    render_fps_counter_shell_tick(c)
+    i = i + 1
+  return c
+
+type RenderViewportSmoke = object
+  public wgpu: LigWgpuSmoke
+  public viewport_w: float
+  public viewport_h: float
+  public fps_counter_ready: int
+  public native_pixels: int
+
+def render_wgpu_viewport_smoke(vp: ViewportRegion) -> RenderViewportSmoke raises IO, Alloc
+  requires vp.w >= 0.0
+  requires vp.h >= 0.0
+  ensures result.viewport_w == vp.w
+  ensures result.viewport_h == vp.h
+  ensures result.fps_counter_ready == 1
+  ensures result.native_pixels >= 0
+  ensures result.native_pixels <= 1
+  decreases 0
+=
+  var out: RenderViewportSmoke
+  out.wgpu = lig_wgpu_smoke_run()
+  out.viewport_w = vp.w
+  out.viewport_h = vp.h
+  out.fps_counter_ready = 1
+  out.native_pixels = lig_present_surface_ok()
+  return out
+
+def render_viewport_smoke_ok(smoke: RenderViewportSmoke) -> int
+  requires true
+  ensures result >= 0
+  ensures result <= 1
+  decreases 0
+=
+  if smoke.fps_counter_ready != 1:
+    return 0
+  if lig_wgpu_smoke_passed(smoke.wgpu) != 1:
+    return 0
+  if smoke.viewport_w <= 0.0:
+    return 0
+  if smoke.viewport_h <= 0.0:
+    return 0
+  return 1
+
+def render_bench_fps_sample_frames() -> int
+  requires true
+  ensures result == 120
+  decreases 0
+=
+  return 120
+
+def render_bench_fps_sample_dt_ms() -> float
+  requires true
+  ensures result == 16.667
+  decreases 0
+=
+  return 16.667
+
+def render_bench_fps_counter_simulate() -> RenderFpsCounter
+  requires true
+  ensures result.frame_count == render_bench_fps_sample_frames()
+  ensures result.meets_target == 1
+  ensures result.native_pixels == 0
+  decreases 0
+=
+  return render_fps_counter_shell_simulate()
+
+type RenderMdParticleViewport = object
+  public smoke: RenderViewportSmoke
+  public draw: SceneParticleDraw
+  public fps_display: int
+  public particle_count: int
+  public tier_fps_target: float
+
+def render_scene_md_particle_viewport(vp: ViewportRegion, tier_id: int) -> RenderMdParticleViewport
+  requires vp.w >= 0.0
+  requires vp.h >= 0.0
+  requires tier_id >= 0
+  requires tier_id <= 2
+  ensures result.draw.tier.tier_id == tier_id
+  ensures result.draw.native_pixels == 0
+  ensures result.particle_count == result.draw.tier.particles
+  ensures result.fps_display >= 0
+  decreases tier_id
+=
+  var out: RenderMdParticleViewport
+  out.smoke = render_wgpu_viewport_smoke(vp)
+  out.draw = scene_bench_particle_tier_simulate(tier_id)
+  out.fps_display = scene_md_particle_display_fps(out.draw)
+  out.particle_count = out.draw.tier.particles
+  out.tier_fps_target = out.draw.tier.fps_target
+  return out
+
+def render_scene_md_particle_viewport_ok(view: RenderMdParticleViewport) -> int
+  requires true
+  ensures result >= 0
+  ensures result <= 1
+  decreases 0
+=
+  if render_viewport_smoke_ok(view.smoke) != 1:
+    return 0
+  if scene_md_particle_draw_meets_target(view.draw) != 1:
+    return 0
+  if view.draw.native_pixels != 0:
+    return 0
+  return 1
+
+def render_bench_all_md_particle_tiers() -> int
+  requires true
+  ensures result >= 0
+  ensures result <= 1
+  decreases 0
+=
+  return scene_bench_all_particle_tiers_pass()

@@ -1,0 +1,8 @@
+import import_cycle_a
+
+def cycle_b_helper() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return 0

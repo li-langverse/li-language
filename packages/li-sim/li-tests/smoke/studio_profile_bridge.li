@@ -1,0 +1,25 @@
+import sim
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if li_sim_profile_from_studio_id(2) != sim_contract_sim_rl():
+    return 1
+  if li_sim_profile_from_studio_id(4) != sim_contract_sim_robotics():
+    return 2
+  var sess: SimSessionStub = sim_session_stub_default()
+  sim_session_apply_studio_profile(6, sess)
+  if sess.studio_profile_id != 6:
+    return 3
+  if sess.sim_contract_id != sim_contract_sim_scientific():
+    return 4
+  if sess.output_detail != output_detail_debug():
+    return 5
+  sim_session_apply_studio_profile(1, sess)
+  if sess.output_detail != output_detail_summary():
+    return 6
+  if li_sim_profile_from_studio_id(99) != sim_contract_unknown():
+    return 7
+  return 0

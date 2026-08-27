@@ -1,0 +1,116 @@
+# Append these [[benchmark]] blocks to li-langverse/benchmarks catalog.toml
+# after merging lic harness (benchmarks/harness/bench_ecosystem.py).
+#
+# PR target: https://github.com/li-langverse/benchmarks
+# Ingest: scripts/ingest/build_summary.py reads benchmarks/results/latest.csv from lic.
+
+[[benchmark]]
+id = "async_await_chain"
+category = "tooling"
+tier = 3
+repo = "lic"
+path = "benchmarks/tier3_ecosystem/async_await_chain"
+metric = "wall_time"
+threshold_ratio_cpp = 1.0
+ph_ids = ["PH-H", "PH-5b"]
+variant = "async_stub"
+
+[[benchmark]]
+id = "lic_build_async"
+category = "tooling"
+tier = 3
+repo = "lic"
+path = "li-tests/async"
+metric = "wall_time"
+threshold_ratio_cpp = 1.0
+ph_ids = ["PH-H"]
+
+[[benchmark]]
+id = "lic_build_effects_net"
+category = "tooling"
+tier = 3
+repo = "lic"
+path = "li-tests/effects"
+metric = "wall_time"
+threshold_ratio_cpp = 1.0
+ph_ids = ["PH-H"]
+
+[[benchmark]]
+id = "lic_build_effects_async"
+category = "tooling"
+tier = 3
+repo = "lic"
+path = "li-tests/effects"
+metric = "wall_time"
+threshold_ratio_cpp = 1.0
+ph_ids = ["PH-H"]
+
+[[benchmark]]
+id = "lic_build_alloc"
+category = "tooling"
+tier = 3
+repo = "lic"
+path = "li-tests/effects"
+metric = "wall_time"
+threshold_ratio_cpp = 1.0
+ph_ids = ["PH-H"]
+
+[[benchmark]]
+id = "lic_check_contracts"
+category = "tooling"
+tier = 3
+repo = "lic"
+path = "li-tests/contracts_verify"
+metric = "wall_time"
+threshold_ratio_cpp = 1.0
+ph_ids = ["PH-2f"]
+
+[[benchmark]]
+id = "li_tests_full"
+category = "tooling"
+tier = 3
+repo = "lic"
+path = "li-tests"
+metric = "wall_time"
+threshold_ratio_cpp = 1.0
+ph_ids = ["PH-2e"]
+
+[[benchmark]]
+id = "security_gate_full"
+category = "security"
+tier = 3
+repo = "lic"
+path = "scripts/ci-security.sh"
+metric = "wall_time"
+threshold_ratio_cpp = 1.0
+ph_ids = ["PH-sec"]
+
+[[benchmark]]
+id = "security_corpus"
+category = "security"
+tier = 3
+repo = "lic"
+path = "li-tests/run_security.sh"
+metric = "wall_time"
+threshold_ratio_cpp = 1.0
+ph_ids = ["PH-sec"]
+
+[[benchmark]]
+id = "security_cve_patterns"
+category = "security"
+tier = 3
+repo = "lic"
+path = "scripts/check-cve-coverage.sh"
+metric = "wall_time"
+threshold_ratio_cpp = 1.0
+ph_ids = ["PH-sec"]
+
+[[benchmark]]
+id = "security_webserver_registry"
+category = "security"
+tier = 3
+repo = "lic"
+path = "scripts/check-webserver-bugs.sh"
+metric = "wall_time"
+threshold_ratio_cpp = 1.0
+ph_ids = ["PH-H", "PH-sec"]

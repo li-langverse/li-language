@@ -1,0 +1,13 @@
+# Apple "goto fail" (2014): duplicate branch skipped TLS verification.
+# Li forbids goto — structured control flow only.
+
+def verify_chain(ok: bool) -> bool
+  requires true
+  ensures true
+  decreases 0
+=
+  if not ok:
+    goto fail
+  return true
+fail:
+  return false

@@ -1,0 +1,283 @@
+
+extern def li_rt_sqrt(x: float) raises IO -> float
+  requires x >= 0.0
+  ensures result >= 0.0
+  decreases 0
+
+extern def li_rt_sin(x: float) raises IO -> float
+  requires true
+  ensures result >= -1.0
+  ensures result <= 1.0
+  decreases 0
+
+extern def li_rt_cos(x: float) raises IO -> float
+  requires true
+  ensures result >= -1.0
+  ensures result <= 1.0
+  decreases 0
+
+extern def li_rt_atan2(y: float, x: float) raises IO -> float
+  requires true
+  ensures result >= -3.14159265
+  ensures result <= 3.14159265
+  decreases 0
+
+type Vec2 = object
+  public x: float
+  public y: float
+
+type Vec3 = object
+  public x: float
+  public y: float
+  public z: float
+
+type Vec4 = object
+  public x: float
+  public y: float
+  public z: float
+  public w: float
+
+type Quat = object
+  public w: float
+  public x: float
+  public y: float
+  public z: float
+
+type Mat4 = object
+  public m00: float
+  public m01: float
+  public m02: float
+  public m03: float
+  public m10: float
+  public m11: float
+  public m12: float
+  public m13: float
+  public m20: float
+  public m21: float
+  public m22: float
+  public m23: float
+  public m30: float
+  public m31: float
+  public m32: float
+  public m33: float
+
+type Aabb = object
+  public min: Vec3
+  public max: Vec3
+def math_tag() -> int
+  requires true
+  ensures result == 2
+  decreases 0
+=
+  return 2
+def li_std_math_version() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+def vec2(x: float, y: float) -> Vec2
+  requires true
+  ensures result.x == x
+  ensures result.y == y
+  decreases 0
+=
+  var v: Vec2
+  v.x = x
+  v.y = y
+  return v
+def vec3(x: float, y: float, z: float) -> Vec3
+  requires true
+  ensures result.x == x
+  ensures result.y == y
+  ensures result.z == z
+  decreases 0
+=
+  var v: Vec3
+  v.x = x
+  v.y = y
+  v.z = z
+  return v
+def vec3_add(a: Vec3, b: Vec3) -> Vec3
+  requires true
+  ensures result.x == a.x + b.x
+  ensures result.y == a.y + b.y
+  ensures result.z == a.z + b.z
+  decreases 0
+=
+  var r: Vec3
+  r.x = a.x + b.x
+  r.y = a.y + b.y
+  r.z = a.z + b.z
+  return r
+def vec3_sub(a: Vec3, b: Vec3) -> Vec3
+  requires true
+  ensures result.x == a.x - b.x
+  ensures result.y == a.y - b.y
+  ensures result.z == a.z - b.z
+  decreases 0
+=
+  var r: Vec3
+  r.x = a.x - b.x
+  r.y = a.y - b.y
+  r.z = a.z - b.z
+  return r
+def vec3_scale(a: Vec3, s: float) -> Vec3
+  requires true
+  ensures result.x == a.x * s
+  ensures result.y == a.y * s
+  ensures result.z == a.z * s
+  decreases 0
+=
+  var r: Vec3
+  r.x = a.x * s
+  r.y = a.y * s
+  r.z = a.z * s
+  return r
+def vec3_dot(a: Vec3, b: Vec3) -> float
+  requires true
+  ensures result == ax * bx + ay * by + az * bz
+  decreases 0
+=
+  var ax: float = a.x
+  var ay: float = a.y
+  var az: float = a.z
+  var bx: float = b.x
+  var by: float = b.y
+  var bz: float = b.z
+  return ax * bx + ay * by + az * bz
+def vec3_cross(a: Vec3, b: Vec3) -> Vec3
+  requires true
+  ensures result == vec3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x)
+  decreases 0
+=
+  return vec3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x)
+def vec3_len_sq(a: Vec3) raises IO -> float
+  requires true
+  ensures result == vec3_dot(a, a)
+  decreases 0
+=
+  return vec3_dot(a, a)
+def vec3_len(a: Vec3) raises IO -> float
+  requires true
+  ensures result == li_rt_sqrt(vec3_len_sq(a))
+  decreases 0
+=
+  return li_rt_sqrt(vec3_len_sq(a))
+def vec3_normalize(a: Vec3) -> Vec3
+  requires true
+  ensures result.x >= -1.0
+  ensures result.x <= 1.0
+  ensures result.y >= -1.0
+  ensures result.y <= 1.0
+  ensures result.z >= -1.0
+  ensures result.z <= 1.0
+  decreases 0
+=
+  var ax: float = a.x
+  var ay: float = a.y
+  var az: float = a.z
+  var l: float = li_rt_sqrt(ax * ax + ay * ay + az * az)
+  if l == 0.0:
+    return vec3(0.0, 0.0, 0.0)
+  return vec3(ax / l, ay / l, az / l)
+def vec3_lerp(a: Vec3, b: Vec3, t: float) -> Vec3
+  requires true
+  ensures result == vec3(a.x * (1.0 - t) + b.x * t, a.y * (1.0 - t) + b.y * t, a.z * (1.0 - t) + b.z * t)
+  decreases 0
+=
+  var one_t: float = 1.0 - t
+  return vec3(a.x * one_t + b.x * t, a.y * one_t + b.y * t, a.z * one_t + b.z * t)
+def quat_identity() -> Quat
+  requires true
+  ensures result.w == 1.0
+  decreases 0
+=
+  var q: Quat
+  q.w = 1.0
+  q.x = 0.0
+  q.y = 0.0
+  q.z = 0.0
+  return q
+def quat_mul(a: Quat, b: Quat) -> Quat
+  requires true
+  ensures result.w == a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z
+  decreases 0
+=
+  var q: Quat
+  q.w = a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z
+  q.x = a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y
+  q.y = a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x
+  q.z = a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w
+  return q
+def mat4_identity() -> Mat4
+  requires true
+  ensures result.m00 == 1.0
+  ensures result.m11 == 1.0
+  decreases 0
+=
+  var m: Mat4
+  m.m00 = 1.0
+  m.m01 = 0.0
+  m.m02 = 0.0
+  m.m03 = 0.0
+  m.m10 = 0.0
+  m.m11 = 1.0
+  m.m12 = 0.0
+  m.m13 = 0.0
+  m.m20 = 0.0
+  m.m21 = 0.0
+  m.m22 = 1.0
+  m.m23 = 0.0
+  m.m30 = 0.0
+  m.m31 = 0.0
+  m.m32 = 0.0
+  m.m33 = 1.0
+  return m
+def mat4_mul_point(m: Mat4, p: Vec3) -> Vec3
+  requires true
+  ensures result == vec3(x, y, z)
+  decreases 0
+=
+  var x: float = m.m00 * p.x + m.m01 * p.y + m.m02 * p.z + m.m03
+  var y: float = m.m10 * p.x + m.m11 * p.y + m.m12 * p.z + m.m13
+  var z: float = m.m20 * p.x + m.m21 * p.y + m.m22 * p.z + m.m23
+  return vec3(x, y, z)
+def array_dot_f64(a: array[4, float], b: array[4, float]) -> float
+  requires true
+  ensures result == a @ b
+  decreases 0
+=
+  return a @ b
+def array_sum_f64(a: array[4, float]) -> float
+  requires true
+  ensures result == sum(a)
+  decreases 0
+=
+  return sum(a)
+
+# Golden wrappers (small-N spec); verified by scripts/verify-math-physics-goldens.sh
+def math_golden_dot4_ones_twos() -> float
+  requires true
+  ensures result == 8.0
+  decreases 0
+=
+  var a: array[4, float]
+  var b: array[4, float]
+  var i: int = 0
+  while i < 4
+    a[i] = 1.0
+    b[i] = 2.0
+    i = i + 1
+  return array_dot_f64(a, b)
+def math_golden_sum4_unit() -> float
+  requires true
+  ensures result == 4.0
+  decreases 0
+=
+  var v: array[4, float]
+  var i: int = 0
+  while i < 4
+    v[i] = 1.0
+    i = i + 1
+  return array_sum_f64(v)

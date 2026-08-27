@@ -1,0 +1,13 @@
+extern def li_ragdoll_chain_kernel()
+  requires true
+  ensures true
+  decreases 0
+
+def main() raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  li_ragdoll_chain_kernel()
+  return 0
+

@@ -1,0 +1,11 @@
+
+def overlap_slices() -> unit
+  requires true
+  ensures true
+  decreases 0
+=
+  var buf: array[100, int]
+  parallel for tile in 0..<10
+    decreases 10 - tile
+  =
+    buf[tile] = tile

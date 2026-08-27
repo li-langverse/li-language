@@ -1,0 +1,23 @@
+# Machine-wide defaults for tier5_http (merged under each scenario bench.toml).
+
+[global]
+workers = "auto"
+port_base = 18080
+warmup_sec = 30
+measured_runs = 5
+
+[servers.nginx]
+binary = "nginx"
+
+[servers.li]
+binary = "../../../build/li-httpd"
+
+[load.wrk]
+threads = 8
+connections = 200
+duration_sec = 30
+pipeline = 1
+
+[fixtures]
+static_1k = 1024
+static_1m = 1048576

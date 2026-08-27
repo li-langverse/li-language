@@ -1,0 +1,25 @@
+import std.bytes
+
+def main() raises Alloc, IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var buf: bytes = "hello"
+  var r: Reader = reader_new()
+  var w: Writer = writer_new()
+  if reader_remaining(r, buf) != 5:
+    return 1
+  var b0: int = reader_read_byte(r, buf)
+  if b0 != 104:
+    return 2
+  var chunk: StringView = reader_read_chunk(r, buf, 3)
+  if stringview_byte_at(chunk, 0) != 101:
+    return 3
+  if reader_remaining(r, buf) != 1:
+    return 5
+  var out: bytes = ""
+  writer_push_byte(w, out, 33)
+  if writer_len(w) != 1:
+    return 6
+  return 0

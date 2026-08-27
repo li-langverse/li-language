@@ -1,0 +1,8 @@
+# Schema catalog for setup-censor — parser lives in scripts/schema_catalog.py (M1.5).
+
+def schema_catalog_version() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1

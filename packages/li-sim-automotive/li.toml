@@ -1,0 +1,21 @@
+[package]
+name = "li-sim-automotive"
+version = "0.1.0"
+edition = "2026"
+license = "Apache-2.0 OR MIT"
+description = "Automotive simulation profiles — Driving, sensors, and maps"
+
+[dependencies]
+li-sim = { path = "../li-sim" }
+
+[package.metadata.li]
+github_repo = "li-sim-automotive"
+import_name = "sim.automotive"
+min_lic = "0.1.0"
+maintainer = "li-langverse"
+pkg_id = "PKG-li-sim-automotive"
+
+[package.repository]
+url = "https://github.com/li-langverse/li-sim-automotive"
+documentation = "https://li-langverse.github.io/li-language/ecosystem/li-sim-automotive/"
+changelog = "https://github.com/li-langverse/li-sim-automotive/blob/main/CHANGELOG.md"

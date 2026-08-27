@@ -1,0 +1,25 @@
+name = "static_large"
+phase = "m1"
+enabled = true
+
+[server]
+kind = "static"
+document_root = "fixtures/static/1m"
+sendfile = true
+
+[fixtures]
+static_1m = 1048576
+
+[verify]
+requests = [
+  { method = "GET", path = "/file.bin", expect_status = 200, body_len = 1048576 },
+]
+
+[load]
+tool = "wrk"
+threads = 8
+connections = 100
+duration_sec = 15
+
+[metrics]
+collect = ["rps", "transfer_mb_s"]

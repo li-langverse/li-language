@@ -1,0 +1,112 @@
+{
+  "completed_ids": [
+    "wave-a-7e-matmul-pure",
+    "wave-a-2f-lean-strict",
+    "wave-a-2f-vc-corpus",
+    "wave-a-7e-pure-li-simd",
+    "wave-a-7e-verify",
+    "wave-a-2i-explicit-math",
+    "wave-a-7d-vectorized",
+    "wave-b-md-oracle",
+    "wave-b-tier2-verify"
+  ],
+  "iterations": 16,
+  "history": [
+    {
+      "at": "2026-05-22T20:35:55.846913+00:00",
+      "todo_id": "wave-a-7e-matmul-pure",
+      "agent_exit": 124,
+      "gates_ok": false
+    },
+    {
+      "at": "2026-05-22T21:07:27.896827+00:00",
+      "todo_id": "wave-a-7e-matmul-pure",
+      "agent_exit": 0,
+      "gates_ok": false
+    },
+    {
+      "at": "2026-05-22T21:19:21.229435+00:00",
+      "todo_id": "wave-a-2f-lean-strict",
+      "agent_exit": 0,
+      "gates_ok": false
+    },
+    {
+      "at": "2026-05-22T21:31:19.855354+00:00",
+      "todo_id": "wave-a-2f-vc-corpus",
+      "agent_exit": 1,
+      "gates_ok": false
+    },
+    {
+      "at": "2026-05-22T21:45:53.979479+00:00",
+      "todo_id": "wave-a-2f-vc-corpus",
+      "agent_exit": 0,
+      "gates_ok": false
+    },
+    {
+      "at": "2026-05-22T22:31:50.568109+00:00",
+      "todo_id": "wave-a-7e-pure-li-simd",
+      "agent_exit": 124,
+      "gates_ok": false
+    },
+    {
+      "at": "2026-05-22T22:47:28.798067+00:00",
+      "todo_id": "wave-a-7e-pure-li-simd",
+      "agent_exit": 0,
+      "gates_ok": false
+    },
+    {
+      "at": "2026-05-22T23:05:18.197684+00:00",
+      "todo_id": "wave-a-7e-verify",
+      "agent_exit": 0,
+      "gates_ok": false
+    },
+    {
+      "at": "2026-05-22T23:24:28.358881+00:00",
+      "todo_id": "wave-a-2i-explicit-math",
+      "agent_exit": 0,
+      "gates_ok": false
+    },
+    {
+      "at": "2026-05-22T23:36:16.063749+00:00",
+      "todo_id": "wave-a-7d-vectorized",
+      "agent_exit": 1,
+      "gates_ok": false
+    },
+    {
+      "at": "2026-05-22T23:49:35.737054+00:00",
+      "todo_id": "wave-a-7d-vectorized",
+      "agent_exit": 1,
+      "gates_ok": false
+    },
+    {
+      "at": "2026-05-23T00:02:59.228050+00:00",
+      "todo_id": "wave-a-7d-vectorized",
+      "agent_exit": 0,
+      "gates_ok": false
+    },
+    {
+      "at": "2026-05-23T00:14:57.342267+00:00",
+      "todo_id": "wave-b-md-oracle",
+      "agent_exit": 1,
+      "gates_ok": false
+    },
+    {
+      "at": "2026-05-23T00:28:15.839097+00:00",
+      "todo_id": "wave-b-md-oracle",
+      "agent_exit": 1,
+      "gates_ok": false
+    },
+    {
+      "at": "2026-05-23T00:48:01.867142+00:00",
+      "todo_id": "wave-b-md-oracle",
+      "agent_exit": 0,
+      "gates_ok": false
+    },
+    {
+      "at": "2026-05-23T01:06:49.359178+00:00",
+      "todo_id": "wave-b-tier2-verify",
+      "agent_exit": 0,
+      "gates_ok": false
+    }
+  ]
+}

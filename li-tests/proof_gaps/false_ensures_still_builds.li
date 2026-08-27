@@ -1,0 +1,9 @@
+# GAP-VERIFY-01: ensures is not discharged — lic build must not be treated as proof.
+# This module should fail Lean/VC discharge; today it compiles (see proof_gap researcher digest).
+
+def lie_about_sign(x: float) -> float
+  requires true
+  ensures result >= 0.0
+  decreases 0
+=
+  return -x

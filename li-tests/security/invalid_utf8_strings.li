@@ -1,0 +1,7 @@
+def strings() -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  discard "line1\nline2\t"
+  return 0

@@ -1,0 +1,31 @@
+
+
+import sim
+
+def li_sim_automotive_version() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+def li_sim_automotive_profile_contract() -> int
+  requires true
+  ensures result == sim_contract_sim_automotive()
+  decreases 0
+=
+  return sim_contract_sim_automotive()
+
+def li_sim_automotive_studio_profile_id() -> int
+  requires true
+  ensures result == 3
+  decreases 0
+=
+  return 3
+
+def run_automotive_smoke() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return 0

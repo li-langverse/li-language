@@ -1,0 +1,27 @@
+def li_std_physics_hep_version() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+def decay_branching(valid: int, total: int) -> float
+  requires total > 0
+  requires valid >= 0
+  requires valid <= total
+  ensures result == 0.0
+  decreases total
+=
+  return 0.0
+def sample_isotropic_costheta(seed: int) -> float
+  requires true
+  ensures result == 0.0
+  decreases seed
+=
+  return 0.0
+def event_weight_cross_section(sigma: float, luminosity: float) -> float
+  requires sigma >= 0.0
+  requires luminosity >= 0.0
+  ensures result == sigma * luminosity
+  decreases 0
+=
+  return sigma * luminosity

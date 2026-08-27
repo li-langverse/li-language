@@ -1,0 +1,8 @@
+add_library(li_codegen STATIC codegen.cpp smoke_llvm.cpp emit.cpp compile.cpp)
+target_include_directories(li_codegen PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(li_codegen PUBLIC li_mir)
+llvm_map_components_to_libnames(llvm_libs core support)
+target_link_libraries(li_codegen PUBLIC ${llvm_libs})
+target_include_directories(li_codegen SYSTEM PUBLIC ${LLVM_INCLUDE_DIRS})
+target_compile_definitions(li_codegen PUBLIC ${LLVM_DEFINITIONS})
+target_link_libraries(li_codegen PUBLIC li_common)

@@ -1,0 +1,23 @@
+# Small golden: dot([1,1,1,1], [2,2,2,2]) == 8.0 (spec in reference.py / li-math).
+
+extern def li_rt_volatile_sink_f64(v: float) -> unit
+  requires true
+  ensures true
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var a: array[4, float]
+  var b: array[4, float]
+  var i: int = 0
+  while i < 4
+    a[i] = 1.0
+    b[i] = 2.0
+    i = i + 1
+  var s: float = a @ b
+  if s != 8.0:
+    return 1
+  li_rt_volatile_sink_f64(s)
+  return 0

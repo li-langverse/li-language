@@ -1,0 +1,6 @@
+def bad(m: dict[str]) -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  return 0

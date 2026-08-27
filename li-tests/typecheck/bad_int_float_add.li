@@ -1,0 +1,7 @@
+def add(x: int, y: int) -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  var z: float = 1.0
+  return x + z

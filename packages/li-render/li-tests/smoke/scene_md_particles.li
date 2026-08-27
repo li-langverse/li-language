@@ -1,0 +1,23 @@
+import render
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if li_std_render_version() < 1:
+    return 1
+  var layout: StudioShellLayout = layout_studio_shell_adaptive(1920.0, 1080.0)
+  var vp: ViewportRegion = gui_viewport_region_from_layout(layout)
+  var view: RenderMdParticleViewport = render_scene_md_particle_viewport(vp, scene_md_tier_10k())
+  if render_scene_md_particle_viewport_ok(view) != 1:
+    return 2
+  if view.particle_count != 10000:
+    return 3
+  if view.draw.native_pixels != 0:
+    return 4
+  if view.fps_display < 60:
+    return 5
+  if render_bench_all_md_particle_tiers() != 1:
+    return 6
+  return 0

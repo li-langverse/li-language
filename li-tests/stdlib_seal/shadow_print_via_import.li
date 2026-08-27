@@ -1,0 +1,8 @@
+import shadow_print_dep
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return print(0)

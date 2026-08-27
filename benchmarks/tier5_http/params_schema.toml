@@ -1,0 +1,25 @@
+# Documented keys for tier5_http bench.toml (see docs/benchmarks-http.md).
+
+[global]
+workers = "auto | int — nginx worker_processes"
+port_base = "int — base port; scenario hash picks offset"
+warmup_sec = "int — discarded wrk warmup"
+measured_runs = "int — median of N timed runs"
+
+[server]
+kind = "static | proxy | li_config"
+document_root = "path relative to tier5_http/"
+sendfile = "bool — nginx sendfile parity label"
+
+[verify]
+requests = "array of { method, path, expect_status, body_sha256?, body_len? }"
+
+[load]
+tool = "wrk | h2load | openssl_s_time | tcpkali"
+threads = "int"
+connections = "int"
+duration_sec = "int"
+pipeline = "int — wrk -P"
+
+[metrics]
+collect = "rps, p50_latency_ms, p99_latency_ms, transfer_mb_s, …"

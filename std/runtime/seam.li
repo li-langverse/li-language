@@ -1,0 +1,650 @@
+# Trusted runtime ABI — canonical `extern def` declarations for `runtime/li_rt.c` + `li_rt_net.c`.
+# Product code must `import std.runtime.seam` (or a package that re-exports it, e.g. `net`).
+# Do not add new `extern def` in application modules; extend this file + `security/trusted-extern-manifest.toml` + C runtime together.
+
+# --- Core runtime (li_rt.c) ---
+
+extern def li_rt_argc() -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def li_rt_argv_i(index: int) -> ptr
+  requires 0 <= index
+  ensures true
+  decreases 0
+
+extern def li_rt_sqrt(x: float) raises IO -> float
+  requires true
+  ensures true
+  decreases 0
+
+extern def li_rt_sin(x: float) raises IO -> float
+  requires true
+  ensures true
+  decreases 0
+
+extern def li_rt_cos(x: float) raises IO -> float
+  requires true
+  ensures true
+  decreases 0
+
+extern def li_rt_atan2(y: float, x: float) raises IO -> float
+  requires true
+  ensures true
+  decreases 0
+
+extern def li_rt_exp(x: float) raises IO -> float
+  requires true
+  ensures true
+  decreases 0
+
+extern def li_rt_log(x: float) raises IO -> float
+  requires true
+  ensures true
+  decreases 0
+
+# --- Net / IO seam (li_rt_net.c) ---
+
+extern def tcp_listen(port: int) raises Net -> int
+  requires 0 < port
+  ensures true
+  decreases 0
+
+extern def tcp_accept(listen_fd: var int) raises Net -> int
+  requires listen_fd >= 0
+  ensures true
+  decreases 0
+
+extern def tcp_close(conn_fd: var int) raises Net -> unit
+  requires conn_fd >= 0
+  ensures true
+  decreases 0
+
+extern def tcp_tune_client(conn_fd: var int) raises Net -> unit
+  requires conn_fd >= 0
+  ensures true
+  decreases 0
+
+extern def net_set_nonblock(fd: var int) raises Net -> int
+  requires fd >= 0
+  ensures true
+  decreases 0
+
+extern def tcp_accept_nb(listen_fd: var int) raises Net -> int
+  requires listen_fd >= 0
+  ensures true
+  decreases 0
+
+extern def tcp_recv_slot(conn: var int, slot: var int, max_bytes: int) raises Net -> int
+  requires conn >= 0
+  requires 0 <= slot
+  ensures true
+  decreases 0
+
+extern def tcp_send_buf(conn: var int, data: var ptr, off: int, n: var int) raises Net -> int
+  requires conn >= 0
+  ensures true
+  decreases 0
+
+extern def tcp_send_coalesce_i(conn: var int, a: var ptr, la: int, b: var ptr, lb: int) raises Net -> int
+  requires conn >= 0
+  ensures true
+  decreases 0
+
+extern def net_buf_len(slot: var int) -> int
+  requires 0 <= slot
+  ensures true
+  decreases 0
+
+extern def net_slot_buf_ptr(slot: var int) -> ptr
+  requires 0 <= slot
+  ensures true
+  decreases 0
+
+extern def httpd_slot_hdr_i(slot: var int) -> ptr
+  requires 0 <= slot
+  ensures true
+  decreases 0
+
+extern def httpd_prepare_root_i(root: var ptr) raises IO -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def httpd_cache_ready_i() -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def httpd_cached_body_i() -> ptr
+  requires true
+  ensures true
+  decreases 0
+
+extern def httpd_cached_sz_i() -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def httpd_reply_cached_index_i(conn: var int, slot: var int, keep_alive: var int) raises Net, IO -> int
+  requires conn >= 0
+  requires 0 <= slot
+  ensures true
+  decreases 0
+
+extern def httpd_drain_slot_i(conn: var int, slot: var int) raises Net, IO -> int
+  requires conn >= 0
+  requires 0 <= slot
+  ensures true
+  decreases 0
+
+extern def net_slot_consume(slot: var int, n: int) -> int
+  requires 0 <= slot
+  ensures true
+  decreases 0
+
+extern def httpd_slot_alloc(fd: var int) -> int
+  requires fd >= 0
+  ensures true
+  decreases 0
+
+extern def httpd_slot_find_fd(fd: int) -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def httpd_slot_free(slot: var int) raises Net -> unit
+  requires 0 <= slot
+  ensures true
+  decreases 0
+
+extern def epoll_create1_i() raises Net -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def epoll_ctl_add_i(epfd: var int, fd: var int) raises Net -> int
+  requires epfd >= 0
+  ensures true
+  decreases 0
+
+extern def epoll_ctl_add_listen_i(epfd: var int, fd: var int) raises Net -> int
+  requires epfd >= 0
+  ensures true
+  decreases 0
+
+extern def epoll_ctl_del_i(epfd: var int, fd: var int) raises Net -> int
+  requires epfd >= 0
+  ensures true
+  decreases 0
+
+extern def epoll_wait_events_i(epfd: var int, events: var ptr, max_events: int) raises Net -> int
+  requires epfd >= 0
+  ensures true
+  decreases 0
+
+extern def li_async_reactor_selftest_i() raises Async -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def tcp_echo_epoll_once_i(port: var int) raises Net -> int
+  requires port > 0
+  ensures true
+  decreases 0
+
+extern def net_events_fd(events: var ptr, index: int) -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def net_events_revents(events: var ptr, index: int) -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def net_epoll_readable(revents: int) -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def net_epoll_hangup(revents: int) -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def net_fill_not_found_i(p: var ptr) -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def net_tcp_ack_now(fd: var int) raises Net -> int
+  requires fd >= 0
+  ensures true
+  decreases 0
+
+extern def net_open_readonly_i(path: var ptr) raises IO -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def net_fstat_size(fd: var int) raises IO -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def net_read_fd(fd: var int, buf: var ptr, max_bytes: int) raises IO -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def net_close_fd(fd: var int) raises IO -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def net_sendfile_fd(conn: var int, file_fd: var int, file_size: var int) raises Net, IO -> int
+  requires conn >= 0
+  ensures true
+  decreases 0
+
+extern def net_buf_alloc(size: var int) raises Alloc -> ptr
+  requires 0 < size
+  ensures true
+  decreases 0
+
+extern def net_buf_free(p: var ptr) raises Alloc -> unit
+  requires true
+  ensures true
+  decreases 0
+
+extern def httpd_write_response_hdr_i(buf: var ptr, cap: int, status: int, body_len: var int, keep_alive: var int) raises IO -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def bytes_len_i(b: var ptr) raises Alloc -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def bytes_slice_i(b: var ptr, off: int, n: int) raises Alloc -> ptr
+  requires 0 <= off
+  requires 0 <= n
+  ensures true
+  decreases 0
+
+extern def net_byte_at_i(b: var ptr, off: int) -> int
+  requires 0 <= off
+  ensures true
+  decreases 0
+
+extern def str_cat2_i(a: var ptr, b: var ptr) raises Alloc -> ptr
+  requires true
+  ensures true
+  decreases 0
+
+extern def net_lit_index_html_i() -> ptr
+  requires true
+  ensures true
+  decreases 0
+
+extern def httpd_parse_port_i(s: var ptr) -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def net_diag(tag: int) -> int
+  requires true
+  ensures true
+  decreases 0
+
+# --- Li HTTP proxy seam (li_rt_net.c) — extend with trusted-extern-manifest when adding symbols ---
+
+extern def httpd_li_proxy_up_fd_i(slot: var int) -> int
+  requires 0 <= slot
+  ensures true
+  decreases 0
+
+extern def httpd_li_proxy_set_phase_i(slot: var int, phase: int) -> unit
+  requires 0 <= slot
+  ensures true
+  decreases 0
+
+extern def httpd_li_proxy_up_epoll_i(epfd: var int, slot: var int, revents: int) -> unit
+  requires epfd >= 0
+  ensures true
+  decreases 0
+
+extern def httpd_li_proxy_client_epoll_i(epfd: var int, slot: var int, revents: int) -> unit
+  requires epfd >= 0
+  ensures true
+  decreases 0
+
+extern def httpd_li_proxy_active_i(slot: var int) -> int
+  requires 0 <= slot
+  ensures true
+  decreases 0
+
+extern def httpd_li_proxy_phase_i(slot: var int) -> int
+  requires 0 <= slot
+  ensures true
+  decreases 0
+
+extern def httpd_li_proxy_finish_err_i(epfd: var int, slot: var int) -> int
+  requires epfd >= 0
+  ensures true
+  decreases 0
+
+extern def httpd_li_proxy_finish_ok_i(epfd: var int, slot: var int) -> int
+  requires epfd >= 0
+  ensures true
+  decreases 0
+
+extern def httpd_li_proxy_finish_drain_i(epfd: var int, slot: var int) -> int
+  requires epfd >= 0
+  ensures true
+  decreases 0
+
+extern def httpd_li_proxy_get_resp_body_left_i(slot: var int) -> int
+  requires 0 <= slot
+  ensures true
+  decreases 0
+
+extern def httpd_li_proxy_set_resp_body_left_i(slot: var int, n: int) -> unit
+  requires 0 <= slot
+  ensures true
+  decreases 0
+
+extern def httpd_li_proxy_forward_bytes_i(epfd: var int, slot: var int, data: var ptr, n: var int) -> int
+  requires epfd >= 0
+  ensures true
+  decreases 0
+
+extern def httpd_li_proxy_resp_hdr_acc_i(slot: var int) -> ptr
+  requires 0 <= slot
+  ensures true
+  decreases 0
+
+extern def httpd_li_proxy_get_resp_hdr_len_i(slot: var int) -> int
+  requires 0 <= slot
+  ensures true
+  decreases 0
+
+extern def httpd_li_proxy_store_resp_cache_i(slot: var int) -> int
+  requires 0 <= slot
+  ensures true
+  decreases 0
+
+extern def httpd_li_proxy_cached_hdr_len_i() -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def httpd_li_proxy_cached_hdr_ptr_i() -> ptr
+  requires true
+  ensures true
+  decreases 0
+
+extern def httpd_li_proxy_set_resp_parsing_i(slot: var int, v: int) -> unit
+  requires 0 <= slot
+  ensures true
+  decreases 0
+
+extern def httpd_li_proxy_set_resp_body_mode_i(slot: var int, v: int) -> unit
+  requires 0 <= slot
+  ensures true
+  decreases 0
+
+extern def httpd_li_proxy_cached_cl_i() -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def httpd_li_proxy_append_resp_hdr_i(slot: var int, data: var ptr, n: var int) -> int
+  requires 0 <= slot
+  ensures true
+  decreases 0
+
+extern def httpd_li_proxy_get_resp_parsing_i(slot: var int) -> int
+  requires 0 <= slot
+  ensures true
+  decreases 0
+
+extern def httpd_li_proxy_get_resp_body_mode_i(slot: var int) -> int
+  requires 0 <= slot
+  ensures true
+  decreases 0
+
+extern def httpd_li_proxy_send_request_i(epfd: var int, slot: var int) -> int
+  requires epfd >= 0
+  ensures true
+  decreases 0
+
+extern def httpd_li_proxy_mark_active_i(epfd: var int, slot: var int, up: var int, he: var int, keep: var int) -> int
+  requires epfd >= 0
+  ensures true
+  decreases 0
+
+extern def httpd_li_proxy_init_req_i(slot: var int, he: var int) -> int
+  requires 0 <= slot
+  ensures true
+  decreases 0
+
+extern def httpd_li_proxy_snap_ready_i() -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def httpd_li_proxy_try_snap_i(conn: var int, slot: var int, hdr_end: var int, keep: var int) -> int
+  requires conn >= 0
+  ensures true
+  decreases 0
+
+extern def httpd_li_scratch_get_i() -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def httpd_proxy_configured_i() -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def httpd_set_li_proxy_mode_i(mode: int) -> unit
+  requires true
+  ensures true
+  decreases 0
+
+extern def httpd_set_epfd_i(epfd: var int) -> unit
+  requires epfd >= 0
+  ensures true
+  decreases 0
+
+extern def httpd_slot_conn_i(slot: var int) -> int
+  requires 0 <= slot
+  ensures true
+  decreases 0
+
+extern def httpd_upstream_acquire_i() -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def httpd_upstream_release_i(fd: var int, keep: int) -> unit
+  requires fd >= 0
+  ensures true
+  decreases 0
+
+extern def httpd_epoll_unregister_fd_i(epfd: var int, fd: var int) -> unit
+  requires epfd >= 0
+  ensures true
+  decreases 0
+
+extern def net_events_tagged_load_i(events: ptr, idx: int) -> unit
+  requires true
+  ensures true
+  decreases 0
+
+extern def net_events_loaded_lo_i() -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def net_events_loaded_hi_i() -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def net_events_loaded_revents_i() -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def epoll_wait_tagged_i(epfd: var int, events: var ptr, max_events: var int) -> int
+  requires epfd >= 0
+  ensures true
+  decreases 0
+
+extern def epoll_wait_tagged_spin_i(epfd: var int, events: var ptr, max_events: var int) -> int
+  requires epfd >= 0
+  ensures true
+  decreases 0
+
+extern def tcp_recv_nb_i(conn: var int, buf: var ptr, cap: var int) -> int
+  requires conn >= 0
+  ensures true
+  decreases 0
+
+extern def tcp_send_nb_i(conn: var int, buf: var ptr, off: var int, n: var int) -> int
+  requires conn >= 0
+  ensures true
+  decreases 0
+
+extern def httpd_fork_workers_i() -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def httpd_config_workers_i() -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def httpd_epoll_serve_i(port: var int, root: var ptr) -> int
+  requires 0 < port
+  ensures true
+  decreases 0
+
+extern def httpd_epoll_serve_proxy_i(port: var int, root: var ptr, backend_port: var int) -> int
+  requires 0 < port
+  ensures true
+  decreases 0
+
+extern def httpd_proxy_splice_cl_i(up_fd: var int, client_fd: var int, max_bytes: var int) -> int
+  requires up_fd >= 0
+  ensures true
+  decreases 0
+
+extern def httpd_li_scratch_set_i(n: int) -> unit
+  requires true
+  ensures true
+  decreases 0
+
+extern def httpd_proxy_compact_req_hdr_i(slot: var int, hdr_end: var int) -> int
+  requires 0 <= slot
+  ensures true
+  decreases 0
+
+extern def httpd_inject_traceparent_slot_i(slot: var int, hdr_end: var int) -> int
+  requires 0 <= slot
+  ensures true
+  decreases 0
+
+extern def httpd_epoll_add_client_i(epfd: var int, conn: var int, slot: var int) -> int
+  requires epfd >= 0
+  ensures true
+  decreases 0
+
+extern def httpd_set_proxy_upstream_port_i(port: var int, proxy_all: var int) -> int
+  requires 0 < port
+  ensures true
+  decreases 0
+
+extern def httpd_env_li_proxy_loop_i() -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def httpd_load_runtime_config_i(path: var ptr) -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def httpd_tls_enabled_i() -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def httpd_tls_handshake_slot_i(slot: var int, fd: var int) -> int
+  requires 0 <= slot
+  requires fd >= 0
+  ensures true
+  decreases 0
+
+extern def httpd_tls_slot_h2_i(slot: var int) -> int
+  requires 0 <= slot
+  ensures true
+  decreases 0
+
+extern def httpd_h2_serve_slot_i(epfd: var int, slot: var int) -> int
+  requires epfd >= 0
+  requires 0 <= slot
+  ensures true
+  decreases 0
+
+extern def httpd_tick_active_health_probes_i() -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def httpd_tick_sse_stream_idle_i(epfd: var int) -> int
+  requires epfd >= 0
+  ensures true
+  decreases 0
+
+extern def httpd_sse_idle_epoll_timeout_ms_i() -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def epoll_wait_tagged_timeout_ms_i(epfd: var int, events: var ptr, max_events: var int, timeout_ms: var int) -> int
+  requires epfd >= 0
+  ensures true
+  decreases 0
+
+extern def httpd_config_listen_port_i() -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def httpd_config_doc_root_i() -> ptr
+  requires true
+  ensures true
+  decreases 0
+
+extern def httpd_set_upstream_ports_csv_i(csv: var ptr, proxy_all: var int) -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def httpd_lb_mode_from_arg_i(arg: var ptr) -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def httpd_set_lb_mode_i(mode: int) -> unit
+  requires true
+  ensures true
+  decreases 0

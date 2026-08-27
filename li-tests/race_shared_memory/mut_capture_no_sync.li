@@ -1,0 +1,11 @@
+
+def mut_capture() -> unit
+  requires true
+  ensures result >= 0
+  decreases 0
+=
+  var counter: int = 0
+  parallel for i in 0..<100
+    decreases 100 - i
+  =
+    counter = counter + 1

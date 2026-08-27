@@ -1,0 +1,23 @@
+import lig
+
+def chem_dft_energy_stub_hartree() -> float
+  requires true
+  ensures result == -76.0
+  decreases 0
+=
+  return -76.0
+
+def chem_dft_run_smoke() -> float
+  requires true
+  ensures result == chem_dft_energy_stub_hartree()
+  decreases 0
+=
+  return chem_dft_energy_stub_hartree()
+
+def chem_lig_backend_auto() raises IO -> int
+  requires true
+  ensures 1 <= result
+  ensures result <= 4
+  decreases 0
+=
+  return lig_backend_select_auto()

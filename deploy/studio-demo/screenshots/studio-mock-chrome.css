@@ -1,0 +1,7 @@
+:root{--shell-left-px:200px;--spacing-outliner-width-px:144px}
+.outliner{position:absolute;left:var(--spacing-dock-width-px);top:var(--spacing-topbar-height-px);width:var(--spacing-outliner-width-px);bottom:180px;background:var(--color-bg-elevated);border-right:1px solid var(--color-border);padding:12px 8px;font-size:12px}
+.dock-item{display:flex;flex-direction:column;align-items:center;gap:2px}
+.dock-label{font-size:9px;color:var(--color-text-muted)}
+.outliner-empty,.inspector .outliner-empty{font-size:11px;color:var(--color-text-muted);margin-top:12px}
+.viewport-error-strip{position:absolute;left:0;right:0;bottom:0;padding:10px 16px;background:rgba(218,54,51,.18);border-top:1px solid var(--color-agent-error);display:flex;gap:12px;align-items:center;font-size:12px;color:var(--color-agent-error)}
+.viewport-error-strip button{padding:4px 10px;border:1px solid var(--color-accent-cyan);background:transparent;color:var(--color-accent-cyan);cursor:pointer}

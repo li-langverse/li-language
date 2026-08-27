@@ -1,0 +1,14 @@
+type Buf = object
+  public xs: array[2, int]
+
+def main() -> int
+  requires true
+  ensures result == 3
+  decreases 0
+=
+  var a: Buf
+  a.xs[0] = 1
+  a.xs[1] = 2
+  var b: Buf = a
+  a.xs[0] = 99
+  return b.xs[0] + b.xs[1]

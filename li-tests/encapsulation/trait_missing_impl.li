@@ -1,0 +1,21 @@
+type Hash = trait
+  def hash(self: Self) -> int
+
+type Bad = object
+  public x: int
+
+def require_hash[H: Hash](p: H) -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return 0
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var b: Bad
+  b.x = 1
+  return require_hash(b)

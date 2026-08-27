@@ -1,0 +1,9 @@
+# Re-export trusted runtime seam (std/runtime/seam.li). HTTP product code imports `net`.
+import std.runtime.seam
+
+def net_tag() raises Net -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1

@@ -1,0 +1,41 @@
+import studio
+import ui
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if li_std_studio_version() < 6:
+    return 1
+  var compose0: StudioShellCompose = studio_compose_shell_palette(1280.0, 720.0, 0, 1, studio_palette_closed_flag())
+  var sel0: int = compose0.inspector.has_selection
+  var scene0: int = compose0.scene_entity_count
+  var task0: int = compose0.agent.task_state
+  var pal0: int = compose0.palette.is_open
+  var ctx0: int = compose0.agent.agent_context_label
+  var exp0: int = studio_shell_chrome_count_palette(sel0, scene0, task0, pal0, ctx0, 0)
+  var frame0: PaintFrame = paint_frame_new()
+  studio_paint_shell_chrome(frame0, compose0)
+  if frame0.cmd_count != exp0:
+    return 10
+  var key0: StudioShellCompose = studio_compose_shell_palette(1280.0, 720.0, 0, 1, studio_palette_closed_flag())
+  var input0: InputState = input_default()
+  var _key0: int = studio_handle_studio_key(key0, input0)
+  var compose1: StudioShellCompose = studio_compose_shell_palette(1280.0, 720.0, 0, 1, studio_palette_closed_flag())
+  if compose1.timeline.playhead_pct != studio_timeline_playhead_pct():
+    return 21
+  var sel1: int = compose1.inspector.has_selection
+  var scene1: int = compose1.scene_entity_count
+  var task1: int = compose1.agent.task_state
+  var pal1: int = compose1.palette.is_open
+  var ctx1: int = compose1.agent.agent_context_label
+  var exp1: int = studio_shell_chrome_count_palette(sel1, scene1, task1, pal1, ctx1, 0)
+  var frame1: PaintFrame = paint_frame_new()
+  studio_paint_shell_chrome(frame1, compose1)
+  if frame1.cmd_count != exp1:
+    return 11
+  var compose2: StudioShellCompose = studio_compose_shell_palette(1280.0, 720.0, 0, 1, studio_palette_open_flag())
+  if studio_compose_ok(compose2) != 1:
+    return 32
+  return 0

@@ -1,0 +1,10 @@
+# Positive control: refinement-typed index — safe analogue to C bounds-checked access.
+
+type Idx8 = {i: int | 0 <= i and i < 8}
+
+def get_cell(grid: array[8, int], i: Idx8) -> int
+  requires true
+  ensures result == grid[i]
+  decreases 0
+=
+  return grid[i]

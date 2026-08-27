@@ -1,0 +1,16 @@
+import sim.drug_design
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if li_sim_drug_design_version() != 1:
+    return 1
+  if li_sim_drug_design_profile_contract() != sim_contract_sim_drug_design():
+    return 2
+  if li_sim_drug_design_studio_profile_id() != 7:
+    return 3
+  if run_drug_design_smoke() != 0:
+    return 4
+  return 0

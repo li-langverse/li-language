@@ -1,0 +1,42 @@
+# Unit test — Module A: box, piston, and thermal-cycle schedule.
+# Every contract here discharges strictly (verify_ok).
+import nanoreactor
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if nano_phase_count() != 4:
+    return 1
+  if nano_cycle_len() != 8:
+    return 2
+  if nano_box_half() != 2.0:
+    return 3
+  if nano_phase_of(0) != 0:
+    return 4
+  if nano_phase_of(2) != 1:
+    return 5
+  if nano_phase_of(4) != 2:
+    return 6
+  if nano_phase_of(6) != 3:
+    return 7
+  if nano_phase_of(8) != 0:
+    return 8
+  if nano_piston_z(0) != 2.0:
+    return 9
+  if nano_piston_z(1) != 1.0:
+    return 10
+  if nano_piston_z(2) != 1.2:
+    return 11
+  if nano_piston_z(3) != 2.0:
+    return 12
+  if nano_box_volume(1.0) != 4.0:
+    return 13
+  if nano_box_volume(2.0) != 8.0:
+    return 14
+  if nano_target_temp(2) != 1200.0:
+    return 15
+  if nano_target_temp(0) != 300.0:
+    return 16
+  return 0

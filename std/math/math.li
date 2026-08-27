@@ -1,0 +1,6 @@
+def math_std_tag() -> int
+  requires true
+  ensures result == 2
+  decreases 0
+=
+  return 2

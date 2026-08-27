@@ -1,0 +1,16 @@
+def order_transitive(a: int, b: int, c: int) -> int
+  requires a >= 0 and b >= 0 and c >= 0
+  requires a < b and b < c
+  ensures result == 1
+  decreases 0
+=
+  if a < c:
+    return 1
+  return 0
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return 0

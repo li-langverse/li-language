@@ -1,0 +1,17 @@
+type NonNeg = {x: int | x >= 0}
+
+def callee(x: NonNeg) -> int
+  requires true
+  ensures result == x
+  decreases 0
+=
+  return x
+
+def caller_guarded(n: int) -> int
+  requires true
+  ensures result == n
+  decreases 0
+=
+  if n >= 0:
+    return callee(n)
+  return 0

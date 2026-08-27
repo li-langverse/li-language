@@ -1,0 +1,15 @@
+# Phase H: routing oracle with explicit postcondition on fixture match.
+import http
+
+def main() raises IO, Alloc -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var health: int = match_route_fixture("GET", "/health")
+  if health != 1:
+    return 1
+  var miss: int = match_route_fixture("GET", "/unknown")
+  if miss != http_route_id_none():
+    return 2
+  return 0

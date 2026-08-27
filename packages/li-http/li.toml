@@ -1,0 +1,22 @@
+[package]
+name = "li-http"
+version = "0.1.0"
+edition = "2026"
+license = "Apache-2.0 OR MIT"
+description = "HTTP parser, router, proxy, leak_censor"
+
+[dependencies]
+# path = { path = "../other" }   # lip 8b+
+# registry = "1.0.0"             # lip 8d+
+
+[package.metadata.li]
+github_repo = "li-http"
+import_name = "http"
+min_lic = "0.1.0"
+maintainer = "li-langverse"
+pkg_id = "PKG-li-http"
+
+[package.repository]
+url = "https://github.com/li-langverse/li-http"
+documentation = "https://li-langverse.github.io/li-language/ecosystem/li-http/"
+changelog = "https://github.com/li-langverse/li-http/blob/main/CHANGELOG.md"

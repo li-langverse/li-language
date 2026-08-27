@@ -1,0 +1,28 @@
+import sim
+import scene
+import studio
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var game_cfg: StudioProjectConfig = studio_project_config_new(studio_profile_game())
+  var game_sess: SimSessionStub = sim_session_stub_default()
+  if studio_sim_step_hook(game_cfg, game_sess, 0.016) != sim_status_ok():
+    return 10
+  if game_sess.tick != 1:
+    return 11
+  if game_sess.sim_contract_id != sim_contract_game():
+    return 12
+  var sci_cfg: StudioProjectConfig = studio_project_config_new(studio_profile_sim_scientific())
+  var sci_sess: SimSessionStub = sim_session_stub_default()
+  if studio_sim_step_hook(sci_cfg, sci_sess, 0.01) != sim_status_ok():
+    return 20
+  if sci_sess.tick != 1:
+    return 21
+  if sci_sess.sim_contract_id != sim_contract_sim_scientific():
+    return 22
+  if studio_md_particle_tier_select_ok(scene_md_tier_10k()) != 1:
+    return 23
+  return 0

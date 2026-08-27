@@ -1,0 +1,21 @@
+[package]
+name = "li-sim-robotics"
+version = "0.1.0"
+edition = "2026"
+license = "Apache-2.0 OR MIT"
+description = "Robotics simulation profiles — Arms, mobile bases, and factory cells"
+
+[dependencies]
+li-sim = { path = "../li-sim" }
+
+[package.metadata.li]
+github_repo = "li-sim-robotics"
+import_name = "sim.robotics"
+min_lic = "0.1.0"
+maintainer = "li-langverse"
+pkg_id = "PKG-li-sim-robotics"
+
+[package.repository]
+url = "https://github.com/li-langverse/li-sim-robotics"
+documentation = "https://li-langverse.github.io/li-language/ecosystem/li-sim-robotics/"
+changelog = "https://github.com/li-langverse/li-sim-robotics/blob/main/CHANGELOG.md"

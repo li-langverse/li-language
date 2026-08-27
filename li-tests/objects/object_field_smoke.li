@@ -1,0 +1,13 @@
+type Limits = object
+  public max_header_block: int
+  public max_body: int
+
+def main() -> int
+  requires true
+  ensures result == 10
+  decreases 0
+=
+  var limits: Limits
+  limits.max_header_block = 3
+  limits.max_body = 7
+  return limits.max_header_block + limits.max_body

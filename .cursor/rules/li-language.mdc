@@ -1,0 +1,48 @@
+---
+description: Conventions for Li source files and stdlib
+globs: "**/*.li,std/**/*"
+alwaysApply: false
+---
+
+# Li source conventions
+
+**Unproved code does not compile.** No exceptions in user modules.
+
+## Every function: `def` (not `proc`)
+
+```nim
+def f(x: int) -> int
+  requires x > 0
+  ensures result > 0
+  decreases x
+=
+  ...
+```
+
+Bare `proc` is rejected. Use **`extern proc`** only for FFI stubs.
+
+## Forbidden
+
+`Any`, `unsafe`, `safe`, `verified`, `sorry`, `assume`, bare `cast[T](e)`
+
+## Allowed casts
+
+`cast[T](e, proof)` only.
+
+## Loops
+
+`while` must have `invariant` and `decreases`.
+
+## Indices
+
+Use refinements `{i: int | 0 <= i and i < N}` or proof-carrying index types — not raw `int` for grid access without proof.
+
+## IO
+
+User code proves against axioms in `trusted.lean`; game/sim `step` procs are total; driver loop is trusted `IO`.
+
+## Parallelism (v1)
+
+`parallel for` on **shared memory** (OpenMP). Safety = proved disjoint writes + `Send`/`Sync`. Run `scripts/test_race_reject.sh` — exploit fixtures must fail compile.
+
+No unchecked overflow. `int` + `float` mixing requires explicit proved conversion.

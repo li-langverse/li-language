@@ -1,0 +1,9 @@
+# Official repos to notify on lic release (repository_dispatch).
+# One repo per line: org/repo
+li-langverse/lip
+li-langverse/lit
+li-langverse/li-net
+li-langverse/li-core
+li-langverse/li-math
+li-langverse/li-demo
+li-langverse/li-httpd

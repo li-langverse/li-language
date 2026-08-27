@@ -1,0 +1,136 @@
+# Pure-Li matmul (512×512).
+
+extern def li_rt_volatile_sink_f64(v: float) -> unit
+  requires true
+  ensures true
+
+def mm_lut_a(rem: int) -> float
+  requires rem >= 0
+  ensures result >= 0.0
+  decreases rem
+=
+  if rem == 0:
+    return 0.0
+  if rem == 1:
+    return 0.01
+  if rem == 2:
+    return 0.02
+  if rem == 3:
+    return 0.03
+  if rem == 4:
+    return 0.04
+  if rem == 5:
+    return 0.05
+  if rem == 6:
+    return 0.06
+  if rem == 7:
+    return 0.07
+  if rem == 8:
+    return 0.08
+  if rem == 9:
+    return 0.09
+  if rem == 10:
+    return 0.1
+  if rem == 11:
+    return 0.11
+  if rem == 12:
+    return 0.12
+  if rem == 13:
+    return 0.13
+  if rem == 14:
+    return 0.14
+  if rem == 15:
+    return 0.15
+  if rem == 16:
+    return 0.16
+  return 0.0
+
+def mm_lut_b(rem: int) -> float
+  requires rem >= 0
+  ensures result >= 0.0
+  decreases rem
+=
+  if rem == 0:
+    return 0.0
+  if rem == 1:
+    return 0.02
+  if rem == 2:
+    return 0.04
+  if rem == 3:
+    return 0.06
+  if rem == 4:
+    return 0.08
+  if rem == 5:
+    return 0.1
+  if rem == 6:
+    return 0.12
+  if rem == 7:
+    return 0.14
+  if rem == 8:
+    return 0.16
+  if rem == 9:
+    return 0.18
+  if rem == 10:
+    return 0.2
+  if rem == 11:
+    return 0.22
+  if rem == 12:
+    return 0.24
+  return 0.0
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var A: array[512, array[512, float]]
+  var B: array[512, array[512, float]]
+  var C: array[512, array[512, float]]
+  var i: int = 0
+  while i < 512
+    var j_init: int = 0
+    while j_init < 512
+      A[i][j_init] = mm_lut_a((i + j_init) % 17)
+      B[i][j_init] = mm_lut_b((i * 3 + j_init) % 13)
+      C[i][j_init] = 0.0
+      j_init = j_init + 1
+    i = i + 1
+  var ii: int = 0
+  while ii < 512
+    var kk: int = 0
+    while kk < 512
+      var jj: int = 0
+      while jj < 512
+        var i_max: int = ii + 64
+        if i_max > 512:
+          i_max = 512
+        var k_max: int = kk + 64
+        if k_max > 512:
+          k_max = 512
+        var j_max: int = jj + 64
+        if j_max > 512:
+          j_max = 512
+        var ti: int = ii
+        while ti < i_max
+          var tk: int = kk
+          while tk < k_max
+            var aik: float = A[ti][tk]
+            var tj: int = jj
+            while tj < j_max
+              C[ti][tj] = C[ti][tj] + aik * B[tk][tj]
+              tj = tj + 1
+            tk = tk + 1
+          ti = ti + 1
+        jj = jj + 64
+      kk = kk + 64
+    ii = ii + 64
+  var acc: float = 0.0
+  var i_sum: int = 0
+  while i_sum < 512
+    var j_sum: int = 0
+    while j_sum < 512
+      acc = acc + C[i_sum][j_sum]
+      j_sum = j_sum + 1
+    i_sum = i_sum + 1
+  li_rt_volatile_sink_f64(acc)
+  return 0

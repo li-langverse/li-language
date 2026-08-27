@@ -1,0 +1,17 @@
+[server]
+listen = "127.0.0.1:8080"
+host = "api.example.com"
+
+[limits]
+max_body = "1m"
+max_header = "16k"
+rate_limit_rps = 100
+rate_limit_burst = 200
+
+[upstreams.api]
+peers = ["http://127.0.0.1:3000"]
+
+[routes]
+"GET /health" = "static:healthcheck"
+"POST /v1/*" = "proxy:api"
+"GET /v1/*" = "proxy:api"

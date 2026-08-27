@@ -1,0 +1,16 @@
+N = 256
+steps = 10_000
+dt = 0.004
+rc = 2.5
+box_length = 10.0
+seed = 7
+
+# Conservation stress suite (Allen–Tildesley / Drexel MSim references)
+[conservation]
+rho = 0.75
+temperature = 1.0
+steps = 40_000
+dt = 0.004
+energy_msd_threshold = 3.0e-8
+end_drift_threshold = 1.0e-4
+timestep_halving_ratio = 16.0

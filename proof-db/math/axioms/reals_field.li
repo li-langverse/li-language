@@ -1,0 +1,18 @@
+# Real field axioms — trusted base (M-AX-REAL-*). Mirror `MathAxioms.lean`
+# (Li.ProofDb.Math.real_*) in li source: `float` stands in for R. Axioms are
+# trusted declarations; derived theorems are discharged in Layer 2.
+
+axiom real_add_comm(a: float, b: float) : a + b == b + a
+
+axiom real_add_assoc(a: float, b: float, c: float) : (a + b) + c == a + (b + c)
+
+axiom real_mul_distrib(a: float, b: float, c: float) : a * (b + c) == a * b + a * c
+
+axiom real_mul_one(a: float) : a * 1.0 == a
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return 0

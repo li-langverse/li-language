@@ -1,0 +1,36 @@
+[package]
+name = "li-studio"
+version = "0.1.0"
+edition = "2026"
+license = "Apache-2.0 OR MIT"
+description = "Li World Studio — compose dock, timeline, and inspector from li-ui/li-gui composables"
+
+[dependencies]
+li-gui = { path = "../li-gui" }
+li-ui = { path = "../li-ui" }
+li-sim = { path = "../li-sim" }
+li-sim-scientific = { path = "../li-sim-scientific" }
+li-scene = { path = "../li-scene" }
+li-physics-runtime = { path = "../li-physics-runtime" }
+lig = { path = "../lig" }
+li-lig-present = { path = "../li-lig-present" }
+
+[[bin]]
+name = "li-studio-demo"
+path = "src/main.li"
+
+[package.metadata.li]
+github_repo = "li-studio"
+import_name = "studio"
+min_lic = "0.1.0"
+maintainer = "li-langverse"
+pkg_id = "PKG-li-studio"
+
+[package.metadata.studio]
+compose_panels = ["dock", "timeline", "inspector"]
+panel_switch_budget_ms = 100
+
+[package.repository]
+url = "https://github.com/li-langverse/li-studio"
+documentation = "https://li-langverse.github.io/li-language/ecosystem/li-studio/"
+changelog = "https://github.com/li-langverse/li-studio/blob/main/CHANGELOG.md"

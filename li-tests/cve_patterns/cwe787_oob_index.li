@@ -1,0 +1,8 @@
+# CWE-787: out-of-bounds write — constant index past fixed array end (C stack overflow class).
+type Grid = array[8, array[8, int]]
+def write_past_end(g: Grid) -> int
+  requires true
+  ensures result == g[9][0]
+  decreases 0
+=
+  return g[9][0]

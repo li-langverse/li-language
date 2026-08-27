@@ -1,0 +1,23 @@
+import lig
+
+def main() raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var ledger: LigMemoryLedger = lig_memory_ledger_new(lig_memory_budget_mib())
+  if lig_alloc_within_budget(ledger, lig_memory_tier_estimated_bytes(1000)) != 1:
+    return 1
+  if lig_alloc_within_budget(ledger, lig_memory_tier_estimated_bytes(10000)) != 1:
+    return 2
+  if lig_alloc_within_budget(ledger, lig_memory_tier_estimated_bytes(100000)) != 0:
+    return 3
+  if lig_memory_ledger_peak_mib(ledger) <= 0:
+    return 4
+  var fpga: LigCustomTargetDescriptor = lig_custom_target_descriptor(lig_custom_lab_id_fpga())
+  if lig_custom_target_ready(fpga) != 1:
+    return 5
+  var log: LigBackendSwitchLog = lig_backend_switch_log(4, 3, 1)
+  if lig_backend_switch_log_ok(log) != 1:
+    return 7
+  return 0

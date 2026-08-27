@@ -1,0 +1,8 @@
+def main() -> int
+  requires true
+  ensures result == 42
+  decreases 0
+=
+  var buf: array[4, int]
+  buf[0] = 42
+  return buf[0]

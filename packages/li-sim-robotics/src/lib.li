@@ -1,0 +1,31 @@
+
+
+import sim
+
+def li_sim_robotics_version() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+def li_sim_robotics_profile_contract() -> int
+  requires true
+  ensures result == sim_contract_sim_robotics()
+  decreases 0
+=
+  return sim_contract_sim_robotics()
+
+def li_sim_robotics_studio_profile_id() -> int
+  requires true
+  ensures result == 4
+  decreases 0
+=
+  return 4
+
+def run_robotics_smoke() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return 0

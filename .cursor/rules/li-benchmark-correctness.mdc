@@ -1,0 +1,39 @@
+---
+description: Benchmark correctness first, speed second — normative specs, scaled goldens
+globs: benchmarks/**/*
+alwaysApply: false
+---
+
+# Benchmark correctness (correct and fast)
+
+**Goal:** produce the **correct** result for the published kernel spec, **as fast as possible**. Speed without correct math is a failure.
+
+## What “correct” means
+
+- **Normative spec:** `benchmarks/harness/reference.py` — float64 loops/init from `benchmarks/tier1_micro/common/*_core.c` (or tier-2 `verify.py` physics invariants). That is the contract, not “whatever C++/Python printed.”
+- **Two scales:**
+  - **Small N:** exact checksum (`%.17g`) — tight numerics, easy to reason about by hand.
+  - **Large N:** same spec at production size; compare with small `rtol`/`atol` (e.g. `-ffast-math` reordering).
+- **DCE is allowed** — LLVM/fast-math may fold, reorder, or delete dead paths. We do **not** ban optimizations.
+- **We must verify** before any correctness or perf claim (our harness, not hope):
+  - Normative spec match (large + exact small-N) via `reference.py`
+  - `|result|` floor where the spec is non-zero
+  - Min **pure-Li** wall time (`min_li_seconds`) — catches “optimized away to zero” without proof
+  - Optional: `BENCH_VERIFY_TIMING=1` for Li vs native timing sanity
+- Unverified silence (wrong checksum, 1 ms “10M” runs) fails; **verified** aggressive codegen passes.
+
+## Other languages (C++, Rust, Julia, Python)
+
+- **Sanity check only:** if Li and native both match the spec, comparing them is useful consistency.
+- **Not the aim:** matching another runtime’s float bit-for-bit is not success by itself.
+- **Better is fine:** if Li matches the spec and disagrees with a reference impl that violated the spec, **fix the reference or document the spec** — do not chase parity for its own sake.
+
+## Before publishing timings
+
+```bash
+./scripts/bench-verify-results.sh 1   # tier-1; spec checks on by default
+./scripts/verify-math-physics-goldens.sh
+# BENCH_VERIFY_REFERENCE=0  — only to debug harness, not for release claims
+```
+
+When changing init, size, or reduction in a kernel: update **`reference.py`** and the shared `common/*_core.c` together, then re-run verify.

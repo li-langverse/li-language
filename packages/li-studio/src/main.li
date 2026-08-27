@@ -1,0 +1,24 @@
+import studio
+import ui
+
+def main() -> int raises IO
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if li_std_studio_version() < 6:
+    return 1
+  if li_std_gui_version() < 1:
+    return 2
+  if li_std_ui_studio_composables_version() < 3:
+    return 3
+  var r0: int = studio_shell_demo_frame(0)
+  if r0 != 0:
+    return 4
+  var r1: int = studio_shell_demo_frame(1)
+  if r1 != 0:
+    return 5
+  var r2: int = studio_shell_demo_frame(2)
+  if r2 != 0:
+    return 6
+  return 0

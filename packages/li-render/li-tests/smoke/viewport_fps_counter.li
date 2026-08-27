@@ -1,0 +1,31 @@
+import render
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if li_std_render_version() < 3:
+    return 1
+  if render_viewport_fps_target() != 60.0:
+    return 2
+  var layout: StudioShellLayout = layout_studio_shell_adaptive(1920.0, 1080.0)
+  var vp: ViewportRegion = gui_viewport_region_from_layout(layout)
+  if vp.selection_active != 0:
+    return 3
+  var smoke: RenderViewportSmoke = render_wgpu_viewport_smoke(vp)
+  if render_viewport_smoke_ok(smoke) != 1:
+    return 4
+  var counter: RenderFpsCounter = render_fps_counter_shell_simulate()
+  if render_fps_counter_meets_target(counter) != 1:
+    return 5
+  var host_counter: RenderFpsCounter = render_viewport_host_fps_counter(4)
+  if host_counter.frame_count != 4:
+    return 9
+  if render_fps_counter_display_fps(counter) < 60:
+    return 6
+  if counter.native_pixels != 0:
+    return 7
+  if render_fps_counter_hud_tag(counter) != 1:
+    return 8
+  return 0

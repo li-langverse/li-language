@@ -1,0 +1,24 @@
+worker_processes {{workers}};
+error_log logs/error.log warn;
+pid logs/nginx.pid;
+
+events {
+  worker_connections 4096;
+}
+
+http {
+  access_log off;
+  sendfile {{sendfile}};
+  tcp_nopush on;
+  keepalive_timeout 65;
+
+  server {
+    listen 127.0.0.1:{{port}};
+    server_name localhost;
+    root {{document_root}};
+
+    location / {
+      try_files $uri =404;
+    }
+  }
+}

@@ -1,0 +1,21 @@
+@vectorized(lanes=4)
+def dot4(a: array[4, float], b: array[4, float]) -> float
+  requires true
+  ensures result >= 0.0
+=
+  return a @ b
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var x: array[4, float]
+  var y: array[4, float]
+  var i: int = 0
+  while i < 4
+    x[i] = 1.0
+    y[i] = 2.0
+    i = i + 1
+  var s: float = dot4(x, y)
+  return 0

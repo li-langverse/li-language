@@ -1,0 +1,6 @@
+# Absence requires Option[T]; unit means no return value.
+def main() -> int
+  requires true
+  ensures true
+=
+  return None

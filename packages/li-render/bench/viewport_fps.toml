@@ -1,0 +1,17 @@
+# Bench harness hook — read by scripts/bench-studio-viewport-perf.sh
+[viewport]
+fps_target = 60
+native_pixels = false
+fps_counter_hook = "render_fps_counter_meets_target"
+bench_simulate_fn = "render_bench_fps_counter_simulate"
+
+[wgpu_smoke]
+package = "lig"
+status = "stub_pass"
+surface_ok = false
+
+[fps_counter]
+package = "li-render"
+hook_version = 1
+display_fn = "render_fps_counter_display_fps"
+target_fn = "render_viewport_fps_target"

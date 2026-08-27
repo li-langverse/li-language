@@ -1,0 +1,1 @@
+use 'extern def' for trusted FFI

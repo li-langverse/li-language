@@ -1,0 +1,26 @@
+import gui
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if li_std_gui_version() < 2:
+    return 1
+  var layout: StudioShellLayout = layout_studio_shell_adaptive(1280.0, 720.0)
+  var none_vp: ViewportRegion = gui_viewport_region_from_layout(layout)
+  if none_vp.selection_active != 0:
+    return 2
+  if none_vp.depth_cue != 0:
+    return 3
+  var sel: ViewportSelection = gui_viewport_selection_rect(320.0, 180.0, 640.0, 360.0)
+  if sel.active != 1:
+    return 4
+  var sel_vp: ViewportRegion = gui_viewport_region_from_layout_with_selection(layout, sel)
+  if sel_vp.selection_active != 1:
+    return 5
+  if sel_vp.selection_rect.w != 640.0:
+    return 6
+  if sel_vp.depth_cue != 1:
+    return 7
+  return 0

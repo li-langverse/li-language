@@ -1,0 +1,15 @@
+def consume(b: array[4, int]) -> unit
+  requires true
+  ensures true
+  decreases 0
+=
+  discard b
+
+def use_after_move() -> unit
+  requires true
+  ensures true
+  decreases 0
+=
+  var a: array[4, int]
+  consume(a)
+  discard a[0]

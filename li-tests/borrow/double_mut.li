@@ -1,0 +1,8 @@
+def double_mut(b: var array[4, int]) -> unit
+  requires true
+  ensures true
+  decreases 0
+=
+  borrow mut x = b
+  borrow mut y = b
+  x[0] = 1

@@ -1,0 +1,17 @@
+# Security property: deep recursion does not stack-overflow or corrupt memory.
+# Tests stack depth handling in the compiler and runtime.
+def fib(n: int) -> int
+  requires n >= 0
+  ensures result >= 0
+  decreases n
+=
+  if n <= 1:
+    return n
+  return fib(n - 1) + fib(n - 2)
+
+def main() -> int
+  requires true
+  ensures result == 6765
+  decreases 0
+=
+  return fib(20)

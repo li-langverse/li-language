@@ -1,0 +1,22 @@
+[package]
+name = "li-rng"
+version = "0.1.0"
+edition = "2026"
+license = "Apache-2.0 OR MIT"
+description = "OsRng/Prng contracts (no raises Rng in user code)"
+
+[dependencies]
+# path = { path = "../other" }   # lip 8b+
+# registry = "1.0.0"             # lip 8d+
+
+[package.metadata.li]
+github_repo = "li-rng"
+import_name = "rng"
+min_lic = "0.1.0"
+maintainer = "li-langverse"
+pkg_id = "PKG-li-rng"
+
+[package.repository]
+url = "https://github.com/li-langverse/li-rng"
+documentation = "https://li-langverse.github.io/li-language/ecosystem/li-rng/"
+changelog = "https://github.com/li-langverse/li-rng/blob/main/CHANGELOG.md"

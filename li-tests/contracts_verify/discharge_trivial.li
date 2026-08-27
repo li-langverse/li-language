@@ -1,0 +1,27 @@
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return 0
+
+def const_zero() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return 0
+
+def const_forty_two() -> int
+  requires true
+  ensures result == 42
+  decreases 1
+=
+  return 42
+
+def identity_int(x: int) -> int
+  requires true
+  ensures result == x
+  decreases 0
+=
+  return x

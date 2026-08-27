@@ -1,0 +1,83 @@
+
+extern def li_rt_sqrt(x: float) raises IO -> float
+  requires true
+  ensures true
+  decreases 0
+
+type FluidCell = object
+  public rho: float
+  public vx: float
+  public vy: float
+
+def li_std_physics_fluids_version() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+def sph_kernel_poly6(r: float, h: float) -> float
+  requires h > 0.0
+  requires r >= 0.0
+  ensures result >= 0.0
+  decreases 0
+=
+  if r >= h:
+    return 0.0
+  var x: float = (h * h - r * r) / (h * h * h)
+  return 315.0 / (64.0 * 3.14159265) * x * x * x
+
+def euler_advect_scalar(field: array[8, float], vx: array[8, float], dt: float, dx: float) -> unit
+  requires dt > 0.0
+  requires dx > 0.0
+  ensures true
+  decreases 0
+=
+  var i: int = 0
+  while i < 8
+    field[i] = field[i] - vx[i] * dt / dx
+    i = i + 1
+
+def heat_step_explicit(
+    u: array[8, float], lap: array[8, float], alpha: float, dt: float) -> unit
+  requires dt > 0.0
+  ensures true
+  decreases 0
+=
+  var i: int = 0
+  while i < 8
+    u[i] = u[i] + alpha * dt * lap[i]
+    i = i + 1
+
+def cloth_index_ok(ix: int) -> int
+  requires ix >= 0
+  requires ix < 4
+  ensures result >= 0
+  ensures result < 4
+  decreases 0
+=
+  return ix
+
+def cloth_pbd_distance(
+    px: array[4, float], py: array[4, float],
+    i: int, j: int, rest: float, stiffness: float) -> unit
+  requires i >= 0
+  requires i < 4
+  requires j >= 0
+  requires j < 4
+  requires rest > 0.0
+  requires stiffness >= 0.0
+  requires stiffness <= 1.0
+  ensures true
+  decreases 0
+=
+  var dx: float = px[cloth_index_ok(j)] - px[cloth_index_ok(i)]
+  var dy: float = py[cloth_index_ok(j)] - py[cloth_index_ok(i)]
+  var len: float = li_rt_sqrt(dx * dx + dy * dy)
+  if len == 0.0:
+    return
+  var corr: float = stiffness * (len - rest) / len
+  px[cloth_index_ok(i)] = px[cloth_index_ok(i)] + 0.5 * corr * dx
+  py[cloth_index_ok(i)] = py[cloth_index_ok(i)] + 0.5 * corr * dy
+  px[cloth_index_ok(j)] = px[cloth_index_ok(j)] - 0.5 * corr * dx
+  py[cloth_index_ok(j)] = py[cloth_index_ok(j)] - 0.5 * corr * dy

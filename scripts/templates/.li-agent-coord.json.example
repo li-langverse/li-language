@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "updated_at": "2026-05-16T00:00:00Z",
+  "repos": {
+    "lic": {
+      "path": "../li",
+      "branch": "dev",
+      "claims": [
+        {
+          "id": "httpd-p0-net",
+          "paths": ["packages/li-net", "compiler/lexer", "compiler/parser", "compiler/types"],
+          "until": "2026-06-01",
+          "owner": "cursor-agent"
+        }
+      ]
+    },
+    "lip": { "path": "../lip", "branch": "dev", "claims": [] },
+    "lit": { "path": "../lit", "branch": "dev", "claims": [] },
+    "lis": { "path": "../lis", "branch": "dev", "claims": [] }
+  },
+  "notes": "Copy to coding-projects/.li-agent-coord.json — never commit secrets or this file with PATs. See lic docs/ecosystem/active-agent-claims.md."
+}

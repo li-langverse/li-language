@@ -1,0 +1,48 @@
+import ui
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if li_std_ui_studio_composables_version() < 3:
+    return 1
+  if studio_command_palette_hint_len() != 22:
+    return 2
+  if studio_dock_width_px() != 56.0:
+    return 3
+  if studio_panel_transition_ms() > 100.0:
+    return 4
+  var closed: StudioCommandPaletteCompose = studio_compose_palette(1280.0, 720.0, studio_palette_closed_flag())
+  if studio_palette_ok(closed) != 1:
+    return 5
+  if closed.is_open != studio_palette_closed_flag():
+    return 6
+  var open: StudioCommandPaletteCompose = studio_compose_palette(1280.0, 720.0, studio_palette_open_flag())
+  if studio_palette_ok(open) != 1:
+    return 7
+  if open.result_count != studio_palette_result_count_stub():
+    return 8
+  if open.search_rect.h != studio_palette_search_bar_height_px():
+    return 9
+  var toggled: StudioCommandPaletteCompose = studio_compose_palette(1280.0, 720.0, studio_palette_closed_flag())
+  studio_palette_toggle(toggled, 1280.0, 720.0)
+  if toggled.is_open != studio_palette_open_flag():
+    return 10
+  studio_palette_close(toggled)
+  if toggled.is_open != studio_palette_closed_flag():
+    return 11
+  var pal: StudioCommandPaletteCompose = studio_compose_palette(1920.0, 1080.0, studio_palette_closed_flag())
+  studio_palette_open(pal, 1920.0, 1080.0)
+  if pal.panel_rect.w != studio_palette_panel_width_px():
+    return 12
+  var frame: PaintFrame = paint_frame_new()
+  paint_studio_palette(frame, pal)
+  if frame.cmd_count != paint_studio_palette_count(studio_palette_open_flag()):
+    return 13
+  var frame_closed: PaintFrame = paint_frame_new()
+  var chk_closed: StudioCommandPaletteCompose = studio_compose_palette(1280.0, 720.0, studio_palette_closed_flag())
+  paint_studio_palette(frame_closed, chk_closed)
+  if frame_closed.cmd_count != 0:
+    return 14
+  return 0

@@ -1,0 +1,6 @@
+def mix(x: int, y: float) -> float
+  requires true
+  ensures true
+  decreases 0
+=
+  return x + y

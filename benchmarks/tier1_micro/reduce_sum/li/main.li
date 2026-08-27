@@ -1,0 +1,20 @@
+extern def li_reduce_sum_kernel()
+  requires true
+  ensures true
+
+extern def li_reduce_sum_checksum() -> float
+  requires true
+  ensures true
+
+extern def li_rt_volatile_sink_f64(v: float) -> unit
+  requires true
+  ensures true
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  li_reduce_sum_kernel()
+  li_rt_volatile_sink_f64(li_reduce_sum_checksum())
+  return 0

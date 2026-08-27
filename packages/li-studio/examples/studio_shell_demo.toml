@@ -1,0 +1,7 @@
+# PH-GD-1 headless Studio shell demo — compose + paint contract (1280×720).
+# Host window (SDL/wgpu) is not wired; see packages/li-studio/README.md § Run demo.
+
+[studio_demo]
+width = 1280
+height = 720
+frames = 3

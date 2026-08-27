@@ -1,0 +1,7 @@
+import std.math
+
+def advisory_mixed(n: int) -> int
+  requires n >= 0
+  decreases n
+=
+  return n

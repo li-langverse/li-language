@@ -1,0 +1,28 @@
+import aimd
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if li_aimd_version() != 1:
+    return 1
+  if aimd_step_count() != 8:
+    return 2
+  if aimd_harmonic_k() != 8.0:
+    return 3
+  if aimd_dft_energy_hartree() >= 0.0:
+    return 4
+  var drift: float = aimd_oracle_energy_drift()
+  if drift < 0.0:
+    return 5
+  if drift >= 1.0e-2:
+    return 6
+  if aimd_gc_step_count() != 10:
+    return 7
+  if aimd_gc_electrode_potential_v() != 0.25:
+    return 8
+  var gc: float = aimd_gc_oracle_checksum()
+  if gc < 0.0:
+    return 9
+  return 0

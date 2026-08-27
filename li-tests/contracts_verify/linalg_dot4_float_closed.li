@@ -1,0 +1,53 @@
+# P-linalg: fixed-size float dot — finished certificate.
+#
+# All three forms a dot4 certificate needs are discharged by the native engine
+# (no Lean goals left open):
+#   1. closed form:      `return x @ y`            == x[0]*y[0] + ... + x[3]*y[3]
+#   2. handwritten loop: `acc = acc + x[i] * y[i]` == the same expanded sum
+#   3. concrete call:    `s = dot4_float(a, b)` with a = 1.0, b = 2.0 folds to
+#                        s == 8.0 — the counter loop is unrolled so the
+#                        `a[i] = 1.0` / `b[i] = 2.0` stores are tracked per
+#                        element, and the callee `ensures` is constant-folded
+#                        at the call site.
+
+def dot4_float(x: array[4, float], y: array[4, float]) -> float
+  requires true
+  ensures result == x[0] * y[0] + x[1] * y[1] + x[2] * y[2] + x[3] * y[3]
+  decreases 0
+=
+  return x @ y
+
+def dot4_float_loop(x: array[4, float], y: array[4, float]) -> float
+  requires true
+  ensures result == x[0] * y[0] + x[1] * y[1] + x[2] * y[2] + x[3] * y[3]
+  decreases 4
+=
+  var acc: float = 0.0
+  var i: int = 0
+  while i < 4
+    acc = acc + x[i] * y[i]
+    i = i + 1
+  return acc
+
+def check_dot4_value(s: float) -> int
+  requires s == 8.0
+  ensures result == 0
+  decreases 0
+=
+  return 0
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var a: array[4, float]
+  var b: array[4, float]
+  var i: int = 0
+  while i < 4
+    a[i] = 1.0
+    b[i] = 2.0
+    i = i + 1
+  var s: float = dot4_float(a, b)
+  check_dot4_value(s)
+  return 0

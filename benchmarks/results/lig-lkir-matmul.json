@@ -1,0 +1,9 @@
+{
+  "generated_at": "2026-05-25T10:55:55Z",
+  "kernel_id": "lig.kernel.matmul_f32",
+  "validity_min": 0.999,
+  "validity_ratio": 1.0,
+  "validity_gate_pass": true,
+  "compile_ok": true,
+  "cpu_sec": 0.017496
+}

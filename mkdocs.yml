@@ -1,0 +1,160 @@
+# Li documentation site — https://li-langverse.github.io/li-language/
+
+site_name: Li
+site_description: Prove it. Write it easily. Run it fast.
+site_url: https://li-langverse.github.io/li-language/
+repo_url: https://github.com/li-langverse/li-language
+repo_name: li-langverse/li-language
+edit_uri: edit/dev/docs/
+
+theme:
+  name: material
+  logo: assets/li-mark.svg
+  favicon: assets/li-mark.svg
+  palette:
+    - scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Light mode
+    - scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Dark mode
+  font:
+    text: Space Grotesk
+    code: JetBrains Mono
+  features:
+    - navigation.instant
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - toc.follow
+
+plugins:
+  - search
+  - minify:
+      minify_html: true
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+extra_css:
+  - stylesheets/fonts.css
+  - stylesheets/extra.css
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/li-langverse/li-language
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Guide:
+      - Hello world: guide/hello-world.md
+      - Install tools: guide/getting-started-tools.md
+      - Fast math & parallelism: guide/fast-math-and-parallelism.md
+      - Math-first HPC examples: guide/math-hpc-examples.md
+      - Examples gallery: guide/examples-gallery.md
+      - Creating packages: guide/creating-packages.md
+      - Package layout: guide/package-layout-reference.md
+  - Ecosystem:
+      - Overview: ecosystem/overview.md
+      - Canonical docs (roadmap repo): https://github.com/li-langverse/roadmap/tree/main/docs/ecosystem
+      - Agent-kit adoption: ecosystem/ADOPTION.md
+      - Governance: ecosystem/governance.md
+      - Strict by default: ecosystem/strict-by-default.md
+      - Engineering standards: ecosystem/engineering-standards.md
+      - Vision and roadmap: ecosystem/vision-and-roadmap.md
+      - Agent coordination: ecosystem/agent-coordination.md
+      - Language evolution: ecosystem/language-evolution.md
+      - Upstream notifications: ecosystem/upstream-notifications.md
+      - Official packages: ecosystem/official-packages.md
+      - HTTPd prerequisites: ecosystem/httpd-prerequisites.md
+  - Language handbook:
+      - li.toml manifest: language/li-toml.md
+      - Overview: language/overview.md
+      - Philosophy: language/philosophy.md
+      - Naming conventions: language/naming-conventions.md
+      - Import style: language/import-style.md
+  - Game development:
+      - World Studio vision: game-dev/world-studio-vision.md
+      - Program tracker: game-dev/PH-world-studio-program.md
+      - Competitive landscape: game-dev/competitive-landscape.md
+      - RFC index: game-dev/specs/README.md
+      - Physics for games: physics/GAME_DEV.md
+      - Types and data: language/types-and-data.md
+      - Scalar precision & binary: language/scalar-precision.md
+      - Precision-polymorphic APIs: language/precision-polymorphism.md
+      - Numerics: language/numerics.md
+      - SIMD and parallel: language/simd-parallel.md
+      - Decorators: language/decorators.md
+      - Linear algebra: language/linear-algebra.md
+      - Contracts and proofs: language/contracts-and-proofs.md
+      - Control flow and functions: language/control-flow-and-functions.md
+      - Collections and generics: language/collections-generics.md
+      - Effects and I/O: language/effects-and-io.md
+  - Compiler:
+      - Build pipeline: compiler/build-pipeline.md
+      - LLVM ABI: compiler/llvm-abi.md
+      - Why provable: compiler/why-provable.md
+      - Architecture: architecture/overview.md
+      - Verification:
+          - Overview: verification/overview.md
+          - Provability gaps (today): verification/provability-gaps.md
+          - Proof corpus roadmap: verification/proof-corpus-roadmap.md
+  - Testing and security:
+      - All tests: testing/overview.md
+      - Security audits: testing/security.md
+      - Web server security: testing/webserver-security.md
+  - Benchmarks: benchmarks.md
+  - Reference:
+      - Language design (spec): superpowers/specs/2026-05-14-li-language-design.md
+      - Trusted axioms: semantics/README.md
+  - Contributing:
+      - Documentation style: contributing/documentation.md
+  - Project:
+      - Master plan: superpowers/plans/2026-05-14-li-master-plan.md
+      - Phase 7 — Native HPC: superpowers/plans/2026-05-14-phase-07-native-hpc.md
+      - Benchmarks plan: superpowers/plans/2026-05-14-benchmarks-and-simulations.md
+      - Phase plans:
+          - Phase 0 — Bootstrap: superpowers/plans/2026-05-14-phase-00-bootstrap.md
+          - Phase 1 — Lexer/Parser: superpowers/plans/2026-05-14-phase-01-lexer-parser.md
+          - Phase 2 — Typechecker: superpowers/plans/2026-05-14-phase-02-typechecker.md
+          - Phase 3 — MIR/Codegen: superpowers/plans/2026-05-14-phase-03-mir-codegen.md
+          - Phase 4 — Runtime: superpowers/plans/2026-05-14-phase-04-runtime-stdlib.md
+          - Phase 5 — Tetris: superpowers/plans/2026-05-14-phase-05-tetris.md
+          - Phase 6 — Self-host: superpowers/plans/2026-05-14-phase-06-self-host.md

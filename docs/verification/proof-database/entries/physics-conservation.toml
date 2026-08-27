@@ -1,0 +1,32 @@
+version = 1
+
+[[entry]]
+id = "P-AX-CONS-001"
+kind = "axiom"
+field = "physics"
+statement = "Energy drift within a bounded window over one MD step (tier-0 smoke + tier-2 MD)."
+proof_status = "open"
+gap_id = "G-physics"
+gap_kind = "modeling_gap"
+lean_module = "docs/semantics/Discharge.lean"
+li_specimen = "proof-db/physics/axioms/conservation.li"
+li_tests = ["li-tests/benchmarks/tier0_correctness/md_energy_single_step.li"]
+bench_refs = ["benchmarks/tier2_physics/md_lennard_jones"]
+last_verified_lic_commit = "a9542bfc"
+
+[[entry]]
+id = "P-AX-CONS-002"
+kind = "axiom"
+field = "physics"
+statement = "Linear/angular momentum invariants for N-body integration (tier-0 + tier-2)."
+proof_status = "open"
+gap_id = "G-physics"
+gap_kind = "modeling_gap"
+lean_module = "docs/semantics/Discharge.lean"
+li_specimen = "proof-db/physics/axioms/conservation.li"
+li_tests = ["li-tests/benchmarks/tier0_correctness/three_body_invariants.li"]
+bench_refs = [
+  "benchmarks/tier2_physics/three_body",
+  "benchmarks/tier2_physics/nbody_gravity",
+]
+last_verified_lic_commit = "a9542bfc"

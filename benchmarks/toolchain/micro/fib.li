@@ -1,0 +1,7 @@
+def fib(n:int)->int
+ requires n>=0
+ ensures result>=0
+ decreases n
+=
+ if n<=1: return n
+ return fib(n-1)+fib(n-2)

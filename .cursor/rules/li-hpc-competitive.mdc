@@ -1,0 +1,38 @@
+---
+description: Competitive HPC intelligence — registry, benches, provability
+globs:
+  - benchmarks/**/*
+  - compiler/**/simd*
+  - compiler/**/parallel*
+  - docs/benchmarks/**/*
+alwaysApply: false
+---
+
+# Li HPC competitive intelligence
+
+Registry: `benchmarks/competitive/registry.toml`  
+Skill: `.cursor/skills/hpc-competitive-review/SKILL.md`  
+Landscape: `docs/benchmarks/competitive-landscape.md`
+
+## Before changing benchmarks, SIMD, OpenMP, or tier-2 physics
+
+1. **Read the registry** — confirm `track` (`watch` vs `bench_tier*`) and `kernel_honesty` for each ecosystem.
+2. **Run or refresh benches** — `python3 benchmarks/harness/bench.py --tier 12` (or tier relevant); update `benchmarks/results/latest.csv`.
+3. **Label honesty** — `shared_c_kernel` vs `pure_li` per `benchmarks/results/README.md`; never claim parity on stub kernels.
+4. **No perf claims without evidence** — cite CSV rows + flags; no “faster than Rust” without a reproduced column on the same machine.
+5. **Provability first** — `parallel for` / OpenMP only with discharged Lean contracts; competitor SIMD shortcuts are not license to skip proof.
+
+## Competitive review cadence
+
+- On benchmark/parallel PRs: `./scripts/check-hpc-competitive.sh` (warn-only in v1).
+- Quarterly or on competitor major release: skill workflow — manual release notes, optional `./scripts/hpc-competitive-snapshot.sh`.
+- Stale `last_reviewed` (>90d): update date when reviewed; do not silence warnings without review.
+
+## Gap tracking
+
+When a **watch** ecosystem ships a feature Li lacks (e.g. Kokkos team policy, Chapel locale model), file a **G-*** row in the master plan or a short note under `docs/benchmarks/` — do not implement without proof path.
+
+## CI
+
+- PR/main: registry validation is **advisory** (warnings only).
+- Monthly `hpc-competitive` workflow: registry + tier-0 advisory; no competitor network fetch in CI.

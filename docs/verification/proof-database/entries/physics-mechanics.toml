@@ -1,0 +1,53 @@
+version = 1
+
+[[entry]]
+id = "P-AX-MECH-001"
+kind = "axiom"
+field = "physics"
+statement = "Newton I (inertia): isolated body with zero net force has constant velocity."
+proof_status = "open"
+gap_id = "G-physics"
+gap_kind = "modeling_gap"
+lean_module = "docs/semantics/Discharge.lean"
+li_specimen = "proof-db/physics/axioms/newton_laws.li"
+bench_refs = [
+  "benchmarks/tier2_physics/three_body",
+  "benchmarks/tier2_physics/nbody_gravity",
+  "benchmarks/tier2_physics/md_lennard_jones",
+]
+last_verified_lic_commit = "a9542bfc"
+
+[[entry]]
+id = "P-AX-MECH-002"
+kind = "axiom"
+field = "physics"
+statement = "Newton II: net force equals mass times acceleration (scalar stub)."
+proof_status = "open"
+gap_id = "G-physics"
+gap_kind = "proof_gap"
+lean_module = "docs/semantics/Discharge.lean"
+lean_thm = "Li.Discharge.force_equals_mass_accel_stub"
+li_specimen = "proof-db/physics/axioms/newton_laws.li"
+bench_refs = [
+  "benchmarks/tier2_physics/three_body",
+  "benchmarks/tier2_physics/nbody_gravity",
+  "benchmarks/tier2_physics/md_lennard_jones",
+]
+last_verified_lic_commit = "a9542bfc"
+
+[[entry]]
+id = "P-AX-MECH-003"
+kind = "axiom"
+field = "physics"
+statement = "Newton III (action–reaction): interaction forces on a pair sum to zero."
+proof_status = "open"
+gap_id = "G-physics"
+gap_kind = "modeling_gap"
+lean_module = "docs/semantics/Discharge.lean"
+li_specimen = "proof-db/physics/axioms/newton_laws.li"
+bench_refs = [
+  "benchmarks/tier2_physics/three_body",
+  "benchmarks/tier2_physics/nbody_gravity",
+  "benchmarks/tier2_physics/md_lennard_jones",
+]
+last_verified_lic_commit = "a9542bfc"

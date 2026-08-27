@@ -1,0 +1,59 @@
+name: HPC competitive (advisory)
+
+on:
+  workflow_dispatch:
+  schedule:
+    # First Monday of month, 07:00 UTC
+    - cron: "0 7 1-7 * 1"
+  pull_request:
+    paths:
+      - "benchmarks/competitive/**"
+      - "benchmarks/**"
+      - "scripts/check-hpc-competitive.sh"
+      - "scripts/hpc-competitive-snapshot.sh"
+      - ".github/workflows/hpc-competitive.yml"
+
+# Advisory on PRs; scheduled runs may set LI_HPC_COMPETITIVE_STRICT=1 for stale registry.
+concurrency:
+  group: hpc-competitive-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  registry-and-tier0:
+    runs-on: ubuntu-24.04
+    continue-on-error: ${{ github.event_name == 'pull_request' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          chmod +x scripts/ci-install-llvm.sh
+          sudo LI_LLVM_MAJOR=22 bash scripts/ci-install-llvm.sh
+
+      - name: Registry check
+        env:
+          LI_HPC_COMPETITIVE_STRICT: ${{ github.event_name == 'schedule' && '1' || '0' }}
+        run: |
+          chmod +x scripts/check-hpc-competitive.sh scripts/hpc-competitive-snapshot.sh
+          ./scripts/check-hpc-competitive.sh
+
+      - name: Toolchain snapshot (no network)
+        run: ./scripts/hpc-competitive-snapshot.sh
+
+      - name: Build lic + tier-0 bench (strict, unchanged gate)
+        env:
+          LLVM_DIR: /usr/lib/llvm-22/lib/cmake/llvm
+          CC: clang-22
+          CXX: clang++-22
+        run: |
+          chmod +x scripts/build.sh scripts/resolve-lic.sh
+          ./scripts/build.sh
+          export LIC="$(./scripts/resolve-lic.sh)"
+          python3 benchmarks/harness/bench.py --tier 0
+
+      - name: Upload snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: hpc-competitive-snapshot
+          path: benchmarks/competitive/snapshots/latest.env
+          if-no-files-found: warn

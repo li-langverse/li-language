@@ -1,0 +1,25 @@
+# Profiles and scenario toggles — harness reads names from here only.
+
+default_profile = "default"
+
+[profiles.ci]
+scenarios = ["static_small"]
+timing = false
+
+[profiles.baseline]
+scenarios = ["static_small", "static_large"]
+timing = true
+langs = ["nginx"]
+
+[profiles.parity]
+scenarios = ["static_small", "keepalive_pipelining"]
+timing = true
+langs = ["nginx", "li"]
+
+[profiles.default]
+scenarios = ["static_small", "keepalive_pipelining"]
+timing = false
+
+[default]
+include = ["static_small", "static_large", "keepalive_pipelining"]
+exclude = ["h2_static", "tcp_echo", "proxy_loopback"]

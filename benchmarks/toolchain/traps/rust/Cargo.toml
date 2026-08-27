@@ -1,0 +1,8 @@
+[package]
+name="t"
+version="0.0.0"
+edition="2021"
+publish=false
+[[bin]]
+name="oob_array_index"
+path="oob_array_index.rs"

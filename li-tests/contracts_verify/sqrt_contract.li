@@ -1,0 +1,7 @@
+def sqrt_pos(x: float) -> float
+  requires x >= 0.0
+  ensures result >= 0.0
+  ensures result == x
+  decreases 0
+=
+  return x
