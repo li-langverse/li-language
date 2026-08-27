@@ -166,6 +166,12 @@ extern def li_rt_mir_objname_get_be(idx: int) -> int
 extern def li_rt_mir_objname_add_nested(parent_idx: int, text: var ptr, fs: int, fe: int) -> int
   requires true
   ensures true
+extern def li_rt_mir_synth_name_add(text: var ptr) -> int
+  requires true
+  ensures true
+extern def li_rt_mir_objname_reg_prefix(text: var ptr, base_s: int, base_e: int, fs: int, fe: int, src_is_cr: int, crid: int) -> int
+  requires true
+  ensures true
 extern def li_rt_mir_fieldpath_add(parent: int, text: var ptr, s: int, e: int) -> int
   requires true
   ensures true
@@ -6936,9 +6942,184 @@ def mir_obj_field_float(itmp: var array[4096, int], type_idx: int, field_idx: in
   var fbase: int = peek4096(itmp, 3001 + type_idx * 6 + 3)
   return peek4096(itmp, 3401 + (fbase + field_idx) + 0)
 
-# Emit the field copy (or element-wise array-field copy) for whole-object
-# assignment/init: dst.<field> <- src.<field>. src_is_cr=1 means the source is
-# the call-result slot __li_o___cr<crid>.
+# Recursive helper: emit CopyObj/StoreFloat for every leaf field of an
+# object type, building compound prefix names via the objname registry.
+# dst_oi/src_oi are objname indices for the base prefix (e.g. __li_o_d, __li_o___cr71).
+def mir_obj_emit_copy_r(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], itmp: var array[4096, int],  type_idx: int,  dst_oi: int,  src_oi: int,  tc: var array[1, int]) raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var nf: int = mir_obj_field_count(itmp, type_idx)
+  var i: int = 0
+  var fa_r: array[2, int]
+  var tsrc_r: ptr = li_rt_type_src_get(type_idx)
+  if tsrc_r == 0:
+    tsrc_r = src
+  while i < nf:
+    mir_obj_field_name(itmp, type_idx, i, fa_r)
+    var sub_r: int = mir_obj_field_obj_type(src, ts, te, itmp, type_idx, i)
+    if sub_r >= 0:
+      # Sub-object: recurse with nested objname for both dst and src
+      var ndst: int = li_rt_mir_objname_add_nested(dst_oi, tsrc_r, fa_r[0], fa_r[1])
+      var nsrc: int = li_rt_mir_objname_add_nested(src_oi, tsrc_r, fa_r[0], fa_r[1])
+      mir_obj_emit_copy_r(src, ts, te, itmp, sub_r, ndst, nsrc, tc)
+    else:
+      var fel_r: int = mir_obj_field_elems(itmp, type_idx, i)
+      if fel_r == 0:
+        # Scalar leaf: emit CopyObj/StoreFloat
+        var cop_r: int = 26
+        if mir_obj_field_float(itmp, type_idx, i) == 1:
+          cop_r = 28
+        li_rt_mir_str("INS")
+        li_rt_ast_space()
+        li_rt_ast_int(cop_r)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        var ndst2: int = li_rt_mir_objname_add_nested(dst_oi, tsrc_r, fa_r[0], fa_r[1])
+        li_rt_mir_objname_out(ndst2)
+        li_rt_ast_space()
+        li_rt_ast_space()
+        li_rt_ast_space()
+        li_rt_ast_space()
+        var nsrc2: int = li_rt_mir_objname_add_nested(src_oi, tsrc_r, fa_r[0], fa_r[1])
+        li_rt_mir_objname_out(nsrc2)
+        li_rt_ast_space()
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(1)
+        li_rt_ast_space()
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_nl()
+      else:
+        # Array leaf: element-wise load/store
+        var e_r: int = 0
+        while e_r < fel_r:
+          var t_r: int = tc[0]
+          tc[0] = t_r + 1
+          li_rt_mir_str("INS")
+          li_rt_ast_space()
+          li_rt_ast_int(11)
+          li_rt_ast_space()
+          li_rt_ast_int(e_r)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_mir_objname_out(src_oi)
+          li_rt_mir_str("_")
+          li_rt_mir_esc(tsrc_r, fa_r[0], fa_r[1])
+          li_rt_ast_space()
+          li_rt_ast_space()
+          li_rt_ast_space()
+          li_rt_mir_str("__t")
+          li_rt_ast_int(t_r)
+          li_rt_ast_space()
+          li_rt_ast_space()
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(1)
+          li_rt_ast_space()
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(1)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_nl()
+          li_rt_mir_str("INS")
+          li_rt_ast_space()
+          li_rt_ast_int(10)
+          li_rt_ast_space()
+          li_rt_ast_int(e_r)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_mir_objname_out(dst_oi)
+          li_rt_mir_str("_")
+          li_rt_mir_esc(tsrc_r, fa_r[0], fa_r[1])
+          li_rt_ast_space()
+          li_rt_ast_space()
+          li_rt_ast_space()
+          li_rt_ast_space()
+          li_rt_mir_str("__t")
+          li_rt_ast_int(t_r)
+          li_rt_ast_space()
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(1)
+          li_rt_ast_space()
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_nl()
+          e_r = e_r + 1
+    i = i + 1
+  return 0
+
 def mir_obj_emit_copy(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], itmp: var array[4096, int],  obj_ti: int,  fidx: int,  dst_s: int,  dst_e: int,  src_s: int,  src_e: int,  src_is_cr: int,  crid: int,  tc: var array[1, int]) raises IO -> int
   requires true
   ensures result == 0
@@ -6956,6 +7137,24 @@ def mir_obj_emit_copy(src: var ptr,  ts: var array[131072, int],  te: var array[
   var tsrc: ptr = li_rt_type_src_get(obj_ti)
   if tsrc == 0:
     tsrc = src
+  # Sub-object fields: recurse to emit individual leaf copies with compound
+  # prefix names (e.g. __li_o_d_tier_tier_id). Mirrors C++ emit_copy_object_slots_r.
+  if sub_obj >= 0:
+    # Register compound prefixes via C helper (avoids Li move-semantics issues)
+    # Determine dst prefix type: src_is_cr==2 means dst is wb temp
+    var dst_cr: int = 0
+    var dst_crid: int = 0
+    if src_is_cr == 2:
+      dst_cr = 3
+      dst_crid = crid
+    var dst_oi: int = li_rt_mir_objname_reg_prefix(src, dst_s, dst_e, fs, fe, dst_cr, dst_crid)
+    # Determine src prefix type: src_is_cr==1 means cr, src_is_cr==3 means wb
+    var src_cr: int = src_is_cr
+    if src_is_cr == 2:
+      src_cr = 0
+    var src_oi: int = li_rt_mir_objname_reg_prefix(tsrc, src_s, src_e, fs, fe, src_cr, crid)
+    mir_obj_emit_copy_r(src, ts, te, itmp, sub_obj, dst_oi, src_oi, tc)
+    return 0
   if fel == 0:
     var cop: int = 26
     if mir_obj_field_float(itmp, obj_ti, fidx) == 1:
@@ -6994,9 +7193,8 @@ def mir_obj_emit_copy(src: var ptr,  ts: var array[131072, int],  te: var array[
       else:
         li_rt_mir_str("__li_o_")
         li_rt_mir_esc(src, src_s, src_e)
-    if sub_obj < 0:
-      li_rt_mir_str("_")
-      li_rt_mir_esc(tsrc, fs, fe)
+    li_rt_mir_str("_")
+    li_rt_mir_esc(tsrc, fs, fe)
     li_rt_ast_space()
     li_rt_ast_space()
     li_rt_ast_int(0)

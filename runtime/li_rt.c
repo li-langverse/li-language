@@ -726,7 +726,8 @@ int32_t li_rt_mir_objname_out(int32_t idx) {
     return 0;
   }
   /* Synthesized-name entries (be < 0) print verbatim; used for parallel-for
-   * callee cells whose text is not a mangled object field. */
+   * callee cells whose text is not a mangled object field, and for nested
+   * compound names built by li_rt_mir_objname_add_nested. */
   if (li_rt_objname_be[idx] < 0) {
     fputs(li_rt_objname_text[idx], stdout);
     return 0;
@@ -795,6 +796,44 @@ int32_t li_rt_mir_objname_add_nested(int32_t parent_idx, const char* text,
 }
 
 void li_rt_mir_objname_clear(void) { li_rt_objname_n = 0; }
+
+/* Register a compound prefix for objname recursive copy: builds
+ * __li_o_<base>_<field> or __li_o___cr<N>_<field> as a synth entry.
+ * src_is_cr=1 uses __li_o___cr<crid> prefix, otherwise __li_o_<base> prefix. */
+int32_t li_rt_mir_objname_reg_prefix(const char* text, int32_t base_s, int32_t base_e,
+                                     int32_t fs, int32_t fe,
+                                     int32_t src_is_cr, int32_t crid) {
+  char buf[1024];
+  int off = 0;
+  if (src_is_cr == 1) {
+    const char* prefix = "__li_o___cr";
+    for (const char* p = prefix; *p; p++) buf[off++] = *p;
+    /* Append crid as decimal */
+    char tmp[16]; int tn = 0;
+    int v = crid;
+    if (v == 0) { tmp[tn++] = '0'; } else {
+      while (v > 0) { tmp[tn++] = '0' + v % 10; v /= 10; }
+    }
+    for (int i = tn - 1; i >= 0; i--) buf[off++] = tmp[i];
+  } else if (src_is_cr == 3) {
+    const char* prefix = "__li_o_wb";
+    for (const char* p = prefix; *p; p++) buf[off++] = *p;
+    char tmp[16]; int tn = 0;
+    int v = crid;
+    if (v == 0) { tmp[tn++] = '0'; } else {
+      while (v > 0) { tmp[tn++] = '0' + v % 10; v /= 10; }
+    }
+    for (int i = tn - 1; i >= 0; i--) buf[off++] = tmp[i];
+  } else {
+    const char* prefix = "__li_o_";
+    for (const char* p = prefix; *p; p++) buf[off++] = *p;
+    for (int i = base_s; i < base_e; i++) buf[off++] = text[i];
+  }
+  buf[off++] = '_';
+  for (int i = fs; i < fe; i++) buf[off++] = text[i];
+  buf[off] = '\0';
+  return li_rt_mir_synth_name_add(strdup(buf));
+}
 
 #define LI_RT_FIELDPATH_MAX 1024
 static int32_t li_rt_fieldpath_parent[LI_RT_FIELDPATH_MAX];
