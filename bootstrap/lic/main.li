@@ -7459,6 +7459,26 @@ def mir_obj_field_obj_type(src: var ptr, ts: var array[131072, int], te: var arr
     oi = oi + 1
   return -1
 
+# Simpler sub-object check that doesn't require ts/te arrays.
+# Returns the sub-object type index or -1 if the field is not an object.
+def mir_field_is_subobj(itmp: var array[4096, int], type_idx: int, field_idx: int) -> int
+  requires true
+  ensures result >= -1
+  decreases 0
+=
+  var fbase: int = peek4096(itmp, 3001 + type_idx * 6 + 3)
+  var h: int = peek4096(itmp, 3601 + (fbase + field_idx) * 2 + 0)
+  var nlen: int = peek4096(itmp, 3601 + (fbase + field_idx) * 2 + 1)
+  if h == 0 or nlen == 0:
+    return -1
+  var nobj_src: int = peek4096(itmp, 3000)
+  var oi: int = 0
+  while oi < nobj_src:
+    if peek4096(itmp, 3701 + oi) == h and peek4096(itmp, 3731 + oi) == nlen:
+      return oi
+    oi = oi + 1
+  return -1
+
 # float-ness of a descriptor (mirrors is_float_expr on the AST)
 def mir_desc_float(darena: var array[65536, int],  rec: int,  src: var ptr, ts: var array[131072, int],  te: var array[131072, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  fatok: var array[512, int], nfa: var array[1, int], itmp: var array[4096, int]) -> int
   requires true
@@ -7713,6 +7733,49 @@ def mir_arg_line(src: var ptr,  il: int,  iv: int,  ifl: int,  fid: int, id_s: i
   li_rt_ast_nl()
   return 0
 
+# Recursive helper: emit ARG lines for every leaf field of a sub-object.
+# parent_oi is the objname index for the parent compound name prefix.
+def mir_arg_obj_line_r(src: var ptr, itmp: var array[4096, int], type_idx: int, parent_oi: int, iai: int, is_var: int) raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var nf_a: int = mir_obj_field_count(itmp, type_idx)
+  var i_a: int = 0
+  var fa_a: array[2, int]
+  var tsrc_a: ptr = li_rt_type_src_get(type_idx)
+  if tsrc_a == 0:
+    tsrc_a = src
+  while i_a < nf_a:
+    mir_obj_field_name(itmp, type_idx, i_a, fa_a)
+    var sub_a: int = mir_field_is_subobj(itmp, type_idx, i_a)
+    if sub_a >= 0:
+      var noi: int = li_rt_mir_objname_add_nested(parent_oi, tsrc_a, fa_a[0], fa_a[1])
+      mir_arg_obj_line_r(src, itmp, sub_a, noi, iai, is_var)
+    else:
+      var noi2: int = li_rt_mir_objname_add_nested(parent_oi, tsrc_a, fa_a[0], fa_a[1])
+      li_rt_mir_str("ARG")
+      li_rt_ast_space()
+      li_rt_ast_int(0)
+      li_rt_ast_space()
+      li_rt_ast_int(0)
+      li_rt_ast_space()
+      li_rt_ast_int(0)
+      li_rt_ast_space()
+      li_rt_ast_int(0)
+      li_rt_ast_space()
+      li_rt_mir_objname_out(noi2)
+      li_rt_ast_space()
+      li_rt_ast_int(0)
+      li_rt_ast_space()
+      li_rt_ast_space()
+      li_rt_ast_int(iai)
+      li_rt_ast_space()
+      li_rt_ast_int(is_var)
+      li_rt_ast_nl()
+    i_a = i_a + 1
+  return 0
+
 def mir_arg_obj_line(src: var ptr, base_s: int, base_e: int, itmp: var array[4096, int], type_idx: int, field_idx: int, iai: int, is_var: int) raises IO -> int
   requires true
   ensures result == 0
@@ -7720,6 +7783,15 @@ def mir_arg_obj_line(src: var ptr, base_s: int, base_e: int, itmp: var array[409
 =
   var fa: array[2, int]
   mir_obj_field_name(itmp, type_idx, field_idx, fa)
+  var sub_a2: int = mir_field_is_subobj(itmp, type_idx, field_idx)
+  if sub_a2 >= 0:
+    # Sub-object: emit flattened ARG lines for each leaf field
+    var ao_tsrc2: ptr = li_rt_type_src_get(type_idx)
+    if ao_tsrc2 == 0:
+      ao_tsrc2 = src
+    var base_oi: int = li_rt_mir_objname_reg_prefix(src, base_s, base_e, fa[0], fa[1], 0, 0)
+    mir_arg_obj_line_r(src, itmp, sub_a2, base_oi, iai, is_var)
+    return 0
   li_rt_mir_str("ARG")
   li_rt_ast_space()
   li_rt_ast_int(0)
@@ -7755,6 +7827,12 @@ def mir_arg_wb_line(src: var ptr, itmp: var array[4096, int], type_idx: int, fie
 =
   var fw: array[2, int]
   mir_obj_field_name(itmp, type_idx, field_idx, fw)
+  var sub_wb: int = mir_field_is_subobj(itmp, type_idx, field_idx)
+  if sub_wb >= 0:
+    # Sub-object: emit flattened ARG lines using wb prefix
+    var wb_oi2: int = li_rt_mir_objname_reg_prefix(src, 0, 0, fw[0], fw[1], 3, wbid)
+    mir_arg_obj_line_r(src, itmp, sub_wb, wb_oi2, iai, is_var)
+    return 0
   li_rt_mir_str("ARG")
   li_rt_ast_space()
   li_rt_ast_int(0)
