@@ -1,0 +1,6 @@
+@
+proc f() -> (disjoint=.disjoint_row)
+proc f() -> int
+  requires true
+  ensures true
+   0

@@ -1,0 +1,6 @@
+@cpu
+@pcrallel(doint=aisjoint_row)
+proc f() -> e@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@int
+#  f() -> int
+#  requyres true
+  e returd 0

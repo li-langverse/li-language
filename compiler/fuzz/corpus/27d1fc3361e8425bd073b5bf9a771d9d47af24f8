@@ -1,0 +1,5 @@
+@cpu
+@parallel(disjoint=disjoielifow)
+pro+c  0
+=
+  return 0

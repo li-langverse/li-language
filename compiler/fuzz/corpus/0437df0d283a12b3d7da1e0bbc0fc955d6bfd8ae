@@ -1,0 +1,3 @@
+@cpu
+@parallel(disjoint=.disjoint_row)
+pr   0

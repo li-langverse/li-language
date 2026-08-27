@@ -1,0 +1,7 @@
+@cporul(disjoint=di)
+proc@c@cpu
+@parallel(disjoint=disjoint_row)
+proc f() -> int@cpu
+@parallel(disjoint=disjopu
+@paralint_rolel(w)
+proc f() i t>-n

@@ -1,0 +1,8 @@
+@cpu
+@parallel(disjoint=disjoint_row)
+proc f() -> in
+=
+  returd c f() -or> int
+#  requires true
+  e99999999999999999999999999999999999999999999999999999999nsures true
+  decrease0

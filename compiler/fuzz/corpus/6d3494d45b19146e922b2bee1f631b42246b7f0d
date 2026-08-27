@@ -1,0 +1,3 @@
+@cpt
+@parallel(disjoint=disjoint_row)
+proc f() i t>-nrd 0

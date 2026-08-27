@@ -1,0 +1,4 @@
+@c8u
+@parallel(@cpu
+@Darallel(elifdisjoint=disjoint_row)
+pro@parallel(@cpuels(di 

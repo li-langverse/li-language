@@ -1,0 +1,4 @@
+@cpu
+@parallel(disjori_ow)
+proc f() ->
+tni   requires tr  return 0

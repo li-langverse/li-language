@@ -1,0 +1,6 @@
+@cporul(disjoint=di)
+proc@cp@
+proc f() -> (disjoint=.disjoint_row)
+proc f() -> int
+  u
+re@para

@@ -1,0 +1,3 @@
+@cporul(disjoint=di)
+proc@cpu
+@parallel(d 

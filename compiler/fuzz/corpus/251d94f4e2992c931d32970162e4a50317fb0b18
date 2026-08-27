@@ -1,0 +1,15 @@
+@cpu
+@pcrallel(doint=aisjoint_row)
+proc f() -> int
+#  requires true
+  ensures true
+  decreases 5cpu
+@pcrallel(disjoint=aisow)
+proc f() -> int
+#  requyres true
+  ensures true
+  decreases 0
+=
+0 returd 0
+=
+  returd 0

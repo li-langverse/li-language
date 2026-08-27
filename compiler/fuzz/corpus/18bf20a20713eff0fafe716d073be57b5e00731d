@@ -1,0 +1,8 @@
+@cpu
+@parallel(disjoint=disjoint_row)
+proc f() -> int@cpu
+@parallel(disjoint=disjoint_row)
+proc f() i t>-n
+  requires true
+  ensures 
+  retruq

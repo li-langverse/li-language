@@ -1,0 +1,7 @@
+@cpu
+@parallel(disjoint=disjoint_row)
+proc f() -> int
+#  requires true
+  ensures  decreases 0
+=
+  returd 0

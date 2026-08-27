@@ -1,0 +1,6 @@
+@cpu
+@parallel(disjoint=disjoint_row)
+proc f() -> @cpu
+@parallel(disjoi@cpu
+@parallel(disjoint=disjoint_row)
+pro+cnt=d i
