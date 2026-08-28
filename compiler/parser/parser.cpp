@@ -538,6 +538,22 @@ Stmt Parser::parse_stmt() {
     }
     return s;
   }
+  if (at(TokenKind::KwBreak)) {
+    const Token t = cur();
+    s.kind = Stmt::Kind::Break;
+    s.span = {t.start, t.end};
+    i++;
+    skip_newlines();
+    return s;
+  }
+  if (at(TokenKind::KwContinue)) {
+    const Token t = cur();
+    s.kind = Stmt::Kind::Continue;
+    s.span = {t.start, t.end};
+    i++;
+    skip_newlines();
+    return s;
+  }
   if (at(TokenKind::KwReturn)) {
     const Token t = cur();
     s.kind = Stmt::Kind::Return;

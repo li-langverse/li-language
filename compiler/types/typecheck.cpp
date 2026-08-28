@@ -388,7 +388,7 @@ struct Ctx {
         const TyPtr l = type_of(*e.lhs);
         const TyPtr r = type_of(*e.rhs);
         if (e.bin_op == BinOp::Add || e.bin_op == BinOp::Sub || e.bin_op == BinOp::Mul ||
-            e.bin_op == BinOp::Div) {
+            e.bin_op == BinOp::Div || e.bin_op == BinOp::Mod || e.bin_op == BinOp::FloorDiv) {
           if (l->kind == TyKind::Int && r->kind == TyKind::Int) {
             return make_int();
           }

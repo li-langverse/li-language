@@ -25,6 +25,8 @@ enum class TokenKind {
   KwElse,
   KwElif,
   KwWhile,
+  KwBreak,
+  KwContinue,
   KwReturn,
   KwRaises,
   KwEcho,
