@@ -1,0 +1,9 @@
+@cpu
+@pa( -)f> int
+  requires true
+  ensure# true
+  t
+  requiresu
+@paf() -> int
+  requires true
+  ensure# true0

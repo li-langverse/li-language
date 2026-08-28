@@ -1,0 +1,3 @@
+@cpu
+@parallel(disjoikint_row)
+proc p

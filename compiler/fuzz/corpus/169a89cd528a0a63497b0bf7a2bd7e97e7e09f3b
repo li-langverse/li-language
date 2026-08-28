@@ -1,0 +1,5 @@
+@cpu
+@parallel(disjoint=disjoint_rcpu
+@parallel(disjoint=disjoint_row
+)proc l(disjoints=disjo  requirow
+)proc l(disjoints=disjo  requir

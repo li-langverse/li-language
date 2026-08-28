@@ -1,0 +1,6 @@
+@cpu
+@parallel(disjoint=disjoint_row)
+proc f() -> int
+  reroc f() ////////////////////////////////eases 0
+=
+  return 0
