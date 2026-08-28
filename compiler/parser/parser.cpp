@@ -13,6 +13,8 @@ struct Parser {
   std::string file;
   DiagnosticBag& diags;
 
+  int brace_depth_ = 0;
+
   explicit Parser(const std::vector<Token>& toks, std::string file_name,
                   DiagnosticBag& bag)
       : tokens(toks), file(std::move(file_name)), diags(bag) {}
@@ -39,7 +41,8 @@ struct Parser {
     return true;
   }
   void skip_newlines() {
-    while (at(TokenKind::Newline)) {
+    while (at(TokenKind::Newline) ||
+           (brace_depth_ > 0 && (at(TokenKind::Indent) || at(TokenKind::Dedent)))) {
       i++;
     }
   }
@@ -138,11 +141,15 @@ std::unique_ptr<Expr> Parser::parse_primary() {
     if (accept(TokenKind::LParen)) {
       e->kind = Expr::Kind::Call;
       e->ident = name;
+      brace_depth_++;
       if (!at(TokenKind::RParen)) {
         do {
+          skip_newlines();
           e->args.push_back(parse_expr());
         } while (accept(TokenKind::Comma));
+        skip_newlines();
       }
+      brace_depth_--;
       if (!expect(TokenKind::RParen, "')'")) {
         return nullptr;
       }
@@ -153,7 +160,9 @@ std::unique_ptr<Expr> Parser::parse_primary() {
     return parse_postfix(std::move(e));
   }
   if (accept(TokenKind::LParen)) {
+    brace_depth_++;
     auto inner = parse_expr();
+    brace_depth_--;
     if (!expect(TokenKind::RParen, "')'")) {
       return nullptr;
     }
@@ -316,6 +325,7 @@ TypeExpr Parser::parse_type() {
       do {
         ty.type_args.push_back(std::make_unique<TypeExpr>(parse_type()));
       } while (accept(TokenKind::Comma));
+      skip_newlines();
     }
     expect(TokenKind::RBracket, "']'");
     expect(TokenKind::Comma, "','");
@@ -348,6 +358,7 @@ TypeExpr Parser::parse_type() {
           field.type = std::make_unique<TypeExpr>(parse_type());
           ty.named_fields.push_back(std::move(field));
         } while (accept(TokenKind::Comma));
+        skip_newlines();
       }
     } else {
       ty.kind = TypeKind::TypeApp;
@@ -361,6 +372,7 @@ TypeExpr Parser::parse_type() {
             do {
               ty.type_args.push_back(std::make_unique<TypeExpr>(parse_type()));
             } while (accept(TokenKind::Comma));
+            skip_newlines();
           }
         }
       }
@@ -375,6 +387,7 @@ TypeExpr Parser::parse_type() {
         do {
           ty.type_args.push_back(std::make_unique<TypeExpr>(parse_type()));
         } while (accept(TokenKind::Comma));
+        skip_newlines();
       }
       expect(TokenKind::RBracket, "']'");
     }
@@ -387,6 +400,7 @@ std::vector<std::string> Parser::parse_type_params() {
   if (!accept(TokenKind::LBracket)) {
     return params;
   }
+  brace_depth_++;
   if (!at(TokenKind::RBracket)) {
     do {
       if (!at(TokenKind::Ident)) {
@@ -396,7 +410,9 @@ std::vector<std::string> Parser::parse_type_params() {
       params.push_back(std::string(cur().text));
       i++;
     } while (accept(TokenKind::Comma));
+    skip_newlines();
   }
+  brace_depth_--;
   expect(TokenKind::RBracket, "']'");
   return params;
 }
@@ -611,11 +627,15 @@ ProcDecl Parser::parse_proc(bool is_extern) {
   i++;
   proc.type_params = parse_type_params();
   expect(TokenKind::LParen, "'('");
+  brace_depth_++;
   if (!at(TokenKind::RParen)) {
     do {
+      skip_newlines();
       proc.params.push_back(parse_param());
     } while (accept(TokenKind::Comma));
+    skip_newlines();
   }
+  brace_depth_--;
   expect(TokenKind::RParen, "')'");
   auto parse_raises = [&]() {
     if (!at(TokenKind::KwRaises)) {

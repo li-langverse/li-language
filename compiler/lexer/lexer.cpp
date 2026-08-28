@@ -331,6 +331,15 @@ bool Lexer::tokenize(DiagnosticBag& diags) {
     const char c = advance();
 
     if (c == '\n') {
+      if (paren_depth_ > 0) {
+        // Continuation line inside parentheses/brackets: consume the newline
+        // as whitespace. advance() set at_line_start_=true; clear it so the loop
+        // top does not re-enter process_line_begin (which would push spurious
+        // Indent/Dedent tokens). Leading whitespace of the next line is skipped
+        // by skip_whitespace_inline.
+        at_line_start_ = false;
+        continue;
+      }
       Token nl;
       nl.kind = TokenKind::Newline;
       nl.start = start;
@@ -353,10 +362,10 @@ bool Lexer::tokenize(DiagnosticBag& diags) {
     };
 
     switch (c) {
-      case '(': single(TokenKind::LParen); continue;
-      case ')': single(TokenKind::RParen); continue;
-      case '[': single(TokenKind::LBracket); continue;
-      case ']': single(TokenKind::RBracket); continue;
+      case '(': single(TokenKind::LParen); paren_depth_++; continue;
+      case ')': single(TokenKind::RParen); paren_depth_--; continue;
+      case '[': single(TokenKind::LBracket); paren_depth_++; continue;
+      case ']': single(TokenKind::RBracket); paren_depth_--; continue;
       case '{': single(TokenKind::LBrace); continue;
       case '}': single(TokenKind::RBrace); continue;
       case ',': single(TokenKind::Comma); continue;

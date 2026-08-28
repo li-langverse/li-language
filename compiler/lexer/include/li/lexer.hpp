@@ -37,6 +37,7 @@ class Lexer {
   bool at_line_start_ = true;
   bool pending_indent_check_ = false;
   bool body_mode_ = false;
+  int paren_depth_ = 0;
 };
 
 }  // namespace li
