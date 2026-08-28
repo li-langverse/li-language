@@ -37,8 +37,8 @@ inst   ::= assign dest, operand
 - Create: `crates/li_mir/src/lib.rs`
 - Create: `crates/li_mir/src/lower.rs`
 
-- [x] `lower_module(TypedModule) -> MirModule` (C++: `lower_to_mir` in `compiler/mir/lower.cpp`)
-- [x] One basic block per stmt chain; if/while create CFG edges
+- [ ] `lower_module(TypedModule) -> MirModule`
+- [ ] One basic block per stmt chain; if/while create CFG edges
 
 ---
 
@@ -48,9 +48,9 @@ inst   ::= assign dest, operand
 - Modify: `crates/li_codegen/src/lib.rs`
 - Create: `crates/li_codegen/src/mir_llvm.rs`
 
-- [x] Map MIR types to LLVM types (`array` → struct or stack array) (`compiler/codegen/emit.cpp`)
-- [x] Emit `main` calling user `main` if present
-- [x] Debug: `li_bounds_fail` call on dynamic index
+- [ ] Map MIR types to LLVM types (`array` → struct or stack array)
+- [ ] Emit `main` calling user `main` if present
+- [ ] Debug: `li_bounds_fail` call on dynamic index
 
 ---
 
@@ -60,9 +60,9 @@ inst   ::= assign dest, operand
 - Modify: `crates/lic/src/main.rs`
 - Create: `crates/lic/src/driver.rs`
 
-- [x] `lic build input.li -o out [--release]`
-- [x] Pipeline: parse → check → mir → llvm bitcode → `clang -o out`
-- [x] Link `runtime/li_rt.c`
+- [ ] `lic build input.li -o out [--release]`
+- [ ] Pipeline: parse → check → mir → llvm bitcode → `clang -o out`
+- [ ] Link `runtime/li_rt.c`
 
 ---
 
@@ -76,14 +76,14 @@ def main() raises IO =
   echo "hello li"
 ```
 
-- [x] Deferred until Phase 4 provides `echo` — for Phase 3 use: (superseded: Phase 4 shipped `echo`; `examples/hello.li` uses it)
+- [ ] Deferred until Phase 4 provides `echo` — for Phase 3 use:
 
 ```nim
 def main() -> int =
   return 0
 ```
 
-- [x] `lic build examples/hello.li -o hello && ./hello; echo $?` → 0
+- [ ] `lic build examples/hello.li -o hello && ./hello; echo $?` → 0
 
 ---
 
@@ -96,10 +96,8 @@ def main() -> int =
 
 ---
 
-**Proof gaps (Doc-c):** [G-bnd](../../verification/provability-gaps.md#g-bnd) · [G-meta](../../verification/provability-gaps.md#g-meta)
-
 ### Phase 3 exit gate
 
-- [x] Native binary from minimal proc
-- [x] `-O2` flag forwarded to clang in `--release` (C++: `-O3 -march=native` in `compile.cpp` when `--release`)
-- [x] Bounds check calls present in IR for dynamic index
+- [ ] Native binary from minimal def
+- [ ] `-O2` flag forwarded to clang in `--release`
+- [ ] Bounds check calls present in IR for dynamic index

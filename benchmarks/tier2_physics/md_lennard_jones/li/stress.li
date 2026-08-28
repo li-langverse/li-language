@@ -1,6 +1,4 @@
 extern def li_md_stress_cli_all() -> int
-  requires true
-  ensures true
 
 def main() raises IO -> int
   requires true

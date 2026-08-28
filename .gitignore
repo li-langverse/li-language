@@ -1,5 +1,4 @@
 /build/
-build-fuzz/
 .venv-plot/
 .venv-docs/
 site/
@@ -10,13 +9,9 @@ __pycache__/
 .mypy_cache/
 
 # Benchmark / plot artifacts (regenerated locally)
-benchmarks/competitive/snapshots/latest.env
-benchmarks/results/bench-studio-viewport-perf.json
 benchmarks/results/**/*.csv
 benchmarks/results/share/*.png
-benchmarks/results/share/*.gif
-benchmarks/results/md_lennard_jones/traj_*.txt
-benchmarks/results/md_lennard_jones/*.csv
+benchmarks/results/md_lennard_jones/energy_*.csv
 build/bench/
 
 compile_commands.json
@@ -31,39 +26,3 @@ compile_commands.json
 examples/tetris/tetris
 build/lic-from-li
 benchmarks/tier2_physics/**/target/
-
-# Local GitHub PAT (parent dir)
-.env.github
-../.env.github
-.env.github.backup
-../.env.github.backup
-
-# Multi-agent coordination (local only, parent dir)
-.li-agent-coord.json
-../.li-agent-coord.json
-build-asan/
-
-# Lean 4 (docs/semantics)
-docs/semantics/.lake/
-# Autonomous plan-loop (agent logs, goals, overnight tee — local only)
-data/httpd-plan-loop/
-!data/httpd-plan-loop/state.json.example
-data/studio-ui-ux-plan-loop/*
-!data/studio-ui-ux-plan-loop/state.json.example
-!data/studio-ui-ux-plan-loop/state.json
-!data/studio-ui-ux-plan-loop/latest-ux-assessment.json
-!data/studio-ui-ux-plan-loop/latest-capture.json
-!data/studio-ui-ux-plan-loop/tracking-issue.txt
-deploy/studio-demo/screenshots/png/
-deploy/studio-demo/screenshots/verticals/png/
-docs/demo/media/native-verticals/png/
-docs/demo/media/studio-verticals-demo.mp4
-deploy/studio-demo/native/studio_verticals_present_host
-deploy/studio-demo/native/studio_shell_present_host
-deploy/studio-demo/native/studio_viewport_capture
-deploy/studio-demo/**/*.mp4
-docs/demo/media/*.mp4
-docs/demo/media/ffmpeg-*.txt
-
-# Local CI sweep output (benchmarks local-ci)
-data/local-ci*.log

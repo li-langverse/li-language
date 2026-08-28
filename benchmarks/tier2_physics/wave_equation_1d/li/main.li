@@ -1,6 +1,4 @@
 extern def li_wave_1d_kernel()
-  requires true
-  ensures true
 
 def main() raises IO -> int
   requires true

@@ -1,8 +1,6 @@
 # Li three_body — driver over shared C reference kernel.
 
 extern def li_three_body_kernel()
-  requires true
-  ensures true
 
 def main() raises IO -> int
   requires true

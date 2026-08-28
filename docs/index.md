@@ -1,77 +1,71 @@
-<div class="li-hero" markdown="1">
+# Li
 
-<div class="li-hero__glyph">理</div>
-<p class="li-hero__tagline">Li · prove · write · run fast</p>
-
-Li is a language for **programs you can trust in production**: contracts checked before ship, memory and parallelism ruled out as failure modes, and native speed when the proof closes.
-
-</div>
+**理** — principle, reason. Source files: `.li`. Compiler: `lic`.
 
 <div class="grid cards" markdown>
 
--   :material-hand-wave:{ .lg .middle } **New here?**
+-   :material-shield-check:{ .lg .middle } **Prove it**
 
     ---
 
-    Start with [Hello world](guide/hello-world.md), [Math-first HPC examples](guide/math-hpc-examples.md), and the [Examples gallery](guide/examples-gallery.md).
+    Lean 4 kernel, mandatory contracts. No binary without proof.
 
--   :material-book-open-variant:{ .lg .middle } **Learn the language**
-
-    ---
-
-    [Language handbook](language/overview.md) — types, numbers, SIMD, parallel, contracts.
-
--   :material-cog:{ .lg .middle } **How the compiler works**
+-   :material-feather:{ .lg .middle } **Write it easily**
 
     ---
 
-    [Build pipeline](compiler/build-pipeline.md) and [Why provable](compiler/why-provable.md).
+    Nim-like syntax, Python 3.14 types — without `Any`.
 
--   :material-shield-check:{ .lg .middle } **Trust but verify**
+-   :material-lightning-bolt:{ .lg .middle } **Run it fast**
 
     ---
 
-    [All tests](testing/overview.md) and [Security audits](testing/security.md).
+    LLVM 18, SIMD, OpenMP — only after the proof gate passes.
 
 </div>
 
-## Three promises
+## The proof gate
 
-| | |
-|---|---|
-| **Prove it** | **Target:** `lic build` fails if proofs do not close. **Today:** static gate; [gaps](verification/provability-gaps.md). |
-| **Write it easily** | Readable syntax; Python-like types without `Any`. |
-| **Run it fast** | LLVM + SIMD + `parallel for` after proof. |
-
-## Quick example
-
-```nim
-def main() -> int
-  requires true
-  ensures result == 0
-  decreases 0
-=
-  print("Hello from Li")
-  return 0
+```bash
+lic build module.li   # types + memory + contracts + Lean → binary or REJECT
+lic check module.li   # IDE only — not a certificate
 ```
 
-## Install and build
+Every `def` carries `requires` / `ensures`; every loop carries `invariant` / `decreases`.
+Forbidden: `Any`, `unsafe`, `sorry`, bare `cast`, unproved `parallel for`.
 
-[Getting started — tools](guide/getting-started-tools.md)
+## Three pillars (strict priority)
 
-## Full documentation map
+| # | Pillar | Rule |
+|---|--------|------|
+| 1 | **Mathematical provability** | Never compromised |
+| 2 | **Easy syntax** | Nim-like, Python 3.14 − `Any` |
+| 3 | **Fast execution** | LLVM — only after proof |
 
-| Section | Contents |
-|---------|----------|
-| [Guide](guide/hello-world.md) | Tutorials and copy-paste examples |
-| [Language](language/overview.md) | Every type, feature, and rule |
-| [Compiler](compiler/build-pipeline.md) | Compile-time behavior |
-| [Testing](testing/overview.md) | Suites, fuzz, CI, audits |
-| [Provability gaps](verification/provability-gaps.md) | What is **not** proved/wired yet (honest status) |
-| [Ecosystem](ecosystem/overview.md) | Packages, `lip`, governance (`li-langverse`) |
-| [Creating packages](guide/creating-packages.md) | `li-new-package` scaffold |
-| [Reference spec](superpowers/specs/2026-05-14-li-language-design.md) | Normative design (technical) |
+## Quick start
 
-## Project status
+```bash
+export LLVM_DIR="$(brew --prefix llvm@18)/lib/cmake/llvm"   # macOS
+export CC=clang CXX=clang++
+./scripts/build.sh
+./build/compiler/lic/lic --version
+./scripts/local-ci.sh
+```
 
-The compiler is under active development. Phase tracker: [Master plan](superpowers/plans/2026-05-14-li-master-plan.md). **What proofs exist today:** [Provability gaps](verification/provability-gaps.md). Native HPC (SIMD + OpenMP): [Phase 7 plan](superpowers/plans/2026-05-14-phase-07-native-hpc.md).
+See [Getting started](getting-started.md) for Linux prerequisites and repo layout.
+
+## Where to go next
+
+| Topic | Page |
+|-------|------|
+| Compile pipeline | [Architecture](architecture/overview.md) |
+| Lean gate & contracts | [Verification](verification/overview.md) |
+| Type system & numerics | [Language design spec](superpowers/specs/2026-05-14-li-language-design.md) |
+| Implementation order | [Master plan](superpowers/plans/2026-05-14-li-master-plan.md) |
+| Physics & perf harness | [Benchmarks](benchmarks.md) |
+| All tests | [li-tests on GitHub](https://github.com/cap-jmk-real/li-language/tree/dev/li-tests) |
+
+## Status
+
+Phase 0–3 bootstrap: C++ `lic` parses, typechecks, and emits LLVM for a growing subset.
+Self-host and full Lean pipeline are on the [roadmap](superpowers/plans/2026-05-14-li-master-plan.md).

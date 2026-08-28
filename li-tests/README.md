@@ -27,9 +27,6 @@ Single suite:
 | `contracts_verify` | `contracts_verify/` | Must pass Lean on small proved examples |
 | `borrow` | `borrow/` | Use-after-move, double `mut` |
 | `race_shared_memory` | `race_shared_memory/` | **Exploit races** — must fail compile |
-| `decorator_exploits` | `decorator_exploits/` | **Decorator hijack** — reserved names, typosquat, missing `disjoint=` |
-| `decorators` | `decorators/` | `@cpu` / `@parallel(disjoint=...)` compile + verify |
-| `cve_patterns` | `cve_patterns/` | **C CVE + historic bugs** — Heartbleed/Ariane/goto-fail class rejections |
 | `parity_python` | `parity_python/` | `.li` vs `.pyi` / mypy baseline |
 | `mir_llvm` | `mir_llvm/` | MIR / LLVM golden output |
 | `benchmarks` | `benchmarks/` | Tier 0 correctness + invariants |
@@ -61,8 +58,5 @@ Fails if any manifest entry mismatches expected outcome.
 
 ## Related docs
 
-- [Tests overview](../docs/testing/overview.md) — full suite list + CI  
-- [Security audits](../docs/testing/security.md) — CVE catalog, fuzz, malformed input, race exploits  
-- [SECURITY.md](../SECURITY.md) — disclosure and catalog refresh policy  
 - [Language design spec](../docs/superpowers/specs/2026-05-14-li-language-design.md)  
 - [Benchmarks plan](../docs/superpowers/plans/2026-05-14-benchmarks-and-simulations.md)  

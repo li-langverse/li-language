@@ -1,6 +1,4 @@
 extern def li_heat_2d_kernel()
-  requires true
-  ensures true
 
 def main() raises IO -> int
   requires true

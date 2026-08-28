@@ -6,8 +6,6 @@ alwaysApply: false
 
 # li-tests
 
-**Merge premise:** pass/fail programs prove compiler capabilities — see [li-test-driven-validation.mdc](li-test-driven-validation.mdc).
-
 All conformance tests live in `li-tests/`. Do not add scattered fixtures under `compiler/`.
 
 ## Register every test
@@ -29,8 +27,3 @@ All conformance tests live in `li-tests/`. Do not add scattered fixtures under `
 `race_shared_memory` — exploit tests; failures must cite shared memory / disjoint / Sync.
 
 Run: `./li-tests/run_all.sh` or `./li-tests/run_all.sh <suite>`
-
-## Security & gates
-
-- Security-sensitive suites: run `./li-tests/run_security.sh`; map to [CVE catalog](../../security/cve-catalog.json) per [engineering-standards.md](../../docs/ecosystem/engineering-standards.md).
-- **`std/**` tests:** every export needs coverage toward **100%** (`scripts/check-stdlib-coverage.sh`).

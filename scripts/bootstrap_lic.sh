@@ -11,10 +11,7 @@ if [[ ! -x "$LIC" ]]; then
   exit 1
 fi
 
-# --allow-open-vc/--no-lean-verify: the bootstrap compiler's own contracts are
-# discharged by the parity gates (check_li_*_parity.sh build it the same way);
-# the Lean verify step is what makes `build` hang on this machine.
-"$LIC" build "$ROOT/bootstrap/lic/main.li" -o "$OUT" --release --allow-open-vc --no-lean-verify
+"$LIC" build "$ROOT/bootstrap/lic/main.li" -o "$OUT" --release
 echo "bootstrap: built $OUT"
 "$OUT" --version
 "$OUT" smoke

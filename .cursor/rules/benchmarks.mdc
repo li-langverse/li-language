@@ -10,8 +10,6 @@ Plan: `docs/superpowers/plans/2026-05-14-benchmarks-and-simulations.md`
 
 ## Before timing
 
-See **`li-benchmark-correctness.mdc`** and **`li-agent-scope-studio-sim.mdc`** — compiler milestones (**2i / 7e**) before studio verticals; correct results first (normative `reference.py` + small/large goldens); cross-lang parity is a sanity check only.
-
 1. Shared `params.toml` across li and reference impls (C++, Rust, Julia, Python)
 2. `verify.py` must pass (energy drift, momentum, trajectory hash)
 3. **`lic build` must pass Lean** on all `benchmarks/tier2_physics/` li sources
@@ -37,11 +35,3 @@ Plot spec: `docs/superpowers/plans/2026-05-14-plots-and-social.md`
 ## Reference impls
 
 Each Tier 2+ benchmark needs a C++ reference that passes `verify.py` before li numbers are published.
-
-## tier5_http (li-httpd / `lis`)
-
-Config lives in **TOML only** (`benchmarks/tier5_http/`). Do not hardcode scenarios in Python.
-
-- Merge: `defaults.toml` ← `scenarios/*/bench.toml`
-- Harness: `verify_http.py`, `bench_http.py`, `exploit_http.py`, `audit_nginx_src.py`
-- CI: `lis/scripts/verify-http.sh`

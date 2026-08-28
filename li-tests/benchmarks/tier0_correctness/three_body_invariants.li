@@ -1,3 +1,5 @@
+# Momentum invariant sketch — must verify when physics std exists.
+
 def com_stationary() -> unit
   requires true
   ensures total_momentum() == 0.0

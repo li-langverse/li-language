@@ -16,14 +16,12 @@ concurrency:
 
 jobs:
   release:
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      github.event.workflow_run.conclusion == 'success'
+    if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.workflow_run.head_sha }}
+          ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
 
       - name: Decide whether to release
@@ -41,24 +39,17 @@ jobs:
           fi
 
           PREV="$(git show HEAD~1:VERSION 2>/dev/null | tr -d '[:space:]' || true)"
-          TAG_COUNT="$(git tag -l 'v*' | wc -l | tr -d ' ')"
           if [[ -n "$PREV" && "$PREV" == "$VERSION" ]]; then
-            if [[ "$TAG_COUNT" == "0" ]]; then
-              echo "Bootstrap: no v* tags yet — publishing ${TAG}"
-            else
-              echo "skip=true" >> "$GITHUB_OUTPUT"
-              echo "VERSION unchanged (${VERSION}); release only on VERSION bump"
-              exit 0
-            fi
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "VERSION unchanged (${VERSION}); release only on VERSION bump"
+            exit 0
           fi
 
           echo "skip=false" >> "$GITHUB_OUTPUT"
-          if [[ -n "$PREV" && "$PREV" != "$VERSION" ]]; then
+          if [[ -n "$PREV" ]]; then
             echo "VERSION bumped ${PREV} -> ${VERSION}"
-          elif [[ "$TAG_COUNT" == "0" ]]; then
-            echo "First release tag ${TAG}"
           else
-            echo "Releasing ${VERSION}"
+            echo "First VERSION on main (${VERSION})"
           fi
 
       - name: Validate changelog and version format
@@ -83,4 +74,4 @@ jobs:
           gh release create "$TAG" \
             --title "Li ${VERSION}" \
             --notes "$NOTES" \
-            --target "${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.workflow_run.head_sha }}"
+            --target "${{ github.event.workflow_run.head_sha }}"
