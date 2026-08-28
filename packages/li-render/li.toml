@@ -1,0 +1,28 @@
+[package]
+name = "li-render"
+version = "0.1.1"
+edition = "2026"
+license = "Apache-2.0 OR MIT"
+description = "Li Studio viewport render — wgpu smoke bridge + FPS counter for bench harness"
+
+[dependencies]
+lig = { path = "../lig" }
+li-gui = { path = "../li-gui" }
+li-ui = { path = "../li-ui" }
+li-scene = { path = "../li-scene" }
+
+[package.metadata.li]
+github_repo = "li-render"
+import_name = "render"
+min_lic = "0.1.0"
+maintainer = "li-langverse"
+pkg_id = "PKG-li-render"
+
+[package.metadata.studio]
+viewport_fps_target = 60
+bench_hook = "packages/li-render/bench/viewport_fps.toml"
+
+[package.repository]
+url = "https://github.com/li-langverse/li-render"
+documentation = "https://li-langverse.github.io/li-language/ecosystem/li-render/"
+changelog = "https://github.com/li-langverse/li-render/blob/main/CHANGELOG.md"

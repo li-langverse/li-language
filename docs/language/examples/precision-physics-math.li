@@ -1,0 +1,38 @@
+# Example: same numerics at float32 and float64 (documentation only — not in li-tests).
+# Copy into packages when migrating kernels. See docs/language/precision-polymorphism.md.
+
+# --- Pattern B: generic core (li-math style) ---
+
+def vec3_dot[S](ax: S, ay: S, az: S, bx: S, by: S, bz: S) -> S
+  requires true
+  ensures result == ax * bx + ay * by + az * bz
+  decreases 0
+=
+  return ax * bx + ay * by + az * bz
+
+# --- Pattern A: FP32 physics module slice (li-physics style) ---
+
+type Real = float32
+
+def semi_implicit_euler[S](vx: S, vy: S, fz: S, inv_mass: S, dt: S) -> S
+  requires dt > 0.0f32
+  requires inv_mass >= 0.0f32
+  ensures result == vx + fz * inv_mass * dt
+  decreases 0
+=
+  if inv_mass > 0.0f32:
+    return vx + fz * inv_mass * dt
+  return vx
+
+# --- Call site: pick precision explicitly ---
+
+def smoke() -> unit
+  requires true
+  ensures true
+  decreases 0
+=
+  var d32: float32 = vec3_dot(1.0f32, 0.0f32, 0.0f32, 0.0f32, 1.0f32, 0.0f32)
+  var d64: float64 = vec3_dot(1.0, 0.0, 0.0, 0.0, 1.0, 0.0)
+  var vx: Real = 0.0f32
+  var nv: Real = semi_implicit_euler(vx, 0.0f32, -9.81f32, 1.0f32, 0.016f32)
+  return

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://li-langverse.github.io/schemas/diagnostic-v1.json",
+  "title": "Li compiler diagnostic envelope (v1)",
+  "description": "Machine-readable output from `lic check --format=json` and `lic diagnose`.",
+  "type": "object",
+  "required": ["version", "schema", "tool", "command", "ok", "diagnostics"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "const": 1 },
+    "schema": { "const": "diagnostic-v1" },
+    "tool": { "const": "lic" },
+    "command": { "type": "string", "enum": ["check", "diagnose"] },
+    "ok": { "type": "boolean" },
+    "diagnostics": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/diagnostic" }
+    }
+  },
+  "$defs": {
+    "diagnostic": {
+      "type": "object",
+      "required": [
+        "severity",
+        "file",
+        "line",
+        "column",
+        "offset",
+        "code",
+        "message",
+        "fix_hint"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "severity": { "type": "string", "enum": ["error", "warning", "note"] },
+        "file": { "type": "string" },
+        "line": { "type": "integer", "minimum": 1 },
+        "column": { "type": "integer", "minimum": 1 },
+        "offset": { "type": "integer", "minimum": 0 },
+        "code": {
+          "type": "string",
+          "description": "Stable category id (e.g. type.index, parse.indent)."
+        },
+        "message": { "type": "string" },
+        "fix_hint": {
+          "description": "Optional structured fix suggestion; null until fixer ships.",
+          "oneOf": [{ "type": "null" }, { "type": "object" }]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,13 @@
+def main() -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  return await helper()
+
+async def helper() raises Async -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  return 1

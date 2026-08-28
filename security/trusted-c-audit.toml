@@ -1,0 +1,110 @@
+# Manual audit matrix for trusted C code linked into Li binaries.
+# ASan rows run via scripts/profile-memory.sh (--asan-md, --asan-rt).
+
+[[file]]
+path = "runtime/li_rt.c"
+status = "active"
+asan_in_ci = true
+notes = "Minimal runtime: panic, bounds fail, print, native pthread parallel dispatch"
+
+[[file.functions]]
+name = "li_bounds_fail"
+cwe = "CWE-787"
+mitigation = "abort on proven violation; no silent OOB"
+cve_refs = []
+
+[[file.functions]]
+name = "li_rt_argv"
+cwe = "CWE-125"
+mitigation = "bounds check on index before argv access"
+cve_refs = ["CVE-2014-0160"]
+
+[[file.functions]]
+name = "li_parallel_for_i64"
+cwe = "CWE-362"
+mitigation = "Static chunks; LI_MAX_THREADS=64; G-par in compiler"
+cve_refs = []
+
+[[file.functions]]
+name = "bytes_len"
+cwe = "CWE-125"
+mitigation = "null-safe strlen for Bytes (=str) prelude alias"
+cve_refs = []
+
+[[file.functions]]
+name = "bytes_slice"
+cwe = "CWE-787"
+mitigation = "bounds check off+n against strlen; panic on violation"
+cve_refs = []
+
+[[file.functions]]
+name = "li_rt_str_byte_at"
+cwe = "CWE-125"
+mitigation = "bounds check index against strlen before unsigned char read"
+cve_refs = []
+
+[[file.functions]]
+name = "li_rt_str_prefix_is_get"
+cwe = "CWE-125"
+mitigation = "reads first three bytes only; caller requires len>=3 in Li spec"
+cve_refs = []
+
+[[file.functions]]
+name = "li_rt_http_parse_request_len_tag"
+cwe = "CWE-125"
+mitigation = "strlen bounded by max_header_block; GET probe via li_rt_str_prefix_is_get"
+cve_refs = []
+
+[[file]]
+path = "runtime/li_rt_httpd.c"
+status = "active"
+asan_in_ci = false
+notes = "M1 [routes] TOML loader + match (trusted until pure-Li parser)"
+
+[[file.functions]]
+name = "li_rt_httpd_load_config"
+cwe = "CWE-22"
+mitigation = "caller supplies path; reject traversal in route keys; bounded file read"
+cve_refs = []
+
+[[file.functions]]
+name = "li_rt_httpd_match_route"
+cwe = "CWE-20"
+mitigation = "priority-ordered first match; normalize request path"
+cve_refs = []
+
+[[file.functions]]
+name = "li_rt_httpd_explain_config"
+cwe = "CWE-200"
+mitigation = "read-only config path; stdout canonical routes only"
+cve_refs = []
+
+[[file]]
+path = "benchmarks/tier2_physics/md_lennard_jones/common/md_core.c"
+status = "active"
+asan_in_ci = true
+notes = "Reference MD kernel — ASan in memory-ci via md_lj_native"
+
+[[file.functions]]
+name = "md_step"
+cwe = "CWE-787"
+mitigation = "fixed particle count; cell list bounds"
+cve_refs = []
+
+[[file]]
+path = "runtime/li_rt_net.c"
+status = "active"
+asan_in_ci = false
+notes = "P0 li-httpd syscall seam + w1 async reactor (epoll/kqueue li_async_poll; tcp_echo)"
+
+[[file.functions]]
+name = "tcp_listen"
+cwe = "CWE-20"
+mitigation = "reject port outside 1..65535 before returning stub fd"
+cve_refs = []
+
+[[file.functions]]
+name = "tcp_recv"
+cwe = "CWE-125"
+mitigation = "reject non-positive max_bytes; return empty buffer"
+cve_refs = []

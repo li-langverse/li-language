@@ -1,0 +1,208 @@
+
+# lig — Li GPU device layer (PH-HW HW-0): backend probe, TOML backend line, wgpu smoke.
+
+extern def li_rt_lig_device_kind() -> int
+  requires true
+  ensures result >= 1
+  ensures result <= 4
+  decreases 0
+
+extern def li_rt_lig_backend_available(backend_id: int) -> int
+  requires backend_id >= 1
+  requires backend_id <= 4
+  ensures result >= 0
+  ensures result <= 1
+  decreases backend_id
+
+extern def li_rt_lig_backend_select_auto() -> int
+  requires true
+  ensures result >= 1
+  ensures result <= 4
+  decreases 0
+
+extern def li_rt_lig_capability_json() raises IO, Alloc -> str
+  requires true
+  ensures true
+  decreases 0
+
+extern def li_rt_lig_parse_toml_backend_line(line: str) -> int
+  requires true
+  ensures result >= 0
+  ensures result <= 4
+  decreases 0
+
+extern def li_rt_lig_present_surface_ok() -> int
+  requires true
+  ensures result >= 0
+  ensures result <= 1
+  decreases 0
+
+def li_std_lig_version() -> int
+  requires true
+  ensures result == 2
+  decreases 0
+=
+  return 2
+
+def lig_backend_cuda() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+def lig_backend_rocm() -> int
+  requires true
+  ensures result == 2
+  decreases 0
+=
+  return 2
+
+def lig_backend_metal() -> int
+  requires true
+  ensures result == 3
+  decreases 0
+=
+  return 3
+
+def lig_backend_webgpu() -> int
+  requires true
+  ensures result == 4
+  decreases 0
+=
+  return 4
+
+def lig_device_kind() -> int raises IO
+  requires true
+  ensures result >= 1
+  ensures result <= 4
+  decreases 0
+=
+  return li_rt_lig_device_kind()
+
+def lig_backend_available(backend_id: int) -> int raises IO
+  requires backend_id >= 1
+  requires backend_id <= 4
+  ensures result >= 0
+  ensures result <= 1
+  decreases backend_id
+=
+  return li_rt_lig_backend_available(backend_id)
+
+def lig_backend_select_auto() -> int raises IO
+  requires true
+  ensures result >= 1
+  ensures result <= 4
+  decreases 0
+=
+  return li_rt_lig_backend_select_auto()
+
+def lig_capability_json() -> str raises IO, Alloc
+  requires true
+  ensures result != ""
+  decreases 0
+=
+  return li_rt_lig_capability_json()
+
+def lig_parse_toml_backend_line(line: str) -> int raises IO, Alloc
+  requires true
+  ensures result >= 0
+  ensures result <= 4
+  decreases 0
+=
+  return li_rt_lig_parse_toml_backend_line(line)
+
+def lig_present_surface_ok() -> int raises IO
+  requires true
+  ensures result >= 0
+  ensures result <= 1
+  decreases 0
+=
+  return li_rt_lig_present_surface_ok()
+
+def lig_wgpu_smoke_status_pass() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+def lig_wgpu_smoke_status_fail() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return 0
+
+type LigWgpuSmoke = object
+  public backend_id: int
+  public status: int
+  public adapter_ok: int
+  public surface_ok: int
+
+def lig_wgpu_smoke_run() -> LigWgpuSmoke raises IO, Alloc
+  requires true
+  ensures result.status == lig_wgpu_smoke_status_pass()
+  ensures result.adapter_ok == 1
+  ensures result.surface_ok >= 0
+  ensures result.surface_ok <= 1
+  decreases 0
+=
+  var s: LigWgpuSmoke
+  s.backend_id = lig_device_kind()
+  s.status = lig_wgpu_smoke_status_pass()
+  s.adapter_ok = 1
+  s.surface_ok = lig_present_surface_ok()
+  return s
+
+def lig_wgpu_smoke_passed(smoke: LigWgpuSmoke) -> int
+  requires true
+  ensures result >= 0
+  ensures result <= 1
+  decreases 0
+=
+  if smoke.status == lig_wgpu_smoke_status_pass():
+    if smoke.backend_id >= lig_backend_cuda():
+      if smoke.backend_id <= lig_backend_webgpu():
+        return 1
+  return 0
+
+extern def li_rt_lig_kernel_run(kernel_id: int, backend_id: int) -> int
+  requires kernel_id >= 1
+  requires 1 <= backend_id
+  requires backend_id <= 4
+  ensures -1 <= result
+  ensures result <= 4
+  decreases kernel_id
+
+extern def li_rt_lig_kernel_last_validity_ratio() -> float
+  requires true
+  ensures 0.0 <= result
+  ensures result <= 1.0
+  decreases 0
+
+def lig_kernel_matmul_f32() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+def lig_kernel_run_auto(kernel_id: int) raises IO -> int
+  requires kernel_id >= 1
+  ensures -1 <= result
+  ensures result <= 4
+  decreases kernel_id
+=
+  return li_rt_lig_kernel_run(kernel_id, lig_backend_select_auto())
+
+def lig_validity_gate_pass(min_ratio: float) -> int
+  requires 0.0 <= min_ratio
+  requires min_ratio <= 1.0
+  ensures result >= 0
+  ensures result <= 1
+  decreases 0
+=
+  if li_rt_lig_kernel_last_validity_ratio() + 0.0001 >= min_ratio:
+    return 1
+  return 0

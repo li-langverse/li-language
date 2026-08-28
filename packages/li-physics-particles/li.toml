@@ -1,0 +1,23 @@
+[package]
+name = "li-physics-particles"
+version = "0.1.0"
+edition = "2026"
+license = "Apache-2.0 OR MIT"
+description = "Li package li-physics-particles"
+
+[dependencies]
+li-physics-core = { path = "../li-physics-core" }
+li-math-numerics = { path = "../li-math-numerics" }
+# registry = "1.0.0"             # lip 8d+
+
+[package.metadata.li]
+github_repo = "li-physics-particles"
+import_name = "physics.particles"
+min_lic = "0.1.0"
+maintainer = "li-langverse"
+pkg_id = "PKG-li-physics-particles"
+
+[package.repository]
+url = "https://github.com/li-langverse/li-physics-particles"
+documentation = "https://li-langverse.github.io/li-language/ecosystem/li-physics-particles/"
+changelog = "https://github.com/li-langverse/li-physics-particles/blob/main/CHANGELOG.md"

@@ -1,0 +1,58 @@
+{
+  "kind": "studio-vertical-mocks",
+  "native_product": false,
+  "capture_script": "capture.sh",
+  "profiles": [
+    "game",
+    "sim_rl",
+    "sim_automotive",
+    "sim_robotics",
+    "sim_additive",
+    "sim_scientific",
+    "sim_drug_design"
+  ],
+  "mocks": [
+    {
+      "file": "game.html",
+      "profile": "game",
+      "journey": "default_shell_selection_timeline",
+      "native_product": false
+    },
+    {
+      "file": "sim_rl.html",
+      "profile": "sim_rl",
+      "journey": "profile_chip_agent_training_env",
+      "native_product": false
+    },
+    {
+      "file": "sim_automotive.html",
+      "profile": "sim_automotive",
+      "journey": "profile_viewport_placeholder",
+      "native_product": false
+    },
+    {
+      "file": "sim_robotics.html",
+      "profile": "sim_robotics",
+      "journey": "profile_inspector_fields",
+      "native_product": false
+    },
+    {
+      "file": "sim_additive.html",
+      "profile": "sim_additive",
+      "journey": "profile_export_hint",
+      "native_product": false
+    },
+    {
+      "file": "sim_scientific.html",
+      "profile": "sim_scientific",
+      "journey": "profile_particle_tier_md",
+      "native_product": false
+    },
+    {
+      "file": "sim_drug_design.html",
+      "profile": "sim_drug_design",
+      "journey": "profile_adaptive_stage_hint",
+      "native_product": false
+    }
+  ]
+}

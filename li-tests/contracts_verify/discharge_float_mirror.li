@@ -1,0 +1,6 @@
+def id_nonneg(x: float) -> float
+  requires x >= 0.0
+  ensures result >= 0.0
+  decreases 0
+=
+  return x

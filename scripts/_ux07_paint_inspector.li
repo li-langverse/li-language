@@ -1,0 +1,30 @@
+def studio_paint_inspector(frame: var PaintFrame, inspector: StudioInspectorCompose) -> unit
+  requires frame.cmd_count >= 0
+  ensures frame.cmd_count == old(frame.cmd_count) + studio_paint_inspector_cmds(inspector.has_selection)
+  decreases inspector.has_selection
+=
+  if inspector.has_selection == 0:
+    frame.cmd_count = frame.cmd_count + studio_paint_inspector_empty_cmds()
+    frame.last_kind = paint_op_stroke_rect()
+    frame.last_rect = inspector.rect
+    frame.last_color = studio_color_border()
+    frame.last_kind = paint_op_fill_rect()
+    frame.last_rect = inspector.hint_line1_rect
+    frame.last_color = studio_color_border()
+    frame.last_kind = paint_op_fill_rect()
+    frame.last_rect = inspector.hint_line2_rect
+    frame.last_color = studio_color_border()
+    frame.last_kind = paint_op_stroke_rect()
+    frame.last_rect = inspector.hint_box_rect
+    frame.last_color = studio_color_border()
+  if inspector.has_selection == 1:
+    frame.cmd_count = frame.cmd_count + studio_paint_inspector_selected_cmds()
+    frame.last_kind = paint_op_stroke_rect()
+    frame.last_rect = inspector.rect
+    frame.last_color = studio_color_accent_violet()
+    frame.last_kind = paint_op_stroke_rect()
+    frame.last_rect = inspector.header_rect
+    frame.last_color = studio_color_accent_violet()
+    frame.last_kind = paint_op_fill_rect()
+    frame.last_rect = inspector.field_row_rect
+    frame.last_color = studio_color_bg_elevated()

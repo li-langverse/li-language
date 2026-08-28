@@ -1,0 +1,23 @@
+[package]
+name = "li-sim-scientific"
+version = "0.1.0"
+edition = "2026"
+license = "Apache-2.0 OR MIT"
+description = "Scientific simulation profiles — MD, PDE; callable from any Li program via import sim.scientific"
+
+[dependencies]
+li-sim = { path = "../li-sim" }
+li-physics-particles = { path = "../li-physics-particles" }
+li-physics-rigid = { path = "../li-physics-rigid" }
+
+[package.metadata.li]
+github_repo = "li-sim-scientific"
+import_name = "sim.scientific"
+min_lic = "0.1.0"
+maintainer = "li-langverse"
+pkg_id = "PKG-li-sim-scientific"
+
+[package.repository]
+url = "https://github.com/li-langverse/li-sim-scientific"
+documentation = "https://li-langverse.github.io/li-language/ecosystem/li-sim-scientific/"
+changelog = "https://github.com/li-langverse/li-sim-scientific/blob/main/CHANGELOG.md"

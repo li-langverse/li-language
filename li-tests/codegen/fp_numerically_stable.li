@@ -1,0 +1,35 @@
+extern def li_rt_sqrt(x: float) -> float
+  requires true
+  ensures true
+
+extern def li_rt_exp(x: float) -> float
+  requires true
+  ensures true
+
+extern def li_rt_log(x: float) -> float
+  requires true
+  ensures true
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var x: float = 1.0000001
+  var y: float = 1.0
+  var a: float = x * x - y * y
+  var b: float = (x - y) * (x + y)
+  var dx: float = 0.3
+  var dy: float = 0.4
+  var r: float = li_rt_sqrt(dx * dx + dy * dy)
+  var e: float = li_rt_exp(0.0001) - 1.0
+  var l: float = li_rt_log(1.0 + 0.0001)
+  var s: array[4, float]
+  s[0] = a
+  s[1] = b
+  s[2] = r
+  s[3] = e + l
+  var total: float = sum(s)
+  if total != total:
+    return 1
+  return 0

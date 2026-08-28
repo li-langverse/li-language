@@ -1,0 +1,2 @@
+# Prod has only 003 applied (004_billing_secret.sql is pending).
+applied = ["003_api_keys.sql"]

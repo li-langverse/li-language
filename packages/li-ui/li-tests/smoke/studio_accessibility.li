@@ -1,0 +1,24 @@
+import ui
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if li_std_ui_studio_composables_version() < 5:
+    return 1
+  if studio_contrast_ratio_ok() < 1.0:
+    return 2
+  var layout: StudioShellLayout = layout_studio_shell_adaptive(1280.0, 720.0)
+  var insp: Rect = layout_region_rect(layout, studio_region_inspector())
+  if insp.w != studio_inspector_width_px():
+    return 3
+  var frame: PaintFrame = paint_frame_new()
+  studio_paint_focus_ring(frame, insp)
+  if frame.cmd_count != 1:
+    return 4
+  if frame.last_kind != paint_op_stroke_rect():
+    return 5
+  if frame.last_color.r != studio_color_focus_ring().r:
+    return 6
+  return 0

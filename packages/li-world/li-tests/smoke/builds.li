@@ -1,0 +1,10 @@
+import world
+
+def main() raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if world_format_version() != 1:
+    return 1
+  return 0

@@ -1,0 +1,9 @@
+type NonNeg = {x: int | x >= 0}
+
+def good_init() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var n: NonNeg = 0
+  return n

@@ -1,0 +1,6 @@
+# Security: every proc must state what it guarantees on exit.
+# Missing ensures allows the implementation to change without detection.
+def main() -> int
+  requires true
+=
+  return 0

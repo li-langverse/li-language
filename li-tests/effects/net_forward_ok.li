@@ -1,0 +1,10 @@
+extern def net_ping() raises Net -> int
+  requires true
+  ensures true
+  decreases 0
+def forward() raises Net, IO -> int
+  requires true
+  ensures result == net_ping()
+  decreases 0
+=
+  return net_ping()

@@ -1,0 +1,15 @@
+type Box[T] = T
+
+def id_int(x: Box[int]) -> int
+  requires true
+  ensures result == x
+  decreases 0
+=
+  return x
+
+def id_float(x: Box[float]) -> float
+  requires true
+  ensures result == x
+  decreases 0
+=
+  return x

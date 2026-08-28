@@ -1,0 +1,23 @@
+# Closed bounds on direct extern forward (2e/2f witness: callee ensures inheritance).
+extern def li_rt_http_parse_request_len_tag(buf: var str, max_header_block: int, max_body: int) -> int
+  requires 0 < max_header_block
+  requires 0 < max_body
+  ensures 0 <= result
+  ensures result <= max_body
+  decreases 0
+
+def forward_parse_bounds(buf: var str, max_header_block: int, max_body: int) raises Alloc, IO -> int
+  requires 0 < max_header_block
+  requires 0 < max_body
+  ensures 0 <= result
+  ensures result <= max_body
+  decreases 0
+=
+  return li_rt_http_parse_request_len_tag(buf, max_header_block, max_body)
+
+def main() raises Alloc, IO -> int
+  requires true
+  ensures 0 <= result
+  decreases 0
+=
+  return forward_parse_bounds("GET / HTTP/1.1\r\n\r\n", 8192, 1048576)

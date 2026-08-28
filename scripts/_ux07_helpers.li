@@ -1,0 +1,141 @@
+type StudioShellCompose = object
+  public layout: StudioShellLayout
+  public dock: StudioDockCompose
+  public timeline: StudioTimelineCompose
+  public inspector: StudioInspectorCompose
+  public viewport_empty: StudioViewportEmptyCompose
+  public agent: StudioAgentChromeCompose
+  public palette: StudioCommandPaletteCompose
+  public panel: GuiPanelState
+  public scene_entity_count: int
+
+
+def studio_scene_is_empty(scene_entity_count: int) -> int
+  requires scene_entity_count >= 0
+  ensures result >= 0
+  ensures result <= 1
+  decreases scene_entity_count
+=
+  if scene_entity_count == 0:
+    return 1
+  return 0
+
+def studio_empty_state_for_region(region: int, has_selection: int, scene_entity_count: int) -> int
+  requires has_selection >= 0
+  requires has_selection <= 1
+  requires scene_entity_count >= 0
+  ensures result >= 0
+  ensures result <= 1
+  decreases region
+=
+  if region == studio_region_inspector():
+    if has_selection == 0:
+      return 1
+    return 0
+  if region == studio_region_viewport():
+    if scene_entity_count == 0:
+      return 1
+    return 0
+  return 0
+
+def studio_inspector_empty_hint_line_rect_at(insp_x: float, insp_y: float, insp_w: float, line: int) -> Rect
+  requires insp_w >= 48.0
+  requires line >= 0
+  requires line <= 1
+  ensures result.w >= 48.0
+  ensures result.h == studio_empty_hint_line_height_px()
+  decreases line
+=
+  var pad: float = 16.0
+  var y: float = insp_y + studio_inspector_header_height_px() + pad + studio_empty_hint_line_gap_px()
+  if line == 1:
+    y = y + studio_empty_hint_line_height_px() + studio_empty_hint_line_gap_px()
+  var w: float = insp_w - (pad * 2.0)
+  return rect_make(insp_x + pad, y, w, studio_empty_hint_line_height_px())
+
+def studio_inspector_empty_hint_box_rect_at(insp_x: float, insp_y: float, insp_w: float, insp_h: float) -> Rect
+  requires insp_w >= 48.0
+  requires insp_h >= studio_empty_hint_box_height_px() + studio_inspector_header_height_px()
+  ensures result.w >= 48.0
+  ensures result.h == studio_empty_hint_box_height_px()
+  decreases 0
+=
+  var pad: float = 16.0
+  var y: float = insp_y + studio_inspector_header_height_px() + pad + studio_empty_hint_line_height_px() + studio_empty_hint_line_gap_px() + studio_empty_hint_line_height_px() + (studio_empty_hint_line_gap_px() * 2.0)
+  var w: float = insp_w - (pad * 2.0)
+  var h: float = studio_empty_hint_box_height_px()
+  if y + h > insp_y + insp_h:
+    h = insp_h - y
+  if h < 0.0:
+    h = 0.0
+  return rect_make(insp_x + pad, y, w, h)
+
+def studio_inspector_field_row_rect_at(insp_x: float, insp_y: float, insp_w: float) -> Rect
+  requires insp_w >= 48.0
+  ensures result.w >= 48.0
+  ensures result.h == studio_empty_hint_line_height_px()
+  decreases 0
+=
+  var pad: float = 16.0
+  var y: float = insp_y + studio_inspector_header_height_px() + pad
+  var w: float = insp_w - (pad * 2.0)
+  return rect_make(insp_x + pad, y, w, studio_empty_hint_line_height_px())
+
+def studio_viewport_empty_title_rect_at(vp_x: float, vp_y: float, vp_w: float, vp_h: float) -> Rect
+  requires vp_w >= studio_viewport_empty_cta_width_px()
+  requires vp_h >= studio_viewport_empty_title_height_px() + studio_viewport_empty_cta_height_px() + 32.0
+  ensures result.w >= studio_viewport_empty_cta_width_px()
+  ensures result.h == studio_viewport_empty_title_height_px()
+  decreases 0
+=
+  var title_w: float = studio_viewport_empty_cta_width_px() + 80.0
+  if title_w > vp_w - 32.0:
+    title_w = vp_w - 32.0
+  var x: float = vp_x + (vp_w - title_w) / 2.0
+  var y: float = vp_y + (vp_h * 0.42)
+  return rect_make(x, y, title_w, studio_viewport_empty_title_height_px())
+
+def studio_viewport_empty_cta_rect_at(vp_x: float, vp_y: float, vp_w: float, vp_h: float) -> Rect
+  requires vp_w >= studio_viewport_empty_cta_width_px()
+  requires vp_h >= studio_viewport_empty_cta_height_px() + 32.0
+  ensures result.w == studio_viewport_empty_cta_width_px()
+  ensures result.h == studio_viewport_empty_cta_height_px()
+  decreases 0
+=
+  var x: float = vp_x + (vp_w - studio_viewport_empty_cta_width_px()) / 2.0
+  var y: float = vp_y + (vp_h * 0.52)
+  return rect_make(x, y, studio_viewport_empty_cta_width_px(), studio_viewport_empty_cta_height_px())
+
+def studio_compose_empty_inspector(layout: StudioShellLayout) -> StudioInspectorCompose
+  requires layout.inspector.w >= studio_inspector_width_px()
+  ensures result.has_selection == 0
+  ensures result.empty_visible == 1
+  decreases 0
+=
+  var out: StudioInspectorCompose
+  out.rect = layout.inspector
+  out.header_rect = studio_inspector_header_rect_at(layout.inspector.x, layout.inspector.y, layout.inspector.w)
+  out.has_selection = 0
+  out.field_rows = 0
+  out.empty_visible = 1
+  out.hint_line1_rect = studio_inspector_empty_hint_line_rect_at(layout.inspector.x, layout.inspector.y, layout.inspector.w, 0)
+  out.hint_line2_rect = studio_inspector_empty_hint_line_rect_at(layout.inspector.x, layout.inspector.y, layout.inspector.w, 1)
+  out.hint_box_rect = studio_inspector_empty_hint_box_rect_at(layout.inspector.x, layout.inspector.y, layout.inspector.w, layout.inspector.h)
+  out.field_row_rect = rect_make(0.0, 0.0, 0.0, 0.0)
+  return out
+
+def studio_compose_empty_viewport(layout: StudioShellLayout) -> StudioViewportEmptyCompose
+  requires layout.viewport.w > 0.0
+  requires layout.viewport.h > 0.0
+  ensures result.empty_visible == 1
+  ensures result.frame_rect.w == layout.viewport.w
+  decreases 0
+=
+  var out: StudioViewportEmptyCompose
+  out.frame_rect = layout.viewport
+  out.empty_visible = 1
+  out.title_rect = studio_viewport_empty_title_rect_at(layout.viewport.x, layout.viewport.y, layout.viewport.w, layout.viewport.h)
+  out.cta_rect = studio_viewport_empty_cta_rect_at(layout.viewport.x, layout.viewport.y, layout.viewport.w, layout.viewport.h)
+  return out
+
+def studio_dock_slot_offset_y(slot: int) -> float

@@ -1,0 +1,6 @@
+def lkir_matmul_tile() -> int
+  requires true
+  ensures result == 4
+  decreases 0
+=
+  return 4

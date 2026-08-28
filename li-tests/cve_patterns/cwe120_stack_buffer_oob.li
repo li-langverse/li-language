@@ -1,0 +1,8 @@
+# CWE-120: buffer overflow on stack — nested fixed arrays with OOB access.
+def stack_slop() -> int
+  requires true
+  ensures result == frame[40]
+  decreases 0
+=
+  var frame: array[32, int]
+  return frame[40]

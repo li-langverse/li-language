@@ -1,0 +1,15 @@
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var a: array[2, int]
+  a[0] = 1
+  a[1] = 2
+  var b: array[4, int]
+  b[0] = 3
+  b[1] = 4
+  b[2] = 5
+  b[3] = 6
+  var c: array[4, int] = a * b
+  return 0

@@ -1,0 +1,94 @@
+# Build and push lic CI *toolchain* images (LLVM/cmake — no baked-in lic binary).
+# Default tag debian12-llvm22 (Debian bookworm); ubuntu24-llvm22 for GHA runner parity.
+# Release images with a pinned lic compiler: deferred (master plan § deferred release containers).
+# Auth: GITHUB_TOKEN only (no repo secrets required for public packages).
+name: Publish CI Docker image
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - docker/ci-debian12-llvm22/**
+      - docker/ci-ubuntu24-llvm22/**
+      - scripts/ci-install-llvm.sh
+      - .github/workflows/publish-docker-ci-image.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: li-langverse/lic-ci
+
+jobs:
+  publish-debian12:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (Debian 12 — default)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=debian12-llvm22
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push debian12-llvm22
+        uses: docker/build-push-action@v6
+        with:
+          context: docker/ci-debian12-llvm22
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  publish-ubuntu24:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (Ubuntu 24.04 — GHA parity)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=ubuntu24-llvm22
+
+      - name: Build and push ubuntu24-llvm22
+        uses: docker/build-push-action@v6
+        with:
+          context: docker/ci-ubuntu24-llvm22
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  hint:
+    needs: [publish-debian12, publish-ubuntu24]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Usage hint
+        run: |
+          echo "Preferred (Debian 12):"
+          echo "  podman pull ghcr.io/li-langverse/lic-ci:debian12-llvm22"
+          echo "GHA ubuntu-24.04 parity:"
+          echo "  podman pull ghcr.io/li-langverse/lic-ci:ubuntu24-llvm22"
+          echo "  cd lic && ./scripts/prepare-docker-ci-image.sh"
+          echo "  ./scripts/local-ci.sh --docker"

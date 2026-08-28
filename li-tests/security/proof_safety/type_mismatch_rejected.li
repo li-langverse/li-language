@@ -1,0 +1,7 @@
+# Security: declared return type must match the actual return value.
+# Returning int from a str-typed proc is a type escape.
+def main() -> str
+  requires true
+  ensures true
+=
+  return 0

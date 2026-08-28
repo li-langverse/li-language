@@ -1,0 +1,30 @@
+# P-linalg: 4-iteration dot loop — static witness + Li.Discharge.dot4_int_loop_eval_spec.
+def dot4_int_loop(a: array[4, int], b: array[4, int]) -> int
+  requires true
+  ensures result == a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3]
+  decreases 4
+=
+  var acc: int = 0
+  var i: int = 0
+  while i < 4
+    acc = acc + a[i] * b[i]
+    i = i + 1
+  return acc
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var a: array[4, int]
+  var b: array[4, int]
+  a[0] = 1
+  a[1] = 0
+  a[2] = 0
+  a[3] = 0
+  b[0] = 1
+  b[1] = 0
+  b[2] = 0
+  b[3] = 0
+  var s: int = dot4_int_loop(a, b)
+  return 0

@@ -1,0 +1,8 @@
+import std.bytes
+
+def main() raises Alloc, IO -> int
+  requires true
+  ensures result == 3
+  decreases 0
+=
+  return bytes_len(bytes_slice("hello", 1, 3))

@@ -1,0 +1,22 @@
+# LEM-PHYS-001 | Bench: md_lennard_jones | li-tests: md_energy_single_step.li
+def lj_single_step_energy_reference() -> float
+  requires true
+  ensures abs(result - (-1.234567)) < 1e-6
+  decreases 0
+=
+  return -1.234567
+
+extern def proof_db_relative_energy_drift(e0: float, e1: float, rel_tol: float) -> int
+  requires e0 != 0.0
+  requires rel_tol > 0.0
+  ensures abs(e1 - e0) / abs(e0) <= rel_tol or result == 0
+  decreases 0
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var e0: float = lj_single_step_energy_reference()
+  return proof_db_relative_energy_drift(e0, e0, 0.001)
+

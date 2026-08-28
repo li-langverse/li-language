@@ -1,0 +1,34 @@
+def deep() -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  if true:
+    if true:
+      if true:
+        if true:
+          if true:
+            if true:
+              if true:
+                if true:
+                  if true:
+                    if true:
+                      if true:
+                        if true:
+                          if true:
+                            if true:
+                              if true:
+                                if true:
+                                  if true:
+                                    if true:
+                                      if true:
+                                        if true:
+                                          if true:
+                                            if true:
+                                              if true:
+                                                if true:
+                                                  if true:
+                                                    if true:
+                                                      if true:
+                                                        return 0
+  return 1

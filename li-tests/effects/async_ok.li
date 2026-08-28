@@ -1,0 +1,13 @@
+async def worker() raises Async -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return await other()
+
+async def other() raises Async -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1

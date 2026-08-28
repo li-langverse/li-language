@@ -1,0 +1,19 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "labels": ["dependencies"],
+  "regexManagers": [
+    {
+      "fileMatch": ["(^|/)li-toolchain\\.toml$"],
+      "matchStrings": ["lic_version\\s*=\\s*\"(?<currentValue>[^\"]+)\""],
+      "depNameTemplate": "li-langverse/lic",
+      "datasourceTemplate": "github-releases"
+    },
+    {
+      "fileMatch": ["(^|/)li-toolchain\\.toml$"],
+      "matchStrings": ["lit_version\\s*=\\s*\"(?<currentValue>[^\"]+)\""],
+      "depNameTemplate": "li-langverse/lit",
+      "datasourceTemplate": "github-releases"
+    }
+  ]
+}

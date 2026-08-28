@@ -1,0 +1,27 @@
+{
+  "schema": "li_sim_summary_v1",
+  "benchmark": "md_lennard_jones",
+  "vertical_id": "md_lennard_jones",
+  "workload_class": "stub",
+  "lang": "cpp",
+  "variant": "reference_native",
+  "output_detail": "fields",
+  "ok": false,
+  "git_sha": "a081176",
+  "cpu_model": "",
+  "flags": "",
+  "params_digest": "sha256:bd5935d6a2e2aa1056b6e1411dd3463666dbe69edecdb8a09ffbbb1ccf1c5141",
+  "metrics": {
+    "energy_drift_rel": 0.0,
+    "checksum": "0"
+  },
+  "invariants": {
+    "energy_drift_ok": false
+  },
+  "artifacts": {
+    "params": "benchmarks/tier2_physics/md_lennard_jones/params.toml",
+    "tier_f": "benchmarks/results/md_lennard_jones/fields/",
+    "tier_d": null
+  },
+  "updated": "2026-05-24T12:53:43Z"
+}

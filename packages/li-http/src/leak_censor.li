@@ -1,0 +1,19 @@
+# leak_censor policy surface — runtime scrub in trusted C (li_rt_net.c).
+
+extern def li_rt_httpd_leak_censor_enabled() -> int
+  requires true
+  ensures 0 <= result
+  ensures result <= 1
+
+extern def li_rt_httpd_leak_scrub_selftest() -> int
+  requires true
+  ensures -3 <= result
+  ensures result <= 0
+
+def leak_censor_active() -> int
+  requires true
+  ensures 0 <= result
+  ensures result <= 1
+  decreases 0
+=
+  return li_rt_httpd_leak_censor_enabled()

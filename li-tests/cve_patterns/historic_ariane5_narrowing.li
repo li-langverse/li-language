@@ -1,0 +1,9 @@
+# Ariane 5 (1996): silent narrowing / overflow on velocity conversion.
+# Root cause: 64-bit value forced into 16-bit without proof; exception unhandled.
+# Li rule: no bare cast; narrowing requires cast[T](e, proof) (see prove_reject).
+def narrow_velocity(h_vel: int) -> int
+  requires true
+  ensures result == cast[int](h_vel)
+  decreases 0
+=
+  return cast[int](h_vel)

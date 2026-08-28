@@ -1,0 +1,8 @@
+import std.math
+
+def advisory_warn() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1

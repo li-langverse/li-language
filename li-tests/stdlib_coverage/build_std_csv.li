@@ -1,0 +1,12 @@
+import std.csv
+import std.io
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var t: int = csv_tag() + io_tag()
+  if t != 10
+    return 1
+  return 0

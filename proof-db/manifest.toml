@@ -1,0 +1,24 @@
+schema_version = 1
+
+[config]
+gaps_doc = "docs/verification/provability-gaps.md"
+roadmap_doc = "docs/verification/proof-corpus-roadmap.md"
+spec_doc = "docs/verification/proof-database.md"
+
+[[includes]]
+path = "axioms/T-GetElem.toml"
+
+[[includes]]
+path = "axioms/G-hw-fp-model.toml"
+
+[[includes]]
+path = "lemmas/P-linalg-dot4-int-closed.toml"
+
+[[includes]]
+path = "lemmas/P-float-sqrt-open-bound.toml"
+
+[[includes]]
+path = "lemmas/P-linalg-dot4-int-loop-open.toml"
+
+[[includes]]
+path = "lemmas/G-lean-autovc-strict.toml"

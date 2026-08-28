@@ -1,0 +1,8 @@
+import positive
+
+def main() -> int
+  requires true
+  ensures result == 7
+  decreases 0
+=
+  return positive(7)

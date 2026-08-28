@@ -1,0 +1,34 @@
+type Mixed = object
+  public tag: int
+  public xs: array[2, int]
+  public score: int
+
+def pack() -> Mixed
+  requires true
+  ensures result.tag == 1
+  ensures result.score == 4
+  ensures result.xs[0] == 2
+  ensures result.xs[1] == 3
+  decreases 0
+=
+  var m: Mixed
+  m.tag = 1
+  m.xs[0] = 2
+  m.xs[1] = 3
+  m.score = 4
+  return m
+
+def sum_mixed(m: Mixed) -> int
+  requires true
+  ensures result == m.tag + m.xs[0] + m.xs[1] + m.score
+  decreases 0
+=
+  return m.tag + m.xs[0] + m.xs[1] + m.score
+
+def main() -> int
+  requires true
+  ensures result == 10
+  decreases 0
+=
+  var m: Mixed = pack()
+  return sum_mixed(m)

@@ -1,0 +1,9 @@
+type Vault = object
+  public open: int
+  private secret: int
+def leak(v: Vault) -> int
+  requires true
+  ensures result == v.secret
+  decreases 0
+=
+  return v.secret

@@ -1,0 +1,30 @@
+---
+description: Composable by default — packages expose small lifecycle APIs in lib.li, not monolithic mains
+globs:
+  - packages/**
+  - std/**
+  - packages/li-httpd/**
+alwaysApply: false
+---
+
+# Composable by default
+
+**Canonical:** `docs/ecosystem/composable-by-default.md`
+
+## Required
+
+- **`src/lib.li`** exports composable **`def`** APIs: start / stop / ready (or domain-equivalent verbs).
+- Every exported **`def`** (and each **`extern proc`**) has `requires`, `ensures`, `decreases` (strict-by-default).
+- **`src/main.li`** is a thin demo that imports the library — not the only entry point.
+- Package tests **import** `lib.li` (see `li-tests/composable/` and skill `composable-li-library`).
+
+## Forbidden
+
+- Substantial feature logic only in `main.li` with no importable API.
+- Hidden global server/runner state instead of explicit handles.
+- C-only or script-only entry with no Li `lib.li` surface.
+- Claiming a service package is “done” when only a CLI binary exists.
+
+## httpd
+
+`packages/li-httpd` targets `httpd_serve` / `httpd_stop` / `httpd_ready` on `HttpdHandle`. **Do not claim M1 complete** until [httpd-prerequisites.md](../../docs/ecosystem/httpd-prerequisites.md) P0 rows are green and routing tests exist.

@@ -1,0 +1,15 @@
+def game_step(tick: int) -> int
+  requires tick >= 0
+  ensures result >= tick
+  decreases tick
+=
+  if tick <= 0
+    return 0
+  return game_step(tick - 1) + 1
+
+def main() -> int
+  requires true
+  ensures result == 60
+  decreases 0
+=
+  return game_step(60)

@@ -1,0 +1,26 @@
+# Pattern A: type Real = float32 — whole module at one precision (compile_ok).
+
+type Real = float32
+
+def dot3(ax: Real, ay: Real, az: Real, bx: Real, by: Real, bz: Real) -> Real
+  requires true
+  ensures result >= 0.0f32
+  decreases 0
+=
+  return ax * bx + ay * by + az * bz
+
+def lorentz_gamma(v: Real, c: Real) -> Real
+  requires c > 0.0f32
+  ensures result == v
+  decreases 0
+=
+  return v
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var d: Real = dot3(1.0f32, 0.0f32, 0.0f32, 2.0f32, 1.0f32, 0.0f32)
+  var g: Real = lorentz_gamma(0.0f32, 299792458.0f32)
+  return 0

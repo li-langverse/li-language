@@ -1,0 +1,32 @@
+# Small golden: tier-1 dot spec at N=8 (benchmarks/harness/reference.py dot_spec_sum).
+
+extern def li_rt_volatile_sink_f64(v: float) -> unit
+  requires true
+  ensures true
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var a: array[8, float]
+  var b: array[8, float]
+  var i: int = 0
+  while i < 8
+    var ai: float = 0.0
+    var bi: float = 0.0
+    var t: int = 0
+    while t < i
+      ai = ai + 0.001
+      t = t + 1
+    var tb: int = (i * 7) % 256
+    t = 0
+    while t < tb
+      bi = bi + 0.002
+      t = t + 1
+    a[i] = ai
+    b[i] = bi
+    i = i + 1
+  var s: float = a @ b
+  li_rt_volatile_sink_f64(s)
+  return 0

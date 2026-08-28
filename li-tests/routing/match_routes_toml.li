@@ -1,0 +1,24 @@
+# Load li-tests/httpd/fixtures/routing.toml via LI_REPO_ROOT (run_httpd_config.sh).
+import http
+
+def main() raises IO, Alloc -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if load_routes_from_routing_fixture() != 0:
+    return 10
+  var health: int = match_route("GET", "/health")
+  if health != 1:
+    return 1
+  if route_action_kind(health) != http_route_action_static():
+    return 2
+  var chat: int = match_route("POST", "/v1/chat/completions")
+  if chat != 2:
+    return 3
+  if route_action_kind(chat) != http_route_action_proxy():
+    return 4
+  var miss: int = match_route("GET", "/unknown")
+  if miss != http_route_id_none():
+    return 5
+  return 0

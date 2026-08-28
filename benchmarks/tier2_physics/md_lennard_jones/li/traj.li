@@ -1,0 +1,11 @@
+extern def li_md_traj_from_env()
+  requires true
+  ensures true
+
+def main() raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  li_md_traj_from_env()
+  return 0

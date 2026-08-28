@@ -1,0 +1,43 @@
+type Path = str
+type FileHandle = object
+  public open: int
+
+type IoError = object
+  public code: int
+
+def io_tag() -> int
+  requires true
+  ensures result == 4
+  decreases 0
+=
+  return 4
+
+def file_open_read(path: Path) -> FileHandle
+  requires true
+  ensures result.open == 0
+  decreases 0
+=
+  var f: FileHandle
+  f.open = 0
+  return f
+
+def file_close(handle: FileHandle) -> unit
+  requires true
+  ensures true
+  decreases 0
+=
+  return
+
+def file_read_all_stub() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return 0
+
+def path_join(a: Path, b: Path) -> Path
+  requires true
+  ensures result == a
+  decreases 0
+=
+  return a

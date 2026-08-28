@@ -1,0 +1,22 @@
+[package]
+name = "li-net"
+version = "0.1.0"
+edition = "2026"
+license = "Apache-2.0 OR MIT"
+description = "TCP/UDP sockets, DNS, epoll reactor surface"
+
+[dependencies]
+# path = { path = "../other" }   # lip 8b+
+# registry = "1.0.0"             # lip 8d+
+
+[package.metadata.li]
+github_repo = "li-net"
+import_name = "net"
+min_lic = "0.1.0"
+maintainer = "li-langverse"
+pkg_id = "PKG-li-net"
+
+[package.repository]
+url = "https://github.com/li-langverse/li-net"
+documentation = "https://li-langverse.github.io/li-language/ecosystem/li-net/"
+changelog = "https://github.com/li-langverse/li-net/blob/main/CHANGELOG.md"

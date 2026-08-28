@@ -1,0 +1,51 @@
+type PhysicsWorld = object
+  public tier: int
+  public substeps: int
+  public step_count: int
+  public rigid_enabled: int
+  public gravity_z: float
+  public body_count: int
+
+def physics_world_game_default() -> PhysicsWorld
+  requires true
+  ensures result.tier == 2
+  ensures result.substeps >= 1
+  decreases 0
+=
+  var w: PhysicsWorld
+  w.tier = 2
+  w.substeps = 4
+  w.step_count = 0
+  w.rigid_enabled = 1
+  w.gravity_z = -9.81
+  w.body_count = 1
+  return w
+
+def physics_step(world: PhysicsWorld, frame_dt: float) -> int
+  requires frame_dt > 0.0
+  requires world.substeps >= 1
+  decreases world.substeps
+=
+  var i: int = 0
+  while i < world.substeps
+    world.step_count = world.step_count + 1
+    i = i + 1
+  return world.step_count
+
+def game_physics_tick() -> int
+  requires true
+  ensures result >= 4
+  decreases 0
+=
+  var w: PhysicsWorld = physics_world_game_default()
+  return physics_step(w, 1.0 / 60.0)
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var steps: int = game_physics_tick()
+  if steps < 4
+    return 1
+  return 0

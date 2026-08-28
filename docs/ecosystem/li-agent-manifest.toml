@@ -1,0 +1,33 @@
+# Canonical Li agent entry (v0 stub). Source of truth for scripts/gen-li-agent-manifest.sh.
+# Provability pillar #1: lic build remains the certificate; entries below are agent ergonomics.
+
+[agent]
+name = "li-lic"
+version = 1
+repo = "lic"
+
+[commands]
+check = "lic check"
+check_json = "lic check --format=json"
+diagnose = "lic diagnose"
+build = "lic build"
+verify = "lic verify"
+tests = "./li-tests/run_all.sh"
+bench = "./scripts/ci-bench.sh"
+security = "./li-tests/run_security.sh"
+
+[diagnostics]
+schema = "docs/schemas/diagnostic-v1.json"
+json_flag = "--format=json"
+fix_suggest = "scripts/lic-fix-suggest.sh"
+
+[handover]
+formats_doc = "docs/ecosystem/agent-handover-formats.md"
+agents_md = "AGENTS.md"
+cursor_rules = ".cursor/rules/"
+
+[exports]
+# Future: li-agent.json, .cursor/AGENTS.generated.md via gen-li-agent-manifest.sh
+generate = "scripts/gen-li-agent-manifest.sh"
+tests_agent_slice = "scripts/export-li-tests-agent-slice.sh"
+tests_agent_json = "li-tests/agent-manifest.json"

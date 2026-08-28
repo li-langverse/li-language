@@ -1,0 +1,11 @@
+@parallel(disjoint=disjoint_row)
+def weak_decorator_witness() -> unit
+  requires true
+  ensures true
+  decreases 0
+=
+  var grid: array[8, array[8, f64]]
+  parallel for i in 0..<8
+    decreases 8 - i
+  =
+    grid[i][0] = 1.0

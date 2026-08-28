@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1920, height=1080" />
+  <title>Li World Studio — sim_drug_design (marketing mock)</title>
+  <link rel="stylesheet" href="../studio-tokens.css" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      width: 1920px; height: 1080px; margin: 0;
+      background: var(--color-bg-primary);
+      color: var(--color-text-primary);
+      font-family: var(--typography-ui);
+      overflow: hidden;
+    }
+    .mock-banner {
+      position: absolute; top: 0; left: 0; right: 0; z-index: 100;
+      background: var(--mock-banner-bg, #3d1f00);
+      color: #ffdf9e; font-size: 11px; letter-spacing: 0.04em;
+      text-align: center; padding: 4px 8px;
+      border-bottom: 1px solid var(--color-accent-amber);
+    }
+    .shell { position: absolute; inset: 24px 0 0 0; }
+    .dock {
+      position: absolute; left: 0; top: 0; bottom: 0;
+      width: var(--spacing-dock-width-px);
+      background: var(--color-bg-elevated);
+      border-right: 1px solid var(--color-border);
+      display: flex; flex-direction: column; align-items: center;
+      padding: 12px 0; gap: 8px;
+    }
+    .dock button {
+      width: 36px; height: 36px; border: 1px solid var(--color-border);
+      border-radius: 6px; background: transparent; color: var(--color-text-muted);
+    }
+    .dock button.active {
+      border-color: var(--color-accent-cyan);
+      color: var(--color-accent-cyan);
+    }
+    .topbar {
+      position: absolute; left: var(--spacing-dock-width-px); right: 0; top: 0;
+      height: var(--spacing-topbar-height-px);
+      background: var(--color-bg-elevated);
+      border-bottom: 1px solid var(--color-border);
+      display: flex; align-items: center; gap: 16px; padding: 0 16px;
+    }
+    .profile-chip {
+      font-size: 12px; padding: 4px 10px; border-radius: 999px;
+      border: 1px solid var(--color-accent-violet); color: var(--color-accent-violet);
+    }
+    .viewport {
+      position: absolute;
+      left: var(--spacing-dock-width-px); top: var(--spacing-topbar-height-px);
+      right: var(--spacing-inspector-width-px); bottom: 0;
+      background: radial-gradient(circle at 50% 42%, #1a2332, var(--color-bg-primary));
+      border-right: 1px solid var(--color-border);
+    }
+    .viewport-grid {
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(var(--color-viewport-grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--color-viewport-grid) 1px, transparent 1px);
+      background-size: 48px 48px; opacity: 0.45;
+    }
+    .viewport-placeholder {
+      position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+      max-width: 70%; text-align: center; padding: 16px 24px;
+      border: 2px dashed var(--color-accent-amber); color: var(--color-accent-amber);
+      font-size: 14px; background: rgba(13, 17, 23, 0.9); border-radius: 8px;
+    }
+    .selection-ring {
+      position: absolute; left: 50%; top: 45%; width: 120px; height: 120px;
+      transform: translate(-50%, -50%);
+      border: 2px solid var(--color-accent-cyan);
+      border-radius: 50%;
+    }
+    .hud {
+      position: absolute; left: 16px; bottom: 16px;
+      font-family: var(--typography-mono); font-size: 11px;
+      color: var(--color-accent-mint);
+      background: rgba(13, 17, 23, 0.85); padding: 8px 12px;
+      border: 1px solid var(--color-border); border-radius: 4px;
+    }
+    .hud .mock-metric { color: var(--color-text-muted); font-size: 10px; }
+    .timeline {
+      position: absolute;
+      left: var(--spacing-dock-width-px); right: var(--spacing-inspector-width-px); bottom: 0;
+      height: 180px; background: var(--color-bg-elevated);
+      border-top: 1px solid var(--color-border); padding: 12px 16px;
+    }
+    .timeline-track {
+      height: 48px; margin-top: 8px; border-radius: 4px;
+      background: linear-gradient(90deg, var(--color-border) 1px, transparent 1px);
+      background-size: 40px 100%; position: relative;
+    }
+    .playhead {
+      position: absolute; left: 35%; top: 0; bottom: 0; width: 2px;
+      background: var(--color-accent-amber);
+    }
+    .inspector {
+      position: absolute; right: 0; top: var(--spacing-topbar-height-px);
+      width: var(--spacing-inspector-width-px); bottom: 0;
+      background: var(--color-bg-elevated);
+      border-left: 1px solid var(--color-border); padding: 16px;
+      font-size: 13px;
+    }
+    .inspector h2 { margin: 0 0 8px; font-size: 14px; }
+    .kv { display: grid; grid-template-columns: 100px 1fr; gap: 6px 12px; margin-top: 12px; }
+    .kv dt { color: var(--color-text-muted); }
+    .export-hint {
+      margin-top: 12px; padding: 10px; border-radius: 6px;
+      border: 1px solid var(--color-accent-mint); color: var(--color-accent-mint);
+      font-size: 12px;
+    }
+    .empty-hint {
+      margin-top: 16px; padding: 12px; border-radius: 6px;
+      border: 1px dashed var(--color-border); color: var(--color-text-muted);
+      font-size: 12px;
+    }
+    .agent-strip {
+      position: absolute; right: var(--spacing-inspector-width-px); left: var(--spacing-dock-width-px);
+      bottom: 0; height: 40px;
+      display: flex; align-items: center; gap: 12px; padding: 0 16px;
+      background: rgba(22, 27, 34, 0.95);
+      border-top: 1px solid var(--color-border);
+      font-size: 12px;
+    }
+    .agent-status {
+      padding: 4px 10px; border-radius: 4px;
+      background: rgba(35, 134, 54, 0.2); color: var(--color-agent-running);
+      border: 1px solid var(--color-agent-running);
+    }
+    .agent-context { color: var(--color-accent-cyan); font-size: 11px; }
+  </style>
+</head>
+<body>
+  <div class="mock-banner" role="note">MARKETING MOCK — profile: sim_drug_design · native_product: false · compose/paint is native; pixels here are HTML</div>
+  <div class="shell">
+    <nav class="dock" aria-label="Tools">
+      <button type="button" class="active" title="Select">◇</button>
+      <button type="button" title="Move">✥</button>
+    </nav>
+    <header class="topbar">
+      <strong>Li World Studio</strong>
+      <span class="profile-chip">Drug design</span>
+    </header>
+    <main class="viewport" aria-label="3D viewport">
+      <div class="viewport-grid" aria-hidden="true"></div>
+      <div class="viewport-placeholder">Binding site A · adaptive layout</div>
+      <div class="selection-ring" aria-hidden="true"></div>
+      <div class="hud">
+        <div>Adaptive stage: pose refinement (studio.adaptive stub)</div>
+        <div class="mock-metric">lic check · studio_compose_shell_profile · no wgpu pixels in this capture</div>
+      </div>
+    </main>
+    <aside class="agent-strip" aria-label="Agent copilot">
+      <span class="agent-status">Running · Optimize binding pose</span>
+      
+    </aside>
+
+    <aside class="inspector" aria-label="Inspector">
+
+      <h2>Inspector</h2>
+      <p>Selection: <strong>Molecule A</strong></p>
+      <dl class="kv">
+        <dt>Atoms</dt><dd>48</dd>
+        <dt>Force field</dt><dd>AMBER ff14SB</dd>
+        <dt>Stage</dt><dd>adaptive · pose refine</dd>
+      </dl>
+      <div class="empty-hint">Lab-in-the-Loop adaptive GUI hint (not live).</div>
+    
+    </aside>
+  </div>
+</body>
+</html>

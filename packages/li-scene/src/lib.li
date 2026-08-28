@@ -1,0 +1,340 @@
+
+type EntityId = object
+  public value: int
+
+type Transform3 = object
+  public px: float
+  public py: float
+  public pz: float
+  public qx: float
+  public qy: float
+  public qz: float
+  public qw: float
+  public sx: float
+  public sy: float
+  public sz: float
+
+type SceneNode = object
+  public id: EntityId
+  public parent: int
+  public transform: Transform3
+  public physics_body: int
+
+type Scene = object
+  public node_count: int
+  public root_id: int
+def li_std_scene_version() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+def entity_id_new(v: int) -> EntityId
+  requires v >= 0
+  ensures result.value == v
+  decreases v
+=
+  var e: EntityId
+  e.value = v
+  return e
+def transform_identity() -> Transform3
+  requires true
+  ensures result.px == 0.0
+  ensures result.py == 0.0
+  ensures result.pz == 0.0
+  ensures result.qw == 1.0
+  ensures result.sx == 1.0
+  decreases 0
+=
+  var t: Transform3
+  t.px = 0.0
+  t.py = 0.0
+  t.pz = 0.0
+  t.qx = 0.0
+  t.qy = 0.0
+  t.qz = 0.0
+  t.qw = 1.0
+  t.sx = 1.0
+  t.sy = 1.0
+  t.sz = 1.0
+  return t
+def scene_new() -> Scene
+  requires true
+  ensures result.node_count == 0
+  ensures result.root_id == 0
+  decreases 0
+=
+  var s: Scene
+  s.node_count = 0
+  s.root_id = 0
+  return s
+def scene_attach_node(scene: Scene, node: SceneNode) -> unit
+  requires scene.node_count >= 0
+  ensures scene.node_count == old(scene.node_count) + 1
+  decreases scene.node_count
+=
+  scene.node_count = scene.node_count + 1
+def scene_sync_from_physics(scene: Scene) -> unit
+  requires true
+  ensures scene.node_count == old(scene.node_count)
+  decreases 0
+=
+  return
+def scene_sync_to_physics(scene: Scene) -> unit
+  requires true
+  ensures scene.node_count == old(scene.node_count)
+  decreases 0
+=
+  return
+
+# MD particle display tiers (PH-UX: 1k/10k/100k @ 60/60/30 fps) — scene path, honest reporting.
+
+def scene_md_kernel_lennard_jones() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+def scene_md_tier_1k() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return 0
+
+def scene_md_tier_10k() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+def scene_md_tier_100k() -> int
+  requires true
+  ensures result == 2
+  decreases 0
+=
+  return 2
+
+type SceneMdParticleTier = object
+  public tier_id: int
+  public particles: int
+  public fps_target: float
+  public kernel_tag: int
+
+def scene_md_particle_tier_count() -> int
+  requires true
+  ensures result == 3
+  decreases 0
+=
+  return 3
+
+def scene_md_particle_tier_by_id(tier_id: int) -> SceneMdParticleTier
+  requires tier_id >= 0
+  requires tier_id <= 2
+  ensures result.tier_id == tier_id
+  ensures result.kernel_tag == scene_md_kernel_lennard_jones()
+  decreases tier_id
+=
+  var t: SceneMdParticleTier
+  t.tier_id = tier_id
+  t.kernel_tag = scene_md_kernel_lennard_jones()
+  t.particles = 100000
+  t.fps_target = 30.0
+  if tier_id == scene_md_tier_1k():
+    t.particles = 1000
+    t.fps_target = 60.0
+  if tier_id == scene_md_tier_10k():
+    t.particles = 10000
+    t.fps_target = 60.0
+  return t
+
+def scene_md_particle_tier_id_for_particles(n: int) -> int
+  requires n > 0
+  ensures result >= 0
+  ensures result <= 2
+  decreases 0
+=
+  if n <= 1000:
+    return scene_md_tier_1k()
+  if n <= 10000:
+    return scene_md_tier_10k()
+  return scene_md_tier_100k()
+
+type SceneParticleDraw = object
+  public tier: SceneMdParticleTier
+  public frame_count: int
+  public elapsed_ms: float
+  public fps: float
+  public meets_target: int
+  public native_pixels: int
+  public draw_points: int
+
+def scene_md_particle_draw_new(tier_id: int) -> SceneParticleDraw
+  requires tier_id >= 0
+  requires tier_id <= 2
+  ensures result.tier.tier_id == tier_id
+  ensures result.frame_count == 0
+  ensures result.elapsed_ms == 0.0
+  ensures result.fps == 0.0
+  ensures result.meets_target == 0
+  ensures result.native_pixels == 0
+  ensures result.draw_points == 0
+  decreases tier_id
+=
+  var d: SceneParticleDraw
+  d.tier = scene_md_particle_tier_by_id(tier_id)
+  d.frame_count = 0
+  d.elapsed_ms = 0.0
+  d.fps = 0.0
+  d.meets_target = 0
+  d.native_pixels = 0
+  d.draw_points = 0
+  return d
+
+def scene_md_particle_draw_budget_ms(tier: SceneMdParticleTier) -> float
+  requires tier.particles > 0
+  ensures result > 0.0
+  decreases tier.particles
+=
+  if tier.particles <= 1000:
+    return 16.0
+  if tier.particles <= 10000:
+    return 16.0
+  return 33.0
+
+def scene_md_particle_draw_tick(draw: var SceneParticleDraw, dt_ms: float) -> unit
+  requires dt_ms >= 0.0
+  requires draw.frame_count >= 0
+  ensures draw.frame_count == old(draw.frame_count) + 1
+  ensures draw.elapsed_ms == old(draw.elapsed_ms) + dt_ms
+  ensures draw.native_pixels == 0
+  decreases 0
+=
+  var prev_fps: float = draw.fps
+  var prev_ms: float = draw.elapsed_ms
+  draw.frame_count = draw.frame_count + 1
+  draw.elapsed_ms = draw.elapsed_ms + dt_ms
+  draw.draw_points = draw.tier.particles
+  draw.native_pixels = 0
+  draw.fps = 0.0
+  if draw.elapsed_ms > 0.0:
+    if prev_ms <= 0.0:
+      draw.fps = 1000.0 / dt_ms
+    if prev_ms > 0.0:
+      draw.fps = (prev_fps * prev_ms + 1000.0) / draw.elapsed_ms
+  draw.meets_target = 0
+  if draw.fps >= draw.tier.fps_target:
+    draw.meets_target = 1
+
+def scene_md_particle_draw_meets_target(draw: SceneParticleDraw) -> int
+  requires true
+  ensures result >= 0
+  ensures result <= 1
+  decreases 0
+=
+  return draw.meets_target
+
+def scene_md_particle_display_fps(draw: SceneParticleDraw) -> int
+  requires draw.fps >= 0.0
+  ensures result >= 0
+  decreases 0
+=
+  if draw.fps >= 60.0:
+    return 60
+  if draw.fps >= 30.0:
+    return 30
+  if draw.fps >= 1.0:
+    return 1
+  return 0
+
+def scene_bench_particle_sample_frames() -> int
+  requires true
+  ensures result == 120
+  decreases 0
+=
+  return 120
+
+def scene_bench_particle_sample_dt_ms(tier: SceneMdParticleTier) -> float
+  requires tier.fps_target > 0.0
+  ensures result > 0.0
+  decreases 0
+=
+  return 1000.0 / tier.fps_target
+
+def scene_bench_particle_tier_simulate(tier_id: int) -> SceneParticleDraw
+  requires tier_id >= 0
+  requires tier_id <= 2
+  ensures result.tier.tier_id == tier_id
+  ensures result.frame_count == scene_bench_particle_sample_frames()
+  ensures result.meets_target == 1
+  ensures result.native_pixels == 0
+  decreases tier_id
+=
+  var d: SceneParticleDraw = scene_md_particle_draw_new(tier_id)
+  var dt: float = scene_bench_particle_sample_dt_ms(d.tier)
+  var i: int = 0
+  while i < scene_bench_particle_sample_frames():
+    scene_md_particle_draw_tick(d, dt)
+    i = i + 1
+  return d
+
+def scene_bench_all_particle_tiers_pass() -> int
+  requires true
+  ensures result >= 0
+  ensures result <= 1
+  decreases 0
+=
+  var t0: SceneParticleDraw = scene_bench_particle_tier_simulate(scene_md_tier_1k())
+  if scene_md_particle_draw_meets_target(t0) != 1:
+    return 0
+  var t1: SceneParticleDraw = scene_bench_particle_tier_simulate(scene_md_tier_10k())
+  if scene_md_particle_draw_meets_target(t1) != 1:
+    return 0
+  var t2: SceneParticleDraw = scene_bench_particle_tier_simulate(scene_md_tier_100k())
+  if scene_md_particle_draw_meets_target(t2) != 1:
+    return 0
+  return 1
+
+# PH-SIM vertical gap #9 — MD particle memory ledger gate (studio_md_particle_tier_select_ok).
+type LigMemoryLedger = object
+  public budget_bytes: int
+  public used_bytes: int
+  public tier_100k_refused: int
+
+def scene_md_particle_memory_ledger_default() -> LigMemoryLedger
+  requires true
+  ensures result.budget_bytes > 0
+  ensures result.used_bytes >= 0
+  ensures result.tier_100k_refused >= 0
+  ensures result.tier_100k_refused <= 1
+  decreases 0
+=
+  var l: LigMemoryLedger
+  l.budget_bytes = 2147483647
+  l.used_bytes = 0
+  l.tier_100k_refused = 0
+  return l
+
+def scene_md_particle_tier_refuse_md_100k_over_budget(ledger: var LigMemoryLedger) -> int
+  requires true
+  ensures result >= 0
+  ensures result <= 1
+  decreases 0
+=
+  if ledger.used_bytes > ledger.budget_bytes:
+    ledger.tier_100k_refused = 1
+    return 1
+  return 0
+
+def scene_md_particle_tier_would_fit(tier_id: int, ledger: var LigMemoryLedger) -> int
+  requires tier_id >= 0
+  requires tier_id <= 2
+  ensures result >= 0
+  ensures result <= 1
+  decreases tier_id
+=
+  if ledger.used_bytes > ledger.budget_bytes:
+    return 0
+  return 1

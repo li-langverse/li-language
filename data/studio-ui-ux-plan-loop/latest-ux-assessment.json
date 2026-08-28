@@ -1,0 +1,23 @@
+{
+  "pass": true,
+  "avg_score": 2.45,
+  "min_score": 1.8,
+  "dimensions": {
+    "UX-01": { "score": 2.2, "note": "SDL stub draws grid + selection rect; full li-render wgpu grid pending." },
+    "UX-02": { "score": 2.8, "note": "Native play/pause RT + tick (+0.01 playhead), play_btn_rect paint, timeline compose smoke." },
+    "UX-03": { "score": 2.8, "note": "StudioInspectorField rows (2+) when selected; empty delegates to UX-07 helper; inspector smoke." },
+    "UX-04": { "score": 2.5, "note": "Native palette compose on shell, Cmd+K toggle, overlay paint + smokes; stub results, no search latency." },
+    "UX-05": { "score": 3, "note": "Li studio_profile_* + compose topbar chip paint; TOML line parse stub; no full sim stepping." },
+    "UX-06": { "score": 2.3, "note": "Agent chrome composables + Cursor/Linear SOTA refs in harness." },
+    "UX-07": { "score": 3, "note": "Native empty inspector/viewport composables, distinct paint cmd counts, shell wiring + smoke." },
+    "UX-08": { "score": 2, "note": "Agent error mock; GPU fail strip documented." },
+    "UX-09": { "score": 3.0, "note": "SDL/mock InputState probe + studio-shell-sdl-tick.sh; bridge doc; studio_keyboard_input_json.li." },
+    "UX-10": { "score": 3.2, "note": "focus_ring token + studio_paint_focus_ring IR; contrast stub; inspector focus smoke; axe CI follow-up." },
+    "UX-11": { "score": 3, "note": "StudioShellLoadingState compose + 4 fill skeleton cmds; loading cmd_count > idle smoke." },
+    "UX-12": { "score": 2.2, "note": "Mock banner + capture meta label SDL stub vs product." },
+    "UX-13": { "score": 2.5, "note": "Bench JSON honest simulate; native_pixels flag in capture meta when SDL runs." },
+    "UX-14": { "score": 2.8, "note": "HTML labeled mock; native path separate from marketing; no false native claim when SDL skips." }
+  },
+  "honest_native_viewport": false,
+  "notes": "UX-02 playback + UX-03 inspector fields closed in li-studio (li_std_studio_version 5). Smokes: studio_timeline_playback.li, studio_inspector_fields.li."
+}

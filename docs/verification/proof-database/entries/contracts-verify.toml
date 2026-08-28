@@ -1,0 +1,66 @@
+version = 1
+
+[[entry]]
+id = "P-linalg-dot4-int-closed"
+kind = "lemma"
+field = "linalg"
+gap_id = "G-math"
+statement = "Fixed 4-term int dot closed witness."
+proof_status = "proved"
+lean_module = "build/generated/AutoVC.lean"
+li_specimen = "li-tests/contracts_verify/linalg_dot4_int_closed.li"
+last_verified_lic_commit = "main"
+
+[[entry]]
+id = "P-linalg-dot4-int-loop-open"
+kind = "lemma"
+field = "linalg"
+gap_id = "G-math"
+statement = "Loop dot4 int closed."
+proof_status = "proved"
+lean_module = "build/generated/AutoVC.lean"
+li_specimen = "li-tests/contracts_verify/linalg_dot4_int_loop_open.li"
+last_verified_lic_commit = "main"
+
+[[entry]]
+id = "P-float-sqrt-open-bound"
+kind = "lemma"
+field = "math"
+gap_id = "G-math"
+statement = "sqrt_open_bound."
+proof_status = "proved"
+lean_module = "docs/semantics/Discharge.lean"
+li_specimen = "li-tests/contracts_verify/sqrt_open_bound.li"
+last_verified_lic_commit = "main"
+
+[[entry]]
+id = "G-lean-autovc-strict"
+kind = "lemma"
+field = "compiler"
+gap_id = "G-lean"
+statement = "No open Prop without _proved."
+proof_status = "open"
+lean_module = "build/generated/AutoVC.lean"
+li_specimen = "li-tests/contracts_verify/discharge_trivial.li"
+last_verified_lic_commit = "main"
+
+[[entry]]
+id = "P-discharge-trivial"
+kind = "lemma"
+field = "compiler"
+gap_id = "G-lean"
+statement = "Trivial discharge."
+proof_status = "proved"
+lean_module = "build/generated/AutoVC.lean"
+li_specimen = "li-tests/contracts_verify/discharge_trivial.li"
+last_verified_lic_commit = "main"
+
+[[entry]]
+id = "A-trusted-getelem"
+kind = "axiom"
+field = "trust"
+gap_id = "G-trust"
+statement = "typing_getElem trusted."
+proof_status = "axiomatic"
+lean_module = "docs/semantics/Core.lean"
+last_verified_lic_commit = "main"

@@ -1,0 +1,25 @@
+import studio
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if li_std_studio_version() < 6:
+    return 1
+  var layout: StudioShellLayout = layout_studio_shell_adaptive(1280.0, 720.0)
+  var empty_insp: StudioInspectorCompose = studio_compose_empty_inspector(layout)
+  if empty_insp.empty_visible != 1:
+    return 2
+  if studio_paint_inspector_cmds(0) == studio_paint_inspector_cmds(1):
+    return 3
+  var shell: StudioShellCompose = studio_compose_shell(1280.0, 720.0, 0, 0, 0)
+  if shell.inspector.empty_visible != 1:
+    return 4
+  if shell.viewport_empty.empty_visible != 1:
+    return 5
+  var frame: PaintFrame = paint_frame_new()
+  studio_paint_inspector(frame, shell.inspector)
+  if frame.cmd_count != studio_paint_inspector_empty_cmds():
+    return 6
+  return 0

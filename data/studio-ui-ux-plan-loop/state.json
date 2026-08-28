@@ -1,0 +1,81 @@
+{
+  "completed_ids": [
+    "studio-ux-00-design-system",
+    "studio-ux-01-ui-composables",
+    "studio-ux-02-gui-viewport-stub",
+    "studio-ux-03-render-wgpu-smoke",
+    "studio-ux-04-particle-display",
+    "studio-ux-05-studio-compose",
+    "studio-ux-06-agent-chrome",
+    "studio-ux-07-capture-harness",
+    "studio-ux-08-bench-registry",
+    "studio-ux-09-memory-budget",
+    "studio-ux-10-native-capture"
+  ],
+  "iterations": 9,
+  "history": [
+    {
+      "at": "2026-05-24T14:53:41+00:00",
+      "todo_id": "studio-ux-01-ui-composables",
+      "agent_exit": 0,
+      "capture_exit": 0,
+      "gates_ok": true,
+      "ux_pass": true,
+      "note": "recovered after persist fix; work on 6218d35"
+    },
+    {
+      "at": "2026-05-24T18:23:10+00:00",
+      "todo_id": "studio-ux-02-gui-viewport-stub",
+      "agent_exit": 0,
+      "capture_exit": 0,
+      "gates_ok": true,
+      "ux_pass": true,
+      "note": "li-gui viewport + panel switch hooks; gates/capture/bench verified"
+    },
+    {
+      "at": "2026-05-24T19:36:50+00:00",
+      "todo_id": "studio-ux-03-render-wgpu-smoke",
+      "agent_exit": 0,
+      "capture_exit": 0,
+      "gates_ok": true,
+      "ux_pass": true,
+      "note": "li-gpu wgpu smoke + li-render FPS counter bench hooks"
+    },
+    {
+      "at": "2026-05-24T21:42:00+00:00",
+      "todo_id": "studio-ux-03-render-wgpu-smoke",
+      "agent_exit": 0,
+      "capture_exit": 0,
+      "gates_ok": true,
+      "ux_pass": true,
+      "note": "re-verified gates/capture; issue #181 comment"
+    },
+    {
+      "at": "2026-05-24T23:05:00+00:00",
+      "todo_id": "studio-ux-04-particle-display",
+      "agent_exit": 0,
+      "capture_exit": 0,
+      "gates_ok": true,
+      "ux_pass": true,
+      "note": "li-scene MD tiers + li-render scene path; issue #181 comment"
+    },
+    {
+      "at": "2026-05-25T00:42:54+00:00",
+      "todo_id": "studio-ux-04-particle-display",
+      "agent_exit": 0,
+      "capture_exit": 0,
+      "gates_ok": true,
+      "ux_pass": true,
+      "note": "re-verified gates/capture/bench; issue #181 comment 4530713964"
+    },
+    {
+      "at": "2026-05-25T02:14:50+00:00",
+      "todo_id": "studio-ux-06-agent-chrome",
+      "agent_exit": 0,
+      "capture_exit": 0,
+      "gates_ok": true,
+      "ux_pass": true,
+      "note": "StudioAgentChromeCompose task states + cancel + error strip; issue #181"
+    }
+  ]
+}

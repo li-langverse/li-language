@@ -1,0 +1,26 @@
+# Probabilistic IV collision bound under OsRngUniform / PrngSeed (rng-concepts + prob-hoare).
+
+def mc_iv_collision_os() -> int
+  requires true
+  ensures result == 0
+  prob_ensures iv_collision < 1e-3
+    given OsRngUniform
+    samples 8000
+=
+  return 0
+
+def mc_iv_collision_prng_seed() -> int
+  requires true
+  ensures result == 0
+  prob_ensures iv_collision < 1e-3
+    given PrngSeed
+    samples 8000
+=
+  return 0
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return mc_iv_collision_os() + mc_iv_collision_prng_seed()

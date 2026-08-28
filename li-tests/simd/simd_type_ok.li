@@ -1,0 +1,9 @@
+def simd_locals() -> float
+  requires true
+  ensures result == 8.0
+  decreases 0
+=
+  var a: simd[f64, 4] = __li_simd_splat_f64(1.0)
+  var b: simd[f64, 4] = __li_simd_splat_f64(2.0)
+  var c: simd[f64, 4] = __li_simd_mul_f64(a, b)
+  return __li_horiz_sum_f64(c)

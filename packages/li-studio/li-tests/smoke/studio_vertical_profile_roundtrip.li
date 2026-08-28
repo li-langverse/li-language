@@ -1,0 +1,64 @@
+import studio
+
+# Per-vertical compose roundtrip — every world-studio-vision runtime profile.
+
+def studio_vertical_compose_ok(profile_id: int, expect_tag_h: float) -> int
+  requires studio_profile_id_valid(profile_id) == 1
+  ensures result >= 0
+  decreases profile_id
+=
+  var compose: StudioShellCompose = studio_compose_shell_profile(1280.0, 720.0, 0, 0, profile_id)
+  if studio_compose_ok(compose) != 1:
+    return 1
+  if studio_profile_id_valid(compose.config.active_profile) != 1:
+    return 2
+  var frame: PaintFrame = paint_frame_new()
+  var topbar: Rect = compose.layout.topbar
+  var prof: int = compose.config.active_profile
+  studio_paint_topbar_profile(frame, topbar, prof)
+  if frame.last_rect.h != expect_tag_h:
+    return 3
+  return 0
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if li_std_studio_version() < 4:
+    return 1
+  var game: int = studio_profile_game()
+  var n0: int = studio_vertical_compose_ok(game, studio_profile_paint_tag_h(game))
+  if n0 != 0:
+    return 10 + n0
+  var rl: int = studio_profile_sim_rl()
+  var n1: int = studio_vertical_compose_ok(rl, studio_profile_paint_tag_h(rl))
+  if n1 != 0:
+    return 20 + n1
+  var auto: int = studio_profile_sim_automotive()
+  var n2: int = studio_vertical_compose_ok(auto, studio_profile_paint_tag_h(auto))
+  if n2 != 0:
+    return 30 + n2
+  var rob: int = studio_profile_sim_robotics()
+  var n3: int = studio_vertical_compose_ok(rob, studio_profile_paint_tag_h(rob))
+  if n3 != 0:
+    return 40 + n3
+  var add: int = studio_profile_sim_additive()
+  var n4: int = studio_vertical_compose_ok(add, studio_profile_paint_tag_h(add))
+  if n4 != 0:
+    return 50 + n4
+  var sci: int = studio_profile_sim_scientific()
+  var n5: int = studio_vertical_compose_ok(sci, studio_profile_paint_tag_h(sci))
+  if n5 != 0:
+    return 60 + n5
+  var drug: int = studio_profile_sim_drug_design()
+  var n6: int = studio_vertical_compose_ok(drug, studio_profile_paint_tag_h(drug))
+  if n6 != 0:
+    return 70 + n6
+  var rl_name: int = studio_profile_from_name("sim_rl")
+  if rl_name != studio_profile_sim_rl():
+    return 80
+  var parsed: int = studio_parse_toml_profile_line("profile = sim_additive")
+  if parsed != studio_profile_sim_additive():
+    return 81
+  return 0

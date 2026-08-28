@@ -1,0 +1,17 @@
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var a: float32 = 1.0f32
+  var b: float32 = 2.0f32
+  var c: float32 = a + b
+  if c < 3.0f32:
+    return 1
+  var i: int32 = 42i32
+  var j: uint8 = 255u8
+  if i != 42i32:
+    return 2
+  if j != 255u8:
+    return 3
+  return 0

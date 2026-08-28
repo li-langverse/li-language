@@ -1,0 +1,7 @@
+# Bench harness hook — PH-HW HW-0 device probe (scripts/bench-studio-viewport-perf.sh)
+[device_probe]
+hook_version = 1
+package = "lig"
+backend_auto = true
+native_surface = false
+notes = "Runtime li_rt_lig_* probe; surface_ok from lig_present_surface_ok()"

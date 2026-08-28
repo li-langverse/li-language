@@ -1,0 +1,135 @@
+{
+  "version": 1,
+  "generated_at": "2026-05-25T11:32:05Z",
+  "lic_commit": "a8882a8d48af939601134da7a2c81d08fe514ee7",
+  "lic_binary": null,
+  "policy": "> **Policy:** failure/open = gap to investigate \u2014 not Li wrongness.",
+  "entry_count": 12,
+  "summary": {
+    "skipped": 11,
+    "axiomatic": 1,
+    "mismatch_catalog": 0
+  },
+  "entries": [
+    {
+      "id": "P-linalg-dot4-int-closed",
+      "kind": "lemma",
+      "proof_status_catalog": "proved",
+      "li_specimen": "li-tests/contracts_verify/linalg_dot4_int_closed.li",
+      "gap_id": "G-math",
+      "status": "skipped",
+      "open_goals": null,
+      "discrepancy_notes": "lic build skipped."
+    },
+    {
+      "id": "P-linalg-dot4-int-loop-open",
+      "kind": "lemma",
+      "proof_status_catalog": "proved",
+      "li_specimen": "li-tests/contracts_verify/linalg_dot4_int_loop_open.li",
+      "gap_id": "G-math",
+      "status": "skipped",
+      "open_goals": null,
+      "discrepancy_notes": "lic build skipped."
+    },
+    {
+      "id": "P-float-sqrt-open-bound",
+      "kind": "lemma",
+      "proof_status_catalog": "proved",
+      "li_specimen": "li-tests/contracts_verify/sqrt_open_bound.li",
+      "gap_id": "G-math",
+      "status": "skipped",
+      "open_goals": null,
+      "discrepancy_notes": "lic build skipped."
+    },
+    {
+      "id": "G-lean-autovc-strict",
+      "kind": "lemma",
+      "proof_status_catalog": "open",
+      "li_specimen": "li-tests/contracts_verify/discharge_trivial.li",
+      "gap_id": "G-lean",
+      "status": "skipped",
+      "open_goals": null,
+      "discrepancy_notes": "lic build skipped."
+    },
+    {
+      "id": "P-discharge-trivial",
+      "kind": "lemma",
+      "proof_status_catalog": "proved",
+      "li_specimen": "li-tests/contracts_verify/discharge_trivial.li",
+      "gap_id": "G-lean",
+      "status": "skipped",
+      "open_goals": null,
+      "discrepancy_notes": "lic build skipped."
+    },
+    {
+      "id": "A-trusted-getelem",
+      "kind": "axiom",
+      "proof_status_catalog": "axiomatic",
+      "li_specimen": null,
+      "gap_id": "G-trust",
+      "status": "axiomatic",
+      "open_goals": null,
+      "discrepancy_notes": "Axiomatic \u2014 not user-code wrongness."
+    },
+    {
+      "id": "P-AX-CONS-001",
+      "kind": "axiom",
+      "proof_status_catalog": "open",
+      "li_specimen": "proof-db/physics/axioms/conservation.li",
+      "gap_id": "G-physics",
+      "status": "skipped",
+      "open_goals": null,
+      "discrepancy_notes": "lic build skipped."
+    },
+    {
+      "id": "P-AX-CONS-002",
+      "kind": "axiom",
+      "proof_status_catalog": "open",
+      "li_specimen": "proof-db/physics/axioms/conservation.li",
+      "gap_id": "G-physics",
+      "status": "skipped",
+      "open_goals": null,
+      "discrepancy_notes": "lic build skipped."
+    },
+    {
+      "id": "P-AX-MECH-001",
+      "kind": "axiom",
+      "proof_status_catalog": "open",
+      "li_specimen": "proof-db/physics/axioms/newton_laws.li",
+      "gap_id": "G-physics",
+      "status": "skipped",
+      "open_goals": null,
+      "discrepancy_notes": "lic build skipped."
+    },
+    {
+      "id": "P-AX-MECH-002",
+      "kind": "axiom",
+      "proof_status_catalog": "open",
+      "li_specimen": "proof-db/physics/axioms/newton_laws.li",
+      "gap_id": "G-physics",
+      "status": "skipped",
+      "open_goals": null,
+      "discrepancy_notes": "lic build skipped."
+    },
+    {
+      "id": "P-AX-MECH-003",
+      "kind": "axiom",
+      "proof_status_catalog": "open",
+      "li_specimen": "proof-db/physics/axioms/newton_laws.li",
+      "gap_id": "G-physics",
+      "status": "skipped",
+      "open_goals": null,
+      "discrepancy_notes": "lic build skipped."
+    },
+    {
+      "id": "P-float-sqrt-open-bound",
+      "kind": "lemma",
+      "proof_status_catalog": "proved",
+      "li_specimen": "li-tests/contracts_verify/sqrt_open_bound.li",
+      "gap_id": "G-lean",
+      "status": "skipped",
+      "open_goals": null,
+      "discrepancy_notes": "lic build skipped."
+    }
+  ]
+}

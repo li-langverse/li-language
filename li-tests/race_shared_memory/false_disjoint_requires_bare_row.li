@@ -1,0 +1,12 @@
+
+
+def weak_bare_row_witness(grid: var array[8, array[8, f64]]) -> unit
+  requires true
+  ensures true
+  decreases 0
+=
+  parallel for i in 0..<8
+    requires disjoint_row
+    decreases 8 - i
+  =
+    grid[i][0] = 1.0

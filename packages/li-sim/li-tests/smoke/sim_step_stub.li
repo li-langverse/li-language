@@ -1,0 +1,36 @@
+import sim
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var sess: SimSessionStub = sim_session_stub_default()
+  if sim_reset(sess) != sim_status_ok():
+    return 1
+  if sess.tick != 0:
+    return 2
+  if sim_step(sess, 0.016) != sim_status_ok():
+    return 3
+  if sess.tick != 1:
+    return 4
+  if sim_step(sess, 0.016) != sim_status_ok():
+    return 5
+  if sess.tick != 2:
+    return 6
+  if sim_step(sess, 0.0) != sim_status_invalid_dt():
+    return 7
+  if sess.tick != 2:
+    return 8
+  sim_session_apply_studio_profile(2, sess)
+  if sim_reset(sess) != sim_status_ok():
+    return 9
+  if sess.tick != 0:
+    return 10
+  if sess.sim_contract_id != sim_contract_sim_rl():
+    return 11
+  if sim_step(sess, 0.02) != sim_status_ok():
+    return 12
+  if sess.tick != 1:
+    return 13
+  return 0

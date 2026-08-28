@@ -1,0 +1,6 @@
+@vectorized(lanes=8)
+def bad() -> int
+  requires true
+  ensures result == 0
+=
+  return 0

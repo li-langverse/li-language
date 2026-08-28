@@ -1,0 +1,209 @@
+{
+  "version": 1,
+  "generated": "2026-05-25",
+  "taxonomy": [
+    "missing_lemma",
+    "open_vc",
+    "spec_drift",
+    "trusted_axiom",
+    "hardware_axiom"
+  ],
+  "count": 15,
+  "discrepancies": [
+    {
+      "id": "disc-P-float-sqrt-open-bound-missing-lean",
+      "kind": "missing_lemma",
+      "gap_id": "G-lean",
+      "backlog_id": "P-float",
+      "summary": "`Li.Discharge.sqrt_open_bound_spec` missing",
+      "proof_db_ref": "proof-db/lemmas/P-float-sqrt-open-bound.toml",
+      "reference_ref": "Discharge.lean",
+      "evidence": [
+        "Li.Discharge.sqrt_open_bound_spec"
+      ],
+      "resolution": "open"
+    },
+    {
+      "id": "disc-g-hw-float-model",
+      "kind": "hardware_axiom",
+      "gap_id": "G-hw",
+      "backlog_id": "P-float",
+      "summary": "Li float model not IEEE ULP",
+      "proof_db_ref": "provability-gaps.md",
+      "reference_ref": "fp-numerical-stability.md",
+      "evidence": [
+        "G-hw"
+      ],
+      "resolution": "wontfix"
+    },
+    {
+      "id": "disc-g-lean-universal-autovc-open",
+      "kind": "open_vc",
+      "gap_id": "G-lean",
+      "backlog_id": "P-meta",
+      "summary": "AutoVC open outside closed corpus.",
+      "proof_db_ref": "check-autovc-open-goals.sh",
+      "reference_ref": "AutoVC.lean",
+      "evidence": [
+        "verify_open_ok"
+      ],
+      "resolution": "intentional"
+    },
+    {
+      "id": "disc-g-par-lean-disjoint-missing",
+      "kind": "missing_lemma",
+      "gap_id": "G-par",
+      "backlog_id": "P-par",
+      "summary": "G-par policy_module heuristics; no disjoint_par_spec in Discharge.",
+      "proof_db_ref": "compiler/policy/policy_module.cpp",
+      "reference_ref": "provability-gaps.md",
+      "evidence": [
+        "race_shared_memory/"
+      ],
+      "resolution": "pending"
+    },
+    {
+      "id": "disc-linalg-loop-manifest-drift",
+      "kind": "spec_drift",
+      "gap_id": "G-vc",
+      "backlog_id": "P-linalg",
+      "summary": "loop verify_ok vs prove_lean_ok.",
+      "proof_db_ref": "linalg_dot4_int_loop_open.li",
+      "reference_ref": "dot4_int_loop_eval_spec",
+      "evidence": [
+        "manifest.toml"
+      ],
+      "resolution": "intentional"
+    },
+    {
+      "id": "disc-mat2-trusted-vs-mir",
+      "kind": "spec_drift",
+      "gap_id": "G-trust",
+      "backlog_id": "P-linalg",
+      "summary": "mat2 eval vs MIR @.",
+      "proof_db_ref": "provability-gaps.md",
+      "reference_ref": "mat2_at2_eval",
+      "evidence": [
+        "G-trust"
+      ],
+      "resolution": "pending"
+    },
+    {
+      "id": "disc-sqrt-open-bound-missing-spec",
+      "kind": "missing_lemma",
+      "gap_id": "G-lean",
+      "backlog_id": "P-float",
+      "summary": "TOML cites sqrt_open_bound_spec; Discharge has sqrt_open_bound_placeholder.",
+      "proof_db_ref": "proof-db/lemmas/P-float-sqrt-open-bound.toml",
+      "reference_ref": "Discharge.lean:sqrt_open_bound_placeholder",
+      "evidence": [
+        "sqrt_open_bound.li"
+      ],
+      "resolution": "open"
+    },
+    {
+      "id": "disc-std-triangle-ineq-float",
+      "kind": "hardware_axiom",
+      "gap_id": "G-hw",
+      "backlog_id": "P-float",
+      "summary": "Float triangle sorry",
+      "proof_db_ref": "index",
+      "reference_ref": "ProofDB.lean",
+      "evidence": [
+        "sorry"
+      ],
+      "resolution": "wontfix"
+    },
+    {
+      "id": "disc-std_add_comm-open-vc",
+      "kind": "open_vc",
+      "gap_id": null,
+      "backlog_id": null,
+      "summary": "std_add_comm proved vs open",
+      "proof_db_ref": "index",
+      "reference_ref": "proof-db/lean/ProofDB.lean:std_add_comm_int",
+      "evidence": [
+        "Li.ProofDB.std_add_comm_int"
+      ],
+      "resolution": "intentional"
+    },
+    {
+      "id": "disc-std_mul_assoc-open-vc",
+      "kind": "open_vc",
+      "gap_id": null,
+      "backlog_id": null,
+      "summary": "std_mul_assoc proved vs open",
+      "proof_db_ref": "index",
+      "reference_ref": "proof-db/lean/ProofDB.lean:std_mul_assoc_int",
+      "evidence": [
+        "Li.ProofDB.std_mul_assoc_int"
+      ],
+      "resolution": "intentional"
+    },
+    {
+      "id": "disc-trusted-IO",
+      "kind": "trusted_axiom",
+      "gap_id": "G-trust",
+      "backlog_id": null,
+      "summary": "Li.Trusted.IO",
+      "proof_db_ref": "trusted.lean",
+      "reference_ref": "docs/semantics/trusted.lean:IO",
+      "evidence": [
+        "IO"
+      ],
+      "resolution": "wontfix"
+    },
+    {
+      "id": "disc-trusted-Net",
+      "kind": "trusted_axiom",
+      "gap_id": "G-trust",
+      "backlog_id": null,
+      "summary": "Li.Trusted.Net",
+      "proof_db_ref": "trusted.lean",
+      "reference_ref": "docs/semantics/trusted.lean:Net",
+      "evidence": [
+        "Net"
+      ],
+      "resolution": "wontfix"
+    },
+    {
+      "id": "disc-trusted-poll_event",
+      "kind": "trusted_axiom",
+      "gap_id": "G-trust",
+      "backlog_id": null,
+      "summary": "Li.Trusted.poll_event",
+      "proof_db_ref": "trusted.lean",
+      "reference_ref": "docs/semantics/trusted.lean:poll_event",
+      "evidence": [
+        "poll_event"
+      ],
+      "resolution": "wontfix"
+    },
+    {
+      "id": "disc-trusted-present_frame",
+      "kind": "trusted_axiom",
+      "gap_id": "G-trust",
+      "backlog_id": null,
+      "summary": "Li.Trusted.present_frame",
+      "proof_db_ref": "trusted.lean",
+      "reference_ref": "docs/semantics/trusted.lean:present_frame",
+      "evidence": [
+        "present_frame"
+      ],
+      "resolution": "wontfix"
+    },
+    {
+      "id": "disc-trusted-tcp_accept_stub",
+      "kind": "trusted_axiom",
+      "gap_id": "G-trust",
+      "backlog_id": null,
+      "summary": "Li.Trusted.tcp_accept_stub",
+      "proof_db_ref": "trusted.lean",
+      "reference_ref": "docs/semantics/trusted.lean:tcp_accept_stub",
+      "evidence": [
+        "tcp_accept_stub"
+      ],
+      "resolution": "wontfix"
+    }
+  ]
+}

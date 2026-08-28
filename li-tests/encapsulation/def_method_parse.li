@@ -1,0 +1,19 @@
+type Body = object
+  public mass: float
+
+def Body_step(self: var Body, dt: float) -> unit
+  requires dt > 0.0
+  ensures true
+  decreases 0
+=
+  return
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var b: Body
+  b.mass = 1.0
+  b.step(0.01)
+  return 0

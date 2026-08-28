@@ -1,0 +1,16 @@
+import http
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if route_key_valid("GET /health") != 1:
+    return 1
+  if route_key_valid("POST /v1/*") != 1:
+    return 2
+  if route_key_valid("GET /../secret") != 0:
+    return 3
+  if route_key_valid("bad") != 0:
+    return 4
+  return 0

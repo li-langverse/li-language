@@ -1,0 +1,30 @@
+---
+description: When GHA minutes are exhausted, use scripts/local-ci.sh before merging
+alwaysApply: true
+---
+
+# Local Actions (lic)
+
+When GitHub Actions is unavailable or out of minutes:
+
+```bash
+./scripts/local-ci.sh           # native
+./scripts/local-ci.sh --docker  # Ubuntu 24.04 parity with GHA
+```
+
+From **benchmarks** sibling repo:
+
+```bash
+./scripts/run-local-actions.sh lic
+python3 scripts/local-ci-sweep.py --repo lic --pr N
+```
+
+Merge gate in benchmarks reads `data/latest/local-ci-results.json`. Do not merge without GHA green **or** a fresh local-ci pass.
+
+See also `../benchmarks/.cursor/rules/li-local-actions-quota.mdc` when both repos are checked out.
+
+**Skill:** `run-local-ci-gha-quota` (agent-kit / `li-local-ci`) — full commands for `li-local-ci run-pr`, sweep, and merge gate.
+
+**Shell:** See `li-shell-visibility.mdc` — no redirect-and-grep for local CI; run foreground with `echo "… exit=$?"`.
+
+**Skill:** `run-local-pages-benchmarks` — refresh https://li-langverse.github.io/benchmarks/ and roadmap overview without Actions (`benchmarks/scripts/refresh-live-sites.sh`).

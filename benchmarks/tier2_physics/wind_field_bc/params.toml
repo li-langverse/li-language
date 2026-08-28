@@ -1,0 +1,7 @@
+[grid]
+nx = 64
+ny = 64
+
+[sim]
+dt = 0.01
+steps = 1000

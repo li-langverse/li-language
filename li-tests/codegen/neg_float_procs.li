@@ -1,0 +1,25 @@
+# Regression: the self-hosted MIR walker's float-name table must be per-proc.
+# `x` is a float param in negf and an int param in negi — negi must lower
+# `-x` to an int BinOpInt, not a float BinOpFloat (the ftok table leaked the
+# float param across procs). Also covers float-literal negation (-1.5).
+def negf(x: float) -> float
+  requires true
+  ensures result == 0.0 or result == 1.0
+  decreases 0
+=
+  var y: float = -x
+  return y
+
+def neglit() -> float
+  requires true
+  ensures result == -1.5
+  decreases 0
+=
+  return -1.5
+
+def negi(x: int) -> int
+  requires true
+  ensures result >= 0
+  decreases 0
+=
+  return -x

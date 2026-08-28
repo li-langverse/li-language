@@ -1,0 +1,21 @@
+[package]
+name = "li-ui"
+version = "0.1.0"
+edition = "2026"
+license = "Apache-2.0 OR MIT"
+description = "Li UI types and frame hooks for games and simulation tools"
+
+[dependencies]
+li-math = { path = "../li-math" }
+
+[package.metadata.li]
+github_repo = "li-ui"
+import_name = "ui"
+min_lic = "0.1.0"
+maintainer = "li-langverse"
+pkg_id = "PKG-li-ui"
+
+[package.repository]
+url = "https://github.com/li-langverse/li-ui"
+documentation = "https://li-langverse.github.io/li-language/ecosystem/li-ui/"
+changelog = "https://github.com/li-langverse/li-ui/blob/main/CHANGELOG.md"

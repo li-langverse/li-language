@@ -1,0 +1,6 @@
+def main() -> int
+  requires true
+  ensures result == 1024
+  decreases 0
+=
+  return 2 ** 10

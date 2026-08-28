@@ -1,0 +1,3 @@
+# proposition must be a bool expression — lic check must reject
+
+theorem not_a_prop(a: float, b: float) : a + b

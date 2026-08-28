@@ -1,0 +1,7 @@
+{"version":1,"discrepancies":[
+{"id":"disc-sqrt-open-bound-missing-spec","kind":"missing_lemma","gap_id":"G-lean","backlog_id":"P-float","summary":"TOML cites sqrt_open_bound_spec; Discharge has sqrt_open_bound_placeholder.","proof_db_ref":"proof-db/lemmas/P-float-sqrt-open-bound.toml","reference_ref":"Discharge.lean:sqrt_open_bound_placeholder","evidence":["sqrt_open_bound.li"],"resolution":"open"},
+{"id":"disc-g-par-lean-disjoint-missing","kind":"missing_lemma","gap_id":"G-par","backlog_id":"P-par","summary":"G-par policy_module heuristics; no disjoint_par_spec in Discharge.","proof_db_ref":"compiler/policy/policy_module.cpp","reference_ref":"provability-gaps.md","evidence":["race_shared_memory/"],"resolution":"pending"},
+{"id":"disc-g-lean-universal-autovc-open","kind":"open_vc","gap_id":"G-lean","backlog_id":"P-meta","summary":"AutoVC open outside closed corpus.","proof_db_ref":"check-autovc-open-goals.sh","reference_ref":"AutoVC.lean","evidence":["verify_open_ok"],"resolution":"intentional"},
+{"id":"disc-linalg-loop-manifest-drift","kind":"spec_drift","gap_id":"G-vc","backlog_id":"P-linalg","summary":"loop verify_ok vs prove_lean_ok.","proof_db_ref":"linalg_dot4_int_loop_open.li","reference_ref":"dot4_int_loop_eval_spec","evidence":["manifest.toml"],"resolution":"intentional"},
+{"id":"disc-mat2-trusted-vs-mir","kind":"spec_drift","gap_id":"G-trust","backlog_id":"P-linalg","summary":"mat2 eval vs MIR @.","proof_db_ref":"provability-gaps.md","reference_ref":"mat2_at2_eval","evidence":["G-trust"],"resolution":"pending"}
+]}

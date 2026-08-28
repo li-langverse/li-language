@@ -1,0 +1,61 @@
+def studio_compose_shell(w: float, h: float, active_dock_slot: int, has_selection: int, scene_entity_count: int) -> StudioShellCompose
+  requires w > 0.0
+  requires h > 0.0
+  requires active_dock_slot >= 0
+  requires active_dock_slot < studio_dock_slot_count()
+  requires has_selection >= 0
+  requires has_selection <= 1
+  requires scene_entity_count >= 0
+  ensures result.layout.viewport_w > 0.0
+  ensures result.dock.active_slot == active_dock_slot
+  ensures result.scene_entity_count == scene_entity_count
+  decreases active_dock_slot
+=
+  var w0: float = w
+  var h0: float = h
+  var slot0: int = active_dock_slot
+  var sel0: int = has_selection
+  var scene0: int = scene_entity_count
+  var out: StudioShellCompose
+  out.layout = layout_studio_shell_adaptive(w0, h0)
+  out.scene_entity_count = scene0
+  out.dock.rect = out.layout.dock
+  out.dock.slot_count = studio_dock_slot_count()
+  out.dock.active_slot = slot0
+  out.dock.active_slot_rect = studio_dock_slot_rect_at(out.layout.dock.x, out.layout.dock.y, out.layout.dock.w, out.layout.dock.h, slot0)
+  out.timeline.rect = out.layout.timeline
+  out.timeline.track_rect = studio_timeline_track_rect_at(out.layout.timeline.x, out.layout.timeline.y, out.layout.timeline.w, out.layout.timeline.h)
+  out.timeline.playhead_rect = studio_timeline_playhead_rect_at(out.timeline.track_rect.x, out.timeline.track_rect.y, out.timeline.track_rect.w, out.timeline.track_rect.h, studio_timeline_playhead_pct())
+  out.timeline.playhead_pct = studio_timeline_playhead_pct()
+  out.inspector.rect = out.layout.inspector
+  out.inspector.header_rect = studio_inspector_header_rect_at(out.layout.inspector.x, out.layout.inspector.y, out.layout.inspector.w)
+  if sel0 == 0:
+    out.inspector.has_selection = 0
+    out.inspector.field_rows = 0
+    out.inspector.empty_visible = 1
+    out.inspector.hint_line1_rect = studio_inspector_empty_hint_line_rect_at(out.layout.inspector.x, out.layout.inspector.y, out.layout.inspector.w, 0)
+    out.inspector.hint_line2_rect = studio_inspector_empty_hint_line_rect_at(out.layout.inspector.x, out.layout.inspector.y, out.layout.inspector.w, 1)
+    out.inspector.hint_box_rect = studio_inspector_empty_hint_box_rect_at(out.layout.inspector.x, out.layout.inspector.y, out.layout.inspector.w, out.layout.inspector.h)
+    out.inspector.field_row_rect = rect_make(0.0, 0.0, 0.0, 0.0)
+  if sel0 == 1:
+    out.inspector.has_selection = 1
+    out.inspector.field_rows = studio_inspector_field_rows()
+    out.inspector.empty_visible = 0
+    out.inspector.hint_line1_rect = rect_make(0.0, 0.0, 0.0, 0.0)
+    out.inspector.hint_line2_rect = rect_make(0.0, 0.0, 0.0, 0.0)
+    out.inspector.hint_box_rect = rect_make(0.0, 0.0, 0.0, 0.0)
+    out.inspector.field_row_rect = studio_inspector_field_row_rect_at(out.layout.inspector.x, out.layout.inspector.y, out.layout.inspector.w)
+  out.viewport_empty.frame_rect = out.layout.viewport
+  if scene0 == 0:
+    out.viewport_empty.empty_visible = 1
+    out.viewport_empty.title_rect = studio_viewport_empty_title_rect_at(out.layout.viewport.x, out.layout.viewport.y, out.layout.viewport.w, out.layout.viewport.h)
+    out.viewport_empty.cta_rect = studio_viewport_empty_cta_rect_at(out.layout.viewport.x, out.layout.viewport.y, out.layout.viewport.w, out.layout.viewport.h)
+  if scene0 > 0:
+    out.viewport_empty.empty_visible = 0
+    out.viewport_empty.title_rect = rect_make(0.0, 0.0, 0.0, 0.0)
+    out.viewport_empty.cta_rect = rect_make(0.0, 0.0, 0.0, 0.0)
+  out.agent = studio_compose_agent_chrome(out.layout, studio_agent_task_idle(), studio_agent_context_none())
+  out.palette = studio_compose_palette(out.layout.viewport_w, out.layout.viewport_h, studio_palette_closed_flag())
+  out.panel = gui_panel_state_new()
+  return out
+

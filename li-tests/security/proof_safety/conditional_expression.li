@@ -1,0 +1,18 @@
+# Security: conditional expressions must parse and typecheck without memory issues.
+def max(a: int, b: int) -> int
+  requires true
+  ensures result >= a and result >= b
+=
+  return a if a > b else b
+
+def abs_val(x: int) -> int
+  requires true
+  ensures result >= 0
+=
+  return x if x >= 0 else -x
+
+def sign(x: int) -> int
+  requires true
+  ensures -1 <= result and result <= 1
+=
+  return 1 if x > 0 else (0 if x == 0 else -1)

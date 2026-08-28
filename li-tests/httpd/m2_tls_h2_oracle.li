@@ -1,0 +1,95 @@
+# M2 scale oracle — TLS1.3 terminate, HTTP/2, WebSocket route, queue, circuit breaker, webhooks.
+import http
+
+extern def li_rt_httpd_tls_enabled() -> int
+  requires true
+  ensures 0 <= result
+  ensures result <= 1
+
+extern def li_rt_httpd_m2_enabled() -> int
+  requires true
+  ensures 0 <= result
+  ensures result <= 1
+
+extern def li_rt_httpd_m2_tls_terminate() -> int
+  requires true
+  ensures 0 <= result
+  ensures result <= 1
+
+extern def li_rt_httpd_m2_http2_enabled() -> int
+  requires true
+  ensures 0 <= result
+  ensures result <= 1
+
+extern def li_rt_httpd_m2_http2_max_streams() -> int
+  requires true
+  ensures 0 <= result
+
+extern def li_rt_httpd_m2_queue_max_depth() -> int
+  requires true
+  ensures 0 <= result
+
+extern def li_rt_httpd_m2_queue_retry_after_sec() -> int
+  requires true
+  ensures 0 <= result
+
+extern def li_rt_httpd_m2_cb_error_threshold() -> int
+  requires true
+  ensures 0 <= result
+
+extern def li_rt_httpd_m2_webhook_allow_count() -> int
+  requires true
+  ensures 0 <= result
+
+extern def li_rt_httpd_route_requires_websocket(route_id: int) -> int
+  requires 0 <= route_id
+  requires route_id <= 64
+  ensures 0 <= result
+  ensures result <= 1
+
+extern def li_rt_httpd_m2_webhook_url_allowed(url: str) -> int
+  requires true
+  ensures 0 <= result
+  ensures result <= 1
+
+extern def li_rt_httpd_m2_selftest() -> int
+  requires true
+  ensures -6 <= result
+  ensures result <= 0
+
+def main() raises IO, Alloc -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var cfg: str = "li-tests/config_desugar/good/m2_agent_scale.toml"
+  if load_routes_from_toml(cfg) != 0:
+    return 1
+  if li_rt_httpd_m2_enabled() != 1:
+    return 2
+  if li_rt_httpd_tls_enabled() != 1:
+    return 3
+  if li_rt_httpd_m2_tls_terminate() != 1:
+    return 4
+  if li_rt_httpd_m2_http2_enabled() != 1:
+    return 5
+  if li_rt_httpd_m2_http2_max_streams() != 128:
+    return 6
+  if li_rt_httpd_m2_queue_max_depth() != 50:
+    return 7
+  if li_rt_httpd_m2_queue_retry_after_sec() != 2:
+    return 8
+  if li_rt_httpd_m2_cb_error_threshold() != 5:
+    return 9
+  if li_rt_httpd_m2_webhook_allow_count() < 1:
+    return 10
+  var rid: int = match_route("GET", "/ws/tools")
+  if rid <= 0:
+    return 11
+  if li_rt_httpd_route_requires_websocket(rid) != 1:
+    return 12
+  if li_rt_httpd_m2_webhook_url_allowed("https://hooks.example.com/v1/callback") != 1:
+    return 13
+  if li_rt_httpd_m2_selftest() != 0:
+    return 14
+  return 0

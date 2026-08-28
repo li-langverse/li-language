@@ -1,0 +1,47 @@
+---
+description: World Studio + Li Engine — unified sim, UX, agents, AMD, chem, voxels
+globs:
+  - docs/game-dev/**
+  - docs/physics/GAME_DEV.md
+  - packages/li-scene/**
+  - packages/li-ui/**
+  - packages/li-physics-*/
+  - packages/li-sim/**
+  - packages/li-chem/**
+  - packages/li-voxel/**
+alwaysApply: false
+---
+
+# Li World Studio & Li Engine
+
+**Canonical:** `docs/game-dev/world-studio-vision.md`  
+**Tracker:** `docs/game-dev/PH-world-studio-program.md`  
+**RFCs:** `docs/game-dev/specs/`
+
+## Syntax
+
+- Use **`def`** for all new APIs in code and docs. Do not document bare **`proc`**.
+- **`extern proc`** only for FFI/runtime stubs (C ABI), with full contracts.
+- Parser may still accept legacy bare `proc` in old trees — reject that syntax in new Studio/game-dev docs and package code.
+- Keep `requires` / `ensures` / `decreases` on every exported `def` and each `extern proc`.
+
+## Product
+
+- **One engine** for game + sim profiles — no CARLA/GROMACS/slicer forks.
+- **Killer UX** (PH-UX): 60 fps, adaptive layouts, export wizards.
+- **Agents:** MCP `li-engine` + `@cursor/sdk`; every path → `lic build`.
+- **GPU:** CUDA + **ROCm/HIP** (no CUDA-only user kernels).
+- **AM:** simulate + **export STL/3MF/G-code** to printers.
+- **Drug design:** Lab-in-the-Loop + `studio.adaptive` + `li-chem` QM.
+- **Publish:** `studio.publish` for paper-ready figures + repro bundles.
+- **Compliance:** CRITICAL tier on `li-chem`, drug, AM export, `lic`.
+
+## Do not
+
+- Dump studio into `lic` compiler.
+- Use `li-demo` for studio features by default.
+- Add second physics engine for RL/sim.
+
+## Phases
+
+PH-GD (editor) → PH-SIM (profiles) → domain packs (ROBO, AM, SCI, DRUG) → PH-QM / PH-VOXEL / PH-PUB in parallel where deps allow.

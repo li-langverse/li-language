@@ -1,0 +1,30 @@
+import gui
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if li_std_gui_version() < 2:
+    return 1
+  var layout: StudioShellLayout = layout_studio_shell_adaptive(1920.0, 1080.0)
+  var vp: ViewportRegion = gui_viewport_region_from_layout(layout)
+  if vp.w <= 0.0:
+    return 2
+  if vp.grid_enabled != 1:
+    return 3
+  if vp.selection_active != 0:
+    return 8
+  var state: GuiPanelState = gui_panel_state_new()
+  var t: PanelSwitchTiming = gui_panel_switch_to(state, studio_region_inspector(), 42.0)
+  if gui_panel_switch_within_budget(t) != 1:
+    return 4
+  var slow: PanelSwitchTiming = gui_panel_switch_to(state, studio_region_timeline(), 150.0)
+  if gui_panel_switch_within_budget(slow) != 0:
+    return 5
+  var frame: PaintFrame = gui_studio_shell_frame(1280.0, 720.0)
+  if frame.cmd_count != paint_studio_shell_chrome_count():
+    return 6
+  if layout_panel_switch_within_budget_ms() != 1:
+    return 7
+  return 0

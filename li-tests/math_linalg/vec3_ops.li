@@ -1,0 +1,27 @@
+type Vec3 = object
+  public x: float
+  public y: float
+  public z: float
+
+def vec3_dot(a: Vec3, b: Vec3) -> float
+  requires true
+  ensures result == a.x * b.x + a.y * b.y + a.z * b.z
+  decreases 0
+=
+  return a.x * b.x + a.y * b.y + a.z * b.z
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var a: Vec3
+  var b: Vec3
+  a.x = 1.0
+  a.y = 0.0
+  a.z = 0.0
+  b.x = 0.0
+  b.y = 1.0
+  b.z = 0.0
+  var s: float = vec3_dot(a, b)
+  return 0

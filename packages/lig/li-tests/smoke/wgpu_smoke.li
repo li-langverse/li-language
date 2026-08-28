@@ -1,0 +1,21 @@
+import lig.present
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if li_std_lig_present_version() < 1:
+    return 1
+  var smoke: LigWgpuSmoke = lig_wgpu_smoke_run()
+  if lig_wgpu_smoke_passed(smoke) != 1:
+    return 2
+  if smoke.swapchain.backend_id != lig_backend_webgpu():
+    return 3
+  if lig_present_host_active() == 1:
+    if lig_wgpu_smoke_surface_ready(smoke) != 1:
+      return 4
+  if lig_present_host_active() != 1:
+    if smoke.surface_ok != 0:
+      return 5
+  return 0

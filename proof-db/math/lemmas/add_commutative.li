@@ -1,0 +1,13 @@
+def add_commutative(a: float, b: float) -> float
+  requires true
+  ensures result == b + a
+  decreases 0
+=
+  return a + b
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return 0

@@ -1,0 +1,9 @@
+type Vault = object
+  public open: int
+
+private def vault_secret(v: Vault) -> int
+  requires true
+  ensures result == 42
+  decreases 0
+=
+  return 42

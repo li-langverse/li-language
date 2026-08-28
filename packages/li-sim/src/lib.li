@@ -1,0 +1,506 @@
+
+# Core simulation API: adjustable output detail, algorithm ids, composable entry points.
+# Machine-readable summaries: benchmarks/harness/sim_summary.py (li_sim_summary_v1).
+# Registry: benchmarks/competitive/algo_registry.json (126 algo_ids).
+# See docs/ecosystem/sim-output-contract.md
+
+def li_sim_version() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+def output_detail_summary() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return 0
+
+def output_detail_fields() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+def output_detail_debug() -> int
+  requires true
+  ensures result == 2
+  decreases 0
+=
+  return 2
+
+def output_detail_repro() -> int
+  requires true
+  ensures result == 3
+  decreases 0
+=
+  return 3
+
+def summary_format_json() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return 0
+
+def summary_format_json_min() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+def summary_format_yaml() -> int
+  requires true
+  ensures result == 2
+  decreases 0
+=
+  return 2
+
+type SimOutputSpec = object
+  public detail: int
+  public write_json: int
+  public summary_format: int
+
+type SimRunResult = object
+  public ok: int
+  public algo_id: int
+  public vertical_id: int
+  public checksum: float
+  public detail_emitted: int
+
+def output_spec_default() -> SimOutputSpec
+  requires true
+  ensures result.detail == 0
+  ensures result.write_json == 1
+  ensures result.summary_format == 1
+  decreases 0
+=
+  var s: SimOutputSpec
+  s.detail = 0
+  s.write_json = 1
+  s.summary_format = summary_format_json_min()
+  return s
+
+def output_spec_from_detail(detail: int) -> SimOutputSpec
+  requires detail >= 0
+  requires detail <= 3
+  ensures result.detail == detail
+  ensures result.write_json == 1
+  decreases 0
+=
+  var s: SimOutputSpec
+  s.detail = detail
+  s.write_json = 1
+  s.summary_format = summary_format_json_min()
+  return s
+
+def vertical_md_lennard_jones() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+def vertical_pde_heat_2d() -> int
+  requires true
+  ensures result == 2
+  decreases 0
+=
+  return 2
+
+def vertical_gaming_rigid() -> int
+  requires true
+  ensures result == 3
+  decreases 0
+=
+  return 3
+
+def vertical_qm_dft() -> int
+  requires true
+  ensures result == 4
+  decreases 0
+=
+  return 4
+
+def algo_registry_count() -> int
+  requires true
+  ensures result == 126
+  decreases 0
+=
+  return 126
+
+def algo_id_min() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+def algo_id_max() -> int
+  requires true
+  ensures result == 903
+  decreases 0
+=
+  return 903
+
+def algo_in_registry(algo_id: int) -> int
+  requires true
+  ensures result >= 0
+  ensures result <= 1
+  decreases 0
+=
+  if algo_id < 1:
+    return 0
+  if algo_id <= 19:
+    return 1
+  if algo_id >= 101:
+    if algo_id <= 117:
+      return 1
+  if algo_id >= 201:
+    if algo_id <= 216:
+      return 1
+  if algo_id >= 301:
+    if algo_id <= 305:
+      return 1
+  if algo_id >= 401:
+    if algo_id <= 432:
+      return 1
+  if algo_id >= 501:
+    if algo_id <= 505:
+      return 1
+  if algo_id >= 511:
+    if algo_id <= 514:
+      return 1
+  if algo_id >= 521:
+    if algo_id <= 523:
+      return 1
+  if algo_id >= 601:
+    if algo_id <= 610:
+      return 1
+  if algo_id >= 701:
+    if algo_id <= 707:
+      return 1
+  if algo_id >= 801:
+    if algo_id <= 805:
+      return 1
+  if algo_id >= 901:
+    if algo_id <= 903:
+      return 1
+  return 0
+
+def algo_family_num(algo_id: int) -> int
+  requires true
+  ensures result >= 0
+  decreases 0
+=
+  if algo_id >= 1:
+    if algo_id <= 19:
+      return 1
+  if algo_id >= 101:
+    if algo_id <= 117:
+      return 2
+  if algo_id >= 201:
+    if algo_id <= 216:
+      return 3
+  if algo_id >= 301:
+    if algo_id <= 305:
+      return 4
+  if algo_id >= 401:
+    if algo_id <= 432:
+      return 5
+  if algo_id >= 501:
+    if algo_id <= 505:
+      return 6
+  if algo_id >= 511:
+    if algo_id <= 514:
+      return 7
+  if algo_id >= 521:
+    if algo_id <= 523:
+      return 8
+  if algo_id >= 601:
+    if algo_id <= 610:
+      return 9
+  if algo_id >= 701:
+    if algo_id <= 707:
+      return 10
+  if algo_id >= 801:
+    if algo_id <= 805:
+      return 11
+  if algo_id >= 901:
+    if algo_id <= 903:
+      return 12
+  return 0
+
+def algo_md_lj_cutoff_mic() -> int
+  requires true
+  ensures result == 101
+  decreases 0
+=
+  return 101
+
+def algo_md_integrator_verlet() -> int
+  requires true
+  ensures result == 102
+  decreases 0
+=
+  return 102
+
+def algo_pde_heat_explicit_2d() -> int
+  requires true
+  ensures result == 201
+  decreases 0
+=
+  return 201
+
+def algo_rigid_semi_implicit() -> int
+  requires true
+  ensures result == 301
+  decreases 0
+=
+  return 301
+
+def algo_qm_dft_scf_energy() -> int
+  requires true
+  ensures result == 418
+  decreases 0
+=
+  return 418
+
+def algo_robo_multibody_step() -> int
+  requires true
+  ensures result == 801
+  decreases 0
+=
+  return 801
+
+def run_result_ok(r: SimRunResult) -> int
+  requires true
+  ensures result >= 0
+  ensures result <= 1
+  decreases 0
+=
+  if r.ok == 1:
+    return 1
+  return 0
+
+# PH-SIM SIM-0 — studio profile → sim contract (read-only; no stepping).
+def sim_contract_unknown() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return 0
+
+def sim_contract_game() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+def sim_contract_sim_rl() -> int
+  requires true
+  ensures result == 2
+  decreases 0
+=
+  return 2
+
+def sim_contract_sim_automotive() -> int
+  requires true
+  ensures result == 3
+  decreases 0
+=
+  return 3
+
+def sim_contract_sim_robotics() -> int
+  requires true
+  ensures result == 4
+  decreases 0
+=
+  return 4
+
+def sim_contract_sim_additive() -> int
+  requires true
+  ensures result == 5
+  decreases 0
+=
+  return 5
+
+def sim_contract_sim_scientific() -> int
+  requires true
+  ensures result == 6
+  decreases 0
+=
+  return 6
+
+def sim_contract_sim_drug_design() -> int
+  requires true
+  ensures result == 7
+  decreases 0
+=
+  return 7
+
+def sim_contract_id_valid(contract_id: int) -> int
+  requires true
+  ensures result >= 0
+  ensures result <= 1
+  decreases contract_id
+=
+  if contract_id == sim_contract_unknown():
+    return 1
+  if contract_id == sim_contract_game():
+    return 1
+  if contract_id == sim_contract_sim_rl():
+    return 1
+  if contract_id == sim_contract_sim_automotive():
+    return 1
+  if contract_id == sim_contract_sim_robotics():
+    return 1
+  if contract_id == sim_contract_sim_additive():
+    return 1
+  if contract_id == sim_contract_sim_scientific():
+    return 1
+  if contract_id == sim_contract_sim_drug_design():
+    return 1
+  return 0
+
+def li_sim_profile_from_studio_id(studio_profile_id: int) -> int
+  requires true
+  ensures sim_contract_id_valid(result) == 1
+  decreases studio_profile_id
+=
+  if studio_profile_id == 0:
+    return sim_contract_unknown()
+  if studio_profile_id == 1:
+    return sim_contract_game()
+  if studio_profile_id == 2:
+    return sim_contract_sim_rl()
+  if studio_profile_id == 3:
+    return sim_contract_sim_automotive()
+  if studio_profile_id == 4:
+    return sim_contract_sim_robotics()
+  if studio_profile_id == 5:
+    return sim_contract_sim_additive()
+  if studio_profile_id == 6:
+    return sim_contract_sim_scientific()
+  if studio_profile_id == 7:
+    return sim_contract_sim_drug_design()
+  return sim_contract_unknown()
+
+def sim_output_detail_for_studio_profile(studio_profile_id: int) -> int
+  requires true
+  ensures result >= 0
+  ensures result <= 3
+  decreases studio_profile_id
+=
+  if studio_profile_id == 1:
+    return output_detail_summary()
+  if studio_profile_id == 6:
+    return output_detail_debug()
+  if studio_profile_id == 7:
+    return output_detail_debug()
+  if studio_profile_id >= 2:
+    if studio_profile_id <= 5:
+      return output_detail_fields()
+  return output_detail_summary()
+
+def sim_status_ok() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return 0
+
+def sim_status_invalid_dt() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+type SimSessionStub = object
+  public studio_profile_id: int
+  public sim_contract_id: int
+  public output_detail: int
+  public tick: int
+  public last_dt: float
+
+def sim_session_stub_default() -> SimSessionStub
+  requires true
+  ensures result.studio_profile_id == 0
+  ensures result.sim_contract_id == sim_contract_unknown()
+  ensures result.output_detail == output_detail_summary()
+  ensures result.tick == 0
+  ensures result.last_dt == 0.0
+  decreases 0
+=
+  var s: SimSessionStub
+  s.studio_profile_id = 0
+  s.sim_contract_id = sim_contract_unknown()
+  s.output_detail = output_detail_summary()
+  s.tick = 0
+  s.last_dt = 0.0
+  return s
+
+# PH-SIM SIM-1 — deterministic tick counter (no physics kernel).
+def sim_reset(session: var SimSessionStub) -> int
+  requires true
+  ensures result == sim_status_ok()
+  ensures session.tick == 0
+  ensures session.last_dt == 0.0
+  decreases 0
+=
+  session.tick = 0
+  session.last_dt = 0.0
+  return sim_status_ok()
+
+def sim_step(session: var SimSessionStub, dt: float) -> int
+  requires session.tick >= 0
+  ensures result >= 0
+  ensures result <= 1
+  decreases session.tick
+=
+  if dt <= 0.0:
+    return sim_status_invalid_dt()
+  session.tick = session.tick + 1
+  session.last_dt = dt
+  return sim_status_ok()
+
+def sim_session_apply_studio_profile(studio_profile_id: int, sim_out: var SimSessionStub) -> unit
+  requires true
+  ensures sim_out.studio_profile_id == studio_profile_id
+  ensures sim_out.sim_contract_id == li_sim_profile_from_studio_id(studio_profile_id)
+  ensures sim_out.output_detail == sim_output_detail_for_studio_profile(studio_profile_id)
+  decreases studio_profile_id
+=
+  var sid: int = studio_profile_id
+  sim_out.studio_profile_id = sid
+  var contract0: int = sim_contract_unknown()
+  if sid == 1:
+    contract0 = sim_contract_game()
+  if sid == 2:
+    contract0 = sim_contract_sim_rl()
+  if sid == 3:
+    contract0 = sim_contract_sim_automotive()
+  if sid == 4:
+    contract0 = sim_contract_sim_robotics()
+  if sid == 5:
+    contract0 = sim_contract_sim_additive()
+  if sid == 6:
+    contract0 = sim_contract_sim_scientific()
+  if sid == 7:
+    contract0 = sim_contract_sim_drug_design()
+  sim_out.sim_contract_id = contract0
+  var detail0: int = output_detail_summary()
+  if sid == 6:
+    detail0 = output_detail_debug()
+  if sid == 7:
+    detail0 = output_detail_debug()
+  if sid >= 2:
+    if sid <= 5:
+      detail0 = output_detail_fields()
+  sim_out.output_detail = detail0

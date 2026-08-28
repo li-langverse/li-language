@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "updated": "2026-05-25",
+  "lean_module": "Li.ProofDB",
+  "lean_path": "proof-db/lean/ProofDB.lean",
+  "discharge_path": "docs/semantics/Discharge.lean",
+  "lake_package": "docs/semantics",
+  "lake_target": "ProofDB",
+  "build": {
+    "command": "cd docs/semantics && lake build ProofDB",
+    "elan_required": true,
+    "local_build": "2026-05-25: ok (1 sorry warning)"
+  },
+  "entries": [
+    {
+      "id": "std_add_comm",
+      "textbook": "\u2200 a b \u2208 \u2124, a + b = b + a",
+      "autovc_name": "autovc_std_add_comm",
+      "lean_theorem": "Li.ProofDB.std_add_comm_int",
+      "discharge_link": null,
+      "status": "proved",
+      "gap": null
+    },
+    {
+      "id": "std_mul_assoc",
+      "textbook": "\u2200 a b c \u2208 \u2124, (a\u00b7b)\u00b7c = a\u00b7(b\u00b7c)",
+      "autovc_name": "autovc_std_mul_assoc",
+      "lean_theorem": "Li.ProofDB.std_mul_assoc_int",
+      "discharge_link": null,
+      "status": "proved",
+      "gap": null
+    },
+    {
+      "id": "std_triangle_ineq_scalar",
+      "textbook": "\u2200 a b, |a+b| \u2264 |a|+|b|",
+      "autovc_name": "autovc_std_triangle_ineq_scalar",
+      "lean_theorem": "Li.ProofDB.std_triangle_ineq_float_scalar",
+      "discharge_link": null,
+      "status": "sorry",
+      "gap": "P-float: Float.abs order not in semantics slice"
+    },
+    {
+      "id": "std_dot4_bilinear_right",
+      "textbook": "\u27e8a,b+c\u27e9 = \u27e8a,b\u27e9+\u27e8a,c\u27e9",
+      "autovc_name": "autovc_std_dot4_bilinear_right",
+      "lean_theorem": "Li.ProofDB.std_dot4_bilinear_right",
+      "discharge_link": "Li.Discharge.dot4_int_loop_eval_spec",
+      "status": "proved",
+      "gap": null
+    },
+    {
+      "id": "std_dot4_comm",
+      "textbook": "\u27e8a,b\u27e9 = \u27e8b,a\u27e9",
+      "autovc_name": "autovc_std_dot4_comm",
+      "lean_theorem": "Li.ProofDB.std_dot4_comm",
+      "discharge_link": "Li.Discharge.dot4_int_spec",
+      "status": "proved",
+      "gap": null
+    }
+  ]
+}

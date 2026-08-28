@@ -1,0 +1,444 @@
+
+import ui
+
+# li-gui — Studio viewport region + panel switch timing (PH-UX panel_switch_ms < 100).
+
+def li_std_gui_version() -> int
+  requires true
+  ensures result == 3
+  decreases 0
+=
+  return 3
+
+def gui_panel_switch_budget_ms() -> float
+  requires true
+  ensures result == studio_panel_transition_ms()
+  decreases 0
+=
+  return studio_panel_transition_ms()
+
+# Optional marquee selection in viewport (UX-01). active=0 means none.
+type ViewportSelection = object
+  public active: int
+  public rect: Rect
+  public depth_cue: int
+
+def gui_viewport_selection_none() -> ViewportSelection
+  requires true
+  ensures result.active == 0
+  ensures result.depth_cue == 0
+  decreases 0
+=
+  var s: ViewportSelection
+  s.active = 0
+  s.rect = rect_make(0.0, 0.0, 0.0, 0.0)
+  s.depth_cue = 0
+  return s
+
+def gui_viewport_selection_rect(x: float, y: float, w: float, h: float) -> ViewportSelection
+  requires w > 0.0
+  requires h > 0.0
+  ensures result.active == 1
+  ensures result.depth_cue == 1
+  ensures result.rect.w == w
+  ensures result.rect.h == h
+  decreases 0
+=
+  var s: ViewportSelection
+  s.active = 1
+  s.rect = rect_make(x, y, w, h)
+  s.depth_cue = 1
+  return s
+
+type ViewportRegion = object
+  public rect: Rect
+  public w: float
+  public h: float
+  public grid_enabled: int
+  public selection_active: int
+  public selection_rect: Rect
+  public depth_cue: int
+
+def gui_viewport_region_from_layout_with_selection(layout: StudioShellLayout, selection: ViewportSelection) -> ViewportRegion
+  requires layout.viewport.w >= 0.0
+  requires layout.viewport.h >= 0.0
+  requires selection.active >= 0
+  requires selection.active <= 1
+  ensures result.rect.w == layout.viewport.w
+  ensures result.rect.h == layout.viewport.h
+  ensures result.w == layout.viewport.w
+  ensures result.h == layout.viewport.h
+  ensures result.selection_active == selection.active
+  ensures result.depth_cue == selection.depth_cue
+  decreases 0
+=
+  var vp: ViewportRegion
+  vp.rect = layout.viewport
+  vp.w = layout.viewport.w
+  vp.h = layout.viewport.h
+  vp.grid_enabled = 1
+  vp.selection_active = selection.active
+  vp.selection_rect = selection.rect
+  vp.depth_cue = selection.depth_cue
+  return vp
+
+def gui_viewport_region_from_layout(layout: StudioShellLayout) -> ViewportRegion
+  requires layout.viewport.w >= 0.0
+  requires layout.viewport.h >= 0.0
+  ensures result.selection_active == 0
+  decreases 0
+=
+  return gui_viewport_region_from_layout_with_selection(layout, gui_viewport_selection_none())
+
+type PanelSwitchTiming = object
+  public from_region: int
+  public to_region: int
+  public elapsed_ms: float
+  public budget_ms: float
+  public within_budget: int
+
+def gui_panel_switch_timing(from_region: int, to_region: int, elapsed_ms: float) -> PanelSwitchTiming
+  requires from_region >= 1
+  requires from_region <= 6
+  requires to_region >= 1
+  requires to_region <= 6
+  requires elapsed_ms >= 0.0
+  ensures result.budget_ms == gui_panel_switch_budget_ms()
+  ensures result.within_budget >= 0
+  ensures result.within_budget <= 1
+  decreases 0
+=
+  var t: PanelSwitchTiming
+  t.from_region = from_region
+  t.to_region = to_region
+  t.elapsed_ms = elapsed_ms
+  t.budget_ms = gui_panel_switch_budget_ms()
+  if elapsed_ms <= t.budget_ms:
+    t.within_budget = 1
+  if elapsed_ms > t.budget_ms:
+    t.within_budget = 0
+  return t
+
+type GuiPanelState = object
+  public active_region: int
+  public last_switch_ms: float
+  public switch_count: int
+  public palette_open: int
+
+def gui_panel_state_new() -> GuiPanelState
+  requires true
+  ensures result.active_region == studio_region_viewport()
+  ensures result.switch_count == 0
+  ensures result.palette_open == studio_palette_closed_flag()
+  decreases 0
+=
+  var s: GuiPanelState
+  s.active_region = studio_region_viewport()
+  s.last_switch_ms = 0.0
+  s.switch_count = 0
+  s.palette_open = studio_palette_closed_flag()
+  return s
+
+def gui_panel_switch_to(state: var GuiPanelState, region: int, elapsed_ms: float) -> PanelSwitchTiming
+  requires region >= 1
+  requires region <= 6
+  requires elapsed_ms >= 0.0
+  requires state.switch_count >= 0
+  ensures state.active_region == region
+  ensures state.switch_count == old(state.switch_count) + 1
+  decreases 0
+=
+  var from_region: int = state.active_region
+  var timing: PanelSwitchTiming = gui_panel_switch_timing(from_region, region, elapsed_ms)
+  state.last_switch_ms = timing.elapsed_ms
+  state.active_region = timing.to_region
+  state.switch_count = state.switch_count + 1
+  return timing
+
+def gui_panel_switch_within_budget(timing: PanelSwitchTiming) -> int
+  requires true
+  ensures result >= 0
+  ensures result <= 1
+  decreases 0
+=
+  return timing.within_budget
+
+# --- UX-09 keyboard-first: Escape (palette dismiss), Cmd/Ctrl+K (palette), 1-5 region focus ---
+
+def studio_key_action_none() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return 0
+
+def studio_key_action_palette_toggle() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+def studio_key_action_palette_close() -> int
+  requires true
+  ensures result == 2
+  decreases 0
+=
+  return 2
+
+def studio_key_action_region_focus() -> int
+  requires true
+  ensures result == 3
+  decreases 0
+=
+  return 3
+
+def studio_key_binding_escape() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+def studio_key_binding_cmd_k() -> int
+  requires true
+  ensures result == 2
+  decreases 0
+=
+  return 2
+
+def studio_key_binding_digit_dock() -> int
+  requires true
+  ensures result == 3
+  decreases 0
+=
+  return 3
+
+def studio_key_binding_digit_viewport() -> int
+  requires true
+  ensures result == 4
+  decreases 0
+=
+  return 4
+
+def studio_key_binding_digit_inspector() -> int
+  requires true
+  ensures result == 5
+  decreases 0
+=
+  return 5
+
+def studio_key_binding_digit_timeline() -> int
+  requires true
+  ensures result == 6
+  decreases 0
+=
+  return 6
+
+def studio_key_binding_digit_agent() -> int
+  requires true
+  ensures result == 7
+  decreases 0
+=
+  return 7
+
+type StudioKeyBinding = object
+  public binding_id: int
+  public action: int
+  public focus_digit: int
+  public target_region: int
+
+def gui_studio_key_binding(binding_id: int) -> StudioKeyBinding
+  requires binding_id >= studio_key_binding_escape()
+  requires binding_id <= studio_key_binding_digit_agent()
+  ensures result.binding_id == binding_id
+  decreases binding_id
+=
+  var b: StudioKeyBinding
+  b.binding_id = binding_id
+  b.focus_digit = 0
+  b.target_region = 0
+  b.action = studio_key_action_none()
+  if binding_id == studio_key_binding_escape():
+    b.action = studio_key_action_palette_close()
+  if binding_id == studio_key_binding_cmd_k():
+    b.action = studio_key_action_palette_toggle()
+  if binding_id == studio_key_binding_digit_dock():
+    b.focus_digit = 1
+    b.target_region = studio_region_dock()
+    b.action = studio_key_action_region_focus()
+  if binding_id == studio_key_binding_digit_viewport():
+    b.focus_digit = 2
+    b.target_region = studio_region_viewport()
+    b.action = studio_key_action_region_focus()
+  if binding_id == studio_key_binding_digit_inspector():
+    b.focus_digit = 3
+    b.target_region = studio_region_inspector()
+    b.action = studio_key_action_region_focus()
+  if binding_id == studio_key_binding_digit_timeline():
+    b.focus_digit = 4
+    b.target_region = studio_region_timeline()
+    b.action = studio_key_action_region_focus()
+  if binding_id == studio_key_binding_digit_agent():
+    b.focus_digit = 5
+    b.target_region = studio_region_agent_strip()
+    b.action = studio_key_action_region_focus()
+  return b
+
+def gui_studio_region_from_focus_digit(digit: int) -> int
+  requires digit >= 0
+  requires digit <= 5
+  ensures result >= 0
+  ensures result <= 6
+  decreases digit
+=
+  if digit == 1:
+    return studio_region_dock()
+  if digit == 2:
+    return studio_region_viewport()
+  if digit == 3:
+    return studio_region_inspector()
+  if digit == 4:
+    return studio_region_timeline()
+  if digit == 5:
+    return studio_region_agent_strip()
+  return 0
+
+def gui_studio_palette_close(panel: var GuiPanelState) -> int
+  requires panel.palette_open >= studio_palette_closed_flag()
+  requires panel.palette_open <= studio_palette_open_flag()
+  ensures panel.palette_open == studio_palette_closed_flag()
+  ensures result == studio_key_action_palette_close()
+  decreases 0
+=
+  panel.palette_open = studio_palette_closed_flag()
+  return studio_key_action_palette_close()
+
+def gui_studio_palette_toggle(panel: var GuiPanelState) -> int
+  requires panel.palette_open >= studio_palette_closed_flag()
+  requires panel.palette_open <= studio_palette_open_flag()
+  ensures panel.palette_open >= studio_palette_closed_flag()
+  ensures panel.palette_open <= studio_palette_open_flag()
+  ensures result == studio_key_action_palette_toggle()
+  decreases panel.palette_open
+=
+  if panel.palette_open == studio_palette_open_flag():
+    panel.palette_open = studio_palette_closed_flag()
+    return studio_key_action_palette_toggle()
+  panel.palette_open = studio_palette_open_flag()
+  return studio_key_action_palette_toggle()
+
+def gui_studio_palette_close_compose(panel: var GuiPanelState, palette: var StudioCommandPaletteCompose) -> int
+  requires panel.palette_open >= studio_palette_closed_flag()
+  requires panel.palette_open <= studio_palette_open_flag()
+  requires palette.is_open == studio_palette_open_flag()
+  ensures panel.palette_open == studio_palette_closed_flag()
+  ensures palette.is_open == studio_palette_closed_flag()
+  ensures result == studio_key_action_palette_close()
+  decreases 0
+=
+  studio_palette_close(palette)
+  return gui_studio_palette_close(panel)
+
+def gui_studio_palette_toggle_compose(panel: var GuiPanelState, palette: var StudioCommandPaletteCompose, w: float, h: float) -> int
+  requires w > 0.0
+  requires h > 0.0
+  requires panel.palette_open >= studio_palette_closed_flag()
+  requires panel.palette_open <= studio_palette_open_flag()
+  requires palette.is_open >= studio_palette_closed_flag()
+  requires palette.is_open <= studio_palette_open_flag()
+  ensures panel.palette_open >= studio_palette_closed_flag()
+  ensures panel.palette_open <= studio_palette_open_flag()
+  ensures palette.is_open >= studio_palette_closed_flag()
+  ensures palette.is_open <= studio_palette_open_flag()
+  ensures result == studio_key_action_palette_toggle()
+  decreases panel.palette_open
+=
+  var toggle_w: float = w
+  var toggle_h: float = h
+  studio_palette_toggle(palette, toggle_w, toggle_h)
+  panel.palette_open = palette.is_open
+  return studio_key_action_palette_toggle()
+
+def gui_handle_studio_key_palette(panel: var GuiPanelState, palette: var StudioCommandPaletteCompose, w: float, h: float, input: InputState) -> int
+  requires w > 0.0
+  requires h > 0.0
+  requires panel.switch_count >= 0
+  requires panel.palette_open >= studio_palette_closed_flag()
+  requires panel.palette_open <= studio_palette_open_flag()
+  requires palette.is_open >= studio_palette_closed_flag()
+  requires palette.is_open <= studio_palette_open_flag()
+  requires input.key_escape >= 0
+  requires input.key_escape <= 1
+  requires input.key_cmd_k >= 0
+  requires input.key_cmd_k <= 1
+  requires input.key_digit >= 0
+  requires input.key_digit <= 5
+  ensures result >= studio_key_action_none()
+  ensures result <= studio_key_action_region_focus()
+  decreases input.key_digit
+=
+  if input.key_escape == 1:
+    if palette.is_open == studio_palette_open_flag():
+      return gui_studio_palette_close_compose(panel, palette)
+    return studio_key_action_none()
+  if input.key_cmd_k == 1:
+    var key_w: float = w
+    var key_h: float = h
+    return gui_studio_palette_toggle_compose(panel, palette, key_w, key_h)
+  if input.key_digit >= 1:
+    if input.key_digit <= 5:
+      var region: int = gui_studio_region_from_focus_digit(input.key_digit)
+      if region >= studio_region_dock():
+        gui_panel_switch_to(panel, region, 0.0)
+        return studio_key_action_region_focus()
+  return studio_key_action_none()
+
+def gui_handle_studio_key(panel: var GuiPanelState, input: InputState) -> int
+  requires panel.switch_count >= 0
+  requires panel.palette_open >= studio_palette_closed_flag()
+  requires panel.palette_open <= studio_palette_open_flag()
+  requires input.key_escape >= 0
+  requires input.key_escape <= 1
+  requires input.key_cmd_k >= 0
+  requires input.key_cmd_k <= 1
+  requires input.key_digit >= 0
+  requires input.key_digit <= 5
+  ensures result >= studio_key_action_none()
+  ensures result <= studio_key_action_region_focus()
+  decreases input.key_digit
+=
+  if input.key_escape == 1:
+    if panel.palette_open == studio_palette_open_flag():
+      return gui_studio_palette_close(panel)
+    return studio_key_action_none()
+  if input.key_cmd_k == 1:
+    return gui_studio_palette_toggle(panel)
+  if input.key_digit >= 1:
+    if input.key_digit <= 5:
+      var region: int = gui_studio_region_from_focus_digit(input.key_digit)
+      if region >= studio_region_dock():
+        gui_panel_switch_to(panel, region, 0.0)
+        return studio_key_action_region_focus()
+  return studio_key_action_none()
+
+def gui_paint_studio_shell_chrome(frame: var PaintFrame, layout: var StudioShellLayout) -> unit
+  requires frame.cmd_count >= 0
+  ensures frame.cmd_count == paint_studio_shell_chrome_count()
+  ensures frame.last_kind == paint_op_viewport_grid()
+  ensures frame.last_rect.w == layout.viewport.w
+  decreases 0
+=
+  # Delegate aggregate chrome count to li-ui IR; use studio_paint_* for decomposed dock/timeline/inspector.
+  paint_studio_shell_chrome(frame, layout)
+
+def gui_studio_shell_frame(w: float, h: float) -> PaintFrame
+  requires w > 0.0
+  requires h > 0.0
+  ensures result.cmd_count == paint_studio_shell_chrome_count()
+  decreases 0
+=
+  var layout: StudioShellLayout = layout_studio_shell_adaptive(w, h)
+  var frame: PaintFrame = paint_frame_new()
+  gui_paint_studio_shell_chrome(frame, layout)
+  return frame

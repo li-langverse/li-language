@@ -1,0 +1,95 @@
+# li-lig-present — Li GPU present layer (PH-HW WP3).
+# Host present active probe, swapchain create, and per-frame present,
+# backed by the li_rt_lig runtime. Import as `import lig.present`.
+
+extern def li_rt_lig_host_present_active() -> int
+  requires true
+  ensures result >= 0
+  ensures result <= 1
+  decreases 0
+
+extern def li_rt_lig_host_native_pixels() -> int
+  requires true
+  ensures result >= 0
+  decreases 0
+
+extern def li_rt_lig_wgpu_swapchain_create(viewport_w: int, viewport_h: int) -> int
+  requires viewport_w >= 0
+  requires viewport_h >= 0
+  ensures result >= 0
+  ensures result <= 1
+  decreases viewport_w
+
+extern def li_rt_lig_wgpu_present_frame(swapchain_ok: int) -> int
+  requires swapchain_ok >= 0
+  requires swapchain_ok <= 1
+  ensures result >= 0
+  ensures result <= 1
+  decreases swapchain_ok
+
+def li_std_lig_present_version() -> int
+  requires true
+  ensures result >= 1
+  decreases 0
+=
+  return 1
+
+def lig_present_host_active() raises IO -> int
+  requires true
+  ensures result >= 0
+  ensures result <= 1
+  decreases 0
+=
+  return li_rt_lig_host_present_active()
+
+def lig_present_native_pixels() raises IO -> int
+  requires true
+  ensures result >= 0
+  decreases 0
+=
+  return li_rt_lig_host_native_pixels()
+
+type LigSwapchain = object
+  public created: int
+  public viewport_w: int
+  public viewport_h: int
+
+type LigPresentFrame = object
+  public presented: int
+  public native_pixels: int
+  public frame_id: int
+
+def lig_present_swapchain_create(vp_w: float, vp_h: float) raises IO -> LigSwapchain
+  requires vp_w >= 0.0
+  requires vp_h >= 0.0
+  ensures result.created >= 0
+  ensures result.created <= 1
+  ensures result.viewport_w >= 0
+  ensures result.viewport_h >= 0
+  decreases 0
+=
+  var vw: int = 1280
+  var vh: int = 720
+  if vp_w < 64.0:
+    vw = 0
+  if vp_h < 36.0:
+    vh = 0
+  var s: LigSwapchain
+  s.created = li_rt_lig_wgpu_swapchain_create(vw, vh)
+  s.viewport_w = vw
+  s.viewport_h = vh
+  return s
+
+def lig_present_frame(swap: LigSwapchain, frame_id: int) raises IO -> LigPresentFrame
+  requires frame_id >= 0
+  ensures result.presented >= 0
+  ensures result.presented <= 1
+  ensures result.native_pixels >= 0
+  ensures result.frame_id == frame_id
+  decreases frame_id
+=
+  var f: LigPresentFrame
+  f.presented = li_rt_lig_wgpu_present_frame(swap.created)
+  f.native_pixels = lig_present_native_pixels()
+  f.frame_id = frame_id
+  return f

@@ -1,0 +1,22 @@
+def foo(x: int, y: int) -> int
+  requires true
+  ensures result >= 0
+  decreases 0
+=
+  if x > 0:
+    var s1: int = x + 1
+    var s2: int = s1 + y
+    return s1 + s2
+  if y > 0:
+    var t1: int = y + 1
+    var t2: int = t1 + x
+    return t1 + t2
+  return 0
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var r: int = foo(0, 2)
+  return r - 6

@@ -1,0 +1,94 @@
+
+import physics.rigid
+
+type PhysicsWorld = object
+  public tier: int
+  public dt: float
+  public substeps: int
+  public substep_inv: float
+  public step_count: int
+  public rigid_enabled: int
+  public fluids_enabled: int
+  public particles_enabled: int
+  public gravity_z: float
+  public body: RigidBody
+def li_std_physics_runtime_version() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+def physics_world_new(tier: int) -> PhysicsWorld
+  requires tier >= 0
+  requires tier <= 3
+  ensures result.tier == tier
+  ensures result.dt == 1.0 / 60.0
+  ensures result.substeps == 4
+  ensures result.step_count == 0
+  decreases tier
+=
+  var w: PhysicsWorld
+  w.tier = tier
+  w.dt = 1.0 / 60.0
+  w.substeps = 4
+  w.substep_inv = 1.0 / 4.0
+  w.step_count = 0
+  w.rigid_enabled = 1
+  w.fluids_enabled = 0
+  w.particles_enabled = 0
+  w.gravity_z = -9.81
+  w.body.px = 0.0
+  w.body.py = 0.0
+  w.body.pz = 0.0
+  w.body.vx = 0.0
+  w.body.vy = 0.0
+  w.body.vz = 0.0
+  w.body.inv_mass = 1.0
+  w.body.radius = 0.5
+  return w
+def physics_world_game_default() -> PhysicsWorld
+  requires true
+  ensures result.tier == 2
+  ensures result.substeps >= 1
+  decreases 0
+=
+  return physics_world_new(2)
+
+def physics_rigid_substep(world: var PhysicsWorld, sub_dt: float) -> unit
+  requires sub_dt > 0.0
+  ensures true
+  decreases 0
+=
+  if world.rigid_enabled == 0:
+    return
+  rigid_integrate_semi_implicit(world.body, 0.0, 0.0, world.gravity_z, sub_dt)
+
+def physics_step(world: var PhysicsWorld, frame_dt: float) -> unit
+  requires frame_dt > 0.0
+  requires world.substeps >= 1
+  requires world.substep_inv > 0.0
+  ensures true
+  decreases world.substeps
+=
+  var sub: float = frame_dt * world.substep_inv
+  var i: int = 0
+  while i < world.substeps
+    world.dt = sub
+    physics_rigid_substep(world, frame_dt * world.substep_inv)
+    var sc: int = world.step_count
+    sc = sc + 1
+    world.step_count = sc
+    i = i + 1
+def physics_sync_from_scene(world: PhysicsWorld) -> unit
+  requires true
+  ensures true
+  decreases 0
+=
+  return
+def physics_sync_to_scene(world: PhysicsWorld) -> unit
+  requires true
+  ensures true
+  decreases 0
+=
+  return

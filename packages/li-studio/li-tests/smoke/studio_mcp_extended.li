@@ -1,0 +1,36 @@
+import studio
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if li_std_studio_version() < 6:
+    return 1
+  if studio_mcp_tool_count() != 8:
+    return 2
+  if studio_mcp_tool_from_name("am_export_print") != studio_mcp_am_export_print():
+    return 3
+  if studio_mcp_tool_from_name("chem_dft_run") != studio_mcp_chem_dft_run():
+    return 4
+  if studio_mcp_tool_from_name("studio_adaptive_layout") != studio_mcp_studio_adaptive_layout():
+    return 5
+  if studio_mcp_tool_from_name(studio_mcp_tool_name(studio_mcp_am_export_print())) != studio_mcp_am_export_print():
+    return 6
+  var layout: StudioShellLayout = layout_studio_shell_adaptive(1280.0, 720.0)
+  if layout.viewport.w <= 0.0:
+    return 7
+  var chem_req: StudioAgentToolRequest = studio_mcp_tool_dispatch(studio_mcp_chem_dft_run())
+  if chem_req.status != studio_mcp_tool_status_ok():
+    return 8
+  if chem_req.tool_id != studio_mcp_chem_dft_run():
+    return 9
+  var layout_req: StudioAgentToolRequest = studio_mcp_tool_dispatch(studio_mcp_studio_adaptive_layout())
+  if layout_req.status != studio_mcp_tool_status_ok():
+    return 10
+  var bad_req: StudioAgentToolRequest = studio_mcp_tool_dispatch(99)
+  if bad_req.status != studio_mcp_tool_status_failed():
+    return 11
+  if bad_req.result_code != studio_mcp_tool_result_err_io():
+    return 12
+  return 0

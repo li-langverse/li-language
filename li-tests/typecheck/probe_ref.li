@@ -1,0 +1,25 @@
+type Pos2048 = {p: int | 0 <= p and p < 2048}
+
+def peek2048(buf: var array[2048, int], p: Pos2048) -> int
+  requires true
+  ensures result == buf[p]
+  decreases 0
+=
+  return buf[p]
+
+def fill(buf: var array[2048, int]) -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var x: int = peek2048(buf, 0)
+  return 0
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var buf: array[2048, int]
+  var r: int = fill(buf)
+  return r

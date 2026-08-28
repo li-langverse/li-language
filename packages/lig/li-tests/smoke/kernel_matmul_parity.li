@@ -1,0 +1,68 @@
+# T-PKG-lig-smoke-kernel — matmul pilot (standalone FFI)
+
+extern def li_rt_lig_backend_select_auto() -> int
+  requires true
+  ensures 1 <= result
+  ensures result <= 4
+  decreases 0
+
+extern def li_rt_lig_kernel_run(kernel_id: int, backend_id: int) -> int
+  requires kernel_id >= 1
+  requires 1 <= backend_id
+  requires backend_id <= 4
+  ensures -1 <= result
+  ensures result <= 4
+  decreases kernel_id
+
+extern def li_rt_lig_kernel_last_validity_ratio() -> float
+  requires true
+  ensures 0.0 <= result
+  ensures result <= 1.0
+  decreases 0
+
+def lig_kernel_matmul_f32() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+def lig_backend_select_auto() raises IO -> int
+  requires true
+  ensures 1 <= result
+  ensures result <= 4
+  decreases 0
+=
+  return li_rt_lig_backend_select_auto()
+
+def lig_kernel_run(kernel_id: int, backend_id: int) raises IO -> int
+  requires kernel_id >= 1
+  requires 1 <= backend_id
+  requires backend_id <= 4
+  ensures -1 <= result
+  ensures result <= 4
+  decreases kernel_id
+=
+  return li_rt_lig_kernel_run(kernel_id, backend_id)
+
+def lig_validity_gate_pass(min_ratio: float) -> int
+  requires 0.0 <= min_ratio
+  requires min_ratio <= 1.0
+  ensures result >= 0
+  ensures result <= 1
+  decreases 0
+=
+  if li_rt_lig_kernel_last_validity_ratio() + 0.0001 >= min_ratio:
+    return 1
+  return 0
+
+def main() raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if lig_kernel_run(lig_kernel_matmul_f32(), lig_backend_select_auto()) != 0:
+    return 1
+  if lig_validity_gate_pass(0.999) != 1:
+    return 2
+  return 0

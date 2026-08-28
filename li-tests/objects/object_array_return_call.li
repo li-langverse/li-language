@@ -1,0 +1,21 @@
+type Buf = object
+  public xs: array[2, int]
+
+def constant_buf() -> Buf
+  requires true
+  ensures result.xs[0] == 1
+  ensures result.xs[1] == 2
+  decreases 0
+=
+  var b: Buf
+  b.xs[0] = 1
+  b.xs[1] = 2
+  return b
+
+def main() -> int
+  requires true
+  ensures result == 3
+  decreases 0
+=
+  var b: Buf = constant_buf()
+  return b.xs[0] + b.xs[1]

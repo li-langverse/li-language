@@ -1,0 +1,10 @@
+# Security property: large integer arithmetic does not overflow or corrupt memory.
+def main() -> int
+  requires true
+  ensures result >= 0
+  decreases 0
+=
+  var a: int = 9223372036854775807
+  var b: int = 1
+  var c: int = a - b
+  return c

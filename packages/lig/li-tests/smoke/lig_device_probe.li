@@ -1,0 +1,34 @@
+import lig
+
+def main() -> int raises IO, Alloc
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if li_std_lig_version() < 2:
+    return 1
+  var kind: int = lig_device_kind()
+  if kind < lig_backend_cuda():
+    return 2
+  if kind > lig_backend_webgpu():
+    return 3
+  if lig_backend_available(kind) != 1:
+    return 4
+  var auto_id: int = lig_backend_select_auto()
+  if lig_backend_available(auto_id) != 1:
+    return 5
+  var cap: str = lig_capability_json()
+  if cap == "":
+    return 6
+  var toml_lig: int = lig_parse_toml_backend_line("backend = webgpu")
+  if toml_lig != lig_backend_webgpu():
+    return 7
+  var toml_gpu: int = lig_parse_toml_backend_line("backend = metal")
+  if toml_gpu != lig_backend_metal():
+    return 8
+  var smoke: LigWgpuSmoke = lig_wgpu_smoke_run()
+  if lig_wgpu_smoke_passed(smoke) != 1:
+    return 9
+  if smoke.surface_ok != lig_present_surface_ok():
+    return 10
+  return 0

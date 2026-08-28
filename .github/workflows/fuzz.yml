@@ -1,0 +1,129 @@
+# Parser fuzz: PR smoke + daily corpus growth (Linux, Clang 18).
+name: Fuzz
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+    inputs:
+      max_total_time:
+        description: "libFuzzer max_total_time seconds (nightly default 600)"
+        required: false
+        default: "600"
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - compiler/parser/**
+      - compiler/fuzz/**
+      - compiler/types/**
+      - compiler/lexer/**
+      - security/**
+      - .github/workflows/fuzz.yml
+      - scripts/merge_fuzz_corpus.sh
+
+concurrency:
+  group: fuzz-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fuzz-parser:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install LLVM 22
+        run: |
+          chmod +x scripts/ci-install-llvm.sh
+          sudo LI_LLVM_MAJOR=22 bash scripts/ci-install-llvm.sh
+
+      - name: Download prior corpus artifact
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: fuzz-corpus
+          path: build-fuzz/corpus-prev
+
+      - name: Build parse_fuzz
+        env:
+          LLVM_DIR: /usr/lib/llvm-22/lib/cmake/llvm
+        run: |
+          cmake -B build-fuzz -G Ninja -DLI_BUILD_FUZZ=ON -DLLVM_DIR="$LLVM_DIR" \
+            -DCMAKE_C_COMPILER=clang-22 -DCMAKE_CXX_COMPILER=clang++-22
+          cmake --build build-fuzz --target parse_fuzz check_fuzz
+
+      - name: Prepare corpus workspace
+        run: |
+          mkdir -p build-fuzz/corpus-work build-fuzz/artifacts
+          cp -r compiler/fuzz/corpus/* build-fuzz/corpus-work/ 2>/dev/null || true
+          if [[ -d build-fuzz/corpus-prev ]]; then
+            cp -n build-fuzz/corpus-prev/* build-fuzz/corpus-work/ 2>/dev/null || true
+          fi
+
+      - name: Run fuzz
+        id: fuzz_run
+        env:
+          LLVM_DIR: /usr/lib/llvm-22/lib/cmake/llvm
+        run: |
+          FUZZ=build-fuzz/compiler/fuzz/parse_fuzz
+          CORPUS=build-fuzz/corpus-work
+          ART=build-fuzz/artifacts
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            "$FUZZ" "$CORPUS" -runs=5000 -max_len=65536 \
+              -artifact_prefix="$ART/crash-" || echo "exit=$?" >> "$GITHUB_OUTPUT"
+          else
+            MAXT="${{ github.event.inputs.max_total_time }}"
+            MAXT="${MAXT:-600}"
+            "$FUZZ" "$CORPUS" -max_total_time="$MAXT" -max_len=65536 \
+              -artifact_prefix="$ART/crash-" || echo "exit=$?" >> "$GITHUB_OUTPUT"
+          fi
+        continue-on-error: true
+
+      - name: Upload crash artifacts
+        if: failure() || steps.fuzz_run.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-crashes-${{ github.run_id }}
+          path: build-fuzz/artifacts/
+          if-no-files-found: ignore
+
+      - name: Merge corpus
+        run: |
+          chmod +x scripts/merge_fuzz_corpus.sh
+          ./scripts/merge_fuzz_corpus.sh \
+            build-fuzz/compiler/fuzz/parse_fuzz \
+            compiler/fuzz/corpus \
+            build-fuzz/corpus-work \
+            build-fuzz/artifacts
+
+      - name: Upload fuzz-corpus artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-corpus
+          path: |
+            compiler/fuzz/corpus/
+            !compiler/fuzz/corpus/README.md
+
+      - name: Open corpus PR (scheduled / dispatch only)
+        if: |
+          github.event_name != 'pull_request' &&
+          github.ref == 'refs/heads/main'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "chore(fuzz): update parser corpus from nightly"
+          title: "chore(fuzz): parser corpus update"
+          body: |
+            Automated corpus merge from the daily fuzz workflow.
+            Review new seeds under `compiler/fuzz/corpus/` and `corpus/regressions/`.
+          branch: bot/fuzz-corpus-${{ github.run_id }}
+          delete-branch: true
+
+      - name: Fail if fuzz crashed
+        if: steps.fuzz_run.outcome == 'failure'
+        run: |
+          echo "parse_fuzz reported a crash — see fuzz-crashes artifact"
+          exit 1

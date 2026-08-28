@@ -1,0 +1,55 @@
+---
+description: Studio/sim agent — compiler milestones first, then verticals (not httpd)
+globs:
+  - docs/game-dev/**
+  - docs/ecosystem/algorithms-and-libraries-plan.md
+  - docs/superpowers/plans/2026-05-14-benchmarks-and-simulations.md
+  - docs/superpowers/plans/2026-05-14-li-master-plan.md
+  - compiler/**
+  - benchmarks/**
+  - packages/li-physics-*/
+  - packages/li-sim/**
+  - packages/li-chem/**
+  - packages/li-scene/**
+  - packages/li-ui/**
+  - std/physics/**
+  - std/math/**
+alwaysApply: false
+---
+
+# Agent scope — compiler first, then simulation & Studio
+
+**Not in scope:** `li-httpd`, `httpd-plan-loop.py`, tier5 HTTP — separate process (`2026-05-16-li-httpd-plan.md`).
+
+## Loop priority (one agent, full stack — order matters)
+
+1. **Open compiler milestones** on `2026-05-14-li-master-plan.md` until Wave A gates are honest:
+   - **2e / 2f** — contracts, Lean/AutoVC, `provability-gaps.md` (**G-lean**, **G-vc**, **G-trust**)
+   - **2i** — math / linalg surface (broadcast, proofs)
+   - **7d / 7e** — decorators, math → SIMD/MIR, tier-1 correct + fast (see `li-benchmark-correctness.mdc`)
+   - **8p** — compile/CI throughput when it blocks iteration
+2. **Then** simulation, engineering, chemistry, biology, Studio UI, and adjacent packages per:
+   - `docs/ecosystem/algorithms-and-libraries-plan.md`
+   - `docs/game-dev/world-studio-vision.md`, `PH-world-studio-program.md`
+   - `2026-05-14-benchmarks-and-simulations.md` (tier-2 physics, verify before timing)
+
+Do **not** start large domain/studio features while **2e/2f** or core **7e** correctness gates are knowingly false. The loop may still touch benches/packages when they **close a compiler milestone** (e.g. pure-Li `simd_dot`, `reference.py` goldens).
+
+## Philosophy
+
+- **Correct per published spec, as fast as possible** — cross-lang = sanity only; beating others while correct is the win.
+- **DCE allowed** — must pass **our** goldens/spec/timing checks (`reference.py`, verify scripts), not assumed from a green build alone.
+
+## Math (no broadcasting)
+
+- Allow standard **vector algebra**: `dot`, matmul (`@`), `sum`, element-wise ops on **matching** shapes, quaternions, explicit tensors.
+- **Do not** add or extend NumPy-style **broadcasting** (length-1 → N, rank promotion, etc.) — confusing and error-prone.
+- Shape mismatches → **compile error**; users must write explicit loops or reshape operations when they intend promotion.
+
+## Where code lives
+
+| Layer | Path |
+|-------|------|
+| Compiler / proof | `compiler/`, `li-tests/`, `docs/verification/` |
+| Math / benches | `benchmarks/harness/`, `packages/li-math` |
+| Physics / sim / chem / UI | `packages/li-physics-*`, `li-sim-*`, `li-chem*`, `li-scene`, `li-ui` — not inside `compiler/` |

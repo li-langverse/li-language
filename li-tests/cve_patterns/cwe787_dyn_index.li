@@ -1,0 +1,7 @@
+# CWE-122 / heap OOB class: dynamic int index without refinement proof.
+def heap_style_oob(buf: array[64, int], i: int) -> int
+  requires true
+  ensures result == buf[i]
+  decreases 0
+=
+  return buf[i]

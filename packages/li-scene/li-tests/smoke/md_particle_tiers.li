@@ -1,0 +1,28 @@
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if li_std_scene_version() < 1:
+    return 1
+  var t1k: SceneMdParticleTier = scene_md_particle_tier_by_id(scene_md_tier_1k())
+  if t1k.particles != 1000:
+    return 2
+  if t1k.fps_target != 60.0:
+    return 3
+  var t10k: SceneMdParticleTier = scene_md_particle_tier_by_id(scene_md_tier_10k())
+  if t10k.particles != 10000:
+    return 4
+  var t100k: SceneMdParticleTier = scene_md_particle_tier_by_id(scene_md_tier_100k())
+  if t100k.particles != 100000:
+    return 5
+  if t100k.fps_target != 30.0:
+    return 6
+  if scene_bench_all_particle_tiers_pass() != 1:
+    return 7
+  var draw: SceneParticleDraw = scene_bench_particle_tier_simulate(scene_md_tier_10k())
+  if draw.native_pixels != 0:
+    return 8
+  if scene_md_particle_display_fps(draw) < 60:
+    return 9
+  return 0

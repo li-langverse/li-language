@@ -1,0 +1,13 @@
+id = "P-linalg-dot4-int-loop-open"
+kind = "lemma"
+field = "linalg"
+gap_id = "G-math"
+backlog_id = "P-linalg"
+statement = "Loop 4-term int dot: witness_dot4_int_loop + dot4_int_loop_eval_spec."
+li_specimen = "li-tests/contracts_verify/linalg_dot4_int_loop_open.li"
+lean_thm = "dot4_int_loop_eval_spec"
+lean_module = "docs/semantics/Li/Discharge.lean"
+proof_status = "proved"
+release_pin = "2026-05-25"
+release_lic = "dev"
+evidence = ["li-tests/tooling/discharge_linalg_int_lean.sh", "verify_ok"]

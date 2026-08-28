@@ -1,0 +1,7 @@
+[package]
+name = "li-chem"
+version = "0.1.0"
+[dependencies]
+lig = { path = "../lig" }
+[package.metadata.li]
+import_name = "chem"

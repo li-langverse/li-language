@@ -1,0 +1,15 @@
+# P-linalg: 2×2 matmul (0,0) entry via scalars — avoids nested-array CallProc (G-math codegen).
+def mat2_entry00_int(a00: int, a01: int, b00: int, b10: int) -> int
+  requires true
+  ensures result == a00 * b00 + a01 * b10
+  decreases 0
+=
+  return a00 * b00 + a01 * b10
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var e: int = mat2_entry00_int(1, 2, 3, 4)
+  return 0

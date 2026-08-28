@@ -1,0 +1,33 @@
+---
+description: LLM-first token discipline — syntax, docs, and tooling for agents
+globs:
+  - "**/*.li"
+  - "docs/**"
+  - "compiler/**"
+  - ".cursor/**"
+---
+
+# Li LLM-first (token discipline)
+
+Provability pillar **#1** is unchanged. This rule applies when adding **syntax**, **docs**, or **agent-facing tooling**.
+
+## Before you add surface area
+
+1. **Token cost** — Will an agent read this 10× per session? Prefer tables, links, and manifests over repeated prose.
+2. **Structured output** — Prefer `lic check --format=json` / `lic diagnose` for automated fix loops; keep human ANSI as default.
+3. **Stable symbols** — Use grep-friendly names; avoid ambiguous abbreviations in public APIs.
+4. **No proof shortcuts** — Terse syntax must desugar to Core; never skip contracts in **shipped** `.li` because an agent could infer them.
+
+## Docs
+
+- Link to canonical specs; do not fork large normative tables into handover files.
+- Runnable commands must be complete (no `...` in shell blocks).
+
+## Tooling changes
+
+- New diagnostic codes: extend `infer_diagnostic_code` + `docs/schemas/diagnostic-v1.json`.
+- New agent commands: add to `docs/ecosystem/li-agent-manifest.toml` and regenerate if using `gen-li-agent-manifest.sh`.
+
+## Spec
+
+Full research stub: `docs/superpowers/specs/2026-05-16-li-llm-first-design.md`.

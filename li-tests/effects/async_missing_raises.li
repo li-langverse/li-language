@@ -1,0 +1,6 @@
+@async
+def worker() -> int
+  requires true
+  ensures result == 0
+=
+  return 0

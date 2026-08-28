@@ -1,0 +1,12 @@
+def wrap(x: int) -> int
+  requires true
+  ensures result == x + 1
+  decreases 0
+=
+  return x + 1
+def deep() -> int
+  requires true
+  ensures result == wrap(wrap(wrap(wrap(wrap(wrap(wrap(wrap(0))))))))
+  decreases 0
+=
+  return wrap(wrap(wrap(wrap(wrap(wrap(wrap(wrap(0))))))))

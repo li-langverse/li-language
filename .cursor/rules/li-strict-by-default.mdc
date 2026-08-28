@@ -1,0 +1,30 @@
+---
+description: Strict-by-default — proof, security, and perf gates always on; no optional provability
+alwaysApply: true
+---
+
+# Strict by default (non-negotiable)
+
+**Canonical:** `docs/ecosystem/strict-by-default.md`
+
+There is **no optional provability** by default. Mathematical proof, security, and performance gates run at **maximum** for every build/check. Users may **only relax** via **explicit** `li.toml` `[gates]` or **documented** CLI flags (`--no-lean-verify`, `--allow-open-vc` on `lic build`). Silence or omission never weakens a gate.
+
+## Forbidden (agents)
+
+- Suggesting `sorry`, `assume`, `unsafe`, or bare `cast` to “unblock” work
+- Skipping `requires` / `ensures` on new or changed **`def`** / **`extern proc`**
+- Treating `lic check` as sufficient for ship — **`lic build`** is the certificate path
+- Weakening `stdlib_seal`, removing CVE/exploit tests, or lowering bench thresholds without human approval + tracked issue
+- Suggesting `git commit --no-verify`, `--no-verify`, or bypassing hooks/CI gates unless the user **explicitly** requests a documented downgrade
+- Disabling proof “for speed” or “for LLM ergonomics”
+
+## Required (agents)
+
+- Contracts on every new/changed **`def`** and each **`extern proc`**; loop specs where applicable
+- Respect `check_stdlib_seal` and security harnesses when touching `std/` or policy
+- Run relevant gates before claiming done (`li-tests`, `scripts/ci.sh`, stdlib coverage when applicable)
+- Document explicit downgrades in `li.toml` `[gates]` — never implicit defaults-off
+
+## Pillar order (unchanged)
+
+Proof → easy syntax → fast execution. See `li-project.mdc`.

@@ -1,0 +1,17 @@
+extern def li_wind_field_kernel()
+  requires true
+  ensures true
+  decreases 0
+extern def li_wind_field_checksum() -> float
+  requires true
+  ensures true
+  decreases 0
+
+def main() raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  li_wind_field_kernel()
+  return 0
+

@@ -1,0 +1,22 @@
+# Security property: deeply nested object allocations do not corrupt memory.
+type Point = object
+  public x: int
+  public y: int
+
+type Line = object
+  public ax: int
+  public ay: int
+  public bx: int
+  public by: int
+
+def main() -> int
+  requires true
+  ensures result == 10
+  decreases 0
+=
+  var ln: Line
+  ln.ax = 1
+  ln.ay = 2
+  ln.bx = 3
+  ln.by = 4
+  return ln.ax + ln.ay + ln.bx + ln.by

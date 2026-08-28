@@ -1,0 +1,12 @@
+# Negative fixture (Layer 2 gate): squares are not handled by the linear
+# arithmetic engine, so `lic build` must fail with the "not discharged
+# natively" message.
+
+theorem square_monotone_unproved(a: int, b: int) : (0 < a and a < b) -> a * a < b * b
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return 0
