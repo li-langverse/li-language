@@ -6255,7 +6255,7 @@ def d_alloc(darena: var array[65536, int],  dasp: var array[1, int],  kind: int,
 
 # Emit INS with a mangled name like __li_o_<base>_<field>
 # format: INS op iv 0 <mangled_name>      0 0 0 1  0 <flags> ...
-def mir_ins_mangled(src: var ptr, op: int, iv: int, base_s: int, base_e: int, fld_s: int, fld_e: int, flag1: int, flag2: int, val: int, lastop: var array[1, int], rhs_s: int, rhs_e: int, rhs_t: int, rhs_p_s: int, rhs_p_e: int, rhs_f_s: int, rhs_f_e: int, fld_src_fallback: int) raises IO -> int
+def mir_ins_mangled(src: var ptr, op: int, iv: int, base_s: int, base_e: int, fld_s: int, fld_e: int, flag1: int, flag2: int, val: int, lastop: var array[1, int], rhs_s: int, rhs_e: int, rhs_t: int, rhs_p_s: int, rhs_p_e: int, rhs_f_s: int, rhs_f_e: int, fld_src_fallback: int, arr_flt: int) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -6344,7 +6344,7 @@ def mir_ins_mangled(src: var ptr, op: int, iv: int, base_s: int, base_e: int, fl
   li_rt_ast_space()
   li_rt_ast_int(0)
   li_rt_ast_space()
-  li_rt_ast_int(0)
+  li_rt_ast_int(arr_flt)
   li_rt_ast_nl()
   lastop[0] = op
   return 0
@@ -6445,18 +6445,18 @@ def mir_obj_alloc_fields(src: var ptr,  ts: var array[131072, int],  te: var arr
         if p_s >= 0:
           mir_ins_mangled_nested(src, 9, elems_a, base_s, base_e, p_s, p_e, fa_a[0], fa_a[1], 0, 1, 0, lastop)
         else:
-          mir_ins_mangled(src, 9, elems_a, base_s, base_e, fa_a[0], fa_a[1], 0, 1, 0, lastop, -1, -1, -1, -1, -1, -1, -1, 0)
+          mir_ins_mangled(src, 9, elems_a, base_s, base_e, fa_a[0], fa_a[1], 0, 1, 0, lastop, -1, -1, -1, -1, -1, -1, -1, 0, mir_obj_field_float(itmp, type_idx, i_a))
       else:
         if mir_obj_field_float(itmp, type_idx, i_a) == 1:
           if p_s >= 0:
             mir_ins_mangled_nested(src, 35, 0, base_s, base_e, p_s, p_e, fa_a[0], fa_a[1], 0, 1, 0, lastop)
           else:
-            mir_ins_mangled(src, 35, 0, base_s, base_e, fa_a[0], fa_a[1], 0, 1, 0, lastop, -1, -1, -1, -1, -1, -1, -1, 0)
+            mir_ins_mangled(src, 35, 0, base_s, base_e, fa_a[0], fa_a[1], 0, 1, 0, lastop, -1, -1, -1, -1, -1, -1, -1, 0, 0)
         else:
           if p_s >= 0:
             mir_ins_mangled_nested(src, 24, 0, base_s, base_e, p_s, p_e, fa_a[0], fa_a[1], 0, 1, 0, lastop)
           else:
-            mir_ins_mangled(src, 24, 0, base_s, base_e, fa_a[0], fa_a[1], 0, 1, 0, lastop, -1, -1, -1, -1, -1, -1, -1, 0)
+            mir_ins_mangled(src, 24, 0, base_s, base_e, fa_a[0], fa_a[1], 0, 1, 0, lastop, -1, -1, -1, -1, -1, -1, -1, 0, 0)
     i_a = i_a + 1
   return 0
 
@@ -10356,7 +10356,7 @@ def mir_return(darena: var array[65536, int],  dasp: var array[1, int], src: var
                 var rfs: int = peek65536(darena, rec + 2)
                 var rfe: int = peek65536(darena, rec + 3)
                 if peek65536(darena, rfb + 0) == 3:
-                  mir_ins_mangled(src, 3, 0, peek65536(darena, rfb + 1), peek65536(darena, rfb + 2), rfs, rfe, 0, 1, 0, lastop, -1, -1, -1, -1, -1, -1, -1, 1)
+                  mir_ins_mangled(src, 3, 0, peek65536(darena, rfb + 1), peek65536(darena, rfb + 2), rfs, rfe, 0, 1, 0, lastop, -1, -1, -1, -1, -1, -1, -1, 1, 0)
                 else:
                   var f5f: array[44, int]
                   mir_fdef(f5f)
@@ -11229,7 +11229,7 @@ def mir_assign(darena: var array[65536, int],  dasp: var array[1, int],  lrec: i
                   sf_rhs_p_e = peek65536(darena, rfb_i + 3)
                   sf_rhs_f_s = peek65536(darena, rrec + 2)
                   sf_rhs_f_e = peek65536(darena, rrec + 3)
-        mir_ins_mangled(src, 26, 0, base_s_a, base_e_a, fld_s_a, fld_e_a, 0, sf_lit, sf_val, lastop, sf_rhs_s, sf_rhs_e, sf_rhs_t, sf_rhs_p_s, sf_rhs_p_e, sf_rhs_f_s, sf_rhs_f_e, 1)
+        mir_ins_mangled(src, 26, 0, base_s_a, base_e_a, fld_s_a, fld_e_a, 0, sf_lit, sf_val, lastop, sf_rhs_s, sf_rhs_e, sf_rhs_t, sf_rhs_p_s, sf_rhs_p_e, sf_rhs_f_s, sf_rhs_f_e, 1, 0)
         return 0
   if peek65536(darena, lrec + 0) == 5:
     var base: int = peek65536(darena, lrec + 1)
@@ -11255,7 +11255,7 @@ def mir_assign(darena: var array[65536, int],  dasp: var array[1, int],  lrec: i
                 iv9 = -2
             if iv9 >= 0:
               if peek65536(darena, rrec + 0) == 0:
-                mir_ins_mangled(src, 10, iv9, peek65536(darena, fb9 + 1), peek65536(darena, fb9 + 2), fs9, fe9, 0, 1, peek65536(darena, rrec + 1), lastop, -1, -1, -1, -1, -1, -1, -1, 1)
+                mir_ins_mangled(src, 10, iv9, peek65536(darena, fb9 + 1), peek65536(darena, fb9 + 2), fs9, fe9, 0, 1, peek65536(darena, rrec + 1), lastop, -1, -1, -1, -1, -1, -1, -1, 1, 0)
                 return 0
               if peek65536(darena, rrec + 0) == 3:
                 var isrc9: int = mir_obj_find_var(src,  ts,  te,  itmp,  peek65536(darena, rrec + 1),  peek65536(darena, rrec + 2))
@@ -11263,7 +11263,7 @@ def mir_assign(darena: var array[65536, int],  dasp: var array[1, int],  lrec: i
                   # a.xs[i] = b.ys[j] is uncommon; fall through to generic (temp) path
                   iv9 = -3
               if iv9 >= 0:
-                mir_ins_mangled(src, 10, iv9, peek65536(darena, fb9 + 1), peek65536(darena, fb9 + 2), fs9, fe9, 0, 1, peek65536(darena, rrec + 1), lastop, -1, -1, -1, -1, -1, -1, -1, 1)
+                mir_ins_mangled(src, 10, iv9, peek65536(darena, fb9 + 1), peek65536(darena, fb9 + 2), fs9, fe9, 0, 1, peek65536(darena, rrec + 1), lastop, -1, -1, -1, -1, -1, -1, -1, 1, 0)
                 return 0
     if peek65536(darena, base + 0) == 5:
       var mat: int = peek65536(darena, base + 1)
@@ -12608,6 +12608,11 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
                   fld_float = 1
                 if ty_tok + 2 < n[0] and tok_is(src, ts, te, ty_tok, "array") == 1 and tok_is(src, ts, te, ty_tok + 1, "[") == 1:
                   fld_elems = li_rt_mir_int(src,  peek_tk(ts, ty_tok + 2),  peek_tk(te, ty_tok + 2))
+                  # Check element type inside array[N, elem]: array[8, float] -> float
+                  if ty_tok + 4 < n[0] and tok_is(src, ts, te, ty_tok + 3, ",") == 1:
+                    var elem_tok: int = ty_tok + 4
+                    if tok_is(src, ts, te, elem_tok, "float") == 1 or tok_is(src, ts, te, elem_tok, "float64") == 1 or tok_is(src, ts, te, elem_tok, "float32") == 1 or tok_is(src, ts, te, elem_tok, "f64") == 1 or tok_is(src, ts, te, elem_tok, "f32") == 1:
+                      fld_float = 1
               # skip : and type tokens until newline
               while chk < n[0] and peek_tk(tk, chk) != 1:
                 chk = chk + 1
