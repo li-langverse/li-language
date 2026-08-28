@@ -181,6 +181,10 @@ struct EmitCtx {
         return builder->CreateMul(lhs, rhs);
       case BinOp::Div:
         return builder->CreateSDiv(lhs, rhs);
+      case BinOp::Mod:
+        return builder->CreateSRem(lhs, rhs);
+      case BinOp::FloorDiv:
+        return builder->CreateSDiv(lhs, rhs);
       case BinOp::Lt:
         return builder->CreateZExt(
             builder->CreateICmpSLT(lhs, rhs), i32_ty(context));

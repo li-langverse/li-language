@@ -56,6 +56,8 @@ enum class TokenKind {
   Minus,
   Star,
   Slash,
+  Mod,
+  FloorDiv,
   Le,
   Lt,
   Ge,

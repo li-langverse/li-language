@@ -50,7 +50,7 @@ struct Param {
 
 enum class ContractKind { Requires, Ensures, Decreases, Invariant };
 
-enum class BinOp { Add, Sub, Mul, Div, Le, Lt, Ge, Gt, Eq, Ne, And, Or };
+enum class BinOp { Add, Sub, Mul, Div, Mod, FloorDiv, Le, Lt, Ge, Gt, Eq, Ne, And, Or };
 
 struct Expr {
   enum class Kind { IntLit, FloatLit, StringLit, Ident, BinOp, Call, UnaryNot, Index };

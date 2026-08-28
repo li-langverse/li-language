@@ -404,7 +404,11 @@ bool Lexer::tokenize(DiagnosticBag& diags) {
         }
         continue;
       case '*': single(TokenKind::Star); continue;
-      case '/': single(TokenKind::Slash); continue;
+      case '/':
+        if (peek() == '/') { advance(); single(TokenKind::FloorDiv); }
+        else { single(TokenKind::Slash); }
+        continue;
+      case '%': single(TokenKind::Mod); continue;
       case '=':
         if (peek() == '=') {
           advance();
