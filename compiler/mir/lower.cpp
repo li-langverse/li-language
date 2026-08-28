@@ -54,7 +54,7 @@ void push_branch_if_zero(std::vector<MirInsn>& out, const std::string& ident,
 }
 
 bool is_arith_binop(BinOp op) {
-  return op == BinOp::Add || op == BinOp::Sub || op == BinOp::Mul || op == BinOp::Div;
+  return op == BinOp::Add || op == BinOp::Sub || op == BinOp::Mul || op == BinOp::Div || op == BinOp::Mod || op == BinOp::FloorDiv;
 }
 
 bool is_float_expr(const Expr& e, const std::unordered_set<std::string>& float_names) {

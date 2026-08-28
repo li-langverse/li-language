@@ -192,7 +192,9 @@ int prec(TokenKind k) {
     case TokenKind::Plus:
     case TokenKind::Minus: return 4;
     case TokenKind::Star:
-    case TokenKind::Slash: return 5;
+    case TokenKind::Slash:
+    case TokenKind::Mod:
+    case TokenKind::FloorDiv: return 5;
     default: return -1;
   }
 }
@@ -203,6 +205,8 @@ BinOp binop(TokenKind k) {
     case TokenKind::Minus: return BinOp::Sub;
     case TokenKind::Star: return BinOp::Mul;
     case TokenKind::Slash: return BinOp::Div;
+    case TokenKind::Mod: return BinOp::Mod;
+    case TokenKind::FloorDiv: return BinOp::FloorDiv;
     case TokenKind::Le: return BinOp::Le;
     case TokenKind::Lt: return BinOp::Lt;
     case TokenKind::Ge: return BinOp::Ge;
@@ -534,6 +538,22 @@ Stmt Parser::parse_stmt() {
     }
     return s;
   }
+  if (at(TokenKind::KwBreak)) {
+    const Token t = cur();
+    s.kind = Stmt::Kind::Break;
+    s.span = {t.start, t.end};
+    i++;
+    skip_newlines();
+    return s;
+  }
+  if (at(TokenKind::KwContinue)) {
+    const Token t = cur();
+    s.kind = Stmt::Kind::Continue;
+    s.span = {t.start, t.end};
+    i++;
+    skip_newlines();
+    return s;
+  }
   if (at(TokenKind::KwReturn)) {
     const Token t = cur();
     s.kind = Stmt::Kind::Return;
@@ -552,6 +572,11 @@ Stmt Parser::parse_stmt() {
     expect(TokenKind::Colon, "':'");
     skip_newlines();
     s.then_body = parse_block();
+    if (accept(TokenKind::KwElse)) {
+      expect(TokenKind::Colon, "':'");
+      skip_newlines();
+      s.else_body = parse_block();
+    }
     return s;
   }
   const std::size_t save = i;

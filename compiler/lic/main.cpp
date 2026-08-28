@@ -1,4 +1,6 @@
 #include "li/compile.hpp"
+#include "li/mir.hpp"
+#include "li/mir_dump.hpp"
 #include "li/parser.hpp"
 #include "li/policy.hpp"
 #include "li/smoke_llvm.hpp"
@@ -18,6 +20,7 @@ int usage() {
             << "  lic parse <file>       parse and validate syntax\n"
             << "  lic check <file>       parse + typecheck\n"
             << "  lic build <file> -o <out> [--release]\n"
+            << "  lic mir <file>         lower to MIR and dump\n"
             << "  lic smoke-llvm         verify LLVM can emit main returning 0\n"
             << "  lic --version          print version\n";
   return 1;
@@ -154,6 +157,21 @@ int main(int argc, char** argv) {
       std::cerr << "build failed: " << err << '\n';
       return 1;
     }
+    return 0;
+  }
+  if (cmd == "mir") {
+    if (argc < 3) {
+      return usage();
+    }
+    const std::string source = read_file(argv[2]);
+    li::Module module;
+    li::DiagnosticBag diags;
+    if (!frontend(argv[2], source, module, diags)) {
+      li::print_diagnostics(diags);
+      return 1;
+    }
+    auto mir = li::lower_to_mir(module);
+    std::cout << li::dump_mir_module(mir);
     return 0;
   }
   return usage();

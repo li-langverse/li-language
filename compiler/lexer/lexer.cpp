@@ -40,6 +40,8 @@ TokenKind Lexer::keyword_kind(std::string_view text) const {
   if (text == "else") return TokenKind::KwElse;
   if (text == "elif") return TokenKind::KwElif;
   if (text == "while") return TokenKind::KwWhile;
+  if (text == "break") return TokenKind::KwBreak;
+  if (text == "continue") return TokenKind::KwContinue;
   if (text == "return") return TokenKind::KwReturn;
   if (text == "raises") return TokenKind::KwRaises;
   if (text == "echo") return TokenKind::KwEcho;
@@ -404,7 +406,11 @@ bool Lexer::tokenize(DiagnosticBag& diags) {
         }
         continue;
       case '*': single(TokenKind::Star); continue;
-      case '/': single(TokenKind::Slash); continue;
+      case '/':
+        if (peek() == '/') { advance(); single(TokenKind::FloorDiv); }
+        else { single(TokenKind::Slash); }
+        continue;
+      case '%': single(TokenKind::Mod); continue;
       case '=':
         if (peek() == '=') {
           advance();
