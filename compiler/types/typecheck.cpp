@@ -401,7 +401,8 @@ struct Ctx {
         const TyPtr l = type_of(*e.lhs);
         const TyPtr r = type_of(*e.rhs);
         if (e.bin_op == BinOp::Add || e.bin_op == BinOp::Sub || e.bin_op == BinOp::Mul ||
-            e.bin_op == BinOp::Div || e.bin_op == BinOp::Mod || e.bin_op == BinOp::FloorDiv) {
+            e.bin_op == BinOp::Div || e.bin_op == BinOp::Mod || e.bin_op == BinOp::FloorDiv ||
+            e.bin_op == BinOp::Pow) {
           if (l->kind == TyKind::Int && r->kind == TyKind::Int) {
             return make_int();
           }
@@ -411,6 +412,15 @@ struct Ctx {
           diags.error(loc(e.span),
                       "cannot mix int and float in arithmetic without explicit cast");
           return make_int();
+        }
+        if (e.bin_op == BinOp::MatMul) {
+          // `x @ y` dot product over float arrays / matrices lowers to
+          // ArrayDotF64 -> float. Int arrays would be an int dot.
+          const bool any_float =
+              l->kind == TyKind::Float || r->kind == TyKind::Float ||
+              (l->kind == TyKind::Array && l->elem && l->elem->kind == TyKind::Float) ||
+              (r->kind == TyKind::Array && r->elem && r->elem->kind == TyKind::Float);
+          return any_float ? make_float() : make_int();
         }
         return make_bool();
       }
@@ -444,6 +454,12 @@ struct Ctx {
       }
       case Expr::Kind::UnaryNot:
         return make_bool();
+      case Expr::Kind::UnaryMinus:
+        // Negation preserves the operand type (int or float).
+        if (e.operand) {
+          return type_of(*e.operand);
+        }
+        return make_int();
       case Expr::Kind::Index: {
         const TyPtr base = type_of(*e.base);
         const TyPtr idx = type_of(*e.index);

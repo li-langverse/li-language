@@ -203,7 +203,9 @@ int prec(TokenKind k) {
     case TokenKind::Star:
     case TokenKind::Slash:
     case TokenKind::Mod:
-    case TokenKind::FloorDiv: return 5;
+    case TokenKind::FloorDiv:
+    case TokenKind::StarStar:
+    case TokenKind::At: return 5;
     default: return -1;
   }
 }
@@ -216,6 +218,8 @@ BinOp binop(TokenKind k) {
     case TokenKind::Slash: return BinOp::Div;
     case TokenKind::Mod: return BinOp::Mod;
     case TokenKind::FloorDiv: return BinOp::FloorDiv;
+    case TokenKind::StarStar: return BinOp::Pow;
+    case TokenKind::At: return BinOp::MatMul;
     case TokenKind::Le: return BinOp::Le;
     case TokenKind::Lt: return BinOp::Lt;
     case TokenKind::Ge: return BinOp::Ge;
@@ -238,6 +242,7 @@ std::unique_ptr<Expr> Parser::parse_expr(int min_prec) {
     left->span = {t.start, t.end};
     left->operand = parse_expr(100);
   } else if (at(TokenKind::Minus)) {
+    const Token minus_tok = cur();
     i++;
     auto inner = parse_primary();
     if (inner && inner->kind == Expr::Kind::IntLit) {
@@ -246,8 +251,16 @@ std::unique_ptr<Expr> Parser::parse_expr(int min_prec) {
     } else if (inner && inner->kind == Expr::Kind::FloatLit) {
       inner->float_value = -inner->float_value;
       left = std::move(inner);
-    } else {
-      left = std::move(inner);
+    } else if (inner) {
+      // `-x` on a non-literal keeps an explicit UnaryMinus node: the walker's
+      // mir_lower_expr k==11 emits BinOpInt(0 - x) for ints and a StoreFloat
+      // zero temp + BinOpFloat for floats. Dropping the minus would silently
+      // change semantics and break MIR parity.
+      auto neg = std::make_unique<Expr>();
+      neg->kind = Expr::Kind::UnaryMinus;
+      neg->span = {minus_tok.start, inner->span.end};
+      neg->operand = std::move(inner);
+      left = std::move(neg);
     }
   } else {
     left = parse_primary();
@@ -525,7 +538,8 @@ Stmt Parser::parse_stmt() {
     s.span = {t.start, t.end};
     i++;
     s.cond = parse_expr();
-    expect(TokenKind::Colon, "':'");
+    // Colon is optional (walker grammar: `while i < 4` without ':' is valid).
+    (void)accept(TokenKind::Colon);
     skip_newlines();
     s.while_body = parse_block();
     return s;

@@ -140,6 +140,11 @@ int main(int argc, char** argv) {
         output = argv[++i];
       } else if (arg == "--release") {
         release = true;
+      } else if (arg == "--allow-open-vc" || arg == "--no-lean-verify") {
+        // Frontend-only flags: the parity/CI harness passes them when
+        // building bootstrap/lic/main.li. This frontend has no external
+        // prover step, so they are consumed here and never reach clang.
+        continue;
       } else {
         extra_flags.append(argv[i]);
         extra_flags.push_back(' ');

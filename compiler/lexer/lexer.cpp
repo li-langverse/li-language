@@ -402,7 +402,7 @@ bool Lexer::tokenize(DiagnosticBag& diags) {
         }
         continue;
       case '|': single(TokenKind::Pipe); continue;
-      case '+':
+      case '+': single(TokenKind::Plus); continue;
       case '-':
         if (peek() == '>') {
           advance();
@@ -414,12 +414,16 @@ bool Lexer::tokenize(DiagnosticBag& diags) {
           single(TokenKind::Minus);
         }
         continue;
-      case '*': single(TokenKind::Star); continue;
+      case '*':
+        if (peek() == '*') { advance(); single(TokenKind::StarStar); }
+        else { single(TokenKind::Star); }
+        continue;
       case '/':
         if (peek() == '/') { advance(); single(TokenKind::FloorDiv); }
         else { single(TokenKind::Slash); }
         continue;
       case '%': single(TokenKind::Mod); continue;
+      case '@': single(TokenKind::At); continue;
       case '=':
         if (peek() == '=') {
           advance();

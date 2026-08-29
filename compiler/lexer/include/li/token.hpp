@@ -60,6 +60,8 @@ enum class TokenKind {
   Slash,
   Mod,
   FloorDiv,
+  StarStar,
+  At,
   Le,
   Lt,
   Ge,

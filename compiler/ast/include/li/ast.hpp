@@ -50,10 +50,16 @@ struct Param {
 
 enum class ContractKind { Requires, Ensures, Decreases, Invariant };
 
-enum class BinOp { Add, Sub, Mul, Div, Mod, FloorDiv, Le, Lt, Ge, Gt, Eq, Ne, And, Or };
+// Ordering is part of the MIR dump ABI: the self-hosted walker emits these
+// exact binop codes (Le=8, Ge=10, And=14, ...), so Pow/MatMul/Implies must
+// stay in position between FloorDiv and Le.
+enum class BinOp {
+  Add, Sub, Mul, Div, Mod, FloorDiv, Pow, MatMul, Le, Lt, Ge, Gt, Eq, Ne, And,
+  Or, Implies
+};
 
 struct Expr {
-  enum class Kind { IntLit, FloatLit, StringLit, Ident, BinOp, Call, UnaryNot, Index };
+  enum class Kind { IntLit, FloatLit, StringLit, Ident, BinOp, Call, UnaryNot, UnaryMinus, Index };
   Kind kind = Kind::IntLit;
   Span span;
   std::int64_t int_value = 0;

@@ -301,7 +301,14 @@ struct EmitCtx {
         return true;
       }
       case MirOp::Jump:
-        builder->CreateBr(block_for(ins.label));
+        // The MIR text stream mirrors the Li walker, which emits loop-back /
+        // merge jumps even after a terminating statement (return). Skip the
+        // actual branch here so dead jumps never produce a second terminator
+        // in one basic block; the next Label simply switches the insert point.
+        if (builder->GetInsertBlock() != nullptr &&
+            builder->GetInsertBlock()->getTerminator() == nullptr) {
+          builder->CreateBr(block_for(ins.label));
+        }
         return false;
       case MirOp::BranchIfZero: {
         llvm::Value* cond = load_int(ins.ident);
@@ -371,8 +378,12 @@ struct EmitCtx {
         return true;
       }
       case MirOp::BinOpInt: {
-        llvm::Value* lhs = load_int(ins.lhs_ident);
-        llvm::Value* rhs = load_int(ins.rhs_ident);
+        llvm::Value* lhs = ins.lhs_is_literal
+                               ? int32_val(*builder, context, ins.lhs_int)
+                               : load_int(ins.lhs_ident);
+        llvm::Value* rhs = ins.rhs_is_literal
+                               ? int32_val(*builder, context, ins.rhs_int)
+                               : load_int(ins.rhs_ident);
         llvm::Value* result = emit_binop(ins.bin_op, lhs, rhs);
         builder->CreateStore(result, ensure_int_local(ins.ident));
         return true;
@@ -533,6 +544,10 @@ bool emit_llvm_ir(const MirModule& mir, const std::string& out_path, std::string
   llvm::Function* user_main = nullptr;
   bool user_main_argv_wrapper = false;
 
+  // Pass 1: declare every function up front. Bodies are emitted in pass 2 so
+  // that CallProc sites can resolve callees defined later in the module;
+  // emitting each function inline would silently drop forward calls when
+  // module->getFunction() returns null (e.g. parse_block -> parse_stmt).
   for (const auto& fn : mir.functions) {
     if (fn.is_extern) {
       llvm::Type* ret_ty = fn.returns_void ? llvm::Type::getVoidTy(context)
@@ -540,7 +555,7 @@ bool emit_llvm_ir(const MirModule& mir, const std::string& out_path, std::string
                                                             : llvm_scalar(context, fn.returns_float, false);
       std::vector<llvm::Type*> param_tys;
       for (const auto& p : fn.params) {
-        if (p.is_string || p.is_i64) {
+        if (p.is_string || p.is_i64 || p.is_array) {
           param_tys.push_back(i8_ptr(context));
         } else {
           param_tys.push_back(llvm_scalar(context, p.is_float, false));
@@ -555,7 +570,10 @@ bool emit_llvm_ir(const MirModule& mir, const std::string& out_path, std::string
                                          : llvm_scalar(context, fn.returns_float, fn.returns_i64);
     std::vector<llvm::Type*> param_tys;
     for (const auto& p : fn.params) {
-      param_tys.push_back(llvm_scalar(context, p.is_float, p.is_i64));
+      // Array params always pass by pointer (i64-wide ABI) regardless of the
+      // element type; is_i64 only describes scalar ptr/str params.
+      param_tys.push_back(p.is_array ? i64_ty(context)
+                                     : llvm_scalar(context, p.is_float, p.is_i64));
     }
     llvm::FunctionType* fn_ty = llvm::FunctionType::get(ret_ty, param_tys, false);
     const bool argv_main = fn.name == "main" && fn.params.empty();
@@ -566,7 +584,22 @@ bool emit_llvm_ir(const MirModule& mir, const std::string& out_path, std::string
       user_main = func;
       user_main_argv_wrapper = argv_main;
     }
+  }
 
+  // Pass 2: emit bodies into the pre-declared functions.
+  for (const auto& fn : mir.functions) {
+    if (fn.is_extern) {
+      continue;
+    }
+    const bool argv_main = fn.name == "main" && fn.params.empty();
+    const std::string llvm_name = argv_main ? "li_user_main" : fn.name;
+    llvm::Function* func = module->getFunction(llvm_name);
+    if (!func) {
+      continue;
+    }
+
+    llvm::Type* ret_ty = fn.returns_void ? llvm::Type::getVoidTy(context)
+                                         : llvm_scalar(context, fn.returns_float, fn.returns_i64);
     llvm::BasicBlock* entry = llvm::BasicBlock::Create(context, "entry", func);
     llvm::IRBuilder<> builder(entry);
 
@@ -577,7 +610,7 @@ bool emit_llvm_ir(const MirModule& mir, const std::string& out_path, std::string
     for (auto& arg : func->args()) {
       if (idx < fn.params.size()) {
         arg.setName(fn.params[idx].name);
-        if (fn.params[idx].is_i64) {
+        if (fn.params[idx].is_i64 || fn.params[idx].is_array) {
           builder.CreateStore(&arg, ctx.ensure_i64_local(fn.params[idx].name));
           // Register var array params in the arrays map so ArrayStoreInt/
           // ArrayLoadInt can GEP through the pointer.
