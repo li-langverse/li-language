@@ -77,6 +77,7 @@ struct MirFn {
   bool returns_float = false;
   bool returns_void = false;
   bool is_extern = false;
+  bool returns_i64 = false;
   std::vector<MirParam> params;
   std::vector<MirInsn> body;
 };

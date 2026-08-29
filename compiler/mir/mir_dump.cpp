@@ -46,7 +46,7 @@ void dump_fn(const MirFn& fn, D& d) {
   d.sp(); d.f(fn.is_extern);
   d.sp(); d.f(static_cast<std::int64_t>(fn.params.size()));
   d.sp(); d.f(static_cast<std::int64_t>(fn.body.size()));
-  d.sp(); d.f(std::int64_t(0)); // reserved
+  d.sp(); d.f(fn.returns_i64);
   d.sp(); d.f(std::int64_t(0)); // reserved
   d.nl();
   for (const auto& p : fn.params) {

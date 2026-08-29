@@ -168,6 +168,10 @@ struct EmitCtx {
     if (auto it = i64_locals.find(name); it != i64_locals.end()) {
       return builder->CreateLoad(i64_ty(context), it->second);
     }
+    if (auto it = ptr_locals.find(name); it != ptr_locals.end()) {
+      return builder->CreatePtrToInt(
+          builder->CreateLoad(i8_ptr(context), it->second), i64_ty(context));
+    }
     return builder->CreateSExt(load_int(name), i64_ty(context));
   }
 
@@ -322,6 +326,10 @@ struct EmitCtx {
       case MirOp::ReturnIdent:
         if (ins.ret_is_float || returns_float || float_locals.count(ins.ident) > 0) {
           builder->CreateRet(load_float(ins.ident));
+        } else if (ret_ty && ret_ty->isIntegerTy(64)) {
+          // ptr-returning functions: load as i64/ptr
+          llvm::Value* v = load_i64(ins.ident);
+          builder->CreateRet(v);
         } else {
           builder->CreateRet(load_int(ins.ident));
         }
@@ -512,7 +520,8 @@ bool emit_llvm_ir(const MirModule& mir, const std::string& out_path, std::string
   for (const auto& fn : mir.functions) {
     if (fn.is_extern) {
       llvm::Type* ret_ty = fn.returns_void ? llvm::Type::getVoidTy(context)
-                                           : llvm_scalar(context, fn.returns_float, false);
+                                           : fn.returns_i64 ? i8_ptr(context)
+                                                            : llvm_scalar(context, fn.returns_float, false);
       std::vector<llvm::Type*> param_tys;
       for (const auto& p : fn.params) {
         if (p.is_string || p.is_i64) {
@@ -527,7 +536,7 @@ bool emit_llvm_ir(const MirModule& mir, const std::string& out_path, std::string
     }
 
     llvm::Type* ret_ty = fn.returns_void ? llvm::Type::getVoidTy(context)
-                                         : llvm_scalar(context, fn.returns_float, false);
+                                         : llvm_scalar(context, fn.returns_float, fn.returns_i64);
     std::vector<llvm::Type*> param_tys;
     for (const auto& p : fn.params) {
       param_tys.push_back(llvm_scalar(context, p.is_float, p.is_i64));

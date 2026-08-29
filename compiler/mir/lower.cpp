@@ -493,6 +493,7 @@ MirModule lower_to_mir(const Module& module) {
     if (proc.ret_type) {
       fn.returns_float = is_float_type_name(proc.ret_type->name);
       fn.returns_void = proc.ret_type->name == "unit";
+      fn.returns_i64 = is_i64_type_name(proc.ret_type->name);
     } else if (proc.is_extern) {
       fn.returns_void = true;
     }
