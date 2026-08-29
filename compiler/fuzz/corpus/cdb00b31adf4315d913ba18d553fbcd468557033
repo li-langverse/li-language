@@ -1,0 +1,11 @@
+@cpu f() -> int
+ rq euires true
+  e 0proc p() -> int
+  req
+=
+  return 0
+uires true
+  ensures true
+  decreases 0
+=
+  return 0

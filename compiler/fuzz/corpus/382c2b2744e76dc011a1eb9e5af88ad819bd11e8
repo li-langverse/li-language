@@ -1,0 +1,6 @@
+@cpu
+@parallel(disjoint=dis)
+proc f() -> i@parallel(disjoint=dis)
+proc f() -> int
+ rq nt
+ res trturn 0

@@ -1,0 +1,4 @@
+@cpu
+@p@c
+proc f() -> int
+  requires arallel(disjoint=dirn 0

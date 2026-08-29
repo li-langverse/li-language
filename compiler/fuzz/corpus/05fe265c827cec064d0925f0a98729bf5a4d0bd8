@@ -1,0 +1,11 @@
+@cpu
+@parallel(disjoint=dst_row)
+proc f() -> int
+  requires @cpu
+@parallel(disjoint=disjointjoinirt_row)
+proc f() -> int
+  requires @cpu
+@parallel(ruee
+es 0
+=
+  return 0

@@ -1,0 +1,3 @@
+@cpu
+@parallel(proc f() -> i@parallel(disjoint=dis)
+proc f(

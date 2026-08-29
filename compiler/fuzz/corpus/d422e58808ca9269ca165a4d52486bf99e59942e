@@ -1,0 +1,8 @@
+@cpu
+@parall%l(ddisjoint_row)
+proc f() -> int
+  requires urue
+  e=dures true
+  decreases 5
+=
+  return 0

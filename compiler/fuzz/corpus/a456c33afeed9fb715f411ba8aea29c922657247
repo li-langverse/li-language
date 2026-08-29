@@ -1,0 +1,3 @@
+@cpupel(djoint_row)
+proc f() -> in  requires true
+  ensures tr)n 0

@@ -1,0 +1,7 @@
+@cpu
+@cpu
+@@p@proc@cpu
+@parallel(disjoint=dis)
+proc f() -> i p() ->@par int rueallel(disjoint=dis)
+proc 
+ f( ensu

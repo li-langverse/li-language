@@ -1,0 +1,4 @@
+# )
+proc f() -> int
+  requires true
+  ensuresParser fuzz corpusö@õ¬šš›ŒØforcp
