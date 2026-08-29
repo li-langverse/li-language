@@ -141,8 +141,13 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
           if (arg->kind == Expr::Kind::IntLit) {
             ma.is_literal = true;
             ma.int_value = arg->int_value;
+          } else if (arg->kind == Expr::Kind::StringLit) {
+            ma.is_string = true;
+            ma.str_value = arg->str_value;
           } else if (arg->kind == Expr::Kind::Ident) {
             ma.ident = arg->ident;
+          } else {
+            ma.ident = lower_expr_to(*arg, module, out, float_names);
           }
           ins.args.push_back(std::move(ma));
         }

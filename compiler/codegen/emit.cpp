@@ -256,6 +256,25 @@ struct EmitCtx {
     return load_int(arg.ident);
   }
 
+  // Coerce a computed argument value to the callee parameter's LLVM type so
+  // calls always match the declared signature. Pointers are the i64/i8* ABI
+  // seam: locals are i64-wide, string globals are i8*, and externs use i8*.
+  llvm::Value* coerce_arg(llvm::Value* val, llvm::Type* expected) {
+    if (!val) {
+      return val;
+    }
+    if (val->getType() == expected) {
+      return val;
+    }
+    if (expected->isPointerTy() && val->getType() == i64_ty(context)) {
+      return builder->CreateIntToPtr(val, expected);
+    }
+    if (expected == i64_ty(context) && val->getType()->isPointerTy()) {
+      return builder->CreatePtrToInt(val, i64_ty(context));
+    }
+    return val;
+  }
+
   bool emit_insn(const MirInsn& ins) {
     switch (ins.op) {
       case MirOp::Label: {
@@ -367,12 +386,10 @@ struct EmitCtx {
         }
         std::vector<llvm::Value*> args;
         for (std::size_t ai = 0; ai < ins.args.size(); ++ai) {
-          const bool ptr_param =
-              ai < callee->arg_size() &&
-              callee->getArg(ai)->getType() == i8_ptr(context);
-          llvm::Value* val = mir_arg_value(ins.args[ai], ptr_param);
-          if (ptr_param && val->getType() == i64_ty(context)) {
-            val = builder->CreateIntToPtr(val, i8_ptr(context));
+          llvm::Argument* parg = ai < callee->arg_size() ? callee->getArg(ai) : nullptr;
+          llvm::Value* val = mir_arg_value(ins.args[ai], parg && parg->getType() == i8_ptr(context));
+          if (parg) {
+            val = coerce_arg(val, parg->getType());
           }
           args.push_back(val);
         }
@@ -394,8 +411,13 @@ struct EmitCtx {
           return true;
         }
         std::vector<llvm::Value*> args;
-        for (const auto& arg : ins.args) {
-          args.push_back(mir_arg_value(arg, false));
+        for (std::size_t ai = 0; ai < ins.args.size(); ++ai) {
+          llvm::Argument* parg = ai < callee->arg_size() ? callee->getArg(ai) : nullptr;
+          llvm::Value* val = mir_arg_value(ins.args[ai], parg && parg->getType() == i8_ptr(context));
+          if (parg) {
+            val = coerce_arg(val, parg->getType());
+          }
+          args.push_back(val);
         }
         llvm::CallInst* call = builder->CreateCall(callee, args);
         if (!ins.ident.empty()) {
