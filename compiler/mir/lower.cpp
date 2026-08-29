@@ -447,6 +447,37 @@ void lower_stmt(const Stmt& stmt, const Module& module, bool returns_float,
       if (stmt.expr && stmt.expr->kind == Expr::Kind::Call) {
         if (stmt.expr->ident == "echo" && !stmt.expr->args.empty()) {
           lower_echo_arg(*stmt.expr->args[0], out);
+        } else if (stmt.expr->ident == "print" && !stmt.expr->args.empty()) {
+          // print() is a prelude builtin — lower to CallExtern li_rt_print_str
+          MirInsn ins;
+          ins.op = MirOp::CallExtern;
+          ins.callee = "li_rt_print_str";
+          MirArg ma;
+          if (stmt.expr->args[0]->kind == Expr::Kind::StringLit) {
+            ma.is_string = true;
+            ma.str_value = stmt.expr->args[0]->str_value;
+          } else {
+            ma.is_literal = false;
+            ma.ident = lower_expr_to(*stmt.expr->args[0], module, out, float_names);
+          }
+          ins.args.push_back(std::move(ma));
+          out.push_back(std::move(ins));
+        } else if (stmt.expr->ident == "print_int" && !stmt.expr->args.empty()) {
+          // print_int() is a prelude builtin — lower to CallExtern li_rt_print_int
+          MirInsn ins;
+          ins.op = MirOp::CallExtern;
+          ins.callee = "li_rt_print_int";
+          MirArg ma;
+          if (stmt.expr->args[0]->kind == Expr::Kind::IntLit) {
+            ma.is_literal = true;
+            ma.int_value = stmt.expr->args[0]->int_value;
+          } else if (stmt.expr->args[0]->kind == Expr::Kind::Ident) {
+            ma.ident = stmt.expr->args[0]->ident;
+          } else {
+            ma.ident = lower_expr_to(*stmt.expr->args[0], module, out, float_names);
+          }
+          ins.args.push_back(std::move(ma));
+          out.push_back(std::move(ins));
         } else {
           (void)lower_expr_to(*stmt.expr, module, out, float_names);
         }
