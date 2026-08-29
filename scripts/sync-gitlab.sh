@@ -47,10 +47,13 @@ echo "[sync-gitlab] minting PAT '${TOKEN_NAME}' for root via gitlab-rails runner
 # the homelab). If the project's owner differs, change User.find_by below.
 PAT="$(runner_cmd "
   u = User.find_by(username: 'root')
-  next '' unless u
-  u.personal_access_tokens.active.where(name: '${TOKEN_NAME}').find_each { |t| t.destroy! }
-  t = u.personal_access_tokens.create!(name: '${TOKEN_NAME}', scopes: ${SCOPES}.map(&:to_sym), expires_at: 365.days.from_now)
-  puts t.token
+  if u
+    u.personal_access_tokens.active.where(name: '${TOKEN_NAME}').find_each { |t| t.destroy! }
+    t = u.personal_access_tokens.create!(name: '${TOKEN_NAME}', scopes: ${SCOPES}.map(&:to_sym), expires_at: 365.days.from_now)
+    puts t.token
+  else
+    puts 'NO_USER'
+  end
 " | grep -oE 'glpat-[A-Za-z0-9_]+' | head -1)"
 if [[ -z "$PAT" ]]; then
   echo "[sync-gitlab] FAILED to mint PAT" >&2
