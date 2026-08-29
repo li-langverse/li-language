@@ -533,7 +533,13 @@ MirModule lower_to_mir(const Module& module) {
       mp.name = p.name;
       mp.is_float = is_float_type_name(p.type.name);
       mp.is_string = is_string_type_name(p.type.name);
-      mp.is_i64 = is_i64_type_name(p.type.name);
+      if (p.type.kind == TypeKind::Array && p.type.elem) {
+        mp.is_array = true;
+        mp.array_size = p.type.array_size;
+        mp.is_i64 = true;  // var array params are passed as pointers
+      } else {
+        mp.is_i64 = is_i64_type_name(p.type.name);
+      }
       fn.params.push_back(std::move(mp));
     }
     if (!proc.is_extern) {

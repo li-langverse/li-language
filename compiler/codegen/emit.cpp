@@ -64,7 +64,8 @@ llvm::Value* string_ptr(llvm::IRBuilder<>& builder, llvm::GlobalVariable* gv) {
 }
 
 struct ArraySlot {
-  llvm::AllocaInst* alloca = nullptr;
+  llvm::AllocaInst* alloca = nullptr;  // non-null for local arrays
+  llvm::Value* ptr_param = nullptr;     // non-null for param arrays (pointer to data)
   std::int64_t size = 0;
 };
 
@@ -257,6 +258,11 @@ struct EmitCtx {
     if (i64_locals.find(arg.ident) != i64_locals.end()) {
       return load_i64(arg.ident);
     }
+    // If the arg is a local array, pass its alloca address as i64
+    auto ait = arrays.find(arg.ident);
+    if (ait != arrays.end() && ait->second.alloca) {
+      return builder->CreatePtrToInt(ait->second.alloca, i64_ty(context));
+    }
     return load_int(arg.ident);
   }
 
@@ -445,7 +451,7 @@ struct EmitCtx {
         llvm::ArrayType* arr_ty =
             llvm::ArrayType::get(i32_ty(context), static_cast<unsigned>(ins.int_value));
         llvm::AllocaInst* slot = create_alloca_addr(arr_ty, ins.ident);
-        arrays[ins.ident] = ArraySlot{slot, ins.int_value};
+        arrays[ins.ident] = ArraySlot{slot, nullptr, ins.int_value};
         return true;
       }
       case MirOp::ArrayStoreInt: {
@@ -456,13 +462,19 @@ struct EmitCtx {
         llvm::Value* idx = ins.index_is_literal
                                ? int32_val(*builder, context, ins.int_value)
                                : load_int(ins.index_ident);
-        llvm::Value* zero = llvm::ConstantInt::get(builder->getInt32Ty(), 0);
-        llvm::Value* gep_indices[] = {zero, idx};
-        llvm::Value* ptr = builder->CreateInBoundsGEP(
-            it->second.alloca->getAllocatedType(), it->second.alloca, gep_indices);
         llvm::Value* val = ins.rhs_is_literal ? int32_val(*builder, context, ins.rhs_int)
                                               : load_int(ins.rhs_ident);
-        builder->CreateStore(val, ptr);
+        llvm::Value* elem_ptr;
+        if (it->second.ptr_param) {
+          // Parameter array: base is an i8* pointer, GEP with single index
+          elem_ptr = builder->CreateGEP(i32_ty(context), it->second.ptr_param, idx);
+        } else {
+          // Local array: base is an alloca of [N x i32], GEP with [0, idx]
+          llvm::Value* zero = llvm::ConstantInt::get(builder->getInt32Ty(), 0);
+          elem_ptr = builder->CreateInBoundsGEP(
+              it->second.alloca->getAllocatedType(), it->second.alloca, {zero, idx});
+        }
+        builder->CreateStore(val, elem_ptr);
         return true;
       }
       case MirOp::ArrayLoadInt: {
@@ -473,11 +485,15 @@ struct EmitCtx {
         llvm::Value* idx = ins.index_is_literal
                                ? int32_val(*builder, context, ins.int_value)
                                : load_int(ins.index_ident);
-        llvm::Value* zero = llvm::ConstantInt::get(builder->getInt32Ty(), 0);
-        llvm::Value* gep_indices[] = {zero, idx};
-        llvm::Value* ptr = builder->CreateInBoundsGEP(
-            it->second.alloca->getAllocatedType(), it->second.alloca, gep_indices);
-        llvm::Value* loaded = builder->CreateLoad(i32_ty(context), ptr);
+        llvm::Value* elem_ptr;
+        if (it->second.ptr_param) {
+          elem_ptr = builder->CreateGEP(i32_ty(context), it->second.ptr_param, idx);
+        } else {
+          llvm::Value* zero = llvm::ConstantInt::get(builder->getInt32Ty(), 0);
+          elem_ptr = builder->CreateInBoundsGEP(
+              it->second.alloca->getAllocatedType(), it->second.alloca, {zero, idx});
+        }
+        llvm::Value* loaded = builder->CreateLoad(i32_ty(context), elem_ptr);
         if (!ins.lhs_ident.empty()) {
           builder->CreateStore(loaded, ensure_int_local(ins.lhs_ident));
         }
@@ -563,6 +579,15 @@ bool emit_llvm_ir(const MirModule& mir, const std::string& out_path, std::string
         arg.setName(fn.params[idx].name);
         if (fn.params[idx].is_i64) {
           builder.CreateStore(&arg, ctx.ensure_i64_local(fn.params[idx].name));
+          // Register var array params in the arrays map so ArrayStoreInt/
+          // ArrayLoadInt can GEP through the pointer.
+          if (fn.params[idx].is_array) {
+            llvm::Value* loaded = ctx.builder->CreateLoad(
+                i64_ty(context), ctx.ensure_i64_local(fn.params[idx].name));
+            llvm::Value* ptr = ctx.builder->CreateIntToPtr(loaded, i8_ptr(context));
+            ctx.arrays[fn.params[idx].name] =
+                ArraySlot{nullptr, ptr, fn.params[idx].array_size};
+          }
         } else if (fn.params[idx].is_float) {
           builder.CreateStore(&arg, ctx.ensure_float_local(fn.params[idx].name));
         } else {

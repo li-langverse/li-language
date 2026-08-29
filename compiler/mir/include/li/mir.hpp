@@ -70,6 +70,8 @@ struct MirParam {
   bool is_float = false;
   bool is_string = false;
   bool is_i64 = false;
+  bool is_array = false;
+  int array_size = 0;
 };
 
 struct MirFn {
