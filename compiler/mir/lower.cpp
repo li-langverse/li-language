@@ -11,6 +11,15 @@ int temp_counter = 0;
 std::vector<std::string> while_head_labels;
 std::vector<std::string> while_exit_labels;
 const ProcDecl* g_cur_proc = nullptr;
+// Array-ident registry (per-proc, reset in lower_to_mir): name -> declared
+// size for float AND int arrays, plus the set of int-array names. Seeded from
+// params and VarDecls so elementwise binops / sum / norm / dot / axpy can emit
+// the walker's array ops (ArrayBinOpF64/I64, ArrayScaleF64, ArraySumF64/I64,
+// ArrayDotF64, ArrayAxpyF64) with the declared length in int_value.
+std::unordered_map<std::string, std::int64_t> g_array_sizes;
+std::unordered_set<std::string> g_int_arrays;
+
+bool is_array_ident(const std::string& n) { return g_array_sizes.count(n) > 0; }
 
 std::string fresh_temp() { return "__t" + std::to_string(temp_counter++); }
 std::string fresh_label(const std::string& prefix) {
@@ -79,6 +88,14 @@ bool is_arith_binop(BinOp op) {
          op == BinOp::Mod || op == BinOp::FloorDiv || op == BinOp::Pow;
 }
 
+// The walker selects BinOpFloat for comparisons too (mir_lower_expr: `if arith
+// == 1 or cmp == 1: flt = mir_desc_float(...)`), so float-ness propagates
+// through Le/Lt/Ge/Gt/Eq/Ne operands.
+bool is_float_ctx_binop(BinOp op) {
+  return is_arith_binop(op) || op == BinOp::Le || op == BinOp::Lt || op == BinOp::Ge ||
+         op == BinOp::Gt || op == BinOp::Eq || op == BinOp::Ne;
+}
+
 bool is_float_expr(const Expr& e, const std::unordered_set<std::string>& float_names,
                    const std::unordered_set<std::string>& float_arrays) {
   switch (e.kind) {
@@ -93,7 +110,7 @@ bool is_float_expr(const Expr& e, const std::unordered_set<std::string>& float_n
       }
       return false;
     case Expr::Kind::BinOp:
-      if (!is_arith_binop(e.bin_op)) {
+      if (!is_float_ctx_binop(e.bin_op)) {
         return false;
       }
       return is_float_expr(*e.lhs, float_names, float_arrays) ||
@@ -120,10 +137,106 @@ void seed_float_params(const MirFn& fn, std::unordered_set<std::string>& float_n
     if (p.is_float) {
       float_names.insert(p.name);
     }
-    if (p.is_float && p.is_array) {
-      float_arrays.insert(p.name);
+    if (p.is_array) {
+      g_array_sizes[p.name] = p.array_size;
+      if (p.is_float) {
+        float_arrays.insert(p.name);
+      } else {
+        g_int_arrays.insert(p.name);
+      }
     }
   }
+}
+
+// Elementwise array binop emission. Mirrors the walker's VarDecl/Assign paths
+// (bootstrap/lic/main.li mir_stmt / mir_assign): `var c = a + b` / `c = a + b`
+// on same-shape float or int arrays lowers to ArrayBinOpF64 (INS 20) / I64
+// (INS 21) directly into the destination ident (no extra temp). Broadcast
+// flags brl/brr are set when one operand is array[1].
+bool emit_array_binop_into(const Expr& binop, const std::string& dest,
+                           const std::unordered_set<std::string>& float_arrays,
+                           std::vector<MirInsn>& out) {
+  if (binop.kind != Expr::Kind::BinOp || !binop.lhs || !binop.rhs) {
+    return false;
+  }
+  if (!is_arith_binop(binop.bin_op)) {
+    return false;
+  }
+  if (binop.lhs->kind != Expr::Kind::Ident || binop.rhs->kind != Expr::Kind::Ident) {
+    return false;
+  }
+  const auto itl = g_array_sizes.find(binop.lhs->ident);
+  const auto itr = g_array_sizes.find(binop.rhs->ident);
+  if (itl == g_array_sizes.end() || itr == g_array_sizes.end()) {
+    return false;
+  }
+  const std::int64_t szl = itl->second;
+  const std::int64_t szr = itr->second;
+  if (szl <= 0 || szr <= 0) {
+    return false;
+  }
+  const bool broadcast_ok =
+      szl == szr || (szl == 1 && szr > 1) || (szr == 1 && szl > 1);
+  if (!broadcast_ok) {
+    return false;
+  }
+  const bool flt = float_arrays.count(binop.lhs->ident) > 0 ||
+                   float_arrays.count(binop.rhs->ident) > 0;
+  MirInsn ins;
+  ins.op = flt ? MirOp::ArrayBinOpF64 : MirOp::ArrayBinOpI64;
+  ins.ident = dest;
+  ins.int_value = std::max(szl, szr);
+  ins.lhs_ident = binop.lhs->ident;
+  ins.rhs_ident = binop.rhs->ident;
+  ins.bin_op = binop.bin_op;
+  if (szl == 1 && szr > 1) {
+    ins.array_broadcast_lhs_len1 = true;
+  }
+  if (szr == 1 && szl > 1) {
+    ins.array_broadcast_rhs_len1 = true;
+  }
+  out.push_back(std::move(ins));
+  return true;
+}
+
+// Float scale `2.0 * x` / `x * 2.0` on a float array lowers to ArrayScaleF64
+// (INS 22) directly into the destination ident: int_value = size, float_value
+// = the literal, lhs_ident = the array, rhs_is_literal = 1.
+bool emit_array_scale_into(const Expr& binop, const std::string& dest,
+                           const std::unordered_set<std::string>& float_arrays,
+                           std::vector<MirInsn>& out) {
+  if (binop.kind != Expr::Kind::BinOp || binop.bin_op != BinOp::Mul || !binop.lhs ||
+      !binop.rhs) {
+    return false;
+  }
+  const Expr* lit = nullptr;
+  const Expr* arr = nullptr;
+  if (binop.lhs->kind == Expr::Kind::FloatLit &&
+      binop.rhs->kind == Expr::Kind::Ident &&
+      float_arrays.count(binop.rhs->ident) > 0) {
+    lit = binop.lhs.get();
+    arr = binop.rhs.get();
+  } else if (binop.rhs->kind == Expr::Kind::FloatLit &&
+             binop.lhs->kind == Expr::Kind::Ident &&
+             float_arrays.count(binop.lhs->ident) > 0) {
+    lit = binop.rhs.get();
+    arr = binop.lhs.get();
+  } else {
+    return false;
+  }
+  const auto it = g_array_sizes.find(arr->ident);
+  if (it == g_array_sizes.end() || it->second <= 0) {
+    return false;
+  }
+  MirInsn ins;
+  ins.op = MirOp::ArrayScaleF64;
+  ins.ident = dest;
+  ins.int_value = it->second;
+  ins.float_value = lit->float_value;
+  ins.lhs_ident = arr->ident;
+  ins.rhs_is_literal = true;
+  out.push_back(std::move(ins));
+  return true;
 }
 
 std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirInsn>& out,
@@ -200,22 +313,14 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
       return dest;
     }
     case Expr::Kind::BinOp: {
-      // `x @ y` over float-array params lowers to ArrayDotF64 (walker INS 14)
-      // with the declared array length in int_value.
+      // `x @ y` over float-array params or locals lowers to ArrayDotF64
+      // (walker INS 14) with the declared array length in int_value.
       if (e.bin_op == BinOp::MatMul && e.lhs && e.rhs &&
-          e.lhs->kind == Expr::Kind::Ident && e.rhs->kind == Expr::Kind::Ident) {
-        std::int64_t len = 0;
-        if (g_cur_proc) {
-          for (const auto& p : g_cur_proc->params) {
-            if (p.name == e.lhs->ident && p.type.kind == TypeKind::Array) {
-              len = p.type.array_size;
-              break;
-            }
-          }
-        }
+          e.lhs->kind == Expr::Kind::Ident && e.rhs->kind == Expr::Kind::Ident &&
+          g_array_sizes.count(e.lhs->ident) > 0 && g_array_sizes.count(e.rhs->ident) > 0) {
         MirInsn ins;
         ins.op = MirOp::ArrayDotF64;
-        ins.int_value = len;
+        ins.int_value = g_array_sizes[e.lhs->ident];
         ins.lhs_ident = e.lhs->ident;
         ins.rhs_ident = e.rhs->ident;
         const std::string dest = fresh_temp();
@@ -223,6 +328,78 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
         out.push_back(std::move(ins));
         float_names.insert(dest);
         return dest;
+      }
+      // Elementwise array binop in expression position: `sum(a + b)` lowers
+      // the binop to ArrayAlloc temp + ArrayBinOpF64 into the temp (walker
+      // mir_lower_expr k==7 array path). VarDecl/Assign positions take the
+      // direct-into-var form via emit_array_binop_into instead.
+      if (is_arith_binop(e.bin_op) && e.lhs && e.rhs &&
+          e.lhs->kind == Expr::Kind::Ident && e.rhs->kind == Expr::Kind::Ident &&
+          g_array_sizes.count(e.lhs->ident) > 0 && g_array_sizes.count(e.rhs->ident) > 0) {
+        const std::int64_t szl = g_array_sizes[e.lhs->ident];
+        const std::int64_t szr = g_array_sizes[e.rhs->ident];
+        const bool broadcast_ok =
+            szl == szr || (szl == 1 && szr > 1) || (szr == 1 && szl > 1);
+        if (broadcast_ok) {
+          const std::int64_t esz = std::max(szl, szr);
+          // Walker emits the expr-context ArrayAlloc with an EMPTY ident cell
+          // (fea is all-zero from mir_fdef; only the binop names the temp).
+          MirInsn a;
+          a.op = MirOp::ArrayAlloc;
+          a.int_value = esz;
+          out.push_back(std::move(a));
+          const std::string alloc = fresh_temp();
+          const bool flt = float_arrays.count(e.lhs->ident) > 0 ||
+                           float_arrays.count(e.rhs->ident) > 0;
+          MirInsn ins;
+          ins.op = flt ? MirOp::ArrayBinOpF64 : MirOp::ArrayBinOpI64;
+          ins.ident = alloc;
+          ins.int_value = esz;
+          ins.lhs_ident = e.lhs->ident;
+          ins.rhs_ident = e.rhs->ident;
+          ins.bin_op = e.bin_op;
+          if (szl == 1 && szr > 1) {
+            ins.array_broadcast_lhs_len1 = true;
+          }
+          if (szr == 1 && szl > 1) {
+            ins.array_broadcast_rhs_len1 = true;
+          }
+          out.push_back(std::move(ins));
+          return alloc;
+        }
+      }
+      // Float scale `2.0 * x` in expression position -> ArrayAlloc (empty
+      // ident, matching the walker) + ArrayScaleF64 into the temp.
+      if (e.bin_op == BinOp::Mul && e.lhs && e.rhs) {
+        const Expr* lit = nullptr;
+        const Expr* arr = nullptr;
+        if (e.lhs->kind == Expr::Kind::FloatLit && e.rhs->kind == Expr::Kind::Ident &&
+            float_arrays.count(e.rhs->ident) > 0) {
+          lit = e.lhs.get();
+          arr = e.rhs.get();
+        } else if (e.rhs->kind == Expr::Kind::FloatLit &&
+                   e.lhs->kind == Expr::Kind::Ident &&
+                   float_arrays.count(e.lhs->ident) > 0) {
+          lit = e.rhs.get();
+          arr = e.lhs.get();
+        }
+        if (lit && arr && g_array_sizes.count(arr->ident) > 0) {
+          const std::string dest = fresh_temp();
+          MirInsn alloc;
+          alloc.op = MirOp::ArrayAlloc;
+          alloc.int_value = g_array_sizes[arr->ident];
+          out.push_back(std::move(alloc));
+          MirInsn ins;
+          ins.op = MirOp::ArrayScaleF64;
+          ins.ident = dest;
+          ins.int_value = g_array_sizes[arr->ident];
+          ins.float_value = lit->float_value;
+          ins.lhs_ident = arr->ident;
+          ins.rhs_is_literal = true;
+          out.push_back(std::move(ins));
+          float_names.insert(dest);
+          return dest;
+        }
       }
       // Walker contract (bootstrap/lic/main.li mir_lower_expr k==7): the dest
       // counter is allocated BEFORE the operands, and int literals fold into
@@ -274,6 +451,150 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
       return dest;
     }
     case Expr::Kind::Call: {
+      // Builtin array kernels (self-hosted walker reference, bootstrap/lic/
+      // main.li mir_lower_expr k==4): sum/norm/dot/axpy on array operands.
+      if (e.ident == "sum" && e.args.size() == 1 &&
+          e.args[0]->kind == Expr::Kind::Ident &&
+          g_array_sizes.count(e.args[0]->ident) > 0) {
+        const bool flt = float_arrays.count(e.args[0]->ident) > 0;
+        const std::string dest = fresh_temp();
+        MirInsn ins;
+        ins.op = flt ? MirOp::ArraySumF64 : MirOp::ArraySumI64;
+        ins.int_value = g_array_sizes[e.args[0]->ident];
+        ins.ident = dest;
+        ins.lhs_ident = e.args[0]->ident;
+        out.push_back(std::move(ins));
+        if (flt) {
+          float_names.insert(dest);
+        }
+        return dest;
+      }
+      // sum(a * b) -> ArrayAlloc temp + ArrayScaleF64 + ArraySumF64
+      // (walker sum(Mul_expr) path; lhs=b, rhs=a, rhs_is_literal=0).
+      if (e.ident == "sum" && e.args.size() == 1 &&
+          e.args[0]->kind == Expr::Kind::BinOp &&
+          e.args[0]->bin_op == BinOp::Mul && e.args[0]->lhs && e.args[0]->rhs &&
+          e.args[0]->lhs->kind == Expr::Kind::Ident &&
+          e.args[0]->rhs->kind == Expr::Kind::Ident &&
+          g_array_sizes.count(e.args[0]->lhs->ident) > 0 &&
+          g_array_sizes.count(e.args[0]->rhs->ident) > 0) {
+        const auto& mul = *e.args[0];
+        const std::int64_t szl = g_array_sizes[mul.lhs->ident];
+        const std::int64_t szr = g_array_sizes[mul.rhs->ident];
+        if (szl == szr && szl > 0) {
+          const std::string tmp = fresh_temp();
+          MirInsn alloc;
+          alloc.op = MirOp::ArrayAlloc;
+          alloc.int_value = szl;
+          alloc.ident = tmp;
+          alloc.array_is_float = true;
+          out.push_back(std::move(alloc));
+          MirInsn scale;
+          scale.op = MirOp::ArrayScaleF64;
+          scale.int_value = szl;
+          scale.ident = tmp;
+          scale.lhs_ident = mul.rhs->ident;
+          scale.rhs_ident = mul.lhs->ident;
+          scale.rhs_is_literal = false;
+          out.push_back(std::move(scale));
+          const std::string dest = fresh_temp();
+          MirInsn sum;
+          sum.op = MirOp::ArraySumF64;
+          sum.int_value = szl;
+          sum.ident = dest;
+          sum.lhs_ident = tmp;
+          out.push_back(std::move(sum));
+          float_names.insert(dest);
+          return dest;
+        }
+      }
+      // norm(a) on an int array -> ArrayAlloc + ArrayBinOpI64(a,a,Mul) +
+      // ArraySumI64; on a float array -> ArrayDotF64(a,a) + CallExtern sqrt.
+      if (e.ident == "norm" && e.args.size() == 1 &&
+          e.args[0]->kind == Expr::Kind::Ident &&
+          g_array_sizes.count(e.args[0]->ident) > 0) {
+        const bool flt = float_arrays.count(e.args[0]->ident) > 0;
+        const std::int64_t sz = g_array_sizes[e.args[0]->ident];
+        if (flt) {
+          const std::string dot = fresh_temp();
+          MirInsn d;
+          d.op = MirOp::ArrayDotF64;
+          d.int_value = sz;
+          d.ident = dot;
+          d.lhs_ident = e.args[0]->ident;
+          d.rhs_ident = e.args[0]->ident;
+          out.push_back(std::move(d));
+          float_names.insert(dot);
+          const std::string dest = fresh_temp();
+          MirInsn call;
+          call.op = MirOp::CallExtern;
+          call.callee = "li_rt_sqrt";
+          call.ident = dest;
+          MirArg ma;
+          ma.ident = dot;
+          call.args.push_back(std::move(ma));
+          out.push_back(std::move(call));
+          float_names.insert(dest);
+          return dest;
+        }
+        const std::string tmp = fresh_temp();
+        MirInsn alloc;
+        alloc.op = MirOp::ArrayAlloc;
+        alloc.int_value = sz;
+        alloc.ident = tmp;
+        out.push_back(std::move(alloc));
+        MirInsn sq;
+        sq.op = MirOp::ArrayBinOpI64;
+        sq.int_value = sz;
+        sq.ident = tmp;
+        sq.lhs_ident = e.args[0]->ident;
+        sq.rhs_ident = e.args[0]->ident;
+        sq.bin_op = BinOp::Mul;
+        out.push_back(std::move(sq));
+        const std::string dest = fresh_temp();
+        MirInsn sum;
+        sum.op = MirOp::ArraySumI64;
+        sum.int_value = sz;
+        sum.ident = dest;
+        sum.lhs_ident = tmp;
+        out.push_back(std::move(sum));
+        return dest;
+      }
+      // dot(a, b) -> ArrayDotF64 with the declared length.
+      if (e.ident == "dot" && e.args.size() == 2 &&
+          e.args[0]->kind == Expr::Kind::Ident && e.args[1]->kind == Expr::Kind::Ident &&
+          g_array_sizes.count(e.args[0]->ident) > 0 &&
+          g_array_sizes.count(e.args[1]->ident) > 0) {
+        const std::string dest = fresh_temp();
+        MirInsn ins;
+        ins.op = MirOp::ArrayDotF64;
+        ins.int_value = g_array_sizes[e.args[0]->ident];
+        ins.ident = dest;
+        ins.lhs_ident = e.args[0]->ident;
+        ins.rhs_ident = e.args[1]->ident;
+        out.push_back(std::move(ins));
+        float_names.insert(dest);
+        return dest;
+      }
+      // axpy(alpha, x, y) -> ArrayAxpyF64 (no dest ident; alpha literal in
+      // float_value, lhs=x, rhs=y, rhs_is_literal=1). Walker axpy path.
+      if (e.ident == "axpy" && e.args.size() == 3 &&
+          e.args[1]->kind == Expr::Kind::Ident && e.args[2]->kind == Expr::Kind::Ident &&
+          g_array_sizes.count(e.args[1]->ident) > 0 &&
+          g_array_sizes.count(e.args[2]->ident) > 0 &&
+          e.args[0]->kind == Expr::Kind::FloatLit) {
+        MirInsn ins;
+        ins.op = MirOp::ArrayAxpyF64;
+        ins.int_value = g_array_sizes[e.args[1]->ident];
+        ins.float_value = e.args[0]->float_value;
+        ins.lhs_ident = e.args[1]->ident;
+        ins.rhs_ident = e.args[2]->ident;
+        ins.rhs_is_literal = true;
+        out.push_back(std::move(ins));
+        // Walker consumes no counter for axpy (result name is the previous
+        // tc, never emitted), so return a name without advancing the counter.
+        return "__t" + std::to_string(temp_counter);
+      }
       const ProcDecl* callee = find_proc(module, e.ident);
       if (callee && !callee->is_extern) {
         MirInsn ins;
@@ -290,7 +611,7 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
           } else if (arg->kind == Expr::Kind::Ident) {
             ma.ident = arg->ident;
             // Array args pass by address (walker ARG is_array_ident).
-            if (float_arrays.count(arg->ident) > 0) {
+            if (is_array_ident(arg->ident)) {
               ma.is_array_ident = true;
             }
           } else {
@@ -435,8 +756,21 @@ void lower_stmt(const Stmt& stmt, const Module& module, bool returns_float,
         if (is_float_type_name(stmt.var_type.elem->name)) {
           ins.array_is_float = true;
           float_arrays.insert(stmt.var_name);
+        } else {
+          g_int_arrays.insert(stmt.var_name);
         }
+        g_array_sizes[stmt.var_name] = stmt.var_type.array_size;
         out.push_back(std::move(ins));
+        // Walker direct-into-var array init: `var c = a + b` -> ArrayBinOpF64
+        // into c (no temp); `var y = 2.0 * x` -> ArrayScaleF64 into y.
+        if (stmt.init) {
+          if (emit_array_binop_into(*stmt.init, stmt.var_name, float_arrays, out)) {
+            break;
+          }
+          if (emit_array_scale_into(*stmt.init, stmt.var_name, float_arrays, out)) {
+            break;
+          }
+        }
       } else if (is_i64_type_name(stmt.var_type.name)) {
         MirInsn ins;
         ins.op = MirOp::LocalAllocI64;
@@ -538,6 +872,18 @@ void lower_stmt(const Stmt& stmt, const Module& module, bool returns_float,
           ins.rhs_is_literal = false;
         }
         out.push_back(std::move(ins));
+      } else if (stmt.init && stmt.init->kind == Expr::Kind::Ident && stmt.expr &&
+                 is_array_ident(stmt.init->ident)) {
+        // Array assignment `c = a + b` -> ArrayBinOpF64/I64 directly into c;
+        // `c = 2.0 * x` -> ArrayScaleF64 into c. The ArrayAlloc for c came
+        // from its VarDecl.
+        if (emit_array_binop_into(*stmt.expr, stmt.init->ident, float_arrays, out)) {
+          break;
+        }
+        if (emit_array_scale_into(*stmt.expr, stmt.init->ident, float_arrays, out)) {
+          break;
+        }
+        // Fall through to the scalar path for non-array-op RHS.
       } else if (stmt.init && stmt.init->kind == Expr::Kind::Ident && stmt.expr) {
         const bool flt = float_names.count(stmt.init->ident) > 0;
         MirInsn ins;
@@ -704,6 +1050,11 @@ MirModule lower_to_mir(const Module& module) {
     }
     if (!proc.is_extern) {
       g_cur_proc = &proc;
+      // Per-proc registries: array sizes / int arrays must not leak across
+      // procs (main.li is itself compiled by this lowerer, so a leak would
+      // change the walker's own behavior).
+      g_array_sizes.clear();
+      g_int_arrays.clear();
       std::unordered_set<std::string> float_names;
       std::unordered_set<std::string> float_arrays;
       seed_float_params(fn, float_names, float_arrays);

@@ -409,6 +409,30 @@ struct Ctx {
           if (l->kind == TyKind::Float && r->kind == TyKind::Float) {
             return make_float();
           }
+          // Elementwise array binop: `a + b` / `a * b` on same-shape float or
+          // int arrays lowers to ArrayBinOpF64/I64; size is max for broadcast
+          // (array[1] operands), matching the walker's esz = max(szl, szr).
+          if (l->kind == TyKind::Array && r->kind == TyKind::Array && l->elem && r->elem &&
+              l->elem->kind == r->elem->kind &&
+              (l->elem->kind == TyKind::Float || l->elem->kind == TyKind::Int)) {
+            auto t = std::make_shared<Ty>();
+            t->kind = TyKind::Array;
+            t->elem = l->elem;
+            t->array_size = std::max(l->array_size, r->array_size);
+            return t;
+          }
+          // Float scale: `2.0 * x` / `x * 2.0` on a float array -> ArrayScaleF64.
+          if ((l->kind == TyKind::Float && r->kind == TyKind::Array && r->elem &&
+               r->elem->kind == TyKind::Float) ||
+              (r->kind == TyKind::Float && l->kind == TyKind::Array && l->elem &&
+               l->elem->kind == TyKind::Float)) {
+            const TyPtr arr = l->kind == TyKind::Array ? l : r;
+            auto t = std::make_shared<Ty>();
+            t->kind = TyKind::Array;
+            t->elem = arr->elem;
+            t->array_size = arr->array_size;
+            return t;
+          }
           diags.error(loc(e.span),
                       "cannot mix int and float in arithmetic without explicit cast");
           return make_int();
@@ -434,6 +458,27 @@ struct Ctx {
           if (arg_ty->kind != TyKind::Int && arg_ty->kind != TyKind::Str) {
             diags.error(loc(e.span), "echo expects int or str");
           }
+          return make_int();
+        }
+        // Builtin array reductions / kernels (self-hosted walker reference):
+        // sum(a) / norm(a) return the element type, dot(a,b) returns float,
+        // axpy(alpha,x,y) is a statement (int).
+        if ((e.ident == "sum" || e.ident == "norm") && e.args.size() == 1) {
+          const TyPtr arg_ty = type_of(*e.args[0]);
+          if (arg_ty->kind == TyKind::Array && arg_ty->elem) {
+            return arg_ty->elem;
+          }
+          return make_int();
+        }
+        if (e.ident == "dot" && e.args.size() == 2) {
+          (void)type_of(*e.args[0]);
+          (void)type_of(*e.args[1]);
+          return make_float();
+        }
+        if (e.ident == "axpy" && e.args.size() == 3) {
+          (void)type_of(*e.args[0]);
+          (void)type_of(*e.args[1]);
+          (void)type_of(*e.args[2]);
           return make_int();
         }
         const auto pit = procs.find(e.ident);
