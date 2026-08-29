@@ -44,6 +44,7 @@ enum class TokenKind {
   KwResult,
   KwProtocol,
   KwCallable,
+  KwImport,
   LParen,
   RParen,
   LBracket,

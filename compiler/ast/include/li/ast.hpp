@@ -151,9 +151,17 @@ struct TypeAlias {
   std::vector<std::string> enum_variants;
 };
 
+struct ImportDecl {
+  Span span;
+  std::string module;
+  std::string alias;
+  bool has_alias = false;
+};
+
 struct Module {
   std::vector<TypeAlias> types;
   std::vector<ProcDecl> procs;
+  std::vector<ImportDecl> imports;
 };
 
 std::string debug_expr(const Expr& e, int indent = 0);

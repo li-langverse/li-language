@@ -788,7 +788,9 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
         const std::string dest = fresh_temp();
         ins.ident = dest;
         if (callee->ret_type->name == "ptr" || callee->ret_type->name == "int64" ||
-            callee->ret_type->name == "i64") {
+            callee->ret_type->name == "i64" ||
+            is_string_type_name(callee->ret_type->name)) {
+          // Walker ret descriptor: str/ptr/i64 are pointer-width (rd 3/4/5).
           ins.is_i64 = true;
           ins.ret_is_i64 = true;
         } else if (is_float_type_name(callee->ret_type->name)) {
@@ -928,6 +930,19 @@ void lower_return_expr(const Expr& e, bool returns_float, const Module& module,
     ins.op = MirOp::ReturnIdent;
     ins.ident = tmp;
     ins.ret_is_float = returns_float || is_float_expr(e, float_names, float_arrays);
+    // Pointer-width returns (str/ptr/i64/array calls) set the i64 bit on the
+    // ReturnIdent too (walker mir_return rd 3/4/5 -> reti64).
+    if (e.kind == Expr::Kind::Call && !ins.ret_is_float) {
+      const auto callee = std::find_if(module.procs.begin(), module.procs.end(),
+                                       [&](const ProcDecl& p) { return p.name == e.ident; });
+      if (callee != module.procs.end() && callee->ret_type) {
+        if (is_i64_type_name(callee->ret_type->name) ||
+            is_string_type_name(callee->ret_type->name) ||
+            callee->ret_type->kind == TypeKind::Array) {
+          ins.ret_is_i64 = true;
+        }
+      }
+    }
   } else {
     ins.op = MirOp::ReturnVoid;
   }
@@ -1675,7 +1690,10 @@ MirModule lower_to_mir(const Module& module) {
     if (proc.ret_type) {
       fn.returns_float = is_float_type_name(proc.ret_type->name);
       fn.returns_void = proc.ret_type->name == "unit";
-      fn.returns_i64 = is_i64_type_name(proc.ret_type->name);
+      // Walker reti64: pointer-width return — int64/ptr AND str/string all
+      // set the bit (mir_proc reti64 mirrors the PARAM is_i64 rule).
+      fn.returns_i64 = is_i64_type_name(proc.ret_type->name) ||
+                       is_string_type_name(proc.ret_type->name);
     } else if (proc.is_extern) {
       fn.returns_void = true;
     }

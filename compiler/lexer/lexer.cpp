@@ -30,6 +30,7 @@ char Lexer::advance() {
 void Lexer::push_token(Token t) { tokens_.push_back(std::move(t)); }
 
 TokenKind Lexer::keyword_kind(std::string_view text) const {
+  if (text == "import") return TokenKind::KwImport;
   if (text == "def") return TokenKind::KwProc;
   if (text == "type") return TokenKind::KwType;
   if (text == "object") return TokenKind::KwObject;

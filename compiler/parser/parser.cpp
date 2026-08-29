@@ -128,6 +128,44 @@ struct Parser {
   bool parse_module(Module& out) {
     skip_newlines();
     while (!at(TokenKind::Eof)) {
+      if (at(TokenKind::KwImport)) {
+        // `import a.b.c [as x]` — module-qualified name with optional alias.
+        ImportDecl imp;
+        const Token k = cur();
+        imp.span = {k.start, k.end};
+        i++;
+        if (!at(TokenKind::Ident)) {
+          diags.error(loc(cur()), "expected module name after import");
+          return false;
+        }
+        imp.module = std::string(cur().text);
+        imp.span.end = cur().end;
+        i++;
+        while (accept(TokenKind::Dot)) {
+          if (!at(TokenKind::Ident)) {
+            diags.error(loc(cur()), "expected name after '.' in import");
+            return false;
+          }
+          imp.module += ".";
+          imp.module += std::string(cur().text);
+          imp.span.end = cur().end;
+          i++;
+        }
+        if (at(TokenKind::Ident) && std::string(cur().text) == "as") {
+          i++;
+          if (!at(TokenKind::Ident)) {
+            diags.error(loc(cur()), "expected alias after 'as' in import");
+            return false;
+          }
+          imp.alias = std::string(cur().text);
+          imp.has_alias = true;
+          imp.span.end = cur().end;
+          i++;
+        }
+        out.imports.push_back(std::move(imp));
+        skip_newlines();
+        continue;
+      }
       if (at(TokenKind::At)) {
         auto decs = parse_decorator_list();
         if (at(TokenKind::KwProc)) {

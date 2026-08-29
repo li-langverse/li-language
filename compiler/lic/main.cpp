@@ -6,11 +6,16 @@
 #include "li/smoke_llvm.hpp"
 #include "li/typecheck.hpp"
 
+#include <algorithm>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <optional>
+#include <set>
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace {
 
@@ -31,6 +36,195 @@ std::string read_file(const char* path) {
   std::ostringstream ss;
   ss << in.rdbuf();
   return ss.str();
+}
+
+// ---- Import resolution (mirrors li_rt_resolve_import in runtime/li_rt.c) ----
+//
+// The self-hosted walker resolves `import X` with this exact candidate chain
+// (bootstrap/lic/main.li pre-scan + runtime/li_rt.c li_rt_resolve_import):
+//   1. same-directory sibling      <dir>/X.li
+//   2. same-directory package      <dir>/X/X.li
+//   3. workspace root (walk up to the first dir containing packages/):
+//      a. packages/li-<dash(X)>/src/lib.li          (dots/underscores -> '-')
+//      b. packages/<dash(X)>/src/lib.li
+//      c. li_<rest> imports strip the li_ prefix, then packages/li-<dash>/src/lib.li
+//   4. std.* tree                  <root>/std/<segments...>/<leaf>.li
+//      and std package form       <root>/std/<all>/<all>.li
+//      plus fallback              <root>/packages/li-<dash>/src/lib.li
+// Resolution is per-import, in the walker's import order, with dedup by the
+// canonical resolved path. The walker emits main's procs first, then each
+// resolved import (recursively) in resolution order.
+
+std::string dash_convert(const std::string& s) {
+  std::string out = s;
+  for (char& c : out) {
+    if (c == '.' || c == '_') {
+      c = '-';
+    }
+  }
+  return out;
+}
+
+std::optional<std::string> find_workspace_root(const std::string& file_path) {
+  const auto slash = file_path.find_last_of('/');
+  if (slash == std::string::npos) {
+    return std::nullopt;
+  }
+  std::string dir = file_path.substr(0, slash);
+  while (!dir.empty()) {
+    if (std::filesystem::is_directory(dir + "/packages")) {
+      return dir;
+    }
+    const auto p = dir.find_last_of('/');
+    if (p == std::string::npos) {
+      break;
+    }
+    dir = dir.substr(0, p);
+  }
+  if (std::filesystem::is_directory("packages")) {
+    return std::string(".");
+  }
+  return std::nullopt;
+}
+
+bool try_read_import(const std::string& path, std::string& out) {
+  std::ifstream in(path);
+  if (!in) {
+    return false;
+  }
+  std::ostringstream ss;
+  ss << in.rdbuf();
+  out = ss.str();
+  return true;
+}
+
+// Mirror li_rt_resolve_import candidate order. Returns the resolved file path.
+std::optional<std::string> resolve_import_path(const std::string& module,
+                                               const std::string& base_file) {
+  const auto slash = base_file.find_last_of('/');
+  const std::string dir =
+      slash == std::string::npos ? std::string() : base_file.substr(0, slash);
+  const std::string& m = module;
+  const std::size_t mlen = m.size();
+  const std::string dash = dash_convert(m);
+  std::string content;
+
+  auto candidate = [&](const std::string& path) -> std::optional<std::string> {
+    if (try_read_import(path, content)) {
+      return path;
+    }
+    return std::nullopt;
+  };
+
+  // 1. same-directory sibling: <dir>/<module>.li
+  const std::string sib = dir.empty() ? m + ".li" : dir + "/" + m + ".li";
+  if (auto p = candidate(sib)) {
+    return p;
+  }
+  // 1b. same-directory package: <dir>/<module>/<module>.li
+  const std::string sibpkg =
+      dir.empty() ? m + "/" + m + ".li" : dir + "/" + m + "/" + m + ".li";
+  if (auto p = candidate(sibpkg)) {
+    return p;
+  }
+
+  // 2. workspace package candidates (walk up to the first dir with packages/).
+  if (const auto root = find_workspace_root(base_file)) {
+    const std::string r = *root;
+    // 2a. packages/li-<dash>/src/lib.li
+    const std::string p2a = r + "/packages/li-" + dash + "/src/lib.li";
+    if (auto p = candidate(p2a)) {
+      return p;
+    }
+    // 2b. packages/<dash>/src/lib.li
+    const std::string p2b = r + "/packages/" + dash + "/src/lib.li";
+    if (auto p = candidate(p2b)) {
+      return p;
+    }
+    // 2c. li_<rest> strips the li_ prefix, then packages/li-<dash>/src/lib.li
+    if (mlen > 3 && m[0] == 'l' && m[1] == 'i' && m[2] == '_') {
+      const std::string rest = m.substr(3);
+      const std::string p2c = r + "/packages/li-" + dash_convert(rest) + "/src/lib.li";
+      if (auto p = candidate(p2c)) {
+        return p;
+      }
+    }
+    // 3. std.* tree: std/<segments...>/<leaf>.li and std/<all>/<all>.li
+    if (mlen > 4 && m.compare(0, 4, "std.") == 0) {
+      const std::string stripped = m.substr(4);
+      const std::size_t last_dot = stripped.find_last_of('.');
+      // 3a. std/<prefix-as-dirs>/<leaf>.li
+      std::string seg_path;
+      if (last_dot != std::string::npos) {
+        for (std::size_t i = 0; i < last_dot; ++i) {
+          seg_path += stripped[i] == '.' ? '/' : stripped[i];
+        }
+        if (last_dot > 0) {
+          seg_path += "/";
+        }
+        seg_path += stripped.substr(last_dot + 1);
+        const std::string p3a = r + "/std/" + seg_path + ".li";
+        if (auto p = candidate(p3a)) {
+          return p;
+        }
+      }
+      // 3b. std/<all>/<all>.li
+      const std::string p3b = r + "/std/" + stripped + "/" + stripped + ".li";
+      if (auto p = candidate(p3b)) {
+        return p;
+      }
+      // 4. fallback packages/li-<dash>/src/lib.li
+      const std::string p4 = r + "/packages/li-" + dash_convert(stripped) + "/src/lib.li";
+      if (auto p = candidate(p4)) {
+        return p;
+      }
+    }
+  }
+  return std::nullopt;
+}
+
+// Parse a file (with its own import declarations preserved) into a module.
+li::ParseResult parse_import_file(const std::string& path) {
+  const std::string src = read_file(path.c_str());
+  return li::parse_module(src, path);
+}
+
+// Merge `from` procs/types into `to` (all procs; the walker emits every proc
+// it walks, public or not). Types merge so imported object types resolve.
+void merge_imported(li::Module& to, li::Module&& from) {
+  for (auto& t : from.types) {
+    to.types.push_back(std::move(t));
+  }
+  for (auto& p : from.procs) {
+    to.procs.push_back(std::move(p));
+  }
+}
+
+// Resolve all imports of `mod` (already parsed, with .imports populated) and
+// append the imported modules' procs/types, recursively, in walker order.
+// Dedup by resolved canonical path. Mirrors the walker's transitive import
+// scan + emit (main first, then imports in resolution order).
+void resolve_module_imports(li::Module& mod, const std::string& base_file,
+                            std::set<std::string>& resolved) {
+  const std::vector<li::ImportDecl> imports = mod.imports;
+  for (const auto& imp : imports) {
+    const auto path = resolve_import_path(imp.module, base_file);
+    if (!path) {
+      continue;
+    }
+    const std::string canon = std::filesystem::weakly_canonical(*path).string();
+    if (resolved.count(canon)) {
+      continue;
+    }
+    resolved.insert(canon);
+    auto parsed = parse_import_file(*path);
+    if (!parsed.module) {
+      continue;
+    }
+    // Recursively resolve this import's own imports (base = its path).
+    resolve_module_imports(*parsed.module, *path, resolved);
+    merge_imported(mod, std::move(*parsed.module));
+  }
 }
 
 bool frontend(const char* path, const std::string& source, li::Module& out,
@@ -178,6 +372,10 @@ int main(int argc, char** argv) {
       li::print_diagnostics(diags);
       return 1;
     }
+    // Resolve imports into the module (walker order: main procs first, then
+    // each import's procs recursively, dedup by canonical path).
+    std::set<std::string> resolved;
+    resolve_module_imports(module, argv[2], resolved);
     auto mir = li::lower_to_mir(module);
     std::cout << li::dump_mir_module(mir);
     return 0;
