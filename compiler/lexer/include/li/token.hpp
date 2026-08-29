@@ -73,6 +73,9 @@ enum class TokenKind {
   Pipe,
   Ellipsis,
   Dot,
+  KwAxiom,
+  KwTheorem,
+  KwLemma,
 };
 
 struct Token {

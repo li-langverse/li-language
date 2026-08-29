@@ -14,6 +14,11 @@ struct Parser {
   DiagnosticBag& diags;
 
   int brace_depth_ = 0;
+  // Only true while parsing a proof proposition (axiom/theorem/lemma). When
+  // set, `->` is the lowest-precedence implication binary op; otherwise `->`
+  // is never an expression operator, so compiling the walker (which uses `->`
+  // for return types and in expression positions) is unaffected.
+  bool allow_implies_ = false;
 
   explicit Parser(const std::vector<Token>& toks, std::string file_name,
                   DiagnosticBag& bag)
@@ -52,6 +57,7 @@ struct Parser {
   }
 
   std::unique_ptr<Expr> parse_expr(int min_prec = 0);
+  int prec(TokenKind k);
   std::unique_ptr<Expr> parse_primary();
   std::unique_ptr<Expr> parse_postfix(std::unique_ptr<Expr> base);
   TypeExpr parse_type();
@@ -203,6 +209,41 @@ struct Parser {
       } else if (at(TokenKind::KwType)) {
         out.types.push_back(parse_type_alias());
         skip_newlines();
+      } else if (at(TokenKind::KwAxiom) || at(TokenKind::KwTheorem) ||
+                 at(TokenKind::KwLemma)) {
+        // axiom/theorem/lemma: proof declarations parsed and validated but
+        // emit no MIR (mirror of the walker's parse_theorem with d=0).
+        // Grammar: keyword name [ ( params ) ] : <bool expr>
+        i++;
+        if (!expect(TokenKind::Ident, "name after proof keyword")) {
+          return false;
+        }
+        if (accept(TokenKind::LParen)) {
+          if (!at(TokenKind::RParen)) {
+            while (true) {
+              parse_param();
+              if (!accept(TokenKind::Comma)) {
+                break;
+              }
+            }
+          }
+          if (!expect(TokenKind::RParen, "')'")) {
+            return false;
+          }
+        }
+        skip_newlines();
+        if (!expect(TokenKind::Colon, "':' before proposition")) {
+          return false;
+        }
+        skip_newlines();
+        const bool prev_allow = allow_implies_;
+        allow_implies_ = true;
+        const bool ok = parse_expr() != nullptr;
+        allow_implies_ = prev_allow;
+        if (!ok) {
+          return false;
+        }
+        skip_newlines();
       } else {
         diags.error(loc(cur()), "expected top-level declaration");
         return false;
@@ -345,8 +386,9 @@ std::unique_ptr<Expr> Parser::parse_postfix(std::unique_ptr<Expr> base) {
   }
 }
 
-int prec(TokenKind k) {
+int Parser::prec(TokenKind k) {
   switch (k) {
+    case TokenKind::Arrow: return allow_implies_ ? 0 : -1;
     case TokenKind::KwOr: return 1;
     case TokenKind::KwAnd: return 2;
     case TokenKind::EqEq:
@@ -385,6 +427,7 @@ BinOp binop(TokenKind k) {
     case TokenKind::Ne: return BinOp::Ne;
     case TokenKind::KwAnd: return BinOp::And;
     case TokenKind::KwOr: return BinOp::Or;
+    case TokenKind::Arrow: return BinOp::Implies;
     default: return BinOp::Add;
   }
 }
@@ -432,7 +475,12 @@ std::unique_ptr<Expr> Parser::parse_expr(int min_prec) {
     }
     const Token op = cur();
     i++;
+    const bool prev_allow = allow_implies_;
+    if (op.kind == TokenKind::Arrow) {
+      allow_implies_ = true;
+    }
     auto right = parse_expr(p + 1);
+    allow_implies_ = prev_allow;
     if (!right) {
       return nullptr;
     }
