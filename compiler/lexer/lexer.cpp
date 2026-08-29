@@ -396,9 +396,9 @@ bool Lexer::tokenize(DiagnosticBag& diags) {
             return false;
           }
         } else {
-          SourceLoc loc{file_, sl, sc, start};
-          diags.error(loc, "unexpected character '.'");
-          return false;
+          // Single `.` — object field access (`obj.field`).
+          advance();
+          single(TokenKind::Dot);
         }
         continue;
       case '|': single(TokenKind::Pipe); continue;

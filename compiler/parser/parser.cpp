@@ -271,19 +271,40 @@ std::unique_ptr<Expr> Parser::parse_primary() {
 }
 
 std::unique_ptr<Expr> Parser::parse_postfix(std::unique_ptr<Expr> base) {
-  while (accept(TokenKind::LBracket)) {
-    auto idx = parse_expr();
-    if (!expect(TokenKind::RBracket, "']'")) {
-      return nullptr;
+  while (true) {
+    if (accept(TokenKind::LBracket)) {
+      auto idx = parse_expr();
+      if (!expect(TokenKind::RBracket, "']'")) {
+        return nullptr;
+      }
+      auto node = std::make_unique<Expr>();
+      node->kind = Expr::Kind::Index;
+      node->span = {base->span.start, tokens[i - 1].end};
+      node->base = std::move(base);
+      node->index = std::move(idx);
+      base = std::move(node);
+    } else if (accept(TokenKind::Dot)) {
+      // Object field access: `expr.field`. The field name is an Ident.
+      if (!at(TokenKind::Ident)) {
+        diags.error(loc(cur()), "expected field name after '.'");
+        return nullptr;
+      }
+      const Token fld = cur();
+      i++;
+      auto node = std::make_unique<Expr>();
+      node->kind = Expr::Kind::Field;
+      node->span = {base->span.start, fld.end};
+      node->base = std::move(base);
+      // Reuse index as an Ident holder for the field name.
+      auto fe = std::make_unique<Expr>();
+      fe->kind = Expr::Kind::Ident;
+      fe->ident = std::string(fld.text);
+      node->index = std::move(fe);
+      base = std::move(node);
+    } else {
+      return base;
     }
-    auto node = std::make_unique<Expr>();
-    node->kind = Expr::Kind::Index;
-    node->span = {base->span.start, tokens[i - 1].end};
-    node->base = std::move(base);
-    node->index = std::move(idx);
-    base = std::move(node);
   }
-  return base;
 }
 
 int prec(TokenKind k) {
@@ -918,6 +939,28 @@ TypeAlias Parser::parse_type_alias() {
       i++;
       skip_newlines();
     }
+    return alias;
+  }
+  if (at(TokenKind::KwObject)) {
+    // `type X = object` — comma indented `[public] field: type` lines.
+    alias.alias_kind = AliasKind::Object;
+    i++;
+    skip_newlines();
+    while (at(TokenKind::Ident)) {
+      TypeField field;
+      field.public_field = true;
+      if (cur().text == "public" && peek(1).kind == TokenKind::Ident) {
+        field.public_field = true;
+        i++;
+      }
+      field.name = std::string(cur().text);
+      i++;
+      expect(TokenKind::Colon, "':'");
+      field.type = std::make_unique<TypeExpr>(parse_type());
+      skip_newlines();
+      alias.fields.push_back(std::move(field));
+    }
+    skip_newlines();
     return alias;
   }
   alias.definition = parse_type();

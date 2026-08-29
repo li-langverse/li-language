@@ -20,6 +20,7 @@ struct TypeField {
   std::string name;
   std::unique_ptr<TypeExpr> type;
   bool optional = false;
+  bool public_field = true;
 };
 
 enum class TypeKind { Named, Array, Refinement, TypeApp, Callable, GenericParam, NamedTuple };
@@ -40,7 +41,7 @@ struct TypeExpr {
   bool tuple_variadic = false;
 };
 
-enum class AliasKind { Type, TypedDict, Enum };
+enum class AliasKind { Type, TypedDict, Enum, Object };
 
 struct Param {
   Span span;
@@ -59,7 +60,7 @@ enum class BinOp {
 };
 
 struct Expr {
-  enum class Kind { IntLit, FloatLit, StringLit, Ident, BinOp, Call, UnaryNot, UnaryMinus, Index, Await };
+  enum class Kind { IntLit, FloatLit, StringLit, Ident, BinOp, Call, UnaryNot, UnaryMinus, Index, Await, Field };
   Kind kind = Kind::IntLit;
   Span span;
   std::int64_t int_value = 0;
