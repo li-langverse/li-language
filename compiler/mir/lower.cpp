@@ -34,6 +34,13 @@ int g_par_counter = 0;
 bool g_uses_openmp = false;
 bool g_in_parallel = false;
 std::vector<MirFn> g_par_fns;
+// Object types: type name -> ordered (field name, is_float). Built once per
+// module in lower_to_mir from `type X = object` aliases. The walker lowers
+// each object field to an independent scalar slot named __li_o_<var>_<field>.
+std::unordered_map<std::string, std::vector<std::pair<std::string, bool>>> g_object_types;
+// Object-typed locals (var name -> type name), seeded per-proc from VarDecls
+// and params so Field reads/stores know how to mangle the slot.
+std::unordered_map<std::string, std::string> g_object_vars;
 
 bool is_array_ident(const std::string& n) {
   return g_array_sizes.count(n) > 0 || g_matrices.count(n) > 0 ||
@@ -122,6 +129,31 @@ bool is_float_expr(const Expr& e, const std::unordered_set<std::string>& float_n
       return true;
     case Expr::Kind::Ident:
       return float_names.count(e.ident) > 0;
+    case Expr::Kind::Field: {
+      // Field slot is float iff the object's field type is float.
+      std::string base;
+      std::string field;
+      if (e.base && e.base->kind == Expr::Kind::Ident) {
+        base = e.base->ident;
+      }
+      if (e.index && e.index->kind == Expr::Kind::Ident) {
+        field = e.index->ident;
+      }
+      const auto it = g_object_vars.find(base);
+      if (it == g_object_vars.end()) {
+        return false;
+      }
+      const auto ty = g_object_types.find(it->second);
+      if (ty == g_object_types.end()) {
+        return false;
+      }
+      for (const auto& f : ty->second) {
+        if (f.first == field) {
+          return f.second;
+        }
+      }
+      return false;
+    }
     case Expr::Kind::Index:
       // x[i] over a float array param/local is a float element.
       if (e.base && e.base->kind == Expr::Kind::Ident) {
@@ -302,6 +334,20 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
     }
     case Expr::Kind::Ident:
       return e.ident;
+    case Expr::Kind::Field: {
+      // `obj.field` reads lower to the object's per-field scalar slot
+      // __li_o_<var>_<field> (walker mir_obj_field_read mangles the slot).
+      // No INS is emitted; the slot name is used directly as an operand.
+      std::string base;
+      std::string field;
+      if (e.base && e.base->kind == Expr::Kind::Ident) {
+        base = e.base->ident;
+      }
+      if (e.index && e.index->kind == Expr::Kind::Ident) {
+        field = e.index->ident;
+      }
+      return "__li_o_" + base + "_" + field;
+    }
     case Expr::Kind::UnaryMinus: {
       // Walker mir_lower_expr k==11: `-x` = `0 - x`. Int operands fold the
       // literal zero into the BinOpInt (lhs_is_literal=1, lhs_int=0); float
@@ -906,6 +952,36 @@ void lower_stmt(const Stmt& stmt, const Module& module, bool returns_float,
       }
       break;
     case Stmt::Kind::VarDecl: {
+      // Object VarDecl `var o: T`: allocate one scalar slot per field as
+      // __li_o_<var>_<field> (LocalAllocInt for int fields, LocalAllocFloat
+      // for float fields). `var b: T = a` copies every field slot of a.
+      if (stmt.var_type.kind == TypeKind::Named &&
+          g_object_types.count(stmt.var_type.name) > 0) {
+        const auto& fields = g_object_types[stmt.var_type.name];
+        g_object_vars[stmt.var_name] = stmt.var_type.name;
+        for (const auto& f : fields) {
+          MirInsn alloc;
+          alloc.op = f.second ? MirOp::LocalAllocFloat : MirOp::LocalAllocInt;
+          alloc.ident = "__li_o_" + stmt.var_name + "_" + f.first;
+          out.push_back(std::move(alloc));
+          if (f.second) {
+            float_names.insert(alloc.ident);
+          }
+        }
+        if (stmt.init && stmt.init->kind == Expr::Kind::Ident &&
+            g_object_vars.count(stmt.init->ident) > 0) {
+          // Whole-object copy: store each source field slot into the new one.
+          for (const auto& f : fields) {
+            MirInsn st;
+            st.op = f.second ? MirOp::StoreFloat : MirOp::StoreInt;
+            st.ident = "__li_o_" + stmt.var_name + "_" + f.first;
+            st.rhs_is_literal = false;
+            st.rhs_ident = "__li_o_" + stmt.init->ident + "_" + f.first;
+            out.push_back(std::move(st));
+          }
+        }
+        break;
+      }
       if (stmt.var_type.kind == TypeKind::Array && stmt.var_type.elem &&
           stmt.var_type.elem->kind == TypeKind::Array && stmt.var_type.elem->elem) {
         // Matrix VarDecl `var A: array[M, array[K, float]]`: the walker emits
@@ -1023,6 +1099,46 @@ void lower_stmt(const Stmt& stmt, const Module& module, bool returns_float,
       break;
     }
     case Stmt::Kind::Assign:
+      // `o.field = <rhs>` -> StoreInt/StoreFloat into the field slot
+      // __li_o_<var>_<field> (walker mir_obj_field_store).
+      if (stmt.init && stmt.init->kind == Expr::Kind::Field && stmt.expr) {
+        const Expr* field_expr = stmt.init.get();
+        if (field_expr->base && field_expr->base->kind == Expr::Kind::Ident &&
+            field_expr->index && field_expr->index->kind == Expr::Kind::Ident) {
+          const std::string& base = field_expr->base->ident;
+          const std::string field = field_expr->index->ident;
+          const auto vit = g_object_vars.find(base);
+          if (vit != g_object_vars.end()) {
+            const auto& fields = g_object_types[vit->second];
+            bool is_float = false;
+            for (const auto& f : fields) {
+              if (f.first == field) {
+                is_float = f.second;
+                break;
+              }
+            }
+            MirInsn ins;
+            ins.op = is_float ? MirOp::StoreFloat : MirOp::StoreInt;
+            ins.ident = "__li_o_" + base + "_" + field;
+            if (is_float && stmt.expr->kind == Expr::Kind::FloatLit) {
+              ins.rhs_is_literal = true;
+              ins.float_value = stmt.expr->float_value;
+            } else if (!is_float && stmt.expr->kind == Expr::Kind::IntLit) {
+              ins.rhs_is_literal = true;
+              ins.rhs_int = stmt.expr->int_value;
+            } else if (stmt.expr->kind == Expr::Kind::Ident) {
+              ins.rhs_is_literal = false;
+              ins.rhs_ident = stmt.expr->ident;
+            } else {
+              ins.rhs_is_literal = false;
+              ins.rhs_ident =
+                  lower_expr_to(*stmt.expr, module, out, float_names, float_arrays);
+            }
+            out.push_back(std::move(ins));
+            break;
+          }
+        }
+      }
       // `C = A @ B` where A/B/C are LOCAL matrices -> ArrayMatMul2DF64 into C
       // (walker mir_stmt eopk==76 both-ident path). Only fires when both
       // operands are plain idents registered in matok; otherwise the RHS goes
@@ -1501,6 +1617,20 @@ MirModule lower_to_mir(const Module& module) {
   g_uses_openmp = false;
   g_in_parallel = false;
   MirModule mir;
+  g_object_types.clear();
+  for (const auto& alias : module.types) {
+    if (alias.alias_kind == AliasKind::Object) {
+      std::vector<std::pair<std::string, bool>> fields;
+      for (const auto& f : alias.fields) {
+        bool is_float = false;
+        if (f.type && f.type->kind == TypeKind::Named) {
+          is_float = is_float_type_name(f.type->name);
+        }
+        fields.emplace_back(f.name, is_float);
+      }
+      g_object_types[alias.name] = std::move(fields);
+    }
+  }
   scan_runtime_flags(module, mir);
   for (const auto& proc : module.procs) {
     MirFn fn;
@@ -1594,6 +1724,7 @@ MirModule lower_to_mir(const Module& module) {
       g_matrices.clear();
       g_matrix_params.clear();
       g_par_fns.clear();
+      g_object_vars.clear();
       std::unordered_set<std::string> float_names;
       std::unordered_set<std::string> float_arrays;
       seed_float_params(fn, float_names, float_arrays);

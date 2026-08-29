@@ -327,7 +327,9 @@ struct Ctx {
       }
       const auto it = aliases.find(te.name);
       if (it != aliases.end()) {
-        if (it->second.alias_kind == AliasKind::TypedDict && it->second.fields) {
+        if ((it->second.alias_kind == AliasKind::TypedDict ||
+             it->second.alias_kind == AliasKind::Object) &&
+            it->second.fields) {
           return resolve_typedict(te.name, *it->second.fields, te.span);
         }
         if (it->second.alias_kind == AliasKind::Enum && it->second.enum_variants) {
@@ -540,6 +542,24 @@ struct Ctx {
           }
         }
         return base->elem;
+      }
+      case Expr::Kind::Field: {
+        const TyPtr base = type_of(*e.base);
+        std::string fname;
+        if (e.index && e.index->kind == Expr::Kind::Ident) {
+          fname = e.index->ident;
+        }
+        if (base->kind != TyKind::TypedDict) {
+          diags.error(loc(e.span), "field access on non-object type");
+          return make_int();
+        }
+        for (const auto& f : base->fields) {
+          if (f.first == fname) {
+            return f.second;
+          }
+        }
+        diags.error(loc(e.span), "unknown field '" + fname + "'");
+        return make_int();
       }
     }
     return make_int();

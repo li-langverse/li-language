@@ -396,8 +396,8 @@ bool Lexer::tokenize(DiagnosticBag& diags) {
             return false;
           }
         } else {
-          // Single `.` — object field access (`obj.field`).
-          advance();
+          // Single `.` — object field access (`obj.field`). The outer loop's
+          // advance() has already consumed the dot, so just emit the token.
           single(TokenKind::Dot);
         }
         continue;
