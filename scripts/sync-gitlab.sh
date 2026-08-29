@@ -32,9 +32,14 @@ TOKEN_NAME="${GITLAB_PAT_NAME:-buffy-write}"
 SCOPES="${GITLAB_PAT_SCOPES:-api write_repository read_repository read_user}"
 
 ssh_host="${HOST%@*}"
-runner_cmd() { # args passed to gitlab-rails runner inside pod gitlab-0
+# Run a Ruby snippet inside the gitlab-0 pod. The snippet is base64-encoded so
+# newlines/quotes survive the ssh + kubectl exec layers without escaping bugs.
+runner_cmd() {
+  local b64
+  b64="$(printf '%s' "$1" | base64)"
   ssh -o BatchMode=yes -o ConnectTimeout=10 "$HOST" \
-    "kubectl -n gitlab exec gitlab-0 -- gitlab-rails runner \"$1\"" 2>/dev/null
+    "kubectl -n gitlab exec gitlab-0 -- sh -c 'echo $b64 | base64 -d | gitlab-rails runner -'" \
+    2>/dev/null
 }
 
 echo "[sync-gitlab] resolving GitLab owner via API…"
@@ -49,7 +54,7 @@ PAT="$(runner_cmd "
   u = User.find_by(username: 'root')
   if u
     u.personal_access_tokens.active.where(name: '${TOKEN_NAME}').find_each { |t| t.destroy! }
-    t = u.personal_access_tokens.create!(name: '${TOKEN_NAME}', scopes: ${SCOPES}.map(&:to_sym), expires_at: 365.days.from_now)
+    t = u.personal_access_tokens.create!(name: '${TOKEN_NAME}', scopes: '${SCOPES}'.split.map(&:to_sym), expires_at: 365.days.from_now)
     puts t.token
   else
     puts 'NO_USER'
@@ -61,11 +66,17 @@ if [[ -z "$PAT" ]]; then
 fi
 echo "[sync-gitlab] PAT minted."
 
-echo "[sync-gitlab] opening SSH tunnel ${LOCAL_PORT} -> 127.0.0.1:${NODE_PORT}…"
-ssh -o BatchMode=yes -o ConnectTimeout=10 -o ExitOnForwardFailure=yes -fN \
-  -L "${LOCAL_PORT}:127.0.0.1:${NODE_PORT}" "$HOST"
-trap 'ssh -o BatchMode=yes -O exit -L "${LOCAL_PORT}:127.0.0.1:${NODE_PORT}" "$HOST" 2>/dev/null || true' EXIT
-sleep 2
+# Reuse an already-live tunnel on ${LOCAL_PORT} if present (stale tunnels from
+# earlier runs survive; a fresh one would fail with "Address already in use").
+if ! curl -skm4 -H 'Host: gitlab.lilangverse.xyz' "http://127.0.0.1:${LOCAL_PORT}/api/v4/version" >/dev/null 2>&1; then
+  echo "[sync-gitlab] opening SSH tunnel ${LOCAL_PORT} -> 127.0.0.1:${NODE_PORT}…"
+  ssh -o BatchMode=yes -o ConnectTimeout=10 -o ExitOnForwardFailure=yes -fN \
+    -L "${LOCAL_PORT}:127.0.0.1:${NODE_PORT}" "$HOST"
+  trap 'ssh -o BatchMode=yes -O exit -L "${LOCAL_PORT}:127.0.0.1:${NODE_PORT}" "$HOST" 2>/dev/null || true' EXIT
+  sleep 2
+else
+  echo "[sync-gitlab] reusing live tunnel on ${LOCAL_PORT}…"
+fi
 
 echo "[sync-gitlab] confirming project ${NS}/${PROJ}…"
 PROJ_JSON="$(curl -skm8 -H 'Host: gitlab.lilangverse.xyz' -H "PRIVATE-TOKEN: ${PAT}" \
