@@ -11,8 +11,8 @@ namespace li {
 namespace {
 
 enum class TyKind {
-  Int, Int64, Float, Bool, Str, Array, List, Dict, Tuple, TypedDict, Enum, Named, TypeVar,
-  Protocol, Callable
+  Int, Int64, Ptr, Float, Bool, Str, Array, List, Dict, Tuple, TypedDict, Enum, Named,
+  TypeVar, Protocol, Callable
 };
 
 struct Ty;
@@ -36,6 +36,7 @@ TyPtr make_float() { return std::make_shared<Ty>(Ty{TyKind::Float}); }
 TyPtr make_bool() { return std::make_shared<Ty>(Ty{TyKind::Bool}); }
 TyPtr make_str() { return std::make_shared<Ty>(Ty{TyKind::Str}); }
 TyPtr make_i64() { return std::make_shared<Ty>(Ty{TyKind::Int64}); }
+TyPtr make_ptr() { return std::make_shared<Ty>(Ty{TyKind::Ptr}); }
 
 TyPtr make_type_var(std::string name) {
   auto t = std::make_shared<Ty>();
@@ -246,6 +247,15 @@ struct Ctx {
     if (value->kind == TyKind::TypeVar) {
       return expected->kind == TyKind::TypeVar && value->name == expected->name;
     }
+    // String literals coerce to `ptr` (they are stored as char pointers at the
+    // ABI level), and `ptr` and `int64` are ABI-interchangeable in Li.
+    if (value->kind == TyKind::Str && expected->kind == TyKind::Ptr) {
+      return true;
+    }
+    if ((value->kind == TyKind::Ptr && expected->kind == TyKind::Int64) ||
+        (value->kind == TyKind::Int64 && expected->kind == TyKind::Ptr)) {
+      return true;
+    }
     return same_kind(value, expected);
   }
 
@@ -343,7 +353,10 @@ struct Ctx {
       if (te.name == "bool") {
         return make_bool();
       }
-      if (te.name == "ptr" || te.name == "int64" || te.name == "i64" || te.name == "long") {
+      if (te.name == "ptr") {
+        return make_ptr();
+      }
+      if (te.name == "int64" || te.name == "i64" || te.name == "long") {
         return make_i64();
       }
       if (te.name == "str") {

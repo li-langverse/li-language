@@ -80,6 +80,25 @@ struct BorrowCtx {
 
   bool param_is_var(const TypeExpr& ty) { return ty.is_var; }
 
+  // Scalar values (int/float/bool/ptr/int64/str/unit and refinements of them)
+  // are copied when passed by value; only non-scalar heap values (arrays,
+  // objects, lists, dicts) are moved, per Li's copy/move semantics.
+  bool param_is_scalar(const TypeExpr& ty) {
+    if (ty.kind == TypeKind::Refinement) {
+      if (ty.refinement_base) {
+        return param_is_scalar(*ty.refinement_base);
+      }
+      return true;
+    }
+    if (ty.kind != TypeKind::Named) {
+      return false;
+    }
+    return ty.name == "int" || ty.name == "int64" || ty.name == "i64" ||
+           ty.name == "long" || ty.name == "float" || ty.name == "float64" ||
+           ty.name == "f64" || ty.name == "bool" || ty.name == "ptr" ||
+           ty.name == "str" || ty.name == "unit";
+  }
+
   void check_call_moves(const Expr& call) {
     const auto it = procs.find(call.ident);
     if (it == procs.end()) {
@@ -91,6 +110,10 @@ struct BorrowCtx {
         continue;
       }
       if (param_is_var(callee.params[n].type)) {
+        continue;
+      }
+      // Scalars are copied, not moved, on by-value call.
+      if (param_is_scalar(callee.params[n].type)) {
         continue;
       }
       const std::string& name = call.args[n]->ident;

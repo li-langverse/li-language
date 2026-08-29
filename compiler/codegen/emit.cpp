@@ -80,16 +80,28 @@ struct EmitCtx {
   std::map<std::string, llvm::AllocaInst*> i64_locals;
   std::map<std::string, llvm::AllocaInst*> ptr_locals;
   std::map<std::string, ArraySlot> arrays;
+  llvm::BasicBlock* entry_block = nullptr;
+  llvm::IRBuilder<>* alloc = nullptr;
   std::unordered_map<std::string, llvm::BasicBlock*> labels;
   int str_counter = 0;
+
+  // All stack slots must live in the function entry block so every use is
+  // dominated. The main `builder` floats with the current block; emit allocas
+  // through a dedicated builder pinned in the entry block instead.
+  llvm::AllocaInst* create_alloca_addr(llvm::Type* ty, const std::string& name) {
+    llvm::IRBuilderBase::InsertPoint save = alloc->saveIP();
+    alloc->SetInsertPoint(entry_block, entry_block->getFirstInsertionPt());
+    llvm::AllocaInst* slot = alloc->CreateAlloca(ty, nullptr, name);
+    alloc->restoreIP(save);
+    return slot;
+  }
 
   llvm::AllocaInst* ensure_int_local(const std::string& name) {
     auto it = int_locals.find(name);
     if (it != int_locals.end()) {
       return it->second;
     }
-    llvm::AllocaInst* slot =
-        builder->CreateAlloca(i32_ty(context), nullptr, name);
+    llvm::AllocaInst* slot = create_alloca_addr(i32_ty(context), name);
     int_locals[name] = slot;
     return slot;
   }
@@ -100,7 +112,7 @@ struct EmitCtx {
       return it->second;
     }
     llvm::AllocaInst* slot =
-        builder->CreateAlloca(llvm::Type::getDoubleTy(context), nullptr, name);
+        create_alloca_addr(llvm::Type::getDoubleTy(context), name);
     float_locals[name] = slot;
     return slot;
   }
@@ -114,8 +126,7 @@ struct EmitCtx {
     if (it != ptr_locals.end()) {
       return it->second;
     }
-    llvm::AllocaInst* slot =
-        builder->CreateAlloca(i8_ptr(context), nullptr, name);
+    llvm::AllocaInst* slot = create_alloca_addr(i8_ptr(context), name);
     ptr_locals[name] = slot;
     return slot;
   }
@@ -136,8 +147,7 @@ struct EmitCtx {
     if (it != i64_locals.end()) {
       return it->second;
     }
-    llvm::AllocaInst* slot =
-        builder->CreateAlloca(i64_ty(context), nullptr, name);
+    llvm::AllocaInst* slot = create_alloca_addr(i64_ty(context), name);
     i64_locals[name] = slot;
     return slot;
   }
@@ -400,7 +410,7 @@ struct EmitCtx {
       case MirOp::ArrayAlloc: {
         llvm::ArrayType* arr_ty =
             llvm::ArrayType::get(i32_ty(context), static_cast<unsigned>(ins.int_value));
-        llvm::AllocaInst* slot = builder->CreateAlloca(arr_ty, nullptr, ins.ident);
+        llvm::AllocaInst* slot = create_alloca_addr(arr_ty, ins.ident);
         arrays[ins.ident] = ArraySlot{slot, ins.int_value};
         return true;
       }
@@ -510,7 +520,7 @@ bool emit_llvm_ir(const MirModule& mir, const std::string& out_path, std::string
     llvm::IRBuilder<> builder(entry);
 
     EmitCtx ctx{context, module.get(), func, &builder, ret_ty, fn.returns_float,
-                {}, {}, {}, {}, {}};
+                {}, {}, {}, {}, {}, entry, new llvm::IRBuilder<>(entry)};
 
     unsigned idx = 0;
     for (auto& arg : func->args()) {
