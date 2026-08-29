@@ -152,6 +152,13 @@ struct Parser {
         }
         out.procs.push_back(parse_proc(true));
         skip_newlines();
+      } else if (at(TokenKind::Ident) && std::string(cur().text) == "async" &&
+                 peek(1).kind == TokenKind::KwProc) {
+        i++;
+        auto proc = parse_proc(false);
+        proc.is_async = true;
+        out.procs.push_back(std::move(proc));
+        skip_newlines();
       } else if (at(TokenKind::KwProc)) {
         out.procs.push_back(parse_proc(false));
         skip_newlines();
@@ -178,6 +185,20 @@ std::unique_ptr<Expr> Parser::parse_primary() {
     if (auto arg = parse_primary()) {
       e->args.push_back(std::move(arg));
     }
+    return parse_postfix(std::move(e));
+  }
+  if (t.kind == TokenKind::Ident && t.text == "await") {
+    const Token aw = t;
+    i++;
+    auto inner = parse_primary();
+    if (!inner) {
+      diags.error(loc(aw), "expected expression after await");
+      return nullptr;
+    }
+    auto e = std::make_unique<Expr>();
+    e->kind = Expr::Kind::Await;
+    e->span = {aw.start, inner->span.end};
+    e->operand = std::move(inner);
     return parse_postfix(std::move(e));
   }
   if (t.kind == TokenKind::StringLit) {

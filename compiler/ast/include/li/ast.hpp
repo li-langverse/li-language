@@ -59,7 +59,7 @@ enum class BinOp {
 };
 
 struct Expr {
-  enum class Kind { IntLit, FloatLit, StringLit, Ident, BinOp, Call, UnaryNot, UnaryMinus, Index };
+  enum class Kind { IntLit, FloatLit, StringLit, Ident, BinOp, Call, UnaryNot, UnaryMinus, Index, Await };
   Kind kind = Kind::IntLit;
   Span span;
   std::int64_t int_value = 0;
@@ -135,6 +135,9 @@ struct ProcDecl {
   std::vector<Contract> contracts;
   std::vector<Stmt> body;
   std::vector<Decorator> decorators;
+  /** `async def` keyword (bare form): sets the FN async bit but, unlike the
+   *  @async decorator, emits no DEC line. */
+  bool is_async = false;
 };
 
 struct TypeAlias {

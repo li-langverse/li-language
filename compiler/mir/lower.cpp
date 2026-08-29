@@ -872,6 +872,10 @@ void lower_return_expr(const Expr& e, bool returns_float, const Module& module,
     ins.op = MirOp::ReturnIdent;
     ins.ident = e.ident;
     ins.ret_is_float = returns_float || float_names.count(e.ident) > 0;
+  } else if (e.kind == Expr::Kind::Await) {
+    // `return await x` lowers to a bare ReturnVoid (walker mir_return kk==34:
+    // async calls are lowered at the LLVM level, not emitted as MIR).
+    ins.op = MirOp::ReturnVoid;
   } else if (e.kind == Expr::Kind::Call || e.kind == Expr::Kind::BinOp ||
              e.kind == Expr::Kind::Index || e.kind == Expr::Kind::UnaryMinus) {
     const std::string tmp = lower_expr_to(e, module, out, float_names, float_arrays);
@@ -1505,6 +1509,7 @@ MirModule lower_to_mir(const Module& module) {
     // Walker DEC side-channel (ftmp 4092..4095, 4086..4088): the FN line's
     // no_vectorize/async bits come from @no_vectorize / @async; a DEC line is
     // emitted for the first decorator (or for @cpu + @parallel separately).
+    fn.is_async = fn.is_async || proc.is_async;
     for (const auto& d : proc.decorators) {
       fn.no_vectorize = fn.no_vectorize || d.no_vectorize;
       fn.is_async = fn.is_async || d.is_async;
@@ -1592,9 +1597,20 @@ MirModule lower_to_mir(const Module& module) {
       std::unordered_set<std::string> float_names;
       std::unordered_set<std::string> float_arrays;
       seed_float_params(fn, float_names, float_arrays);
+      if (fn.is_async) {
+        // Walker emits AsyncFrameEnter (INS 47) + AsyncFrameLeave (INS 48)
+        // at the top of every async proc body, before the first statement.
+        MirInsn enter;
+        enter.op = MirOp::AsyncFrameEnter;
+        fn.body.push_back(std::move(enter));
+        MirInsn leave;
+        leave.op = MirOp::AsyncFrameLeave;
+        fn.body.push_back(std::move(leave));
+      }
       lower_stmts(proc.body, module, fn.returns_float, fn.body, float_names, float_arrays);
       append_implicit_return(fn.body);
       g_cur_proc = nullptr;
+      mir.uses_async = mir.uses_async || fn.is_async;
     }
     if (!proc.is_extern) {
       // Synthesized __li_par_* functions replay BEFORE the enclosing FN
