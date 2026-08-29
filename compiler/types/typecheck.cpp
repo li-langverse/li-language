@@ -438,8 +438,25 @@ struct Ctx {
           return make_int();
         }
         if (e.bin_op == BinOp::MatMul) {
-          // `x @ y` dot product over float arrays / matrices lowers to
-          // ArrayDotF64 -> float. Int arrays would be an int dot.
+          // `A @ B` over matrices (array[M, array[K, float]]) returns the
+          // result matrix array[rows(l), array[cols(r), elem]].
+          const bool l_mat = l->kind == TyKind::Array && l->elem &&
+                             l->elem->kind == TyKind::Array;
+          const bool r_mat = r->kind == TyKind::Array && r->elem &&
+                             r->elem->kind == TyKind::Array;
+          if (l_mat && r_mat) {
+            auto inner = std::make_shared<Ty>();
+            inner->kind = TyKind::Array;
+            inner->array_size = r->elem->array_size;
+            inner->elem = r->elem->elem;
+            auto t = std::make_shared<Ty>();
+            t->kind = TyKind::Array;
+            t->array_size = l->array_size;
+            t->elem = inner;
+            return t;
+          }
+          // `x @ y` dot product over float arrays lowers to ArrayDotF64 ->
+          // float. Int arrays would be an int dot.
           const bool any_float =
               l->kind == TyKind::Float || r->kind == TyKind::Float ||
               (l->kind == TyKind::Array && l->elem && l->elem->kind == TyKind::Float) ||
@@ -591,6 +608,20 @@ struct Ctx {
         type_of(*s.cond);
       }
       for (const auto& inner : s.while_body) {
+        check_stmt(inner);
+      }
+      return;
+    }
+    if (s.kind == Stmt::Kind::For) {
+      locals[s.for_index] = make_int();
+      for (const auto& inner : s.for_body) {
+        check_stmt(inner);
+      }
+      return;
+    }
+    if (s.kind == Stmt::Kind::ParallelFor) {
+      locals[s.par_index] = make_int();
+      for (const auto& inner : s.par_body) {
         check_stmt(inner);
       }
       return;

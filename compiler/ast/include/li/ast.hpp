@@ -82,7 +82,7 @@ struct Contract {
 };
 
 struct Stmt {
-  enum class Kind { Return, If, While, Expr, VarDecl, Borrow, Assign, Break, Continue };
+  enum class Kind { Return, If, While, Expr, VarDecl, Borrow, Assign, Break, Continue, ParallelFor, For };
   Kind kind = Kind::Return;
   Span span;
   std::unique_ptr<Expr> expr;
@@ -94,6 +94,34 @@ struct Stmt {
   TypeExpr var_type;
   std::unique_ptr<Expr> init;
   bool borrow_mut = false;
+  // ParallelFor: `parallel for <par_index> in <par_start>..<<par_end>` with
+  // the body in par_body (walker lowers it into a synthetic __li_par_* fn).
+  std::string par_index;
+  std::int64_t par_start = 0;
+  std::int64_t par_end = 0;
+  std::vector<Stmt> par_body;
+  // For: `for <for_index> in <for_start>..<<for_end>` with the body in
+  // for_body. `for_vectorized`/`for_lanes` come from a statement-level
+  // `@vectorized(lanes=N)` decorator directly above the for (walker gates
+  // ArraySimdScope INS 49 enter/exit on ftmp 4095).
+  std::string for_index;
+  std::int64_t for_start = 0;
+  std::int64_t for_end = 0;
+  std::vector<Stmt> for_body;
+  bool for_vectorized = false;
+  std::int64_t for_lanes = 0;
+};
+
+// One `@name` / `@name(args)` line in a decorator list attached to a def.
+struct Decorator {
+  std::string name;
+  std::int64_t lanes = 0;
+  bool vectorized = false;
+  bool no_vectorize = false;
+  bool parallel = false;
+  bool disjoint = false;
+  bool cpu = false;
+  bool is_async = false;
 };
 
 struct ProcDecl {
@@ -106,6 +134,7 @@ struct ProcDecl {
   std::vector<std::string> raises;
   std::vector<Contract> contracts;
   std::vector<Stmt> body;
+  std::vector<Decorator> decorators;
 };
 
 struct TypeAlias {

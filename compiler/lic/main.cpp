@@ -43,7 +43,10 @@ bool frontend(const char* path, const std::string& source, li::Module& out,
   for (const auto& d : parsed.diagnostics.items()) {
     diags.error(d.loc, d.message);
   }
-  if (!parsed.module) {
+  // parse_module may recover and still build a (partial) module after emitting
+  // parse diagnostics; reject on any parse error so `lic check`/`lic mir`/
+  // `lic build` reject malformed input exactly where the Li walker does.
+  if (!parsed.module || !parsed.diagnostics.empty()) {
     return false;
   }
   auto checked = li::typecheck_module(*parsed.module);

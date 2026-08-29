@@ -18,8 +18,27 @@ const ProcDecl* g_cur_proc = nullptr;
 // ArrayDotF64, ArrayAxpyF64) with the declared length in int_value.
 std::unordered_map<std::string, std::int64_t> g_array_sizes;
 std::unordered_set<std::string> g_int_arrays;
+// Local (var-declared) 2D float matrices: name -> (rows, cols). Mirrors the
+// walker's matok registry, which only holds LOCAL matrices (matrix params are
+// not seeded, so `return A @ B` / `A[i][j]` on params take the generic
+// BinOpInt / no-emit paths).
+std::unordered_map<std::string, std::pair<std::int64_t, std::int64_t>> g_matrices;
+// Matrix params (name -> (rows, cols)): registered for the no-emit 2D-load
+// quirk and matrix call args, but NOT treated as float names / array sizes.
+std::unordered_map<std::string, std::pair<std::int64_t, std::int64_t>> g_matrix_params;
+// Parallel-for state: per-module synthetic-fn counter + uses_openmp bit, and
+// the per-proc list of synthesized __li_par_* functions (spliced before the
+// enclosing FN, mirroring the walker's hold-buffer replay). g_in_parallel
+// switches array stores to the walker's parallel form (INS 10 + value temp).
+int g_par_counter = 0;
+bool g_uses_openmp = false;
+bool g_in_parallel = false;
+std::vector<MirFn> g_par_fns;
 
-bool is_array_ident(const std::string& n) { return g_array_sizes.count(n) > 0; }
+bool is_array_ident(const std::string& n) {
+  return g_array_sizes.count(n) > 0 || g_matrices.count(n) > 0 ||
+         g_matrix_params.count(n) > 0;
+}
 
 std::string fresh_temp() { return "__t" + std::to_string(temp_counter++); }
 std::string fresh_label(const std::string& prefix) {
@@ -108,6 +127,14 @@ bool is_float_expr(const Expr& e, const std::unordered_set<std::string>& float_n
       if (e.base && e.base->kind == Expr::Kind::Ident) {
         return float_arrays.count(e.base->ident) > 0;
       }
+      // A[i][j] over a LOCAL float matrix is a float element (walker
+      // mir_desc_float k==5 -> mir_name_matrix_local); matrix params are NOT
+      // float-registered, so `return A[0][0] * B[0][0]` on params lowers as
+      // BinOpInt (matching the walker's no-emit temp path).
+      if (e.base && e.base->kind == Expr::Kind::Index && e.base->base &&
+          e.base->base->kind == Expr::Kind::Ident) {
+        return g_matrices.count(e.base->base->ident) > 0;
+      }
       return false;
     case Expr::Kind::BinOp:
       if (!is_float_ctx_binop(e.bin_op)) {
@@ -134,6 +161,15 @@ const ProcDecl* find_proc(const Module& module, const std::string& name) {
 void seed_float_params(const MirFn& fn, std::unordered_set<std::string>& float_names,
                        std::unordered_set<std::string>& float_arrays) {
   for (const auto& p : fn.params) {
+    if (p.is_matrix) {
+      // Matrix params keep the PARAM-line is_float=1 bit but are NOT seeded
+      // into float_names/float_arrays/g_array_sizes: the walker registers
+      // matrix params in neither ftok nor fatok/matok, so `A @ B` on params
+      // falls to the generic BinOpInt path and `A[i][j]` on params is a
+      // no-emit temp.
+      g_matrix_params[p.name] = {p.array_size, p.matrix_cols};
+      continue;
+    }
     if (p.is_float) {
       float_names.insert(p.name);
     }
@@ -313,11 +349,46 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
       return dest;
     }
     case Expr::Kind::BinOp: {
+      // `A @ B` over two LOCAL matrices (expr position, e.g. inside a chained
+      // `C = (A @ B) @ D`): ArrayAlloc temp (ident=temp, rhs_int=rows(lhs),
+      // matrix flags) + ArrayMatMul2DF64 temp. The temp is NOT re-registered
+      // as a matrix, so the outer `temp @ D` falls to the generic BinOpInt
+      // path below (walker mir_mat_dims only knows registered idents).
+      if (e.bin_op == BinOp::MatMul && e.lhs && e.rhs &&
+          e.lhs->kind == Expr::Kind::Ident && e.rhs->kind == Expr::Kind::Ident) {
+        const auto la = g_matrices.find(e.lhs->ident);
+        const auto ra = g_matrices.find(e.rhs->ident);
+        if (la != g_matrices.end() && ra != g_matrices.end() &&
+            la->second.second == ra->second.first) {
+          const std::string dest = fresh_temp();
+          MirInsn alloc;
+          alloc.op = MirOp::ArrayAlloc;
+          alloc.ident = dest;
+          alloc.int_value = la->second.first;
+          alloc.rhs_int = la->second.first;
+          alloc.array_is_float = true;
+          alloc.array_is_matrix = true;
+          out.push_back(std::move(alloc));
+          MirInsn mm;
+          mm.op = MirOp::ArrayMatMul2DF64;
+          mm.ident = dest;
+          mm.int_value = la->second.first;
+          mm.lhs_ident = e.lhs->ident;
+          mm.rhs_ident = e.rhs->ident;
+          mm.rhs_int = la->second.second;
+          mm.lhs_int = ra->second.second;
+          out.push_back(std::move(mm));
+          return dest;
+        }
+      }
       // `x @ y` over float-array params or locals lowers to ArrayDotF64
       // (walker INS 14) with the declared array length in int_value.
       if (e.bin_op == BinOp::MatMul && e.lhs && e.rhs &&
           e.lhs->kind == Expr::Kind::Ident && e.rhs->kind == Expr::Kind::Ident &&
-          g_array_sizes.count(e.lhs->ident) > 0 && g_array_sizes.count(e.rhs->ident) > 0) {
+          g_array_sizes.count(e.lhs->ident) > 0 && g_array_sizes.count(e.rhs->ident) > 0 &&
+          g_array_sizes[e.lhs->ident] == g_array_sizes[e.rhs->ident]) {
+        // Equal-length 1D float arrays only (walker requires szr == szl; a
+        // length mismatch falls to the generic BinOpInt MatMul path).
         MirInsn ins;
         ins.op = MirOp::ArrayDotF64;
         ins.int_value = g_array_sizes[e.lhs->ident];
@@ -560,11 +631,14 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
         out.push_back(std::move(sum));
         return dest;
       }
-      // dot(a, b) -> ArrayDotF64 with the declared length.
+      // dot(a, b) -> ArrayDotF64 with the declared length. Equal lengths only
+      // (walker requires szr == szl; a mismatch falls through to the generic
+      // CallExtern `dot` path).
       if (e.ident == "dot" && e.args.size() == 2 &&
           e.args[0]->kind == Expr::Kind::Ident && e.args[1]->kind == Expr::Kind::Ident &&
           g_array_sizes.count(e.args[0]->ident) > 0 &&
-          g_array_sizes.count(e.args[1]->ident) > 0) {
+          g_array_sizes.count(e.args[1]->ident) > 0 &&
+          g_array_sizes[e.args[0]->ident] == g_array_sizes[e.args[1]->ident]) {
         const std::string dest = fresh_temp();
         MirInsn ins;
         ins.op = MirOp::ArrayDotF64;
@@ -605,12 +679,17 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
           if (arg->kind == Expr::Kind::IntLit) {
             ma.is_literal = true;
             ma.int_value = arg->int_value;
+          } else if (arg->kind == Expr::Kind::FloatLit) {
+            // CallProc passes float literals inline (walker ARG
+            // is_float_literal), unlike CallExtern which materializes temps.
+            ma.is_float_literal = true;
+            ma.float_value = arg->float_value;
           } else if (arg->kind == Expr::Kind::StringLit) {
             ma.is_string = true;
             ma.str_value = arg->str_value;
           } else if (arg->kind == Expr::Kind::Ident) {
             ma.ident = arg->ident;
-            // Array args pass by address (walker ARG is_array_ident).
+            // Array/matrix args pass by address (walker ARG is_array_ident).
             if (is_array_ident(arg->ident)) {
               ma.is_array_ident = true;
             }
@@ -619,11 +698,23 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
           }
           ins.args.push_back(std::move(ma));
         }
+        if (callee->ret_type && callee->ret_type->name == "unit") {
+          // Walker rd==0 (unit): INS 8 with no dest ident and no counter
+          // consumed (mir_lower_expr mir_mk_name code 2 empty).
+          out.push_back(std::move(ins));
+          return "";
+        }
         const std::string dest = fresh_temp();
         ins.ident = dest;
         if (callee->ret_type && is_float_type_name(callee->ret_type->name)) {
           ins.ret_is_float = true;
           float_names.insert(dest);
+        } else if (callee->ret_type &&
+                   (callee->ret_type->kind == TypeKind::Array ||
+                    is_i64_type_name(callee->ret_type->name) ||
+                    is_string_type_name(callee->ret_type->name))) {
+          // Walker ret descriptor: rd 3/4/5 (str/ptr/i64/array) -> ret_is_i64.
+          ins.ret_is_i64 = true;
         }
         out.push_back(std::move(ins));
         return dest;
@@ -653,6 +744,7 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
         if (callee->ret_type->name == "ptr" || callee->ret_type->name == "int64" ||
             callee->ret_type->name == "i64") {
           ins.is_i64 = true;
+          ins.ret_is_i64 = true;
         } else if (is_float_type_name(callee->ret_type->name)) {
           ins.ret_is_float = true;
           float_names.insert(dest);
@@ -663,7 +755,59 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
       out.push_back(std::move(ins));
       return fresh_temp();
     }
+    case Expr::Kind::StringLit: {
+      // String literal in expr position (e.g. `a[i] = "str"` on a ptr
+      // array): materialize the string global into an i64 temp (walker INS 27
+      // StoreI64 with rhs_is_string=1), then the store references the temp.
+      const std::string dest = fresh_temp();
+      MirInsn ins;
+      ins.op = MirOp::StoreI64;
+      ins.ident = dest;
+      ins.rhs_is_literal = true;
+      ins.rhs_is_string = true;
+      ins.str_value = e.str_value;
+      out.push_back(std::move(ins));
+      return dest;
+    }
     case Expr::Kind::Index: {
+      // 2D index A[row][col]: base is itself an Index over a matrix ident.
+      if (e.base && e.base->kind == Expr::Kind::Index && e.base->base &&
+          e.base->base->kind == Expr::Kind::Ident && e.index) {
+        const std::string& mat = e.base->base->ident;
+        const auto lit = g_matrices.find(mat);
+        if (lit != g_matrices.end()) {
+          // Local matrix -> ArrayLoad2DF64 (walker f2d load): int_value=row,
+          // rhs_int=col, dest in lhs_ident, index_is_literal/rhs_is_literal
+          // for literal row/col.
+          MirInsn load;
+          load.op = MirOp::ArrayLoad2DF64;
+          load.ident = mat;
+          if (e.base->index && e.base->index->kind == Expr::Kind::IntLit) {
+            load.index_is_literal = true;
+            load.int_value = e.base->index->int_value;
+          } else if (e.base->index && e.base->index->kind == Expr::Kind::Ident) {
+            load.index_is_literal = false;
+            load.index_ident = e.base->index->ident;
+          }
+          if (e.index->kind == Expr::Kind::IntLit) {
+            load.rhs_is_literal = true;
+            load.rhs_int = e.index->int_value;
+          } else if (e.index->kind == Expr::Kind::Ident) {
+            load.rhs_is_literal = false;
+            load.rhs_ident = e.index->ident;
+          }
+          const std::string dest = fresh_temp();
+          load.lhs_ident = dest;
+          out.push_back(std::move(load));
+          return dest;
+        }
+        // Matrix param -> the walker allocates a temp but emits NOTHING
+        // (mir_lower_expr `var cp = tc[0]` no-emit quirk), so the result is
+        // referenced but never defined.
+        if (g_matrix_params.count(mat) > 0) {
+          return fresh_temp();
+        }
+      }
       if (e.base && e.base->kind == Expr::Kind::Ident && e.index) {
         MirInsn load;
         load.op = MirOp::ArrayLoadInt;
@@ -674,6 +818,11 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
         } else if (e.index->kind == Expr::Kind::Ident) {
           load.index_is_literal = false;
           load.index_ident = e.index->ident;
+        } else {
+          // General index expr (e.g. board[cell_index(5, 7)]): lower it to a
+          // temp first (walker lowers idx before allocating the load dest).
+          load.index_is_literal = false;
+          load.index_ident = lower_expr_to(*e.index, module, out, float_names, float_arrays);
         }
         const std::string dest = fresh_temp();
         load.lhs_ident = dest;
@@ -687,7 +836,9 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
   }
 }
 
-void lower_echo_arg(const Expr& arg, std::vector<MirInsn>& out) {
+void lower_echo_arg(const Expr& arg, const Module& module, std::vector<MirInsn>& out,
+                    std::unordered_set<std::string>& float_names,
+                    std::unordered_set<std::string>& float_arrays) {
   MirInsn ins;
   if (arg.kind == Expr::Kind::IntLit) {
     ins.op = MirOp::EchoInt;
@@ -698,6 +849,11 @@ void lower_echo_arg(const Expr& arg, std::vector<MirInsn>& out) {
   } else if (arg.kind == Expr::Kind::StringLit) {
     ins.op = MirOp::EchoString;
     ins.str_value = arg.str_value;
+  } else {
+    // General arg (e.g. `print(a[i])`): lower to a temp, then echo it
+    // (walker lower_echo_arg falls back to mir_lower_expr + EchoInt).
+    ins.op = MirOp::EchoInt;
+    ins.ident = lower_expr_to(arg, module, out, float_names, float_arrays);
   }
   out.push_back(std::move(ins));
 }
@@ -746,7 +902,24 @@ void lower_stmt(const Stmt& stmt, const Module& module, bool returns_float,
       }
       break;
     case Stmt::Kind::VarDecl: {
-      if (stmt.var_type.kind == TypeKind::Array && stmt.var_type.elem) {
+      if (stmt.var_type.kind == TypeKind::Array && stmt.var_type.elem &&
+          stmt.var_type.elem->kind == TypeKind::Array && stmt.var_type.elem->elem) {
+        // Matrix VarDecl `var A: array[M, array[K, float]]`: the walker emits
+        // ArrayAlloc with int_value=M (rows), rhs_int=K (cols),
+        // array_is_float=1 + array_is_matrix=1, and DROPS any init (the
+        // matmul/call init is never lowered; only the alloc + registry entry
+        // remain).
+        MirInsn ins;
+        ins.op = MirOp::ArrayAlloc;
+        ins.ident = stmt.var_name;
+        ins.int_value = stmt.var_type.array_size;
+        ins.rhs_int = stmt.var_type.elem->array_size;
+        ins.array_is_float = true;
+        ins.array_is_matrix = true;
+        g_matrices[stmt.var_name] = {stmt.var_type.array_size,
+                                     stmt.var_type.elem->array_size};
+        out.push_back(std::move(ins));
+      } else if (stmt.var_type.kind == TypeKind::Array && stmt.var_type.elem) {
         MirInsn ins;
         ins.op = MirOp::ArrayAlloc;
         ins.ident = stmt.var_name;
@@ -762,7 +935,10 @@ void lower_stmt(const Stmt& stmt, const Module& module, bool returns_float,
         g_array_sizes[stmt.var_name] = stmt.var_type.array_size;
         out.push_back(std::move(ins));
         // Walker direct-into-var array init: `var c = a + b` -> ArrayBinOpF64
-        // into c (no temp); `var y = 2.0 * x` -> ArrayScaleF64 into y.
+        // into c (no temp); `var y = 2.0 * x` -> ArrayScaleF64 into y. Any
+        // other init (e.g. an invalid-broadcast `var c: array[4,int] = a*b`
+        // with array[2]*array[4]) lowers via the generic expr path into a
+        // discarded temp (walker mir_var_decl fallthrough) and stores nothing.
         if (stmt.init) {
           if (emit_array_binop_into(*stmt.init, stmt.var_name, float_arrays, out)) {
             break;
@@ -770,6 +946,7 @@ void lower_stmt(const Stmt& stmt, const Module& module, bool returns_float,
           if (emit_array_scale_into(*stmt.init, stmt.var_name, float_arrays, out)) {
             break;
           }
+          (void)lower_expr_to(*stmt.init, module, out, float_names, float_arrays);
         }
       } else if (is_i64_type_name(stmt.var_type.name)) {
         MirInsn ins;
@@ -842,9 +1019,107 @@ void lower_stmt(const Stmt& stmt, const Module& module, bool returns_float,
       break;
     }
     case Stmt::Kind::Assign:
+      // `C = A @ B` where A/B/C are LOCAL matrices -> ArrayMatMul2DF64 into C
+      // (walker mir_stmt eopk==76 both-ident path). Only fires when both
+      // operands are plain idents registered in matok; otherwise the RHS goes
+      // through lower_expr_to (chain: inner ArrayAlloc+MatMul, outer BinOpInt).
+      if (stmt.init && stmt.init->kind == Expr::Kind::Ident && stmt.expr &&
+          stmt.expr->kind == Expr::Kind::BinOp && stmt.expr->bin_op == BinOp::MatMul &&
+          stmt.expr->lhs && stmt.expr->rhs &&
+          stmt.expr->lhs->kind == Expr::Kind::Ident &&
+          stmt.expr->rhs->kind == Expr::Kind::Ident) {
+        const auto la = g_matrices.find(stmt.expr->lhs->ident);
+        const auto ra = g_matrices.find(stmt.expr->rhs->ident);
+        if (la != g_matrices.end() && ra != g_matrices.end() &&
+            la->second.second == ra->second.first) {
+          MirInsn ins;
+          ins.op = MirOp::ArrayMatMul2DF64;
+          ins.int_value = la->second.first;   // rows of lhs
+          ins.ident = stmt.init->ident;
+          ins.lhs_ident = stmt.expr->lhs->ident;
+          ins.rhs_ident = stmt.expr->rhs->ident;
+          ins.rhs_int = la->second.second;    // cols of lhs
+          ins.lhs_int = ra->second.second;    // cols of rhs
+          out.push_back(std::move(ins));
+          break;
+        }
+      }
+      // `A[row][col] = value` on a LOCAL matrix -> ArrayStore2DF64.
+      if (stmt.init && stmt.init->kind == Expr::Kind::Index && stmt.init->base &&
+          stmt.init->base->kind == Expr::Kind::Index && stmt.init->base->base &&
+          stmt.init->base->base->kind == Expr::Kind::Ident && stmt.expr) {
+        const std::string& mat = stmt.init->base->base->ident;
+        if (g_matrices.count(mat) > 0) {
+          MirInsn ins;
+          ins.op = MirOp::ArrayStore2DF64;
+          ins.ident = mat;
+          if (stmt.init->base->index &&
+              stmt.init->base->index->kind == Expr::Kind::IntLit) {
+            ins.index_is_literal = true;
+            ins.int_value = stmt.init->base->index->int_value;
+          } else if (stmt.init->base->index &&
+                     stmt.init->base->index->kind == Expr::Kind::Ident) {
+            ins.index_is_literal = false;
+            ins.index_ident = stmt.init->base->index->ident;
+          }
+          if (stmt.init->index && stmt.init->index->kind == Expr::Kind::IntLit) {
+            ins.rhs_is_literal = true;
+            ins.rhs_int = stmt.init->index->int_value;
+          } else if (stmt.init->index && stmt.init->index->kind == Expr::Kind::Ident) {
+            ins.rhs_is_literal = false;
+            ins.rhs_ident = stmt.init->index->ident;
+          }
+          if (stmt.expr->kind == Expr::Kind::FloatLit) {
+            ins.lhs_is_literal = true;
+            ins.float_value = stmt.expr->float_value;
+          } else if (stmt.expr->kind == Expr::Kind::IntLit) {
+            ins.lhs_is_literal = true;
+            ins.rhs_int = 0;  // placeholder, unreachable for float matrices
+            ins.lhs_int = stmt.expr->int_value;
+          } else if (stmt.expr->kind == Expr::Kind::Ident) {
+            ins.lhs_is_literal = false;
+            ins.lhs_ident = stmt.expr->ident;
+          } else {
+            ins.lhs_ident = lower_expr_to(*stmt.expr, module, out, float_names, float_arrays);
+            ins.lhs_is_literal = false;
+          }
+          out.push_back(std::move(ins));
+          break;
+        }
+      }
       if (stmt.init && stmt.init->kind == Expr::Kind::Index && stmt.init->base &&
           stmt.init->base->kind == Expr::Kind::Ident && stmt.expr) {
         const bool arr_flt = float_arrays.count(stmt.init->base->ident) > 0;
+        // Parallel-body context (walker ftmp 4089): float literals materialize
+        // into a fresh __tN (INS 28 StoreFloat) and the store references the
+        // temp by name as ArrayStoreInt (INS 10), NOT ArrayStoreFloat.
+        if (g_in_parallel && arr_flt && stmt.expr->kind == Expr::Kind::FloatLit) {
+          const std::string tmp = fresh_temp();
+          MirInsn sf;
+          sf.op = MirOp::StoreFloat;
+          sf.ident = tmp;
+          sf.float_value = stmt.expr->float_value;
+          out.push_back(std::move(sf));
+          MirInsn pstore;
+          pstore.op = MirOp::ArrayStoreInt;
+          pstore.ident = stmt.init->base->ident;
+          if (stmt.init->index && stmt.init->index->kind == Expr::Kind::IntLit) {
+            pstore.index_is_literal = true;
+            pstore.int_value = stmt.init->index->int_value;
+          } else if (stmt.init->index && stmt.init->index->kind == Expr::Kind::Ident) {
+            pstore.index_is_literal = false;
+            pstore.index_ident = stmt.init->index->ident;
+          } else {
+          pstore.index_is_literal = false;
+          pstore.index_ident =
+              lower_expr_to(*stmt.init->index, module, out, float_names, float_arrays);
+        }
+        // Value temp goes in the RHS name cell (walker f[12..14] code 5).
+        pstore.rhs_ident = tmp;
+        pstore.rhs_is_literal = false;
+        out.push_back(std::move(pstore));
+          break;
+        }
         MirInsn ins;
         // Walker emits ArrayStoreFloat (INS 12) for float arrays, folding a
         // float literal into int_value with rhs_is_literal=1 (no temp).
@@ -856,6 +1131,11 @@ void lower_stmt(const Stmt& stmt, const Module& module, bool returns_float,
         } else if (stmt.init->index && stmt.init->index->kind == Expr::Kind::Ident) {
           ins.index_is_literal = false;
           ins.index_ident = stmt.init->index->ident;
+        } else if (stmt.init->index) {
+          // General index expr (e.g. board[cell_index(5, 7)] = 1): lower it
+          // to a temp before the store (walker mir_stmt index lowering).
+          ins.index_is_literal = false;
+          ins.index_ident = lower_expr_to(*stmt.init->index, module, out, float_names, float_arrays);
         }
         if (arr_flt && stmt.expr->kind == Expr::Kind::FloatLit) {
           // Walker stores the literal in the float field (INS 12 0 <f>).
@@ -872,19 +1152,20 @@ void lower_stmt(const Stmt& stmt, const Module& module, bool returns_float,
           ins.rhs_is_literal = false;
         }
         out.push_back(std::move(ins));
-      } else if (stmt.init && stmt.init->kind == Expr::Kind::Ident && stmt.expr &&
-                 is_array_ident(stmt.init->ident)) {
-        // Array assignment `c = a + b` -> ArrayBinOpF64/I64 directly into c;
-        // `c = 2.0 * x` -> ArrayScaleF64 into c. The ArrayAlloc for c came
-        // from its VarDecl.
-        if (emit_array_binop_into(*stmt.expr, stmt.init->ident, float_arrays, out)) {
-          break;
-        }
-        if (emit_array_scale_into(*stmt.expr, stmt.init->ident, float_arrays, out)) {
-          break;
-        }
-        // Fall through to the scalar path for non-array-op RHS.
       } else if (stmt.init && stmt.init->kind == Expr::Kind::Ident && stmt.expr) {
+        // Array/matrix assignment `c = <rhs>`. Array-op RHS lowers directly
+        // into c (ArrayBinOpF64/I64, ArrayScaleF64); any other RHS (scalar
+        // binop, chained matmul `C = (A@B) @ D`, call, ...) lowers via
+        // lower_expr_to and stores the temp into c (walker StoreInt for a
+        // matrix dest, StoreFloat/StoreInt by float-ness otherwise).
+        if (is_array_ident(stmt.init->ident)) {
+          if (emit_array_binop_into(*stmt.expr, stmt.init->ident, float_arrays, out)) {
+            break;
+          }
+          if (emit_array_scale_into(*stmt.expr, stmt.init->ident, float_arrays, out)) {
+            break;
+          }
+        }
         const bool flt = float_names.count(stmt.init->ident) > 0;
         MirInsn ins;
         ins.op = flt ? MirOp::StoreFloat : MirOp::StoreInt;
@@ -936,6 +1217,109 @@ void lower_stmt(const Stmt& stmt, const Module& module, bool returns_float,
       }
       break;
     }
+    case Stmt::Kind::ParallelFor: {
+      // `parallel for j in 0..<8 = body` lowers into a synthetic
+      // __li_par_<proc>_<n> FN (one i64 PARAM, body + implicit ReturnVoid,
+      // fresh label stack, shared temp counter) plus an OmpParallelFor (INS
+      // 42) dispatch: int_value = start, rhs_int = end, callee = par-fn name.
+      const std::string par_name =
+          "__li_par_" + (g_cur_proc ? g_cur_proc->name : "main") + "_" +
+          std::to_string(g_par_counter++);
+      MirFn par_fn;
+      par_fn.name = par_name;
+      // Walker par FN header is all zeros (returns_void NOT set).
+      MirParam p;
+      p.name = stmt.par_index;
+      p.is_i64 = true;
+      par_fn.params.push_back(std::move(p));
+      g_in_parallel = true;
+      while_head_labels.clear();
+      while_exit_labels.clear();
+      lower_stmts(stmt.par_body, module, false, par_fn.body, float_names, float_arrays);
+      g_in_parallel = false;
+      MirInsn ret;
+      ret.op = MirOp::ReturnVoid;
+      par_fn.body.push_back(std::move(ret));
+      g_par_fns.push_back(std::move(par_fn));
+      g_uses_openmp = true;
+      MirInsn disp;
+      disp.op = MirOp::OmpParallelFor;
+      disp.callee = par_name;
+      disp.int_value = stmt.par_start;
+      disp.rhs_int = stmt.par_end;
+      out.push_back(std::move(disp));
+      break;
+    }
+    case Stmt::Kind::For: {
+      // `for <i> in <start>..<<end>` lowers exactly like the walker's
+      // mir_for: alloc the iterator, seed `__t{el} = end` and `i = start`,
+      // then a countdown head test `__t{df} = __t{el} - i` with
+      // BranchIfZero to the exit label. A statement-level @vectorized
+      // decorator wraps the body in ArraySimdScope (INS 49) enter/exit.
+      const std::string head_label = fresh_label("for_head_");
+      const std::string exit_label = fresh_label("for_exit_");
+      while_head_labels.push_back(head_label);
+      while_exit_labels.push_back(exit_label);
+      MirInsn alloc;
+      alloc.op = MirOp::LocalAllocInt;
+      alloc.ident = stmt.for_index;
+      out.push_back(std::move(alloc));
+      const std::string el = fresh_temp();
+      MirInsn store_end;
+      store_end.op = MirOp::StoreInt;
+      store_end.ident = el;
+      store_end.rhs_is_literal = true;
+      store_end.rhs_int = stmt.for_end;
+      out.push_back(std::move(store_end));
+      MirInsn store_start;
+      store_start.op = MirOp::StoreInt;
+      store_start.ident = stmt.for_index;
+      store_start.rhs_is_literal = true;
+      store_start.rhs_int = stmt.for_start;
+      out.push_back(std::move(store_start));
+      push_label(out, head_label);
+      const std::string df = fresh_temp();
+      MirInsn test;
+      test.op = MirOp::BinOpInt;
+      test.ident = df;
+      test.lhs_ident = el;
+      test.rhs_ident = stmt.for_index;
+      test.bin_op = BinOp::Sub;
+      out.push_back(std::move(test));
+      push_branch_if_zero(out, df, exit_label);
+      if (stmt.for_vectorized) {
+        MirInsn enter;
+        enter.op = MirOp::ArraySimdScope;
+        enter.int_value = 1;
+        out.push_back(std::move(enter));
+      }
+      lower_stmts(stmt.for_body, module, returns_float, out, float_names, float_arrays);
+      if (stmt.for_vectorized) {
+        MirInsn exit;
+        exit.op = MirOp::ArraySimdScope;
+        exit.int_value = 0;
+        out.push_back(std::move(exit));
+      }
+      const std::string on = fresh_temp();
+      MirInsn store_one;
+      store_one.op = MirOp::StoreInt;
+      store_one.ident = on;
+      store_one.rhs_is_literal = true;
+      store_one.rhs_int = 1;
+      out.push_back(std::move(store_one));
+      MirInsn inc;
+      inc.op = MirOp::BinOpInt;
+      inc.ident = stmt.for_index;
+      inc.lhs_ident = stmt.for_index;
+      inc.rhs_ident = on;
+      inc.bin_op = BinOp::Add;
+      out.push_back(std::move(inc));
+      push_jump_if_open(out, head_label);
+      push_label(out, exit_label);
+      while_head_labels.pop_back();
+      while_exit_labels.pop_back();
+      break;
+    }
     case Stmt::Kind::While: {
       if (!stmt.cond) {
         break;
@@ -960,7 +1344,7 @@ void lower_stmt(const Stmt& stmt, const Module& module, bool returns_float,
         // args, EchoString for string literals (mir_stmt print dispatch).
         if ((stmt.expr->ident == "echo" || stmt.expr->ident == "print") &&
             !stmt.expr->args.empty()) {
-          lower_echo_arg(*stmt.expr->args[0], out);
+          lower_echo_arg(*stmt.expr->args[0], module, out, float_names, float_arrays);
         } else if (stmt.expr->ident == "print_int" && !stmt.expr->args.empty()) {
           // print_int() is a prelude builtin — lower to CallExtern li_rt_print_int
           MirInsn ins;
@@ -980,6 +1364,12 @@ void lower_stmt(const Stmt& stmt, const Module& module, bool returns_float,
         } else {
           (void)lower_expr_to(*stmt.expr, module, out, float_names, float_arrays);
         }
+      } else if (stmt.expr) {
+        // `discard <expr>`: the walker swallows only the keyword and lowers the
+        // value as a bare side-effecting expression statement (e.g. a string
+        // literal materializes a StoreI64 temp, INS 27).
+        const std::string tmp = lower_expr_to(*stmt.expr, module, out, float_names, float_arrays);
+        (void)tmp;
       }
       break;
     default:
@@ -1014,13 +1404,139 @@ void append_implicit_return(std::vector<MirInsn>& body) {
 
 }  // namespace
 
+bool str_prefix(const std::string& s, const std::string& p) {
+  return s.size() >= p.size() && s.compare(0, p.size(), p) == 0;
+}
+
+// Mirror the walker's mir_scan_rt_flags (bootstrap/lic/main.li): scan every
+// extern call site and set the MIR module runtime-link bits from the callee
+// name's prefix. Only resolved extern names count; imported CallProc bodies
+// must NOT set these flags. net_ping / path_ends_with_conf are exact matches.
+void scan_runtime_flags(const Module& module, MirModule& mir) {
+  std::unordered_set<std::string> externs;
+  for (const auto& p : module.procs) {
+    if (p.is_extern) {
+      externs.insert(p.name);
+    }
+  }
+  const auto classify = [&](const std::string& nm) {
+    if (externs.count(nm) == 0) {
+      return;
+    }
+    if (str_prefix(nm, "li_log_") || str_prefix(nm, "li_rt_log_")) {
+      mir.needs_rt_log = true;
+    }
+    if (str_prefix(nm, "httpd_") || str_prefix(nm, "li_rt_httpd_") ||
+        str_prefix(nm, "proxy_") || str_prefix(nm, "li_rt_proxy_")) {
+      mir.needs_rt_httpd = true;
+    }
+    if (str_prefix(nm, "net_") || str_prefix(nm, "tcp_") || str_prefix(nm, "epoll_") ||
+        str_prefix(nm, "hdr_") || str_prefix(nm, "buf_") || str_prefix(nm, "bytes_") ||
+        str_prefix(nm, "li_rt_net") || str_prefix(nm, "li_async_") ||
+        str_prefix(nm, "tcp_echo_") || nm == "path_ends_with_conf" || nm == "net_ping") {
+      mir.needs_rt_net = true;
+    }
+  };
+  std::function<void(const Expr&)> walk_expr = [&](const Expr& e) {
+    if (e.kind == Expr::Kind::Call) {
+      classify(e.ident);
+      for (const auto& a : e.args) {
+        walk_expr(*a);
+      }
+    } else if (e.kind == Expr::Kind::BinOp) {
+      if (e.lhs) {
+        walk_expr(*e.lhs);
+      }
+      if (e.rhs) {
+        walk_expr(*e.rhs);
+      }
+    } else if (e.kind == Expr::Kind::Index) {
+      if (e.base) {
+        walk_expr(*e.base);
+      }
+      if (e.index) {
+        walk_expr(*e.index);
+      }
+    } else if (e.kind == Expr::Kind::UnaryNot || e.kind == Expr::Kind::UnaryMinus) {
+      if (e.operand) {
+        walk_expr(*e.operand);
+      }
+    }
+  };
+  std::function<void(const Stmt&)> walk_stmt = [&](const Stmt& s) {
+    if (s.expr) {
+      walk_expr(*s.expr);
+    }
+    if (s.kind == Stmt::Kind::If) {
+      for (const auto& inner : s.then_body) {
+        walk_stmt(inner);
+      }
+      if (s.else_body) {
+        for (const auto& inner : *s.else_body) {
+          walk_stmt(inner);
+        }
+      }
+    } else if (s.kind == Stmt::Kind::While) {
+      for (const auto& inner : s.while_body) {
+        walk_stmt(inner);
+      }
+    }
+  };
+  for (const auto& proc : module.procs) {
+    if (!proc.is_extern) {
+      for (const auto& s : proc.body) {
+        walk_stmt(s);
+      }
+    }
+  }
+}
+
 MirModule lower_to_mir(const Module& module) {
   temp_counter = 0;
+  g_par_counter = 0;
+  g_uses_openmp = false;
+  g_in_parallel = false;
   MirModule mir;
+  scan_runtime_flags(module, mir);
   for (const auto& proc : module.procs) {
     MirFn fn;
     fn.name = proc.name;
     fn.is_extern = proc.is_extern;
+    // Walker DEC side-channel (ftmp 4092..4095, 4086..4088): the FN line's
+    // no_vectorize/async bits come from @no_vectorize / @async; a DEC line is
+    // emitted for the first decorator (or for @cpu + @parallel separately).
+    for (const auto& d : proc.decorators) {
+      fn.no_vectorize = fn.no_vectorize || d.no_vectorize;
+      fn.is_async = fn.is_async || d.is_async;
+    }
+    if (!proc.decorators.empty()) {
+      bool has_parallel = false;
+      bool has_cpu = false;
+      bool has_disjoint = false;
+      for (const auto& d : proc.decorators) {
+        has_parallel = has_parallel || d.parallel;
+        has_cpu = has_cpu || d.cpu;
+        has_disjoint = has_disjoint || d.disjoint;
+      }
+      if (has_parallel) {
+        if (has_cpu) {
+          MirDecorator cd;
+          cd.name = "cpu";
+          fn.decorators.push_back(std::move(cd));
+        }
+        MirDecorator pd;
+        pd.name = "parallel";
+        pd.parallel = true;
+        pd.disjoint_proven = has_disjoint;
+        fn.decorators.push_back(std::move(pd));
+      } else {
+        MirDecorator md;
+        md.name = proc.decorators.front().name;
+        md.lanes = proc.decorators.front().lanes;
+        md.vectorized = proc.decorators.front().vectorized;
+        fn.decorators.push_back(std::move(md));
+      }
+    }
     if (proc.ret_type) {
       fn.returns_float = is_float_type_name(proc.ret_type->name);
       fn.returns_void = proc.ret_type->name == "unit";
@@ -1040,12 +1556,27 @@ MirModule lower_to_mir(const Module& module) {
         mp.is_array = true;
         mp.array_size = p.type.array_size;
         mp.fixed_array_elems = p.type.array_size;
-        mp.is_float = is_float_type_name(p.type.elem->name);
-        mp.is_i64 = is_i64_type_name(p.type.elem->name) ||
-                    is_string_type_name(p.type.elem->name);
+        if (p.type.elem->kind == TypeKind::Array && p.type.elem->elem) {
+          // array[M, array[K, float]] matrix param: is_float=1 (inner elem),
+          // fixed_array_elems=M (rows), is_matrix=1, matrix_cols=K.
+          mp.is_matrix = true;
+          mp.matrix_cols = p.type.elem->array_size;
+          mp.is_float = is_float_type_name(p.type.elem->elem->name);
+        } else {
+          mp.is_float = is_float_type_name(p.type.elem->name);
+          mp.is_i64 = is_i64_type_name(p.type.elem->name) ||
+                      is_string_type_name(p.type.elem->name);
+        }
       } else {
-        mp.is_i64 = is_i64_type_name(p.type.name);
+        // Walker PARAM is_i64: scalar int64/ptr AND str params both set the
+        // pointer-width bit (mir_param_line ty==2 -> pi2=1); byte arrays too.
+        mp.is_i64 = is_i64_type_name(p.type.name) ||
+                    is_string_type_name(p.type.name);
       }
+      // Walker is_var: only `var array[...]` params (collect sets preg(10)
+      // from ti[1] for array types only; matrix params force 0 in
+      // mir_param_line).
+      mp.is_var = p.type.kind == TypeKind::Array && p.type.is_var && !mp.is_matrix;
       fn.params.push_back(std::move(mp));
     }
     if (!proc.is_extern) {
@@ -1055,12 +1586,23 @@ MirModule lower_to_mir(const Module& module) {
       // change the walker's own behavior).
       g_array_sizes.clear();
       g_int_arrays.clear();
+      g_matrices.clear();
+      g_matrix_params.clear();
+      g_par_fns.clear();
       std::unordered_set<std::string> float_names;
       std::unordered_set<std::string> float_arrays;
       seed_float_params(fn, float_names, float_arrays);
       lower_stmts(proc.body, module, fn.returns_float, fn.body, float_names, float_arrays);
       append_implicit_return(fn.body);
       g_cur_proc = nullptr;
+    }
+    if (!proc.is_extern) {
+      // Synthesized __li_par_* functions replay BEFORE the enclosing FN
+      // (walker hold-buffer swap), so splice them in ahead of this proc.
+      for (auto& pf : g_par_fns) {
+        mir.functions.push_back(std::move(pf));
+      }
+      g_par_fns.clear();
     }
     if (!proc.is_extern && fn.body.empty()) {
       MirInsn ins;
@@ -1069,6 +1611,7 @@ MirModule lower_to_mir(const Module& module) {
     }
     mir.functions.push_back(std::move(fn));
   }
+  mir.uses_openmp = g_uses_openmp;
   return mir;
 }
 

@@ -65,10 +65,87 @@ struct Parser {
   ProcDecl parse_proc(bool is_extern = false);
   TypeAlias parse_type_alias();
 
+  // Parse one `@name` / `@name(args)` decorator line. The walker accepts
+  // `@name` with optional `(key=value)` args (e.g. `@vectorized(lanes=4)`,
+  // `@parallel(disjoint=...)`) and multiple decorators stacked above a def.
+  Decorator parse_decorator() {
+    Decorator dec;
+    if (!at(TokenKind::At)) {
+      return dec;
+    }
+    i++;  // '@'
+    if (at(TokenKind::Ident)) {
+      dec.name = std::string(cur().text);
+      i++;
+    }
+    dec.vectorized = dec.name == "vectorized";
+    dec.no_vectorize = dec.name == "no_vectorize";
+    dec.parallel = dec.name == "parallel";
+    dec.cpu = dec.name == "cpu";
+    dec.is_async = dec.name == "async";
+    if (at(TokenKind::LParen)) {
+      i++;
+      skip_newlines();
+      while (!at(TokenKind::RParen) && !at(TokenKind::Eof)) {
+        if (at(TokenKind::Ident) && cur().text == "lanes") {
+          i++;
+          if (accept(TokenKind::Eq)) {
+            if (at(TokenKind::IntLit)) {
+              dec.lanes = cur().int_value;
+              i++;
+            }
+          }
+        } else if (at(TokenKind::Ident) && cur().text == "disjoint") {
+          dec.disjoint = true;
+          i++;
+          if (accept(TokenKind::Eq)) {
+            if (at(TokenKind::Ident)) {
+              i++;
+            }
+          }
+        } else {
+          i++;
+        }
+        accept(TokenKind::Comma);
+        skip_newlines();
+      }
+      expect(TokenKind::RParen, "')'");
+    }
+    return dec;
+  }
+
+  // Collect a stack of `@decorator` lines (each may be followed by an
+  // argument list) up to the next `def`/`extern`/`type`.
+  std::vector<Decorator> parse_decorator_list() {
+    std::vector<Decorator> decs;
+    while (at(TokenKind::At)) {
+      decs.push_back(parse_decorator());
+      skip_newlines();
+    }
+    return decs;
+  }
+
   bool parse_module(Module& out) {
     skip_newlines();
     while (!at(TokenKind::Eof)) {
-      if (at(TokenKind::KwExtern)) {
+      if (at(TokenKind::At)) {
+        auto decs = parse_decorator_list();
+        if (at(TokenKind::KwProc)) {
+          out.procs.push_back(parse_proc(false));
+          out.procs.back().decorators = std::move(decs);
+        } else if (at(TokenKind::KwExtern)) {
+          i++;
+          if (!expect(TokenKind::KwProc, "'proc'")) {
+            return false;
+          }
+          out.procs.push_back(parse_proc(true));
+          out.procs.back().decorators = std::move(decs);
+        } else {
+          diags.error(loc(cur()), "expected top-level declaration after decorator");
+          return false;
+        }
+        skip_newlines();
+      } else if (at(TokenKind::KwExtern)) {
         i++;
         if (!expect(TokenKind::KwProc, "'proc'")) {
           return false;
@@ -490,7 +567,13 @@ Stmt Parser::parse_stmt() {
   if (at(TokenKind::Ident) && cur().text == "discard") {
     s.kind = Stmt::Kind::Expr;
     s.span = {cur().start, cur().end};
-    i++;
+    i++;  // 'discard'
+    // The walker consumes only the keyword; the following expression becomes
+    // its own side-effecting statement (e.g. `discard "<str>"` materializes a
+    // StoreI64 temp). Parse it when a value follows on this line.
+    if (!at(TokenKind::Newline) && !at(TokenKind::Dedent) && !at(TokenKind::Eof)) {
+      s.expr = parse_expr();
+    }
     skip_newlines();
     return s;
   }
@@ -545,9 +628,30 @@ Stmt Parser::parse_stmt() {
     return s;
   }
   if (at(TokenKind::Ident) && cur().text == "parallel") {
-    s.kind = Stmt::Kind::Expr;
+    s.kind = Stmt::Kind::ParallelFor;
     s.span = {cur().start, cur().end};
-    while (!at(TokenKind::Eof) && !at(TokenKind::Newline)) {
+    i++;  // 'parallel'
+    if (at(TokenKind::Ident) && cur().text == "for") {
+      i++;
+    }
+    // Loop var: `parallel for j in 0..<8` (walker grammar; `in` is a plain
+    // ident, the range operator lexes as DotDotLt).
+    if (at(TokenKind::Ident)) {
+      s.par_index = std::string(cur().text);
+      i++;
+    }
+    if (at(TokenKind::Ident) && cur().text == "in") {
+      i++;
+    }
+    if (at(TokenKind::IntLit)) {
+      s.par_start = cur().int_value;
+      i++;
+    }
+    if (at(TokenKind::DotDotLt)) {
+      i++;
+    }
+    if (at(TokenKind::IntLit)) {
+      s.par_end = cur().int_value;
       i++;
     }
     skip_newlines();
@@ -563,9 +667,89 @@ Stmt Parser::parse_stmt() {
     if (accept(TokenKind::Eq)) {
       skip_newlines();
       if (at(TokenKind::Indent)) {
-        parse_block();
+        s.par_body = parse_block();
       }
     }
+    return s;
+  }
+  if (at(TokenKind::Ident) && cur().text == "for") {
+    const Token t = cur();
+    s.kind = Stmt::Kind::For;
+    s.span = {t.start, t.end};
+    i++;  // 'for'
+    if (at(TokenKind::Ident)) {
+      s.for_index = std::string(cur().text);
+      i++;
+    }
+    if (at(TokenKind::Ident) && cur().text == "in") {
+      i++;
+    }
+    if (at(TokenKind::IntLit)) {
+      s.for_start = cur().int_value;
+      i++;
+    }
+    if (at(TokenKind::DotDotLt)) {
+      i++;
+    }
+    if (at(TokenKind::IntLit)) {
+      s.for_end = cur().int_value;
+      i++;
+    }
+    // Walker grammar: `for i in 0..<4` (no ':' required), then a block.
+    (void)accept(TokenKind::Colon);
+    skip_newlines();
+    if (at(TokenKind::Indent)) {
+      s.for_body = parse_block();
+    }
+    return s;
+  }
+  if (at(TokenKind::At)) {
+    // Statement-level decorator directly above a for loop (e.g.
+    // `@vectorized(lanes=4)` before `for ...`). The walker records it in
+    // ftmp cells and the following for consumes them.
+    auto decs = parse_decorator_list();
+    bool vec = false;
+    std::int64_t lanes = 0;
+    for (const auto& d : decs) {
+      if (d.vectorized) {
+        vec = true;
+        lanes = d.lanes;
+      }
+    }
+    if (at(TokenKind::Ident) && cur().text == "for") {
+      Stmt fs;
+      const Token ft = cur();
+      fs.kind = Stmt::Kind::For;
+      fs.span = {ft.start, ft.end};
+      fs.for_vectorized = vec;
+      fs.for_lanes = lanes;
+      i++;  // 'for'
+      if (at(TokenKind::Ident)) {
+        fs.for_index = std::string(cur().text);
+        i++;
+      }
+      if (at(TokenKind::Ident) && cur().text == "in") {
+        i++;
+      }
+      if (at(TokenKind::IntLit)) {
+        fs.for_start = cur().int_value;
+        i++;
+      }
+      if (at(TokenKind::DotDotLt)) {
+        i++;
+      }
+      if (at(TokenKind::IntLit)) {
+        fs.for_end = cur().int_value;
+        i++;
+      }
+      (void)accept(TokenKind::Colon);
+      skip_newlines();
+      if (at(TokenKind::Indent)) {
+        fs.for_body = parse_block();
+      }
+      return fs;
+    }
+    diags.error(loc(cur()), "expected for statement after decorator");
     return s;
   }
   if (at(TokenKind::KwBreak)) {
