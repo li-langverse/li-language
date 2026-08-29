@@ -272,6 +272,10 @@ struct EmitCtx {
     if (expected == i64_ty(context) && val->getType()->isPointerTy()) {
       return builder->CreatePtrToInt(val, i64_ty(context));
     }
+    // Li stores byte-offset "pointers" as i32; widen to an i64 ptr param.
+    if (expected == i64_ty(context) && val->getType() == i32_ty(context)) {
+      return builder->CreateSExt(val, i64_ty(context));
+    }
     return val;
   }
 

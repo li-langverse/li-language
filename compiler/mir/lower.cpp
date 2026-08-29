@@ -53,6 +53,22 @@ void push_branch_if_zero(std::vector<MirInsn>& out, const std::string& ident,
   out.push_back(std::move(ins));
 }
 
+bool tail_is_terminator(const std::vector<MirInsn>& out) {
+  return !out.empty() && (out.back().op == MirOp::ReturnVoid ||
+                          out.back().op == MirOp::ReturnInt ||
+                          out.back().op == MirOp::ReturnFloat ||
+                          out.back().op == MirOp::ReturnIdent);
+}
+
+// Emit a jump only if the current block hasn't already terminated (e.g. a body
+// that ended in `return`). Without this, a dead Jump after a Ret would put two
+// terminators in one basic block.
+void push_jump_if_open(std::vector<MirInsn>& out, const std::string& label) {
+  if (!tail_is_terminator(out)) {
+    push_jump(out, label);
+  }
+}
+
 bool is_arith_binop(BinOp op) {
   return op == BinOp::Add || op == BinOp::Sub || op == BinOp::Mul || op == BinOp::Div || op == BinOp::Mod || op == BinOp::FloorDiv;
 }
@@ -402,12 +418,11 @@ void lower_stmt(const Stmt& stmt, const Module& module, bool returns_float,
       }
       const std::string cond_tmp = lower_expr_to(*stmt.cond, module, out, float_names);
       const std::string else_label = fresh_label("else_");
-      const std::string merge_label = fresh_label("merge_");
-      push_branch_if_zero(out, cond_tmp, else_label);
-      lower_stmts(stmt.then_body, module, returns_float, out, float_names);
-      if (stmt.else_body) {
-        push_jump(out, merge_label);
-        push_label(out, else_label);
+      const std::string merge_label = fresh_label("merge_");        push_branch_if_zero(out, cond_tmp, else_label);
+        lower_stmts(stmt.then_body, module, returns_float, out, float_names);
+        if (stmt.else_body) {
+          push_jump_if_open(out, merge_label);
+          push_label(out, else_label);
         lower_stmts(*stmt.else_body, module, returns_float, out, float_names);
         push_label(out, merge_label);
       } else {
@@ -422,11 +437,10 @@ void lower_stmt(const Stmt& stmt, const Module& module, bool returns_float,
       const std::string head_label = fresh_label("while_head_");
       const std::string exit_label = fresh_label("while_exit_");
       push_label(out, head_label);
-      const std::string cond_tmp = lower_expr_to(*stmt.cond, module, out, float_names);
-      push_branch_if_zero(out, cond_tmp, exit_label);
-      lower_stmts(stmt.while_body, module, returns_float, out, float_names);
-      push_jump(out, head_label);
-      push_label(out, exit_label);
+      const std::string cond_tmp = lower_expr_to(*stmt.cond, module, out, float_names);        push_branch_if_zero(out, cond_tmp, exit_label);
+        lower_stmts(stmt.while_body, module, returns_float, out, float_names);
+        push_jump_if_open(out, head_label);
+        push_label(out, exit_label);
       break;
     }
     case Stmt::Kind::Expr:
