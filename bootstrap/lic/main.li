@@ -6271,13 +6271,22 @@ def mir_ins_mangled(src: var ptr, op: int, iv: int, base_s: int, base_e: int, fl
   li_rt_mir_str("__li_o_")
   li_rt_mir_esc(src, base_s, base_e)
   li_rt_mir_str("_")
-  # Field names: positions are always from the type's source (stored during
-  # mir_obj_reg_field). Use the type source to read them.
-  var fs2: ptr = li_rt_type_src_get(-1)
-  if fs2 == 0:
+  # Field name slices: the alloc/copy paths read type-declared field positions
+  # that are relative to the type's defining file, which the caller stored in
+  # the -1 type-source slot. But user-written field access/stores (out.detail,
+  # fld_src_fallback != 0) carry offsets relative to this caller's src buffer,
+  # regardless of where the object type is declared - so they must read from src.
+  # Reading them from -1 picks up whatever unrelated type was last registered,
+  # which for an imported-typed local object is the wrong buffer (NUL/garbage,
+  # and it shifts across runs). Honor the caller's src for the fallback flag.
+  if fld_src_fallback == 1:
     li_rt_mir_esc(src, fld_s, fld_e)
   else:
-    li_rt_mir_esc(fs2, fld_s, fld_e)
+    var fs2: ptr = li_rt_type_src_get(-1)
+    if fs2 == 0:
+      li_rt_mir_esc(src, fld_s, fld_e)
+    else:
+      li_rt_mir_esc(fs2, fld_s, fld_e)
   # empty name cells: str_value, callee, lhs_ident (each needs its own
   # separator space, so 4 spaces land before rhs_ident like C++ mir_dump)
   li_rt_ast_space()
