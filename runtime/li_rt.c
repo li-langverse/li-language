@@ -201,7 +201,14 @@ void li_rt_import_paths_clear(void) {
 
 void li_rt_import_content_store(const char* content) {
   if (content != NULL && li_rt_import_content_count < LI_RT_IMPORT_PATH_MAX) {
-    li_rt_import_contents[li_rt_import_content_count++] = content;
+    /* Duplicate the content since resolve_import reads files into a fixed
+     * ring (try_file_ring) that recycles slots. Object types registered from
+     * this import later read field-name text from this pointer, so it must
+     * stay valid and immutable for the whole walk. */
+    size_t len = strlen(content);
+    char* dup = (char*)malloc(len + 1);
+    if (dup) { memcpy(dup, content, len + 1); }
+    li_rt_import_contents[li_rt_import_content_count++] = dup;
   }
 }
 
@@ -216,7 +223,11 @@ void li_rt_import_content_insert(int idx, const char* content) {
   for (int i = li_rt_import_content_count; i > idx; --i) {
     li_rt_import_contents[i] = li_rt_import_contents[i - 1];
   }
-  li_rt_import_contents[idx] = content;
+  /* Duplicate the content; see li_rt_import_content_store. */
+  size_t len = strlen(content);
+  char* dup = (char*)malloc(len + 1);
+  if (dup) { memcpy(dup, content, len + 1); }
+  li_rt_import_contents[idx] = dup;
   li_rt_import_content_count++;
 }
 
@@ -802,7 +813,7 @@ void li_rt_mir_objname_clear(void) { li_rt_objname_n = 0; }
  * src_is_cr=1 uses __li_o___cr<crid> prefix, otherwise __li_o_<base> prefix. */
 int32_t li_rt_mir_objname_reg_prefix(const char* text, int32_t base_s, int32_t base_e,
                                      int32_t fs, int32_t fe,
-                                     int32_t src_is_cr, int32_t crid) {
+                                     int32_t src_is_cr, int32_t crid, const char* fsrc) {
   char buf[1024];
   int off = 0;
   if (src_is_cr == 1) {
@@ -830,7 +841,11 @@ int32_t li_rt_mir_objname_reg_prefix(const char* text, int32_t base_s, int32_t b
     for (int i = base_s; i < base_e; i++) buf[off++] = text[i];
   }
   buf[off++] = '_';
-  for (int i = fs; i < fe; i++) buf[off++] = text[i];
+  /* Field name positions are type-source-relative (captured by
+   * mir_obj_field_name against the type's defining file), so read the field
+   * slice from the type's source buffer (fsrc), not the caller's src (text). */
+  const char* fb = (fsrc != NULL) ? fsrc : text;
+  for (int i = fs; i < fe; i++) buf[off++] = fb[i];
   buf[off] = '\0';
   return li_rt_mir_synth_name_add(strdup(buf));
 }

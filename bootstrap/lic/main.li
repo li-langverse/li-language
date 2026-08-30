@@ -169,7 +169,7 @@ extern def li_rt_mir_objname_add_nested(parent_idx: int, text: var ptr, fs: int,
 extern def li_rt_mir_synth_name_add(text: var ptr) -> int
   requires true
   ensures true
-extern def li_rt_mir_objname_reg_prefix(text: var ptr, base_s: int, base_e: int, fs: int, fe: int, src_is_cr: int, crid: int) -> int
+extern def li_rt_mir_objname_reg_prefix(text: var ptr, base_s: int, base_e: int, fs: int, fe: int, src_is_cr: int, crid: int, fsrc: var ptr) -> int
   requires true
   ensures true
 extern def li_rt_mir_fieldpath_add(parent: int, text: var ptr, s: int, e: int) -> int
@@ -6368,9 +6368,15 @@ def mir_ins_mangled_nested(src: var ptr, op: int, iv: int, base_s: int, base_e: 
   li_rt_mir_str("__li_o_")
   li_rt_mir_esc(src, base_s, base_e)
   li_rt_mir_str("_")
-  li_rt_mir_esc(src, p_s, p_e)
+  # Field positions are type-source-relative (captured by mir_obj_reg_field
+  # against the type's defining file), so read p_s/p_e and fld_s/fld_e from
+  # the type source stored during allocation, not the caller's src buffer.
+  var nsrc2: ptr = li_rt_type_src_get(-1)
+  if nsrc2 == 0:
+    nsrc2 = src
+  li_rt_mir_esc(nsrc2, p_s, p_e)
   li_rt_mir_str("_")
-  li_rt_mir_esc(src, fld_s, fld_e)
+  li_rt_mir_esc(nsrc2, fld_s, fld_e)
   # empty name cells: str_value, callee, lhs_ident (4 spaces before rhs)
   li_rt_ast_space()
   li_rt_ast_space()
@@ -7147,12 +7153,12 @@ def mir_obj_emit_copy(src: var ptr,  ts: var array[131072, int],  te: var array[
     if src_is_cr == 2:
       dst_cr = 3
       dst_crid = crid
-    var dst_oi: int = li_rt_mir_objname_reg_prefix(src, dst_s, dst_e, fs, fe, dst_cr, dst_crid)
+    var dst_oi: int = li_rt_mir_objname_reg_prefix(src, dst_s, dst_e, fs, fe, dst_cr, dst_crid, tsrc)
     # Determine src prefix type: src_is_cr==1 means cr, src_is_cr==3 means wb
     var src_cr: int = src_is_cr
     if src_is_cr == 2:
       src_cr = 0
-    var src_oi: int = li_rt_mir_objname_reg_prefix(tsrc, src_s, src_e, fs, fe, src_cr, crid)
+    var src_oi: int = li_rt_mir_objname_reg_prefix(src, src_s, src_e, fs, fe, src_cr, crid, tsrc)
     mir_obj_emit_copy_r(src, ts, te, itmp, sub_obj, dst_oi, src_oi, tc)
     return 0
   if fel == 0:
@@ -7789,7 +7795,7 @@ def mir_arg_obj_line(src: var ptr, base_s: int, base_e: int, itmp: var array[409
     var ao_tsrc2: ptr = li_rt_type_src_get(type_idx)
     if ao_tsrc2 == 0:
       ao_tsrc2 = src
-    var base_oi: int = li_rt_mir_objname_reg_prefix(src, base_s, base_e, fa[0], fa[1], 0, 0)
+    var base_oi: int = li_rt_mir_objname_reg_prefix(src, base_s, base_e, fa[0], fa[1], 0, 0, ao_tsrc2)
     mir_arg_obj_line_r(src, itmp, sub_a2, base_oi, iai, is_var)
     return 0
   li_rt_mir_str("ARG")
@@ -7830,7 +7836,10 @@ def mir_arg_wb_line(src: var ptr, itmp: var array[4096, int], type_idx: int, fie
   var sub_wb: int = mir_field_is_subobj(itmp, type_idx, field_idx)
   if sub_wb >= 0:
     # Sub-object: emit flattened ARG lines using wb prefix
-    var wb_oi2: int = li_rt_mir_objname_reg_prefix(src, 0, 0, fw[0], fw[1], 3, wbid)
+    var ao_tsrc3: ptr = li_rt_type_src_get(type_idx)
+    if ao_tsrc3 == 0:
+      ao_tsrc3 = src
+    var wb_oi2: int = li_rt_mir_objname_reg_prefix(src, 0, 0, fw[0], fw[1], 3, wbid, ao_tsrc3)
     mir_arg_obj_line_r(src, itmp, sub_wb, wb_oi2, iai, is_var)
     return 0
   li_rt_mir_str("ARG")
