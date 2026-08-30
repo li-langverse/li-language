@@ -96,6 +96,7 @@ bool tail_is_terminator(const std::vector<MirInsn>& out) {
                           out.back().op == MirOp::ReturnInt ||
                           out.back().op == MirOp::ReturnFloat ||
                           out.back().op == MirOp::ReturnIdent ||
+                          out.back().op == MirOp::ReturnObject ||
                           out.back().op == MirOp::Jump ||
                           out.back().op == MirOp::BranchIfZero);
 }
@@ -917,9 +918,24 @@ void lower_return_expr(const Expr& e, bool returns_float, const Module& module,
     ins.op = MirOp::ReturnFloat;
     ins.float_value = e.float_value;
   } else if (e.kind == Expr::Kind::Ident) {
-    ins.op = MirOp::ReturnIdent;
-    ins.ident = e.ident;
-    ins.ret_is_float = returns_float || float_names.count(e.ident) > 0;
+    const auto ovit = g_object_vars.find(e.ident);
+    if (ovit != g_object_vars.end()) {
+      // Returning an object var -> ReturnObject (INS 4) packs the per-field
+      // slots __li_o_<name>_<field>; OBJ layout lines follow (walker
+      // mir_return objs: emit INS 4 + OBJ per field).
+      ins.op = MirOp::ReturnObject;
+      ins.ident = "__li_o_" + e.ident;
+      for (const auto& f : g_object_types[ovit->second]) {
+        MirParam fp;
+        fp.name = f.first;
+        fp.is_float = f.second;
+        ins.object_layout.push_back(std::move(fp));
+      }
+    } else {
+      ins.op = MirOp::ReturnIdent;
+      ins.ident = e.ident;
+      ins.ret_is_float = returns_float || float_names.count(e.ident) > 0;
+    }
   } else if (e.kind == Expr::Kind::Await) {
     // `return await x` lowers to a bare ReturnVoid (walker mir_return kk==34:
     // async calls are lowered at the LLVM level, not emitted as MIR).
@@ -1526,7 +1542,7 @@ void lower_stmts(const std::vector<Stmt>& stmts, const Module& module, bool retu
 
 bool insn_terminates(MirOp op) {
   return op == MirOp::ReturnVoid || op == MirOp::ReturnInt || op == MirOp::ReturnFloat ||
-         op == MirOp::ReturnIdent;
+         op == MirOp::ReturnIdent || op == MirOp::ReturnObject;
 }
 
 void append_implicit_return(std::vector<MirInsn>& body) {
@@ -1694,10 +1710,38 @@ MirModule lower_to_mir(const Module& module) {
       // set the bit (mir_proc reti64 mirrors the PARAM is_i64 rule).
       fn.returns_i64 = is_i64_type_name(proc.ret_type->name) ||
                        is_string_type_name(proc.ret_type->name);
+      // Object-typed return -> FN returns_object bit + one RETPARAM per field
+      // (walker mir_proc: type stored as vt(0) object -> retobj=1; the return
+      // slot is packed field-by-field and emitted as RETURN + OBJ layout).
+      if (proc.ret_type->kind == TypeKind::Named &&
+          g_object_types.count(proc.ret_type->name) > 0) {
+        fn.returns_object = true;
+        for (const auto& f : g_object_types[proc.ret_type->name]) {
+          MirParam rp;
+          rp.name = f.first;
+          rp.is_float = f.second;
+          fn.return_object_layout.push_back(std::move(rp));
+        }
+      }
     } else if (proc.is_extern) {
       fn.returns_void = true;
     }
+    std::vector<std::pair<std::string, std::string>> obj_params;
     for (const auto& p : proc.params) {
+      // Object-typed param -> flatten to one PARAM slot per field named
+      // __li_o_<param>_<field> (walker mir_proc: object param type vt(0) is
+      // expanded; body reads mangle field slots directly). is_float per field.
+      if (p.type.kind == TypeKind::Named &&
+          g_object_types.count(p.type.name) > 0) {
+        for (const auto& f : g_object_types[p.type.name]) {
+          MirParam op;
+          op.name = "__li_o_" + p.name + "_" + f.first;
+          op.is_float = f.second;
+          fn.params.push_back(std::move(op));
+        }
+        obj_params.emplace_back(p.name, p.type.name);
+        continue;
+      }
       MirParam mp;
       mp.name = p.name;
       mp.is_float = is_float_type_name(p.type.name);
@@ -1743,6 +1787,9 @@ MirModule lower_to_mir(const Module& module) {
       g_matrix_params.clear();
       g_par_fns.clear();
       g_object_vars.clear();
+      for (const auto& op : obj_params) {
+        g_object_vars[op.first] = op.second;
+      }
       std::unordered_set<std::string> float_names;
       std::unordered_set<std::string> float_arrays;
       seed_float_params(fn, float_names, float_arrays);
