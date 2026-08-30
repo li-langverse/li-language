@@ -25,6 +25,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   if (!parsed.module) {
     return 0;
   }
-  (void)li::typecheck_module(*parsed.module);
+  (void)li::typecheck_module(*parsed.module, parsed.module->procs.size());
   return 0;
 }

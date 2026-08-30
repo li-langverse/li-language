@@ -190,7 +190,9 @@ li::ParseResult parse_import_file(const std::string& path) {
 }
 
 // Merge `from` procs/types into `to` (all procs; the walker emits every proc
-// it walks, public or not). Types merge so imported object types resolve.
+// it walks, public or not). Types merge so imported object types resolve, and
+// proc signatures merge so main-module calls to imported procs resolve their
+// return types (mirroring the walker's import pre-scan).
 void merge_imported(li::Module& to, li::Module&& from) {
   for (auto& t : from.types) {
     to.types.push_back(std::move(t));
@@ -204,27 +206,51 @@ void merge_imported(li::Module& to, li::Module&& from) {
 // append the imported modules' procs/types, recursively, in walker order.
 // Dedup by resolved canonical path. Mirrors the walker's transitive import
 // scan + emit (main first, then imports in resolution order).
-void resolve_module_imports(li::Module& mod, const std::string& base_file,
-                            std::set<std::string>& resolved) {
+bool resolve_module_imports(li::Module& mod, const std::string& base_file,
+                            std::set<std::string>& resolved,
+                            std::set<std::string>& loading,
+                            li::DiagnosticBag& diags) {
   const std::vector<li::ImportDecl> imports = mod.imports;
   for (const auto& imp : imports) {
     const auto path = resolve_import_path(imp.module, base_file);
     if (!path) {
+      diags.error(li::SourceLoc{base_file, 1, 1, imp.span.start},
+                  "import_resolve: module not found: " + imp.module);
       continue;
     }
     const std::string canon = std::filesystem::weakly_canonical(*path).string();
     if (resolved.count(canon)) {
       continue;
     }
-    resolved.insert(canon);
-    auto parsed = parse_import_file(*path);
-    if (!parsed.module) {
+    if (loading.count(canon)) {
+      diags.error(li::SourceLoc{base_file, 1, 1, imp.span.start},
+                  "import_cycle: " + canon);
       continue;
     }
-    // Recursively resolve this import's own imports (base = its path).
-    resolve_module_imports(*parsed.module, *path, resolved);
+    loading.insert(canon);
+    auto parsed = parse_import_file(*path);
+    // Imported modules follow the walker's declaration-loading contract: use
+    // the recovered module when available, but do not surface its parser
+    // diagnostics as errors in the importing file. Structural resolver
+    // failures (missing module/cycle) are reported above.
+    if (!parsed.module) {
+      loading.erase(canon);
+      diags.error(li::SourceLoc{base_file, 1, 1, imp.span.start},
+                  "import_parse: unable to parse " + canon);
+      continue;
+    }
+    // Recursively resolve this import's own imports before merging it, matching
+    // the walker's depth-first import traversal and making cycle state explicit.
+    const bool nested_ok = resolve_module_imports(*parsed.module, *path, resolved,
+                                                   loading, diags);
+    loading.erase(canon);
+    if (!nested_ok) {
+      continue;
+    }
+    resolved.insert(canon);
     merge_imported(mod, std::move(*parsed.module));
   }
+  return diags.empty();
 }
 
 bool frontend(const char* path, const std::string& source, li::Module& out,
@@ -243,7 +269,21 @@ bool frontend(const char* path, const std::string& source, li::Module& out,
   if (!parsed.module || !parsed.diagnostics.empty()) {
     return false;
   }
-  auto checked = li::typecheck_module(*parsed.module);
+  // Merge imported types and proc signatures before typecheck so annotations
+  // referencing imported types resolve (e.g. `var layout: StudioShellLayout =
+  // ...`) and calls to imported procs resolve their return types - mirroring
+  // the walker's import pre-scan, which registers imported types and procs
+  // before walking the main module. Only the main module's own proc bodies
+  // are checked (main_proc_count boundary): imported proc bodies are lowered
+  // without a typecheck pass, so checking them would reject files whose
+  // imports use constructs this frontend does not yet support.
+  const std::size_t main_proc_count = parsed.module->procs.size();
+  std::set<std::string> resolved;
+  std::set<std::string> loading;
+  if (!resolve_module_imports(*parsed.module, path, resolved, loading, diags)) {
+    return false;
+  }
+  auto checked = li::typecheck_module(*parsed.module, main_proc_count);
   for (const auto& d : checked.diagnostics.items()) {
     diags.error(d.loc, d.message);
   }
@@ -372,10 +412,9 @@ int main(int argc, char** argv) {
       li::print_diagnostics(diags);
       return 1;
     }
-    // Resolve imports into the module (walker order: main procs first, then
-    // each import's procs recursively, dedup by canonical path).
-    std::set<std::string> resolved;
-    resolve_module_imports(module, argv[2], resolved);
+    // Imports (types and procs) were already merged into the module by
+    // frontend(), in walker order: main procs first, then each import's procs
+    // recursively, dedup by canonical path. Lower the merged module directly.
     auto mir = li::lower_to_mir(module);
     std::cout << li::dump_mir_module(mir);
     return 0;

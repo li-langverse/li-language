@@ -1,5 +1,6 @@
 #include "li/borrowck.hpp"
 
+#include <algorithm>
 #include <map>
 #include <set>
 #include <string>
@@ -283,14 +284,19 @@ bool has_effect(const std::vector<std::string>& raises, const std::string& name)
 
 }  // namespace
 
-void borrow_check_module(const Module& module, DiagnosticBag& diags) {
+void borrow_check_module(const Module& module, DiagnosticBag& diags,
+                         std::size_t main_proc_count) {
   std::map<std::string, const ProcDecl*> proc_map;
   for (const auto& proc : module.procs) {
     proc_map[proc.name] = &proc;
   }
   BorrowCtx ctx{ {}, {}, {}, proc_map, diags, "module" };
-  for (const auto& proc : module.procs) {
-    ctx.check_proc(proc);
+  // Only the main module's own proc bodies are borrow-checked; imported procs
+  // are in scope (proc_map) for call resolution but are lowered without a
+  // borrow-check pass (see typecheck_module).
+  const std::size_t check_count = std::min(main_proc_count, module.procs.size());
+  for (std::size_t n = 0; n < check_count; ++n) {
+    ctx.check_proc(module.procs[n]);
   }
 }
 
@@ -307,12 +313,17 @@ bool proc_mentions_extern_call(const ProcDecl& p,
   return false;
 }
 
-void effects_check_module(const Module& module, DiagnosticBag& diags) {
+void effects_check_module(const Module& module, DiagnosticBag& diags,
+                          std::size_t main_proc_count) {
   std::map<std::string, const ProcDecl*> proc_map;
   for (const auto& proc : module.procs) {
     proc_map[proc.name] = &proc;
   }
-  for (const auto& proc : module.procs) {
+  // Only the main module's own proc bodies are effects-checked; imported procs
+  // are in scope (proc_map) but are lowered without an effects-check pass.
+  const std::size_t check_count = std::min(main_proc_count, module.procs.size());
+  for (std::size_t n = 0; n < check_count; ++n) {
+    const ProcDecl& proc = module.procs[n];
     if (proc.is_extern) {
       continue;
     }

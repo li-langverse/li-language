@@ -2,6 +2,7 @@
 
 #include "li/borrowck.hpp"
 
+#include <algorithm>
 #include <map>
 #include <memory>
 #include <string>
@@ -717,7 +718,7 @@ struct Ctx {
 
 }  // namespace
 
-TypecheckResult typecheck_module(const Module& module) {
+TypecheckResult typecheck_module(const Module& module, std::size_t main_proc_count) {
   TypecheckResult result;
   Ctx ctx{{}, {}, {}, {}, result.diagnostics, "module"};
   for (const auto& proc : module.procs) {
@@ -735,11 +736,16 @@ TypecheckResult typecheck_module(const Module& module) {
         alias.definition.name == "Protocol";
     ctx.aliases[alias.name] = std::move(entry);
   }
-  for (const auto& proc : module.procs) {
-    ctx.check_proc(proc);
+  // Only the main module's own proc bodies are checked. Imported procs are
+  // in scope (ctx.procs) so calls resolve their signatures, but their bodies
+  // are lowered without a typecheck pass, so checking them now would reject
+  // files whose imports use constructs this frontend does not yet support.
+  const std::size_t check_count = std::min(main_proc_count, module.procs.size());
+  for (std::size_t n = 0; n < check_count; ++n) {
+    ctx.check_proc(module.procs[n]);
   }
-  borrow_check_module(module, result.diagnostics);
-  effects_check_module(module, result.diagnostics);
+  borrow_check_module(module, result.diagnostics, main_proc_count);
+  effects_check_module(module, result.diagnostics, main_proc_count);
   result.ok = result.diagnostics.empty();
   return result;
 }
