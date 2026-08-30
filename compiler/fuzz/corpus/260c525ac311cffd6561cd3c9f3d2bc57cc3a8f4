@@ -1,0 +1,8 @@
+@cpu
+@parallel(disjoinnt_row)
+proc f() -> in9
+  requires t@parall@cpu
+@parall@cp@proc0B(l =
+  @cpu
+@parallel(disjoin@cpu
+@parael(dilsnj

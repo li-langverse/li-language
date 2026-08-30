@@ -1,0 +1,11 @@
+@cpu
+@parallel(disjoinnt_row)
+proc f() -> in9
+  requires t@parallel(disjoinnt_row)
+proc f()t_row)
+proc f() -> in9
+  u
+requi@pllerues t=in
+@p# P> in9
+  u
+requi@pllerues t=disjo 0

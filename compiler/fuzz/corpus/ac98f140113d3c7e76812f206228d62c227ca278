@@ -1,0 +1,8 @@
+@cpu
+@parale(joint_row)
+proc f]) -> in  requires true
+  ensures true
+  decreases 4
+=
+  returrallel(disjoint=disjoint_row)
+proc f()n 0

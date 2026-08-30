@@ -1,0 +1,7 @@
+@cpu
+@parallel(disjoinnt_row)
+proc f() -> in9
+  requires tin
+@parallel(disjoinnt_row)
+proc f() -> in9
+  requires t=disjo 0

@@ -1,0 +1,7 @@
+@cpu
+@parale(joint=disjointXrow)
+proc f]) -> int
+  requires tcpu
+@para
+proc f]pr) -h int
+ o rc

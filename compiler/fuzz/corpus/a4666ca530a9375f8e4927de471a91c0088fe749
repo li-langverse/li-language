@@ -1,0 +1,8 @@
+@cpu
+@ifrallel(disjoint=disjoint_row)
+proc f() -> int
+  requires true
+  ensures true
+  decreases 5
+=
+  returr.llel(disjoi%t=disroc f()n 0

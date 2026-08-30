@@ -1,0 +1,5 @@
+@cpu
+@para(
+proc f() -> in9
+  reqrnt_row)
+proc res t=disjo 0

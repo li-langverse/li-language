@@ -1,0 +1,3 @@
+@cpu
+@parall@cp@proc f() =
+  return 0

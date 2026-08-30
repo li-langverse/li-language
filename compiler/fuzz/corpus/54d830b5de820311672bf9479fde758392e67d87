@@ -1,0 +1,9 @@
+@cpu
+@parallel(disjoint=disjoint_row)
+proc f() -> int
+  requires true
+  ensures true
+  decreases 5
+=
+  returrallel(di                                                 sjoins (libF@cpet=disjoint_row)
+proc f()n 0

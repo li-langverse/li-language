@@ -1,0 +1,3 @@
+@cpu
+@parallel(dioint_row)
+proc f() rturn 0

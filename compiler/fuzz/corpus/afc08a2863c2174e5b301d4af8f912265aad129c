@@ -1,0 +1,11 @@
+@cpule(lldisjoint=disjoint_row)
+proc f]) -> int
+  requires tcpu
+@parale(lldisjoint=disjoint_row)
+proc f]) -> int
+  requires true
+  ensures @cpu
+@
+@parallel(disjoinnt_row)
+proc(disj) -> int
+  requires tint=disjo 0

@@ -1,0 +1,4 @@
+@cpu
+@parallel(disjoinnt_row)
+proc f() -> int
+  requires tint=disjo 0

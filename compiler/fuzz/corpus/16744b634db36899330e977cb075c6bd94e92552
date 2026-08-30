@@ -1,0 +1,15 @@
+@cpu
+@parallel(di
+@pars@cprallel(di
+@pars@cpu
+@parallptrel(prob_ensu@cpu
+@parallel(di
+@pars@cpu
+@parallptrel(u
+@parallptrel(prob_ensu@cpu
+@parallel(di
+@pars@cpu
+@parallptrel(prresdisj_rsjyinnt_row)
+proc f() -> in9
+  requires t@pa @cpu
+@pa
