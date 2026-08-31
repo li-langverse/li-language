@@ -228,28 +228,84 @@ bool type_mentions_heap(const TypeExpr& te) {
   return false;
 }
 
-bool stmt_mentions_echo(const Stmt& s) {
-  if (s.expr) {
-    if (s.expr->kind == Expr::Kind::Call && s.expr->ident == "echo") {
+bool expr_mentions_io(const Expr& e,
+                       const std::map<std::string, const ProcDecl*>& proc_map) {
+  if (e.kind == Expr::Kind::Call) {
+    const bool builtin_output =
+        (e.ident == "echo" || e.ident == "print") && proc_map.count(e.ident) == 0;
+    if (builtin_output) {
       return true;
     }
-    if (s.expr->kind == Expr::Kind::Ident && s.expr->ident == "echo") {
+    for (const auto& arg : e.args) {
+      if (arg && expr_mentions_io(*arg, proc_map)) {
+        return true;
+      }
+    }
+    return false;
+  }
+  if (e.lhs && expr_mentions_io(*e.lhs, proc_map)) {
+    return true;
+  }
+  if (e.rhs && expr_mentions_io(*e.rhs, proc_map)) {
+    return true;
+  }
+  if (e.operand && expr_mentions_io(*e.operand, proc_map)) {
+    return true;
+  }
+  if (e.base && expr_mentions_io(*e.base, proc_map)) {
+    return true;
+  }
+  if (e.index && expr_mentions_io(*e.index, proc_map)) {
+    return true;
+  }
+  return false;
+}
+
+bool stmt_mentions_io(const Stmt& s,
+                      const std::map<std::string, const ProcDecl*>& proc_map) {
+  if (s.expr && expr_mentions_io(*s.expr, proc_map)) {
+    return true;
+  }
+  if (s.cond && expr_mentions_io(*s.cond, proc_map)) {
+    return true;
+  }
+  if (s.init && expr_mentions_io(*s.init, proc_map)) {
+    return true;
+  }
+  for (const auto& inner : s.then_body) {
+    if (stmt_mentions_io(inner, proc_map)) {
       return true;
     }
   }
-  if (s.kind == Stmt::Kind::If) {
-    for (const auto& inner : s.then_body) {
-      if (stmt_mentions_echo(inner)) {
+  if (s.else_body) {
+    for (const auto& inner : *s.else_body) {
+      if (stmt_mentions_io(inner, proc_map)) {
         return true;
       }
+    }
+  }
+  for (const auto& inner : s.while_body) {
+    if (stmt_mentions_io(inner, proc_map)) {
+      return true;
+    }
+  }
+  for (const auto& inner : s.for_body) {
+    if (stmt_mentions_io(inner, proc_map)) {
+      return true;
+    }
+  }
+  for (const auto& inner : s.par_body) {
+    if (stmt_mentions_io(inner, proc_map)) {
+      return true;
     }
   }
   return false;
 }
 
-bool proc_mentions_echo(const ProcDecl& p) {
+bool proc_mentions_io(const ProcDecl& p,
+                      const std::map<std::string, const ProcDecl*>& proc_map) {
   for (const auto& s : p.body) {
-    if (stmt_mentions_echo(s)) {
+    if (stmt_mentions_io(s, proc_map)) {
       return true;
     }
   }
@@ -303,7 +359,9 @@ void borrow_check_module(const Module& module, DiagnosticBag& diags,
 bool proc_mentions_extern_call(const ProcDecl& p,
                                const std::map<std::string, const ProcDecl*>& proc_map) {
   for (const auto& s : p.body) {
-    if (s.expr && s.expr->kind == Expr::Kind::Call && s.expr->ident != "echo") {
+    if (s.expr && s.expr->kind == Expr::Kind::Call &&
+        s.expr->ident != "echo" &&
+        (s.expr->ident != "print" || proc_map.find("print") != proc_map.end())) {
       const auto it = proc_map.find(s.expr->ident);
       if (it != proc_map.end() && it->second->is_extern) {
         return true;
@@ -328,8 +386,8 @@ void effects_check_module(const Module& module, DiagnosticBag& diags,
       continue;
     }
     const SourceLoc loc{ "module", 1, 1, proc.span.start };
-    if (proc_mentions_echo(proc) && !has_effect(proc.raises, "IO")) {
-      diags.error(loc, "proc calls echo but does not declare raises IO");
+    if (proc_mentions_io(proc, proc_map) && !has_effect(proc.raises, "IO")) {
+      diags.error(loc, "proc calls echo or print but does not declare raises IO");
     }
     if (proc_mentions_extern_call(proc, proc_map) && !has_effect(proc.raises, "IO")) {
       diags.error(loc, "proc calls extern but does not declare raises IO");

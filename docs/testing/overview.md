@@ -100,6 +100,12 @@ Run alone:
 ./li-tests/run_all.sh decorator_exploits decorators
 ```
 
+`run_all.sh` accepts one or more suite names; `--ci` may be included with them.
+
+```bash
+./li-tests/run_all.sh decorator_exploits decorators --ci
+```
+
 ```bash
 ./scripts/test_race_reject.sh
 ```
@@ -108,7 +114,7 @@ Run alone:
 
 Separate from manifest — **`li-tests/run_security.sh`**:
 
-- Every file in `li-tests/security/*.li`
+- Every file under `li-tests/security/` (including `proof_safety/`)
 - `lic parse` and `lic check` must exit 0 or 1, **never crash** (no signal)
 - Generated huge-comment stress
 

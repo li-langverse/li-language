@@ -1,19 +1,31 @@
 #!/usr/bin/env bash
-# Run all li-tests suites or one suite by name.
+# Run all li-tests suites, or the named suite filters.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(cd "$ROOT/.." && pwd)"
 LIC="${LIC:-$REPO/build/compiler/lic/lic}"
-FILTER="${1:-all}"
+FILTERS=()
 CI="${CI:-false}"
+for arg in "$@"; do
+  if [[ "$arg" == "--ci" ]]; then
+    CI=true
+  else
+    FILTERS+=("$arg")
+  fi
+done
 
-if [[ "${1:-}" == "--ci" ]]; then
-  CI=true
-  FILTER="all"
-elif [[ "${2:-}" == "--ci" ]]; then
-  CI=true
-fi
+should_run_suite() {
+  if ((${#FILTERS[@]} == 0)); then
+    return 0
+  fi
+  for filter in "${FILTERS[@]}"; do
+    if [[ "$filter" == "all" || "$filter" == "$1" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
 
 if [[ ! -x "$LIC" ]]; then
   echo "li-tests: skip (lic not executable at $LIC)"
@@ -91,7 +103,7 @@ run_one() {
 while IFS= read -r line; do
   if [[ "$line" == "[[tests]]" ]]; then
     if [[ -n "${cur_file:-}" && -n "${cur_outcome:-}" ]]; then
-      if [[ "$FILTER" == "all" || "$FILTER" == "$cur_suite" ]]; then
+      if should_run_suite "$cur_suite"; then
         run_one "$cur_suite" "$cur_file" "$cur_outcome" "${cur_substr:-}"
       fi
     fi
@@ -106,7 +118,7 @@ done < "$ROOT/manifest.toml"
 
 # last entry
 if [[ -n "${cur_file:-}" && -n "${cur_outcome:-}" ]]; then
-  if [[ "$FILTER" == "all" || "$FILTER" == "$cur_suite" ]]; then
+  if should_run_suite "$cur_suite"; then
     run_one "$cur_suite" "$cur_file" "$cur_outcome" "${cur_substr:-}"
   fi
 fi

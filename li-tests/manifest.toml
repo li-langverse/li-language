@@ -283,6 +283,345 @@ file = "tetris/board_oob.li"
 outcome = "compile_fail"
 expected_substr = "out of range"
 
+# --- security malformed-input contracts ---
+
+[[tests]]
+suite = "security"
+file = "security/deep_indent.li"
+outcome = "parse_ok"
+
+[[tests]]
+suite = "security"
+file = "security/deeply_nested_calls.li"
+outcome = "parse_ok"
+
+[[tests]]
+suite = "security"
+file = "security/empty.li"
+outcome = "parse_ok"
+
+[[tests]]
+suite = "security"
+file = "security/integer_literal_flood.li"
+outcome = "parse_ok"
+
+[[tests]]
+suite = "security"
+file = "security/invalid_utf8_strings.li"
+outcome = "parse_ok"
+
+[[tests]]
+suite = "security"
+file = "security/long_line_no_newline.li"
+outcome = "parse_ok"
+
+[[tests]]
+suite = "security"
+file = "security/many_tokens.li"
+outcome = "parse_ok"
+
+[[tests]]
+suite = "security"
+file = "security/nested_parens.li"
+outcome = "parse_fail"
+
+[[tests]]
+suite = "security"
+file = "security/pathological_generics.li"
+outcome = "parse_ok"
+
+[[tests]]
+suite = "security"
+file = "security/truncated_proc.li"
+outcome = "parse_ok"
+
+[[tests]]
+suite = "security"
+file = "security/unclosed_paren.li"
+outcome = "parse_fail"
+
+[[tests]]
+suite = "security"
+file = "security/unclosed_string.li"
+outcome = "parse_ok"
+
+# --- proof-safety corpus ---
+
+[[tests]]
+suite = "security"
+file = "security/proof_safety/conditional_expression.li"
+outcome = "compile_fail"
+
+[[tests]]
+suite = "security"
+file = "security/proof_safety/deep_recursion_memory.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "security"
+file = "security/proof_safety/dishonest_ensures_open_vc.li"
+outcome = "compile_fail"
+
+[[tests]]
+suite = "security"
+file = "security/proof_safety/ensures_true_rejected.li"
+outcome = "compile_fail"
+
+[[tests]]
+suite = "security"
+file = "security/proof_safety/integer_arithmetic_safety.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "security"
+file = "security/proof_safety/missing_ensures_rejected.li"
+outcome = "compile_fail"
+
+[[tests]]
+suite = "security"
+file = "security/proof_safety/nested_object_allocation.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "security"
+file = "security/proof_safety/requires_false_caller.li"
+outcome = "compile_fail"
+
+[[tests]]
+suite = "security"
+file = "security/proof_safety/string_bounds_safety.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "security"
+file = "security/proof_safety/type_mismatch_rejected.li"
+outcome = "compile_fail"
+
+# --- CVE patterns ---
+
+[[tests]]
+suite = "cve_patterns"
+file = "cve_patterns/cwe120_stack_buffer_oob.li"
+outcome = "compile_fail"
+expected_substr = "out of range"
+
+[[tests]]
+suite = "cve_patterns"
+file = "cve_patterns/cwe125_negative_index.li"
+outcome = "compile_fail"
+expected_substr = "out of range"
+
+[[tests]]
+suite = "cve_patterns"
+file = "cve_patterns/cwe676_extern_no_contract.li"
+outcome = "compile_fail"
+expected_substr = "requires"
+
+[[tests]]
+suite = "cve_patterns"
+file = "cve_patterns/cwe787_dyn_index.li"
+outcome = "compile_fail"
+expected_substr = "constant"
+
+[[tests]]
+suite = "cve_patterns"
+file = "cve_patterns/cwe787_oob_index.li"
+outcome = "compile_fail"
+expected_substr = "out of range"
+
+[[tests]]
+suite = "cve_patterns"
+file = "cve_patterns/good_bounded_index.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "cve_patterns"
+file = "cve_patterns/historic_ariane5_narrowing.li"
+outcome = "compile_fail"
+
+[[tests]]
+suite = "cve_patterns"
+file = "cve_patterns/historic_goto_fail.li"
+outcome = "compile_fail"
+
+# --- stdlib sealing and shadowing ---
+
+[[tests]]
+suite = "stdlib_seal"
+file = "stdlib_seal/duplicate_proc.li"
+outcome = "compile_fail"
+
+[[tests]]
+suite = "stdlib_seal"
+file = "stdlib_seal/shadow_list_type.li"
+outcome = "compile_fail"
+
+[[tests]]
+suite = "stdlib_seal"
+file = "stdlib_seal/shadow_std_symbol.li"
+outcome = "compile_fail"
+
+[[tests]]
+suite = "stdlib_seal"
+file = "stdlib_seal/ok_control.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "stdlib_seal"
+file = "stdlib_seal/shadow_print.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "stdlib_seal"
+file = "stdlib_seal/shadow_print_dep.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "stdlib_seal"
+file = "stdlib_seal/shadow_print_via_import.li"
+outcome = "verify_ok"
+
+# --- decorator policy and valid decorator lowering ---
+
+[[tests]]
+suite = "decorator_exploits"
+file = "decorator_exploits/missing_disjoint_at_parallel.li"
+outcome = "compile_fail"
+expected_substr = "disjoint"
+
+[[tests]]
+suite = "decorator_exploits"
+file = "decorator_exploits/reserved_def_parallel.li"
+outcome = "compile_fail"
+expected_substr = "reserved"
+
+[[tests]]
+suite = "decorator_exploits"
+file = "decorator_exploits/single_segment_name.li"
+outcome = "compile_fail"
+expected_substr = "decorator"
+
+[[tests]]
+suite = "decorator_exploits"
+file = "decorator_exploits/typosquat_paralell.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "decorators"
+file = "decorators/cpu_only_ok.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "decorators"
+file = "decorators/no_vectorize_dot_ok.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "decorators"
+file = "decorators/parallel_def_disjoint_inherit.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "decorators"
+file = "decorators/parallel_with_disjoint.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "decorators"
+file = "decorators/vectorized_dot_ok.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "decorators"
+file = "decorators/vectorized_dot_proc_ok.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "decorators"
+file = "decorators/vectorized_for_parse_ok.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "decorators"
+file = "decorators/vectorized_for_scope_ok.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "decorators"
+file = "decorators/vectorized_lanes8_fail.li"
+outcome = "compile_fail"
+
+# --- async / await ---
+
+[[tests]]
+suite = "async"
+file = "async/await_codegen_ok.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "async"
+file = "async/reactor_selftest_link.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "async"
+file = "async/tcp_echo_smoke.li"
+outcome = "verify_ok"
+
+# --- SIMD ---
+
+[[tests]]
+suite = "simd"
+file = "simd/simd_type_ok.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "simd"
+file = "simd/bad_lanes.li"
+outcome = "compile_fail"
+
+# --- object representation and calls ---
+
+[[tests]]
+suite = "objects"
+file = "objects/object_array_field_copy.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "objects"
+file = "objects/object_array_return_call.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "objects"
+file = "objects/object_copy_init.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "objects"
+file = "objects/object_field_smoke.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "objects"
+file = "objects/object_mixed_param_pass.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "objects"
+file = "objects/object_mixed_scalar_array_return.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "objects"
+file = "objects/object_return_call.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "objects"
+file = "objects/object_whole_assign.li"
+outcome = "verify_ok"
+
 # --- integration (bootstrap / self-host seed) ---
 
 [[tests]]
