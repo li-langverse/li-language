@@ -13,5 +13,3 @@ add_executable(check_fuzz check_fuzz.cpp)
 target_link_libraries(check_fuzz PRIVATE li_parser li_types li_config)
 target_compile_options(check_fuzz PRIVATE -fsanitize=fuzzer-no-link)
 target_link_options(check_fuzz PRIVATE -fsanitize=fuzzer)
-
-target_include_directories(check_fuzz PRIVATE "${CMAKE_SOURCE_DIR}/compiler/config/include")

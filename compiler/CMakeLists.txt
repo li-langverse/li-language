@@ -1,4 +1,5 @@
 add_subdirectory(diagnostics)
+add_subdirectory(config)
 add_subdirectory(lexer)
 add_subdirectory(parser)
 add_subdirectory(ast)
