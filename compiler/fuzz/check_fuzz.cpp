@@ -17,7 +17,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   }
   std::string source(reinterpret_cast<const char*>(data), size);
   li::DiagnosticBag policy_diags;
-  li::check_source_policies(source, "fuzz.li", li::CheckConfig{}, policy_diags);
+  li::check_source_policies(source, "fuzz.li", policy_diags);
   if (!policy_diags.empty()) {
     return 0;
   }
