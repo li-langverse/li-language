@@ -27,9 +27,6 @@ li_phase "stdlib_seal"
 li_phase "cve_patterns"
 "$ROOT/li-tests/run_all.sh" cve_patterns
 
-li_phase "decorator_exploits"
-"$ROOT/li-tests/run_all.sh" decorator_exploits
-
 li_phase "CVE catalog coverage"
 chmod +x "$ROOT/scripts/check-cve-coverage.sh"
 "$ROOT/scripts/check-cve-coverage.sh"

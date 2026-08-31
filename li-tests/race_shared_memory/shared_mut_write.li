@@ -1,5 +1,3 @@
-# EXPLOIT: concurrent write to buf[0] from every parallel iteration.
-# MUST NOT compile — expected: overlapping mutable shared memory.
 
 def race() -> unit
   requires true

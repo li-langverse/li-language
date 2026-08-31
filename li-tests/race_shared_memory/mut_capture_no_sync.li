@@ -1,5 +1,3 @@
-# EXPLOIT: capture shared mut counter in parallel body without Sync proof.
-# MUST NOT compile — expected: Send/Sync or capture violation.
 
 def mut_capture() -> unit
   requires true

@@ -11,6 +11,8 @@
 **Depends on:** Phase 1  
 **Blocks:** Phase 3
 
+**Proof gaps (Doc-c):** [G-vc](../../verification/provability-gaps.md#g-vc) · [G-bnd](../../verification/provability-gaps.md#g-bnd) · [G-def](../../verification/provability-gaps.md#g-def) · [G-math-syn](../../verification/provability-gaps.md#g-math-syn)
+
 ---
 
 ## Type system (v1)
@@ -39,8 +41,8 @@
 - Create: `crates/li_types/src/ty.rs`
 - Create: `crates/li_types/src/context.rs`
 
-- [ ] `enum Type { Int, Uint, WrappingInt, Float64, Bool, Unit, String, Array { len: u64, elem: Box<Type> }, Option(Box<Type>), Enum(EnumId), Object(ObjectId), Proc { .. } }`
-- [ ] `TypeCtx::define_type`, `lookup`, `define_proc`
+- [x] `enum Type { Int, Uint, WrappingInt, Float64, Bool, Unit, String, Array { len: u64, elem: Box<Type> }, Option(Box<Type>), Enum(EnumId), Object(ObjectId), Proc { .. } }` (C++: `TypeExpr` + `typecheck.cpp`)
+- [x] `TypeCtx::define_type`, `lookup`, `define_proc` (C++: `TypecheckState` in `typecheck.cpp`)
 
 ---
 
@@ -50,8 +52,8 @@
 - Create: `crates/li_types/src/check.rs`
 - Test: `crates/li_types/tests/check_fib.rs`
 
-- [ ] `check_module(&Module) -> Result<TypedModule, Vec<TypeError>>`
-- [ ] Return typed wrapper nodes or side table `node_id → Type`
+- [x] `check_module(&Module) -> Result<TypedModule, Vec<TypeError>>` (C++: `typecheck_module`)
+- [x] Return typed wrapper nodes or side table `node_id → Type` (C++: `TypecheckResult` + AST type fields)
 
 ---
 
@@ -61,9 +63,9 @@
 - Create: `crates/li_types/src/borrow.rs`
 - Test: `crates/li_types/tests/borrow_errors.rs`
 
-- [ ] Track `Owned | BorrowImm | BorrowMut` per local
-- [ ] Reject: use after move, two `mut` borrows, mut while imm borrow live
-- [ ] v1: no references in struct fields yet
+- [x] Track `Owned | BorrowImm | BorrowMut` per local (`borrowck.cpp`)
+- [x] Reject: use after move, two `mut` borrows, mut while imm borrow live (`li-tests/borrow/`)
+- [x] v1: no references in struct fields yet
 
 ---
 
@@ -78,7 +80,7 @@
 # bad_array_index.li — board[25, 0] when array[20, array[10, int]]
 ```
 
-- [ ] Tests assert compile error messages mention dimension / type mismatch
+- [x] Tests assert compile error messages mention dimension / type mismatch (`li-tests/typecheck/bad_*.li`)
 
 ---
 
@@ -87,12 +89,12 @@
 **Files:**
 - Modify: `crates/lic/src/main.rs`
 
-- [ ] `lic check file.li` — parse + typecheck, exit 1 on errors
+- [x] `lic check file.li` — parse + typecheck, exit 1 on errors (`compiler/lic/main.cpp`)
 
 ---
 
 ### Phase 2 exit gate
 
-- [ ] `fib.li` typechecks
-- [ ] All `bad_*.li` fail with expected errors
-- [ ] Borrow double-mut test fails cleanly
+- [x] `fib.li` typechecks (`li-tests/typecheck/fib.li`)
+- [x] All `bad_*.li` fail with expected errors
+- [x] Borrow double-mut test fails cleanly (`li-tests/borrow/double_mut.li`)

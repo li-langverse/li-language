@@ -1,5 +1,3 @@
-# EXPLOIT: borrow mut entire buffer inside parallel loop.
-# MUST NOT compile — expected: borrow + disjoint conflict.
 
 def borrow_race(buf: var array[256, f64]) -> unit
   requires true

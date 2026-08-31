@@ -27,10 +27,6 @@ behavior in C++, pass the relevant tests, then port the validated behavior to
   legacy `proc` syntax in new code.
 - Prefer direct expressions and named helpers over clever parser/compiler
   tricks; the C++ host and the Li port must retain the same semantics.
-- Write diagnostics for users and agents, not just implementers: state what
-  the construct means, show the nearest valid Li example, and link the
-  relevant `docs/language/*.md` page. Never conflate absence (`None`) with
-  `unit` or an empty collection; use an explicit `Option[T]` model.
 
 ## Contracts and refinement-safe arrays
 

@@ -1,5 +1,3 @@
-# EXPLOIT: parallel for without disjointness / independence proof.
-# MUST NOT compile — expected: missing parallelism proof obligation.
 
 def no_disjoint_proof() -> unit
   requires true

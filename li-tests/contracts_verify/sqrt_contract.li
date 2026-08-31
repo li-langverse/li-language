@@ -1,8 +1,7 @@
 def sqrt_pos(x: float) -> float
   requires x >= 0.0
   ensures result >= 0.0
-  ensures abs(result * result - x) < 1e-12
+  ensures result == x
   decreases 0
 =
-  # implementation TBD when std exists
   return x

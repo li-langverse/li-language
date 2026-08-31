@@ -1,0 +1,139 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, dev]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  version:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Version + changelog gate
+        env:
+          GITHUB_BASE_REF: ${{ github.base_ref }}
+        run: |
+          chmod +x scripts/check-version.sh
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            ./scripts/check-version.sh --pr
+          else
+            ./scripts/check-version.sh
+          fi
+
+  build-and-test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout lip + lit (GitHub siblings)
+        run: |
+          chmod +x scripts/checkout-ecosystem-siblings.sh
+          ./scripts/checkout-ecosystem-siblings.sh
+
+      - name: Install LLVM 22 and build tools
+        run: |
+          chmod +x scripts/ci-install-llvm.sh
+          sudo LI_LLVM_MAJOR=22 bash scripts/ci-install-llvm.sh
+
+      - name: CI (build + li-tests + tier-0 benchmarks)
+        env:
+          LLVM_DIR: /usr/lib/llvm-22/lib/cmake/llvm
+          CC: clang-22
+          CXX: clang++-22
+        run: |
+          chmod +x scripts/ci.sh scripts/build.sh scripts/check-version.sh \
+            scripts/resolve-lic.sh li-tests/run_security.sh
+          ./scripts/ci.sh
+          ./scripts/check-version.sh --build
+
+  build-and-test-macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout lip + lit (GitHub siblings)
+        run: |
+          chmod +x scripts/checkout-ecosystem-siblings.sh
+          ./scripts/checkout-ecosystem-siblings.sh
+
+      - name: Install LLVM 22
+        run: brew install llvm@22 cmake ninja
+
+      - name: CI (build + li-tests + tier-0 benchmarks)
+        run: |
+          chmod +x scripts/ci.sh scripts/build.sh scripts/check-version.sh \
+            scripts/resolve-lic.sh li-tests/run_security.sh
+          LLVM_DIR="$(brew --prefix llvm@22)/lib/cmake/llvm"
+          export LLVM_DIR
+          # Link against Homebrew LLVM, but compile with Xcode clang++/libc++
+          # (brew llvm@22's clang++ breaks libc++ header order on GHA macOS).
+          export CC=clang
+          export CXX=clang++
+          ./scripts/ci.sh
+          ./scripts/check-version.sh --build
+
+  build-and-test-windows:
+    runs-on: windows-latest
+    continue-on-error: true # best-effort; ubuntu+macos gate release
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install LLVM 22, CMake, Ninja
+        run: |
+          choco install cmake ninja -y
+          choco install llvm --version=22.1.0 -y || choco install llvm -y
+          echo "C:/Program Files/LLVM/bin" >> "$GITHUB_PATH"
+
+      - name: Resolve LLVM_DIR
+        id: llvm_dir
+        run: |
+          set -euo pipefail
+          export PATH="/c/Program Files/LLVM/bin:$PATH"
+          for d in "/c/Program Files/LLVM/lib/cmake/llvm" "/c/Program Files/LLVM/lib/cmake/llvm-22"; do
+            if [[ -f "$d/LLVMConfig.cmake" ]]; then
+              echo "LLVM_DIR=$d" >> "$GITHUB_ENV"
+              exit 0
+            fi
+          done
+          if command -v llvm-config >/dev/null 2>&1; then
+            echo "LLVM_DIR=$(llvm-config --cmakedir)" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          found="$(find '/c/Program Files' '/c/Program Files (x86)' -iname LLVMConfig.cmake 2>/dev/null | head -1)"
+          if [[ -n "$found" ]]; then
+            echo "LLVM_DIR=$(dirname "$found")" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          # Chocolatey LLVM on GHA often ships binaries only (no LLVMConfig.cmake).
+          echo "SKIP_WINDOWS_LIC_BUILD=1" >> "$GITHUB_ENV"
+          echo "::warning::LLVM dev CMake package not found; skipping Windows lic build (ubuntu+macos gate)."
+
+      - name: Build lic + smoke + security + li-tests
+        if: env.SKIP_WINDOWS_LIC_BUILD != '1'
+        env:
+          CC: clang
+          CXX: clang++
+        run: |
+          chmod +x scripts/build.sh scripts/ci-security.sh scripts/resolve-lic.sh \
+            scripts/check-cve-coverage.sh scripts/check-historic-bugs.sh \
+            li-tests/run_security.sh li-tests/security/codegen_path_injection.sh \
+            li-tests/run_all.sh
+          cmake -B build -G Ninja -DLLVM_DIR="$LLVM_DIR"
+          cmake --build build
+          LIC="$(./scripts/resolve-lic.sh)"
+          "$LIC" smoke-llvm
+          export LIC
+          ./scripts/ci-security.sh
+          ./li-tests/run_all.sh --ci

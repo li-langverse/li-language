@@ -17,6 +17,8 @@ enum {
 #define LI_MD_DT 0.004
 #define LI_MD_RC 2.5
 #define LI_MD_BOX 10.0
+#define LI_MD_RHO ((double)LI_MD_N / (LI_MD_BOX * LI_MD_BOX * LI_MD_BOX))
+#define LI_MD_TEMP 1.0
 #define LI_MD_SEED UINT64_C(7)
 
 typedef struct LiMdRng {
@@ -42,6 +44,92 @@ static inline double li_md_rng_next(LiMdRng* rng) {
   return (double)(rng->state >> 11) / (double)(1ULL << 53);
 }
 
+static inline double li_md_rng_normal(LiMdRng* rng) {
+  double u1 = li_md_rng_next(rng);
+  if (u1 < 1e-12) u1 = 1e-12;
+  const double u2 = li_md_rng_next(rng);
+  return sqrt(-2.0 * log(u1)) * cos(2.0 * 3.14159265358979323846 * u2);
+}
+
+/* Smallest integer k with 4*k^3 >= N (FCC sites per cubic cell). */
+static inline int li_md_fcc_ncell(void) {
+  int k = 1;
+  while (4 * k * k * k < LI_MD_N) {
+    ++k;
+  }
+  return k;
+}
+
+static inline void li_md_kinetic(const LiMdState* s, double* ke_out) {
+  double ke = 0.0;
+  for (int i = 0; i < LI_MD_N; ++i) {
+    ke += 0.5 * (s->vx[i] * s->vx[i] + s->vy[i] * s->vy[i] + s->vz[i] * s->vz[i]);
+  }
+  *ke_out = ke;
+}
+
+static inline void li_md_init_velocities_mb(LiMdState* s, LiMdRng* rng, double temperature) {
+  const double scale = sqrt(temperature);
+  for (int i = 0; i < LI_MD_N; ++i) {
+    s->vx[i] = scale * li_md_rng_normal(rng);
+    s->vy[i] = scale * li_md_rng_normal(rng);
+    s->vz[i] = scale * li_md_rng_normal(rng);
+  }
+  double px_sum = 0.0, py_sum = 0.0, pz_sum = 0.0;
+  for (int i = 0; i < LI_MD_N; ++i) {
+    px_sum += s->vx[i];
+    py_sum += s->vy[i];
+    pz_sum += s->vz[i];
+  }
+  const double inv_n = 1.0 / (double)LI_MD_N;
+  for (int i = 0; i < LI_MD_N; ++i) {
+    s->vx[i] -= px_sum * inv_n;
+    s->vy[i] -= py_sum * inv_n;
+    s->vz[i] -= pz_sum * inv_n;
+  }
+  double ke = 0.0;
+  li_md_kinetic(s, &ke);
+  const double target = 1.5 * (double)LI_MD_N * temperature;
+  if (ke > 1e-20) {
+    const double vel_scale = sqrt(target / ke);
+    for (int i = 0; i < LI_MD_N; ++i) {
+      s->vx[i] *= vel_scale;
+      s->vy[i] *= vel_scale;
+      s->vz[i] *= vel_scale;
+    }
+  }
+}
+
+/* FCC lattice: 4 sites per cell, uniform spacing a = L/ncell, fills N particles. */
+static inline void li_md_init_fcc(LiMdState* s, LiMdRng* rng, double temperature) {
+  static const double basis[4][3] = {
+      {0.0, 0.0, 0.0}, {0.0, 0.5, 0.5}, {0.5, 0.0, 0.5}, {0.5, 0.5, 0.0}};
+  const int ncell = li_md_fcc_ncell();
+  const double a = LI_MD_BOX / (double)ncell;
+  int idx = 0;
+  for (int ix = 0; ix < ncell && idx < LI_MD_N; ++ix) {
+    for (int iy = 0; iy < ncell && idx < LI_MD_N; ++iy) {
+      for (int iz = 0; iz < ncell && idx < LI_MD_N; ++iz) {
+        for (int b = 0; b < 4 && idx < LI_MD_N; ++b) {
+          s->px[idx] = ((double)ix + basis[b][0]) * a;
+          s->py[idx] = ((double)iy + basis[b][1]) * a;
+          s->pz[idx] = ((double)iz + basis[b][2]) * a;
+          ++idx;
+        }
+      }
+    }
+  }
+  if (temperature <= 0.0) {
+    for (int i = 0; i < LI_MD_N; ++i) {
+      s->vx[i] = 0.0;
+      s->vy[i] = 0.0;
+      s->vz[i] = 0.0;
+    }
+  } else {
+    li_md_init_velocities_mb(s, rng, temperature);
+  }
+}
+
 static inline double li_md_mic(double d) {
   const double half = 0.5 * LI_MD_BOX;
   if (d > half) return d - LI_MD_BOX;
@@ -56,32 +144,11 @@ static inline double li_md_wrap(double x) {
 }
 
 static inline void li_md_init_lattice(LiMdState* s, LiMdRng* rng) {
-  const int cells = (int)ceil(cbrt((double)LI_MD_N));
-  const double spacing = LI_MD_BOX / (double)cells;
-  int idx = 0;
-  for (int ix = 0; ix < cells; ++ix) {
-    for (int iy = 0; iy < cells; ++iy) {
-      for (int iz = 0; iz < cells; ++iz) {
-        if (idx >= LI_MD_N) return;
-        s->px[idx] = ((double)ix + 0.5) * spacing;
-        s->py[idx] = ((double)iy + 0.5) * spacing;
-        s->pz[idx] = ((double)iz + 0.5) * spacing;
-        s->vx[idx] = 0.01 * (li_md_rng_next(rng) - 0.5);
-        s->vy[idx] = 0.01 * (li_md_rng_next(rng) - 0.5);
-        s->vz[idx] = 0.01 * (li_md_rng_next(rng) - 0.5);
-        ++idx;
-      }
-    }
-  }
+  li_md_init_fcc(s, rng, LI_MD_TEMP);
 }
 
-static inline void li_md_kinetic(const LiMdState* s, double* ke_out) {
-  double ke = 0.0;
-  for (int i = 0; i < LI_MD_N; ++i) {
-    ke += 0.5 * (s->vx[i] * s->vx[i] + s->vy[i] * s->vy[i] + s->vz[i] * s->vz[i]);
-  }
-  *ke_out = ke;
-}
+/* LI_MD_TEMP env override for trajectory export (reduced LJ units; labels are Kelvin-style). */
+double li_md_temperature_from_env(void);
 
 static inline void li_md_potential(const LiMdState* s, double* pe_out) {
   const double rc2 = LI_MD_RC * LI_MD_RC;
@@ -150,33 +217,16 @@ static inline void li_md_step(LiMdState* s) {
   }
 }
 
-static inline double li_md_run(void) {
-  LiMdRng rng;
-  LiMdState state;
-  li_md_rng_init(&rng, LI_MD_SEED);
-  li_md_init_lattice(&state, &rng);
-  li_md_compute_forces(&state);
-  double ke = 0.0, pe = 0.0;
-  li_md_kinetic(&state, &ke);
-  li_md_potential(&state, &pe);
-  const double e0 = pe + ke;
-  for (int step = 0; step < LI_MD_STEPS; ++step) {
-    li_md_step(&state);
-    (void)step;
-  }
-  li_md_kinetic(&state, &ke);
-  li_md_potential(&state, &pe);
-  const double e1 = pe + ke;
-  const double denom = (e0 >= e1 ? e0 : e1);
-  const double d = denom > 1e-12 ? denom : 1e-12;
-  const double diff = e1 - e0;
-  return (diff >= 0.0 ? diff : -diff) / d;
-}
-
 void li_md_lj_run(void);
 
 void li_md_kernel(void);
 double li_md_checksum(void);
+
+/* Run MD and write energy trace CSV (step,pe,ke,etotal). Returns |ΔE|/E drift. */
+double li_md_run_trace(const char* path);
+
+/* Export particle positions for animation (text format). Returns 0 on success. */
+int li_md_export_trajectory(const char* path, int stride, int max_steps);
 
 #ifdef __cplusplus
 }

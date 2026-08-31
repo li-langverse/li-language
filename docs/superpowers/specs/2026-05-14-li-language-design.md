@@ -1,15 +1,25 @@
 # Li Language Design Spec
 
+> **Strict by default:** Proof, security, and performance gates are always on at maximum. There is **no optional provability** — only explicit downgrades in `li.toml` or documented env. Policy: [Strict by default](../../ecosystem/strict-by-default.md). Contracts below are **mandatory**, not opt-in.
+
 **Date:** 2026-05-14 (rev. 5)  
 **Status:** Planning  
 **Milestone:** Tetris + proved physics kernels — **unproved code does not compile**
 **License:** Apache-2.0 OR MIT (open source)
 
+> **Implementation status:** Normative **target**. For what `lic` proves **today**, see [Provability gaps](../../verification/provability-gaps.md). Gaps are **compiler maturity**, not a user toggle to disable proof.
+
 ## Vision
 
 Li is an **open-source**, **compiled**, Nim-syntax language for HPC and scientific computing. Its reason to exist is **mathematical provability**: every shipped program is a theorem the **Lean 4 kernel** accepts — not a program we merely tested or type-checked.
 
-**Easy syntax** and **fast execution** are co-equal product goals, but **neither may weaken the proof gate**. If a feature cannot be made provable, it does not ship in user code.
+**Easy syntax** means code **does what it reads like it does** — influenced by Python’s readability ([PEP 20](https://peps.python.org/pep-0020/)): simple names, obvious control flow, pseudocode-friendly surface. See [Language philosophy](../../language/philosophy.md).
+
+**Fast execution** is a co-equal product goal, but **neither clarity nor speed may weaken the proof gate**. If a feature cannot be made provable, it does not ship in user code.
+
+## Composability (ecosystem principle)
+
+Substantial features (HTTP gateway, benchmark harness, package tooling) ship as **small, importable APIs** — `serve`, `stop`, `ready` (or domain-equivalent verbs) — in `src/lib.li`, not only as monolithic `main` binaries. Other Li programs and agents compose services by `import` without copy-paste. Composability does **not** relax the proof gate: exported lifecycle `def`s still require contracts and `lic build` discharge. See [composable-by-default.md](../../ecosystem/composable-by-default.md).
 
 ## The three pillars (priority order)
 
@@ -59,12 +69,12 @@ Every compiling module must have:
 |-------------|----------------|
 | **Pillar 1 — Provability** | **Highest priority**; see checklist above; Lean 4 kernel is mandatory for `build` |
 | **Pillar 2 — Easy syntax** | Nim-like surface; Python 3.14 types; sugar elaborates to provable Core |
-| **Pillar 3 — Fast execution** | LLVM 18, SIMD, `parallel for` v1; no release binary without Pillar 1 |
+| **Pillar 3 — Fast execution** | LLVM 22, SIMD, `parallel for` v1; no release binary without Pillar 1 |
 | **Provable-only** | No compile without discharged Lean proofs; reject partial or untotal user code |
 | Python 3.14 type baseline | All relevant PEP constructs **except `Any`** and gradual escapes |
 | Nim-like syntax | Indentation, `def`, `type`, `object`, `enum`, `import` |
-| **Mandatory contracts** | Every `def` has specs; loops need `invariant` + `decreases` |
-| **Totality** | Non-terminating `def` rejected unless effect is explicitly axiomatized (e.g. `IO` driver) |
+| **Mandatory contracts** | Every `proc` has specs; loops need `invariant` + `decreases` |
+| **Totality** | Non-terminating `proc` rejected unless effect is explicitly axiomatized (e.g. `IO` driver) |
 | **Lean 4 gate** | `lic build` ≡ typecheck + borrow + VC gen + Lean kernel OK |
 | Refinement types | Index bounds, positivity, shapes — proof-carrying where needed |
 | Open source | Apache-2.0/MIT; trusted axioms in `docs/semantics/trusted.lean` |
@@ -83,7 +93,7 @@ Every compiling module must have:
 | **Typechecker** | C++ module `li_types/` | Python 3.14 + refinements + contract well-formedness |
 | **Verifier** | `li_verify/` + **Lean 4** | VC generation; Lean kernel checks proofs (Coq-level standard) |
 | **Middle-end** | Custom MIR (SSA) | Borrow lowering, **parallel regions**, simd, bounds |
-| **Backend** | **LLVM 18 only** | Single codegen path; HPC peak perf, vectorization, LTO |
+| **Backend** | **LLVM 22 only** | Single codegen path; HPC peak perf, vectorization, LTO |
 | **Incremental** | Per-module cache + thinLTO split | Fast rebuild; proof cache keyed by VC hash |
 | **Formal semantics** | **Lean 4** (canonical) | Core calculus, typing rules, contract semantics, MIR preservation |
 | **Runtime** | Minimal C (`li_rt.c`) | Panic, bounds, contract failure hooks in debug |
@@ -166,7 +176,7 @@ type Vec[T] = object
   data: ptr T
   len: int
 
-def map[T, U](xs: list[T], f: def(x: T) -> U) -> list[U] = ...
+def map[T, U](xs: list[T], f: proc(x: T) -> U) -> list[U] = ...
 ```
 
 - `TypeVar`, `TypeVarTuple`, `ParamSpec`, `Concatenate`, `Unpack` — all supported in checker
@@ -180,7 +190,7 @@ Nominal: `object` inheritance still primary for li `object`/`enum`.
 
 ### Callable
 
-`Callable[[A, B], R]` and `def(a: A, b: B) -> R` interchangeable in annotations.
+`Callable[[A, B], R]` and `proc(a: A, b: B) -> R` interchangeable in annotations.
 
 `ParamSpec` for decorators: `Concatenate[Lock, P]` patterns.
 
@@ -352,7 +362,7 @@ Requires: hardware feature detection, explicit conversion rules (`f32` ↔ `bf16
 | `tensor[Shape, T]` | Shape in the type — e.g. `tensor[(3, 3), f64]` vs `tensor[(3,), f64]`; dimension errors at compile time |
 | `array[N, T]` (v1) | Fixed rank-1/2 stack arrays; Tetris boards, small grids |
 | GPU buffers `device[T]` / `host[T]` | Separate address spaces; copy semantics explicit |
-| Kernel `gpu def` | Entry points for CUDA / Metal / Vulkan compute (one backend chosen first) |
+| Kernel `gpu proc` | Entry points for CUDA / Metal / Vulkan compute (one backend chosen first) |
 
 Depends on Phase 1 numerics (including SIMD) and a stable MIR → LLVM path (or secondary GPU IR).
 
@@ -634,7 +644,7 @@ Inner loop: `simd`; outer loop: `parallel for`. Standard li HPC idiom — both r
 
 ### GPU (not v1)
 
-`gpu def` and `devicebuffer` remain **Phase 4+**. v1 competes on **multi-core CPU + SIMD** vs C++/Rust/Julia.
+`gpu proc` and `devicebuffer` remain **Phase 4+**. v1 competes on **multi-core CPU + SIMD** vs C++/Rust/Julia.
 
 ### Benchmarks (v1)
 
@@ -694,7 +704,7 @@ Li combines **Python 3.14 types (minus `Any`)**, **mandatory Hoare contracts**, 
 | `requires` / `ensures` on every `def` | Spec error |
 | `invariant` + `decreases` on every loop | Totality error |
 | All VCs discharged in Lean 4 | **Compile rejected** |
-| `extern def` | Must carry full contract; body trusted and listed in `trusted.lean` |
+| `extern proc` | Must carry full contract; body trusted and listed in `trusted.lean` |
 
 ### What is forbidden in source
 

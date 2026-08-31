@@ -1,4 +1,17 @@
+# Li driver for shared dot kernel (common/dot_core.c). Pure-Li reimplementation is
+# folded to zero under -ffast-math until the compiler keeps observable reduction state.
+
 extern def li_simd_dot_kernel()
+  requires true
+  ensures true
+
+extern def li_simd_dot_checksum() -> float
+  requires true
+  ensures true
+
+extern def li_rt_volatile_sink_f64(v: float) -> unit
+  requires true
+  ensures true
 
 def main() raises IO -> int
   requires true
@@ -6,4 +19,5 @@ def main() raises IO -> int
   decreases 0
 =
   li_simd_dot_kernel()
+  li_rt_volatile_sink_f64(li_simd_dot_checksum())
   return 0

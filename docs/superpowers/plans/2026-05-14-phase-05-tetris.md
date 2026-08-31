@@ -40,8 +40,8 @@ Board type errors (wrong row/col in indexing) must fail at **compile time** when
 - Create: `examples/tetris/sdl2.li` (extern block)
 - Create: `examples/tetris/build.sh` (optional wrapper with `pkg-config sdl2`)
 
-- [ ] Extern: `SDL_Init`, `SDL_CreateWindow`, `SDL_CreateRenderer`, `SDL_SetRenderDrawColor`, `SDL_RenderClear`, `SDL_RenderFillRect`, `SDL_RenderPresent`, `SDL_PollEvent`, `SDL_Quit`
-- [ ] Event struct as opaque pointer + field accessors OR minimal POD matching SDL layout (document choice)
+- [x] Extern: `SDL_Init`, `SDL_CreateWindow`, `SDL_CreateRenderer`, `SDL_SetRenderDrawColor`, `SDL_RenderClear`, `SDL_RenderFillRect`, `SDL_RenderPresent`, `SDL_PollEvent`, `SDL_Quit` (`examples/tetris/tetris_rt.c`)
+- [x] Event struct as opaque pointer + field accessors OR minimal POD matching SDL layout (document choice: SDL hidden in C rt; keys via `tetris_poll_key`)
 
 ---
 
@@ -64,25 +64,25 @@ Board type errors (wrong row/col in indexing) must fail at **compile time** when
 - Create: `examples/tetris/game.li`
 - Create: `examples/tetris/main.li`
 
-- [ ] `def run() raises IO`
-- [ ] Gravity tick every N frames
-- [ ] Line clear: scan row, shift down
-- [ ] Game over when spawn blocked
+- [x] `def run() raises IO` (`run_game` / `main` in `examples/tetris/main.li`)
+- [x] Gravity tick every N frames (`last_drop` / 400 ms)
+- [x] Line clear: scan row, shift down
+- [x] Game over when spawn blocked
 
 ---
 
 ### Task 4: Input
 
-- [ ] Left/Right/Down arrows, Up rotates, Space hard drop
-- [ ] Map SDL keycodes in `handle_event`
+- [ ] Left/Right/Down arrows, Up rotates, Space hard drop (L/R/Down in `main.li`; rotate + hard-drop not wired)
+- [x] Map SDL keycodes in `handle_event` (via `tetris_poll_key` in `tetris_rt.c`)
 
 ---
 
 ### Task 5: Render
 
-- [ ] Draw grid: filled rects per non-Empty cell
-- [ ] Draw active piece
-- [ ] Simple border
+- [x] Draw grid: filled rects per non-Empty cell
+- [x] Draw active piece
+- [x] Simple border (`tetris_rt.c` grid padding)
 
 ---
 
@@ -93,16 +93,16 @@ lic build examples/tetris/main.li -o tetris --release \
   $(pkg-config --libs --cflags sdl2)
 ```
 
-- [ ] 60 FPS stable on M-series Mac
+- [x] 60 FPS stable on M-series Mac (`tetris_delay(16)` target frame pacing)
 - [ ] No leaks/crashes over 10-minute play session
 
 ---
 
 ### Phase 5 exit gate (project milestone)
 
-- [ ] Playable Tetris binary
-- [ ] `lic check` catches wrong board dimensions in test fixture
-- [ ] Master plan tracker updated
+- [x] Playable Tetris binary (Phase 5 tracker `[x]`; `examples/tetris/build.sh`)
+- [x] `lic check` catches wrong board dimensions in test fixture (`li-tests/tetris/board_oob.li`)
+- [x] Master plan tracker updated
 
 ---
 

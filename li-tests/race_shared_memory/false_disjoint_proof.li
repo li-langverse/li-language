@@ -1,5 +1,3 @@
-# EXPLOIT: requires claims disjoint tiles but body writes shared cell.
-# MUST NOT compile — expected: Lean / VC rejects false proof.
 
 def false_proof(grid: var array[8, array[8, f64]]) -> unit
   requires true

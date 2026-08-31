@@ -34,7 +34,7 @@ int32_t li_rt_mir_f64_neg(int32_t id);
 int32_t li_rt_mir_int(const char* text, int32_t start, int32_t end);
 /* Print a decimal int literal slice at its full 64-bit value (Li int cells
  * are 32-bit, so the MIR walker prints big literals from the source span). */
-int32_t li_rt_mir_int64_out(const char* text, int32_t start, int32_t end, int32_t neg);
+int32_t li_rt_mir_int64_out(const char* text, int32_t start, int32_t end);
 /* Print an escaped string slice (mir_dump.cpp esc(): \\ \n \r \t space->\x20). */
 int32_t li_rt_mir_esc(const char* text, int32_t start, int32_t end);
 /* Print a fixed tag string (INS/FN/PARAM/ARG/MIR line headers). */
@@ -51,15 +51,8 @@ int32_t li_rt_mir_objname_add(const char* text, int32_t bs, int32_t be,
                               int32_t fs, int32_t fe);
 int32_t li_rt_mir_objname_out(int32_t idx);
 void li_rt_mir_objname_clear(void);
-/* Nested object field paths, printed without the __li_o_ prefix. */
-int32_t li_rt_mir_fieldpath_add(int32_t parent, const char* text, int32_t s, int32_t e);
-int32_t li_rt_mir_fieldpath_out(int32_t idx);
 /* Synthesized literal name registry (parallel-for callee cells). */
 int32_t li_rt_mir_synth_name_add(const char* text);
-const char* li_rt_mir_objname_get_text(int32_t idx);
-int32_t li_rt_mir_objname_get_bs(int32_t idx);
-int32_t li_rt_mir_objname_get_be(int32_t idx);
-int32_t li_rt_mir_objname_add_nested(int32_t parent_idx, const char* text, int32_t fs, int32_t fe);
 /* Build and register `__li_par_<proc>_<counter>`; returns the cell index. */
 int32_t li_rt_mir_par_callee_register(int32_t pid, int32_t counter);
 /* Proc-name registry for cross-file call resolution in the self-hosted MIR walker.
@@ -89,11 +82,7 @@ const char* li_rt_resolve_import_last_path(void);
 /* Indexed import path store for transitive import resolution. */
 void li_rt_import_paths_clear(void);
 void li_rt_import_path_store(const char* path);
-void li_rt_import_path_insert(int idx, const char* path);
 const char* li_rt_import_path_get(int idx);
-void li_rt_import_content_store(const char* content);
-void li_rt_import_content_insert(int idx, const char* content);
-const char* li_rt_import_content_get(int idx);
 /* Per-type source pointer store: the source where each registered Object type
  * was defined, so field name positions can be read from the correct buffer. */
 void li_rt_type_src_store(int idx, const char* src);

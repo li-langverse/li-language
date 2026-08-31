@@ -187,7 +187,7 @@ def plot_correctness_grid(df: pd.DataFrame, out: Path) -> None:
 
 def load_energy_traces(trace_dir: Path) -> dict[str, pd.DataFrame]:
     traces: dict[str, pd.DataFrame] = {}
-    for lang in ("cpp", "rust", "julia"):
+    for lang in ("cpp", "rust", "julia", "li"):
         path = trace_dir / f"energy_{lang}.csv"
         if path.exists():
             traces[lang] = pd.read_csv(path)
@@ -212,7 +212,7 @@ def plot_md_energy_by_lang(trace_dir: Path, out: Path) -> None:
         return
 
     apply_theme()
-    langs = [lang for lang in ("cpp", "rust", "julia") if lang in traces]
+    langs = [lang for lang in ("cpp", "rust", "julia", "li") if lang in traces]
     fig, axes = plt.subplots(len(langs), 1, figsize=(16, 9), sharex=True)
     if len(langs) == 1:
         axes = [axes]
@@ -243,8 +243,10 @@ def plot_md_energy_by_lang(trace_dir: Path, out: Path) -> None:
         df = traces[lang]
         time_fs = df["step"] * 0.004
         drift = _energy_drift_pct(df)
-        ax.plot(time_fs, df["pe"], label="E_pot", color=pe_color, linewidth=1.6)
-        ax.plot(time_fs, df["ke"], label="E_kin", color=ke_color, linewidth=1.6)
+        pe_c = LANG_COLORS.get(lang, PRIMARY)
+        ke_c = PRIMARY if lang == "li" else "#79c0ff"
+        ax.plot(time_fs, df["pe"], label="E_pot", color=pe_c, linewidth=1.6)
+        ax.plot(time_fs, df["ke"], label="E_kin", color=ke_c, linewidth=1.6)
         ax.plot(time_fs, df["etotal"], label="E_total", color=total_color, linewidth=2.0, alpha=0.9)
         ax.set_ylabel("energy (LJ)")
         ax.set_title(f"{lang} · |ΔE|/E = {drift:.2f}%", loc="left", color=TEXT, fontsize=14)
@@ -433,8 +435,8 @@ def main() -> int:
     args.out.mkdir(parents=True, exist_ok=True)
 
     plot_speed_bars(df, args.tier, args.out / f"bench_speed_{args.tier}.png")
-    if args.tier == "tier2":
-        plot_speed_bars(df, "tier1", args.out / "bench_speed_tier1.png")
+    plot_speed_bars(df, "tier1", args.out / "bench_speed_tier1.png")
+    plot_speed_bars(df, "tier2", args.out / "bench_speed_tier2.png")
     plot_speedup_vs_cpp(df, args.out / "speedup_vs_cpp.png")
     verify_df = load_verify_df()
     if verify_df is not None and "passed" in verify_df.columns:

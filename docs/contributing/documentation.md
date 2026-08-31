@@ -27,6 +27,17 @@ Define terms on first use. Link to the design spec instead of copying ten-page t
 - Internal codenames without context  
 - “Simply” / “just” when the step is not simple  
 - Promising dates without pointing to the master plan phases  
+- Claiming **`lic build` runs Lean** or full proof discharge before **Phase 2f** lands  
+
+## Provability and “today vs target”
+
+When documenting proofs, `lic build`, decorators, parallelism, or math notation:
+
+1. Read **[Provability gaps](../verification/provability-gaps.md)** first.  
+2. Use **target** vs **today** language (see that page’s summary table).  
+3. When a gap closes in code, update the **gap register** in the **same PR** as the implementation.  
+
+Handbook pages should link to the gap doc where the spec promise exceeds the compiler.
 
 ## Page template
 
@@ -38,6 +49,16 @@ One sentence: what this page helps you do.
 ## Background (optional, 1 short paragraph)
 
 ## Main content (sections with headings)
+
+## Traceability and official packages
+
+When documenting **standard** or **first-party** packages:
+
+- Assign a `PKG-*` id and list it in [official-packages.md](../ecosystem/official-packages.md) (see [ecosystem governance plan](../superpowers/plans/2026-05-16-li-ecosystem-governance.md)).
+- Link tests via `T-*` notes in `li-tests/manifest.toml` where behavior is normative.
+- Use **Keep a Changelog** and **SemVer** for release notes; **SPDX** license identifiers in `li.toml`.
+
+Ecosystem pages use HTML comments for doc IDs: `<!-- DOC-ecosystem-lip -->` (optional, for traceability tooling).
 
 ## Related links
 ```

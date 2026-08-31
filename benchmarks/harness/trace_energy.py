@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import subprocess
 import sys
@@ -16,24 +17,7 @@ DEFAULT_OUT = REPO / "benchmarks" / "results" / "md_lennard_jones"
 
 
 def build_cpp(bin_path: Path) -> None:
-    src = MD_DIR / "cpp" / "md_lennard_jones.cpp"
-    core = MD_DIR / "common" / "md_core.c"
-    cxx = shutil.which("clang++") or "clang++"
-    subprocess.check_call(
-        [
-            cxx,
-            "-O3",
-            "-march=native",
-            "-ffast-math",
-            "-flto",
-            "-std=c++17",
-            str(src),
-            str(core),
-            "-o",
-            str(bin_path),
-        ],
-        cwd=REPO,
-    )
+    build_native(bin_path, main_c="cpp/md_main.c")
 
 
 def build_rust(bin_path: Path) -> None:
@@ -45,14 +29,57 @@ def build_rust(bin_path: Path) -> None:
     shutil.copy2(built, bin_path)
 
 
+def build_native(bin_path: Path, *, main_c: str = "cpp/md_main.c") -> None:
+    cc = os.environ.get("CC", "clang")
+    subprocess.check_call(
+        [
+            cc,
+            "-O3",
+            "-march=native",
+            "-ffast-math",
+            str(MD_DIR / main_c),
+            str(MD_DIR / "common" / "md_core.c"),
+            "-lm",
+            "-o",
+            str(bin_path),
+        ],
+        cwd=REPO,
+    )
+
+
+def build_li_trace(bin_path: Path) -> None:
+    lic = REPO / "build" / "compiler" / "lic" / "lic"
+    if not lic.is_file():
+        raise RuntimeError(f"lic missing at {lic} — run ./scripts/build.sh")
+    extra = f"{MD_DIR / 'common' / 'md_core.c'} {MD_DIR / 'common' / 'md_trace_env.c'}"
+    env = {**os.environ, "LI_EXTRA_C": extra}
+    subprocess.check_call(
+        [
+            str(lic),
+            "build",
+            str(MD_DIR / "li" / "trace.li"),
+            "-o",
+            str(bin_path),
+            "--release",
+            "-O3",
+            "-march=native",
+            "-ffast-math",
+        ],
+        cwd=REPO,
+        env=env,
+    )
+
+
 def run_traces(out_dir: Path) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     BUILD_DIR.mkdir(parents=True, exist_ok=True)
 
     cpp_bin = BUILD_DIR / "md_lj_cpp"
     rust_bin = BUILD_DIR / "md_lj_rust"
+    li_bin = BUILD_DIR / "md_lj_li"
     build_cpp(cpp_bin)
     build_rust(rust_bin)
+    build_li_trace(li_bin)
 
     julia = shutil.which("julia")
     if not julia:
@@ -61,15 +88,16 @@ def run_traces(out_dir: Path) -> None:
     specs = [
         ("cpp", [str(cpp_bin)]),
         ("rust", [str(rust_bin)]),
-        (
-            "julia",
-            [julia, "--compiled-modules=no", str(MD_DIR / "julia" / "md_lennard_jones.jl")],
-        ),
+        ("julia", [julia, "--compiled-modules=no", str(MD_DIR / "julia" / "md_lennard_jones.jl")]),
+        ("li", [str(li_bin)]),
     ]
 
     for lang, cmd in specs:
         trace_path = out_dir / f"energy_{lang}.csv"
-        subprocess.check_call([*cmd, "--trace", str(trace_path)], cwd=REPO)
+        env = None
+        if lang == "li":
+            env = {**os.environ, "LI_MD_TRACE": str(trace_path.resolve())}
+        subprocess.check_call([*cmd], cwd=REPO, env=env)
         print(f"wrote {trace_path}")
 
 

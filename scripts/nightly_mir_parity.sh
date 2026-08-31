@@ -19,7 +19,7 @@ LIC="${LIC:-$("$ROOT/scripts/resolve-lic.sh")}"
 LI="${LI_CHECK_BIN:-$ROOT/build/li-mir-walker}"
 BASELINE_FILE="${ROOT}/.mir_parity_baseline"
 TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"' EXIT
+trap 'rm -rf "$TMP"' END
 
 if [[ ! -x "$LI" ]]; then
   echo "ERROR: Li MIR walker binary not found at $LI" >&2
@@ -40,17 +40,15 @@ new_regressions=()
 new_fixes=()
 
 # Load previous baseline if it exists
-prev_status_file="$TMP/previous-status"
-: > "$prev_status_file"
+declare -A prev_status
 if [[ -f "$BASELINE_FILE" ]]; then
-  cp "$BASELINE_FILE" "$prev_status_file"
+  while IFS=' ' read -r status filepath; do
+    prev_status["$filepath"]="$status"
+  done < "$BASELINE_FILE"
 fi
-# Tab separates status from path; spaces remain intact.
-status_delim=$(printf '\t')
 
 # Current results
-curr_status_file="$TMP/current-status"
-: > "$curr_status_file"
+declare -A curr_status
 
 while IFS= read -r f; do
   cpp=0; li=0
@@ -60,17 +58,17 @@ while IFS= read -r f; do
 
   if [[ "$cpp" == "0" && "$li" == "0" ]]; then
     skip=$((skip + 1))
-    printf 'SKIP%s%s\n' "$status_delim" "$f" >> "$curr_status_file"
+    curr_status["$f"]="SKIP"
     continue
   fi
   if [[ "$cpp" == "1" && "$li" == "0" ]]; then
     skip=$((skip + 1))
-    printf 'SKIP%s%s\n' "$status_delim" "$f" >> "$curr_status_file"
+    curr_status["$f"]="SKIP"
     continue
   fi
   if [[ "$cpp" == "0" && "$li" == "1" ]]; then
     skip=$((skip + 1))
-    printf 'SKIP%s%s\n' "$status_delim" "$f" >> "$curr_status_file"
+    curr_status["$f"]="SKIP"
     continue
   fi
 
@@ -79,10 +77,10 @@ while IFS= read -r f; do
 
   if diff -q "$TMP/cpp.txt" "$TMP/li.txt" >/dev/null 2>&1; then
     match=$((match + 1))
-    printf 'MATCH%s%s\n' "$status_delim" "$f" >> "$curr_status_file"
+    curr_status["$f"]="MATCH"
   else
     diff_count=$((diff_count + 1))
-    printf 'DIFF%s%s\n' "$status_delim" "$f" >> "$curr_status_file"
+    curr_status["$f"]="DIFF"
     cl=$(wc -l < "$TMP/cpp.txt")
     ll=$(wc -l < "$TMP/li.txt")
     echo "  DIFF  $cl/$ll  $f"
@@ -93,15 +91,15 @@ done < <(find "$ROOT/bootstrap" "$ROOT/examples" "$ROOT/li-tests" "$ROOT/package
            2>/dev/null | sort)
 
 # Detect regressions and fixes
-while IFS="$status_delim" read -r curr f; do
-  [[ -n "$f" ]] || continue
-  prev=$(awk -F '\t' -v path="$f" '$2 == path {print $1; exit}' "$prev_status_file")
+for f in "${!curr_status[@]}"; do
+  curr="${curr_status[$f]}"
+  prev="${prev_status[$f]:-NEW}"
   if [[ "$curr" == "DIFF" && "$prev" == "MATCH" ]]; then
     new_regressions+=("$f")
   elif [[ "$curr" == "MATCH" && "$prev" == "DIFF" ]]; then
     new_fixes+=("$f")
   fi
-done < "$curr_status_file"
+done
 
 echo ""
 echo "=== Summary ==="
@@ -128,7 +126,9 @@ if [[ ${#new_fixes[@]} -gt 0 ]]; then
 fi
 
 # Save current results as new baseline
-cp "$curr_status_file" "$BASELINE_FILE"
+for f in "${!curr_status[@]}"; do
+  echo "${curr_status[$f]} $f"
+done > "$BASELINE_FILE"
 
 # Open GitHub issue if regression detected
 if [[ "${1:-}" == "--open-issue" && ${#new_regressions[@]} -gt 0 ]]; then
