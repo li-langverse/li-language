@@ -1,0 +1,8 @@
+@cpu
+@parallel(disjoint=disjoint_row)
+proc f() -> istz  requires trur(ue
+  decreases 0
+=
+  retu(disjoint=dipsjo@cpu
+  requires trluer
+l

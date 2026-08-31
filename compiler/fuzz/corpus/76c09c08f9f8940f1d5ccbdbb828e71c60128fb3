@@ -1,0 +1,18 @@
+@cpu
+@parallel(disjoint=disjoint_row)
+proc f true
+  decreases 0
+=
+  
+@pdralleis(ldjoint=disjow)
+proc f() -> int
+  requires tru%
+  ensures true
+  decreases 0
+=
+  
+@pdralleis(ldjoint=disjow)
+proc f(res true
+  decreases 0
+=
+  return p

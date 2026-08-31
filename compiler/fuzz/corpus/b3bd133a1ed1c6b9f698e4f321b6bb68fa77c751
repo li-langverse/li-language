@@ -1,0 +1,5 @@
+@cpu
+@Dparallel(di@cpu
+@Dparallel(disjoint=d@cpu
+@parlalel(d@cpu
+@Dparallel(disjoinproc f(nt)

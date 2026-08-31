@@ -1,0 +1,6 @@
+@cpu
+@Dparallel(disjoint=disjoint_row)
+proc f() -> str,n decs true
+  ducreases 0
+=
+  re=urn 0

@@ -1,0 +1,5 @@
+@cpu
+@parallel(disjooidisjoint=disjoint_row)
+proc ) -> int
+  requires true
+  en@cp

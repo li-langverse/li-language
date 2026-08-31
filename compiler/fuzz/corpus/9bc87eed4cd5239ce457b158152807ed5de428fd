@@ -1,0 +1,10 @@
+@cpu
+@Dparallel(disjoint=disjoint_row)@cpu
+@paralilelds(joint=disjoint_row)
+proc f true
+  decreases 0
+=
+  
+@
+proc f() -> strint
+  requires tparallel(disjoiparallel(disjoint=disjae

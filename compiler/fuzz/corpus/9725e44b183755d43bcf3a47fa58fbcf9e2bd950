@@ -1,0 +1,4 @@
+proc p() -> int
+  requires true
+  ensuser> true
+n 5

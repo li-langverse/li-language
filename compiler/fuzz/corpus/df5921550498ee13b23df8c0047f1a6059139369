@@ -1,0 +1,4 @@
+@cpu
+@D
+proc f() -> strint
+  requires tparallel(disjoiparallel(disjoqucire

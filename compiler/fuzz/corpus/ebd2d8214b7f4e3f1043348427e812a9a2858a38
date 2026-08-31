@@ -1,0 +1,12 @@
+@cpu
+@parallel(disjpoint=disrow)
+proc f-> ystrnt
+  requires true
+  ensures true
+  decreases str
+  
+@pdralleis(ldjoint=disjow)
+proc f(res true
+  decreases 0
+=
+  renturn p

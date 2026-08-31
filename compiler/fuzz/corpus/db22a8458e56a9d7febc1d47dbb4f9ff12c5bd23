@@ -1,0 +1,7 @@
+@cpu
+@Dparallep(disjt_row)
+proc f() -> strint
+  requires tparalleu
+@Dparallel(disjoint=disjoint_row)
+proc f() -> strint
+  requires tpl(disjoipadisjoqucire

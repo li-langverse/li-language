@@ -1,0 +1,8 @@
+@cpu
+@pa(disjoint=disjoint_row)
+proc f true
+  decreases 0
+=
+  
+@pdralleisalleis(ldjoint=disjow)
+proc f(re return p

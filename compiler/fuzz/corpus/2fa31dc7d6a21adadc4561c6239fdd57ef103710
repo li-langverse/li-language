@@ -1,0 +1,15 @@
+@cpu
+@parallel(disj)
+proc f true
+  decreases 0
+=
+  
+@pdralleis(ldjoint=disjow)
+proc f(ru esrte
+  decreases 0
+=
+  redjoint=disjow)
+prstroc f(res true
+  decreases 0
+=
+  return p

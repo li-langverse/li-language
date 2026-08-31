@@ -1,0 +1,7 @@
+@cpu
+@parallel(disjoint=disjoint_row)
+proc f-) -> in
+  ensures true
+  decreases 0
+=
+  retu(d(sjoint=disjoinp

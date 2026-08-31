@@ -1,0 +1,3 @@
+@cpu
+@D
+proc f() -> rintl(di

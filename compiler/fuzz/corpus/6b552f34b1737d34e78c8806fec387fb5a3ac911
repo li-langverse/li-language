@@ -1,0 +1,3 @@
+# Pa fes: @cpu
+@parallel(disjoiint_row)
+proc f
