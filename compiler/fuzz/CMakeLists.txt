@@ -10,6 +10,6 @@ target_compile_options(parse_fuzz PRIVATE -fsanitize=fuzzer-no-link)
 target_link_options(parse_fuzz PRIVATE -fsanitize=fuzzer)
 
 add_executable(check_fuzz check_fuzz.cpp)
-target_link_libraries(check_fuzz PRIVATE li_parser li_types)
+target_link_libraries(check_fuzz PRIVATE li_parser li_types li_config)
 target_compile_options(check_fuzz PRIVATE -fsanitize=fuzzer-no-link)
 target_link_options(check_fuzz PRIVATE -fsanitize=fuzzer)
