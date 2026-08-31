@@ -3,6 +3,7 @@
 #include "li/mir_dump.hpp"
 #include "li/parser.hpp"
 #include "li/policy.hpp"
+#include "li/proof_cli.hpp"
 #include "li/smoke_llvm.hpp"
 #include "li/typecheck.hpp"
 
@@ -367,25 +368,29 @@ int main(int argc, char** argv) {
     if (argc < 3) {
       return usage();
     }
-    const char* input = argv[2];
+    const char* input = nullptr;
     const char* output = "/dev/null";
     bool release = false;
     std::string extra_flags;
-    for (int i = 3; i < argc; ++i) {
+    for (int i = 2; i < argc; ++i) {
       const std::string_view arg = argv[i];
       if (arg == "-o" && i + 1 < argc) {
         output = argv[++i];
       } else if (arg == "--release") {
         release = true;
-      } else if (arg == "--allow-open-vc" || arg == "--no-lean-verify") {
-        // Frontend-only flags: the parity/CI harness passes them when
-        // building bootstrap/lic/main.li. This frontend has no external
-        // prover step, so they are consumed here and never reach clang.
+      } else if (arg == "--allow-open-vc") {
+        li::proof_cli_flags().allow_open_vc = true;
+      } else if (arg == "--no-lean-verify") {
         continue;
+      } else if (input == nullptr) {
+        input = argv[i];
       } else {
         extra_flags.append(argv[i]);
         extra_flags.push_back(' ');
       }
+    }
+    if (input == nullptr) {
+      return usage();
     }
     const std::string source = read_file(input);
     li::Module module;

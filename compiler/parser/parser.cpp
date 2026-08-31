@@ -601,7 +601,22 @@ TypeExpr Parser::parse_type() {
     ty.name = name;
     if (accept(TokenKind::LBracket)) {
       ty.kind = TypeKind::TypeApp;
-      if (!at(TokenKind::RBracket)) {
+      if (name == "simd") {
+        if (!at(TokenKind::Ident)) {
+          diags.error(loc(cur()), "expected SIMD element type");
+          return ty;
+        }
+        ty.type_args.push_back(std::make_unique<TypeExpr>(parse_type()));
+        if (!expect(TokenKind::Comma, "','")) {
+          return ty;
+        }
+        if (!at(TokenKind::IntLit)) {
+          diags.error(loc(cur()), "expected SIMD lane count");
+          return ty;
+        }
+        ty.array_size = cur().int_value;
+        i++;
+      } else if (!at(TokenKind::RBracket)) {
         do {
           ty.type_args.push_back(std::make_unique<TypeExpr>(parse_type()));
         } while (accept(TokenKind::Comma));

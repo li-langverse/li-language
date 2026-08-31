@@ -41,6 +41,20 @@ llvm::Type* llvm_scalar(llvm::LLVMContext& ctx, bool is_float, bool is_i64) {
   return is_float ? llvm::Type::getDoubleTy(ctx) : i32_ty(ctx);
 }
 
+llvm::Type* object_return_type(llvm::LLVMContext& ctx,
+                               const std::vector<MirParam>& layout) {
+  std::vector<llvm::Type*> fields;
+  fields.reserve(layout.size());
+  for (const auto& field : layout) {
+    llvm::Type* field_type = llvm_scalar(ctx, field.is_float, field.is_i64);
+    if (field.is_array) {
+      field_type = llvm::ArrayType::get(field_type, static_cast<unsigned>(field.array_size));
+    }
+    fields.push_back(field_type);
+  }
+  return llvm::StructType::get(ctx, fields, false);
+}
+
 llvm::Value* int32_val(llvm::IRBuilder<>& builder, llvm::LLVMContext& ctx, std::int64_t v) {
   return llvm::ConstantInt::get(i32_ty(ctx), v);
 }
@@ -67,6 +81,8 @@ struct ArraySlot {
   llvm::AllocaInst* alloca = nullptr;  // non-null for local arrays
   llvm::Value* ptr_param = nullptr;     // non-null for param arrays (pointer to data)
   std::int64_t size = 0;
+  bool is_float = false;
+  bool is_i64 = false;
 };
 
 struct EmitCtx {
@@ -174,6 +190,19 @@ struct EmitCtx {
           builder->CreateLoad(i8_ptr(context), it->second), i64_ty(context));
     }
     return builder->CreateSExt(load_int(name), i64_ty(context));
+  }
+
+  llvm::Type* array_element_type(const ArraySlot& slot) {
+    return llvm_scalar(context, slot.is_float, slot.is_i64);
+  }
+
+  llvm::Value* array_element_ptr(const ArraySlot& slot, llvm::Value* idx) {
+    llvm::Type* elem_ty = array_element_type(slot);
+    if (slot.ptr_param) {
+      return builder->CreateGEP(elem_ty, slot.ptr_param, idx);
+    }
+    llvm::Value* zero = llvm::ConstantInt::get(builder->getInt32Ty(), 0);
+    return builder->CreateInBoundsGEP(slot.alloca->getAllocatedType(), slot.alloca, {zero, idx});
   }
 
   llvm::BasicBlock* block_for(const std::string& label) {
@@ -336,6 +365,33 @@ struct EmitCtx {
         builder->CreateRet(llvm::ConstantFP::get(llvm::Type::getDoubleTy(context),
                                                     ins.float_value));
         return false;
+      case MirOp::ReturnObject: {
+        llvm::Value* value = llvm::UndefValue::get(ret_ty);
+        for (std::size_t i = 0; i < ins.object_layout.size(); ++i) {
+          const auto& field = ins.object_layout[i];
+          const std::string field_name = ins.ident + "_" + field.name;
+          llvm::Value* field_value = nullptr;
+          if (field.is_array) {
+            auto it = arrays.find(field_name);
+            if (it != arrays.end() && it->second.alloca) {
+              field_value = builder->CreateLoad(it->second.alloca->getAllocatedType(),
+                                                it->second.alloca);
+            }
+          } else if (field.is_float) {
+            field_value = load_float(field_name);
+          } else if (field.is_i64) {
+            field_value = load_i64(field_name);
+          } else {
+            field_value = load_int(field_name);
+          }
+          if (!field_value) {
+            field_value = llvm::UndefValue::get(ret_ty->getStructElementType(static_cast<unsigned>(i)));
+          }
+          value = builder->CreateInsertValue(value, field_value, {static_cast<unsigned>(i)});
+        }
+        builder->CreateRet(value);
+        return false;
+      }
       case MirOp::ReturnIdent:
         if (ins.ret_is_float || returns_float || float_locals.count(ins.ident) > 0) {
           builder->CreateRet(load_float(ins.ident));
@@ -450,7 +506,28 @@ struct EmitCtx {
         }
         llvm::CallInst* call = builder->CreateCall(callee, args);
         if (!ins.ident.empty()) {
-          if (ins.ret_is_float) {
+          if (!ins.object_layout.empty()) {
+            for (std::size_t i = 0; i < ins.object_layout.size(); ++i) {
+              const auto& field = ins.object_layout[i];
+              llvm::Value* field_value = builder->CreateExtractValue(call, {static_cast<unsigned>(i)});
+              const std::string field_name = ins.ident + "_" + field.name;
+              if (field.is_array) {
+                llvm::ArrayType* arr_ty = llvm::ArrayType::get(
+                    llvm_scalar(context, field.is_float, field.is_i64),
+                    static_cast<unsigned>(field.array_size));
+                llvm::AllocaInst* slot = create_alloca_addr(arr_ty, field_name);
+                builder->CreateStore(field_value, slot);
+                arrays[field_name] = ArraySlot{slot, nullptr, field.array_size,
+                                               field.is_float, field.is_i64};
+              } else if (field.is_float) {
+                builder->CreateStore(field_value, ensure_float_local(field_name));
+              } else if (field.is_i64) {
+                builder->CreateStore(field_value, ensure_i64_local(field_name));
+              } else {
+                builder->CreateStore(field_value, ensure_int_local(field_name));
+              }
+            }
+          } else if (ins.ret_is_float) {
             builder->CreateStore(call, ensure_float_local(ins.ident));
           } else {
             builder->CreateStore(call, ensure_int_local(ins.ident));
@@ -460,12 +537,15 @@ struct EmitCtx {
       }
       case MirOp::ArrayAlloc: {
         llvm::ArrayType* arr_ty =
-            llvm::ArrayType::get(i32_ty(context), static_cast<unsigned>(ins.int_value));
+            llvm::ArrayType::get(llvm_scalar(context, ins.array_is_float, ins.array_is_i64),
+                                 static_cast<unsigned>(ins.int_value));
         llvm::AllocaInst* slot = create_alloca_addr(arr_ty, ins.ident);
-        arrays[ins.ident] = ArraySlot{slot, nullptr, ins.int_value};
+        arrays[ins.ident] = ArraySlot{slot, nullptr, ins.int_value,
+                                      ins.array_is_float, ins.array_is_i64};
         return true;
       }
-      case MirOp::ArrayStoreInt: {
+      case MirOp::ArrayStoreInt:
+      case MirOp::ArrayStoreFloat: {
         auto it = arrays.find(ins.ident);
         if (it == arrays.end()) {
           return true;
@@ -473,22 +553,24 @@ struct EmitCtx {
         llvm::Value* idx = ins.index_is_literal
                                ? int32_val(*builder, context, ins.int_value)
                                : load_int(ins.index_ident);
-        llvm::Value* val = ins.rhs_is_literal ? int32_val(*builder, context, ins.rhs_int)
-                                              : load_int(ins.rhs_ident);
-        llvm::Value* elem_ptr;
-        if (it->second.ptr_param) {
-          // Parameter array: base is an i8* pointer, GEP with single index
-          elem_ptr = builder->CreateGEP(i32_ty(context), it->second.ptr_param, idx);
+        const bool is_float = ins.op == MirOp::ArrayStoreFloat;
+        llvm::Value* val = nullptr;
+        if (is_float) {
+          val = ins.rhs_is_literal
+                    ? llvm::ConstantFP::get(llvm::Type::getDoubleTy(context), ins.float_value)
+                    : load_float(ins.rhs_ident);
+        } else if (it->second.is_i64) {
+          val = ins.rhs_is_literal ? llvm::ConstantInt::get(i64_ty(context), ins.rhs_int)
+                                   : load_i64(ins.rhs_ident);
         } else {
-          // Local array: base is an alloca of [N x i32], GEP with [0, idx]
-          llvm::Value* zero = llvm::ConstantInt::get(builder->getInt32Ty(), 0);
-          elem_ptr = builder->CreateInBoundsGEP(
-              it->second.alloca->getAllocatedType(), it->second.alloca, {zero, idx});
+          val = ins.rhs_is_literal ? int32_val(*builder, context, ins.rhs_int)
+                                   : load_int(ins.rhs_ident);
         }
-        builder->CreateStore(val, elem_ptr);
+        builder->CreateStore(val, array_element_ptr(it->second, idx));
         return true;
       }
-      case MirOp::ArrayLoadInt: {
+      case MirOp::ArrayLoadInt:
+      case MirOp::ArrayLoadFloat: {
         auto it = arrays.find(ins.ident);
         if (it == arrays.end()) {
           return true;
@@ -496,17 +578,18 @@ struct EmitCtx {
         llvm::Value* idx = ins.index_is_literal
                                ? int32_val(*builder, context, ins.int_value)
                                : load_int(ins.index_ident);
-        llvm::Value* elem_ptr;
-        if (it->second.ptr_param) {
-          elem_ptr = builder->CreateGEP(i32_ty(context), it->second.ptr_param, idx);
-        } else {
-          llvm::Value* zero = llvm::ConstantInt::get(builder->getInt32Ty(), 0);
-          elem_ptr = builder->CreateInBoundsGEP(
-              it->second.alloca->getAllocatedType(), it->second.alloca, {zero, idx});
-        }
-        llvm::Value* loaded = builder->CreateLoad(i32_ty(context), elem_ptr);
+        const bool is_float = ins.op == MirOp::ArrayLoadFloat;
+        llvm::Type* elem_ty = is_float ? llvm::Type::getDoubleTy(context)
+                                       : array_element_type(it->second);
+        llvm::Value* loaded = builder->CreateLoad(elem_ty, array_element_ptr(it->second, idx));
         if (!ins.lhs_ident.empty()) {
-          builder->CreateStore(loaded, ensure_int_local(ins.lhs_ident));
+          if (is_float) {
+            builder->CreateStore(loaded, ensure_float_local(ins.lhs_ident));
+          } else if (it->second.is_i64) {
+            builder->CreateStore(loaded, ensure_i64_local(ins.lhs_ident));
+          } else {
+            builder->CreateStore(loaded, ensure_int_local(ins.lhs_ident));
+          }
         }
         return true;
       }
@@ -551,6 +634,7 @@ bool emit_llvm_ir(const MirModule& mir, const std::string& out_path, std::string
   for (const auto& fn : mir.functions) {
     if (fn.is_extern) {
       llvm::Type* ret_ty = fn.returns_void ? llvm::Type::getVoidTy(context)
+                                           : fn.returns_object ? object_return_type(context, fn.return_object_layout)
                                            : fn.returns_i64 ? i8_ptr(context)
                                                             : llvm_scalar(context, fn.returns_float, false);
       std::vector<llvm::Type*> param_tys;
@@ -567,6 +651,7 @@ bool emit_llvm_ir(const MirModule& mir, const std::string& out_path, std::string
     }
 
     llvm::Type* ret_ty = fn.returns_void ? llvm::Type::getVoidTy(context)
+                                         : fn.returns_object ? object_return_type(context, fn.return_object_layout)
                                          : llvm_scalar(context, fn.returns_float, fn.returns_i64);
     std::vector<llvm::Type*> param_tys;
     for (const auto& p : fn.params) {
@@ -599,6 +684,7 @@ bool emit_llvm_ir(const MirModule& mir, const std::string& out_path, std::string
     }
 
     llvm::Type* ret_ty = fn.returns_void ? llvm::Type::getVoidTy(context)
+                                         : fn.returns_object ? object_return_type(context, fn.return_object_layout)
                                          : llvm_scalar(context, fn.returns_float, fn.returns_i64);
     llvm::BasicBlock* entry = llvm::BasicBlock::Create(context, "entry", func);
     llvm::IRBuilder<> builder(entry);
@@ -619,7 +705,8 @@ bool emit_llvm_ir(const MirModule& mir, const std::string& out_path, std::string
                 i64_ty(context), ctx.ensure_i64_local(fn.params[idx].name));
             llvm::Value* ptr = ctx.builder->CreateIntToPtr(loaded, i8_ptr(context));
             ctx.arrays[fn.params[idx].name] =
-                ArraySlot{nullptr, ptr, fn.params[idx].array_size};
+                ArraySlot{nullptr, ptr, fn.params[idx].array_size,
+                          fn.params[idx].is_float, fn.params[idx].is_i64};
           }
         } else if (fn.params[idx].is_float) {
           builder.CreateStore(&arg, ctx.ensure_float_local(fn.params[idx].name));

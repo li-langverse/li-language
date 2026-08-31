@@ -8,9 +8,35 @@
 #include <unistd.h>
 
 namespace li {
+namespace {
+
+bool has_shell_metacharacters(const std::string& value) {
+  return value.find(';') != std::string::npos || value.find('&') != std::string::npos ||
+         value.find('|') != std::string::npos || value.find('$') != std::string::npos ||
+         value.find('`') != std::string::npos || value.find('(') != std::string::npos ||
+         value.find(')') != std::string::npos || value.find('<') != std::string::npos ||
+         value.find('>') != std::string::npos || value.find(static_cast<char>(34)) != std::string::npos ||
+         value.find('\n') != std::string::npos || value.find('\r') != std::string::npos;
+}
+
+}  // namespace
 
 bool compile_module(const Module& module, const std::string& output_path, bool release,
                   const std::string& extra_clang_flags, std::string* error) {
+  if (has_shell_metacharacters(output_path)) {
+    if (error) {
+      *error = "unsafe characters in output path";
+    }
+    return false;
+  }
+  if (const char* extra_c = std::getenv("LI_EXTRA_C")) {
+    if (has_shell_metacharacters(extra_c)) {
+      if (error) {
+        *error = "unsafe characters in LI_EXTRA_C";
+      }
+      return false;
+    }
+  }
   const MirModule mir = lower_to_mir(module);
   const std::string ll_path =
       (std::filesystem::temp_directory_path() /

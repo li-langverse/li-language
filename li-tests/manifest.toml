@@ -369,6 +369,11 @@ outcome = "compile_fail"
 
 [[tests]]
 suite = "security"
+file = "security/proof_safety/ensures_false_rejected.li"
+outcome = "compile_fail"
+
+[[tests]]
+suite = "security"
 file = "security/proof_safety/integer_arithmetic_safety.li"
 outcome = "verify_ok"
 

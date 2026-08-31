@@ -1,6 +1,7 @@
 #include "li/typecheck.hpp"
 
 #include "li/borrowck.hpp"
+#include "li/proof_cli.hpp"
 
 #include <algorithm>
 #include <map>
@@ -12,8 +13,8 @@ namespace li {
 namespace {
 
 enum class TyKind {
-  Int, Int64, Ptr, Float, Bool, Str, Array, List, Dict, Tuple, TypedDict, Enum, Named,
-  TypeVar, Protocol, Callable
+  Int, Int64, Ptr, Float, Bool, Str, Array, Simd, List, Dict, Tuple, TypedDict, Enum,
+  Named, TypeVar, Protocol, Callable
 };
 
 struct Ty;
@@ -23,6 +24,9 @@ using TyPtr = std::shared_ptr<Ty>;
 struct Ty {
   TyKind kind = TyKind::Int;
   std::int64_t array_size = 0;
+  std::int64_t simd_lanes = 0;
+  bool bounded_index = false;
+  bool requires_bounded_index = false;
   std::shared_ptr<Ty> elem;
   std::string name;
   std::vector<std::shared_ptr<Ty>> type_args;
@@ -39,6 +43,14 @@ TyPtr make_str() { return std::make_shared<Ty>(Ty{TyKind::Str}); }
 TyPtr make_i64() { return std::make_shared<Ty>(Ty{TyKind::Int64}); }
 TyPtr make_ptr() { return std::make_shared<Ty>(Ty{TyKind::Ptr}); }
 
+TyPtr make_simd(std::int64_t lanes) {
+  auto t = std::make_shared<Ty>();
+  t->kind = TyKind::Simd;
+  t->name = "simd";
+  t->simd_lanes = lanes;
+  return t;
+}
+
 TyPtr make_type_var(std::string name) {
   auto t = std::make_shared<Ty>();
   t->kind = TyKind::TypeVar;
@@ -51,6 +63,126 @@ TyPtr make_protocol(std::string name) {
   t->kind = TyKind::Protocol;
   t->name = std::move(name);
   return t;
+}
+
+bool is_true_literal(const Expr& e) {
+  return e.kind == Expr::Kind::Ident && e.ident == "true";
+}
+
+bool is_false_literal(const Expr& e) {
+  return e.kind == Expr::Kind::Ident && e.ident == "false";
+}
+
+bool is_unit_type(const TypeExpr& type) {
+  return type.kind == TypeKind::Named && type.name == "unit";
+}
+
+const Expr* direct_return_expr(const ProcDecl& proc) {
+  const Expr* result = nullptr;
+  for (const auto& stmt : proc.body) {
+    if (stmt.kind != Stmt::Kind::Return || !stmt.expr) {
+      continue;
+    }
+    if (result != nullptr) {
+      return nullptr;
+    }
+    result = stmt.expr.get();
+  }
+  return result;
+}
+
+std::optional<long double> literal_number(const Expr& e) {
+  if (e.kind == Expr::Kind::IntLit) {
+    return static_cast<long double>(e.int_value);
+  }
+  if (e.kind == Expr::Kind::FloatLit) {
+    return static_cast<long double>(e.float_value);
+  }
+  return std::nullopt;
+}
+
+std::optional<bool> compare_literal_numbers(BinOp op, long double left, long double right) {
+  switch (op) {
+    case BinOp::Eq: return left == right;
+    case BinOp::Ne: return left != right;
+    case BinOp::Lt: return left < right;
+    case BinOp::Le: return left <= right;
+    case BinOp::Gt: return left > right;
+    case BinOp::Ge: return left >= right;
+    default: return std::nullopt;
+  }
+}
+
+bool literal_comparison_is_false(const Expr& comparison, const Expr& returned) {
+  if (comparison.kind != Expr::Kind::BinOp || !comparison.lhs || !comparison.rhs) {
+    return false;
+  }
+  const Expr* lhs = comparison.lhs.get();
+  const Expr* rhs = comparison.rhs.get();
+  if (lhs->kind == Expr::Kind::Ident && lhs->ident == "result") {
+    lhs = &returned;
+  } else if (rhs->kind == Expr::Kind::Ident && rhs->ident == "result") {
+    rhs = &returned;
+  } else {
+    return false;
+  }
+  const auto left = literal_number(*lhs);
+  const auto right = literal_number(*rhs);
+  if (!left || !right) {
+    return false;
+  }
+  const auto holds = compare_literal_numbers(comparison.bin_op, *left, *right);
+  return holds.has_value() && !*holds;
+}
+
+bool postcondition_is_false_for_literal_return(const ProcDecl& proc, const Contract& contract) {
+  if (contract.kind != ContractKind::Ensures || !contract.expr) {
+    return false;
+  }
+  const Expr* returned = direct_return_expr(proc);
+  return returned != nullptr && literal_comparison_is_false(*contract.expr, *returned);
+}
+
+bool literal_requires_is_false(const ProcDecl& callee, const Expr& call) {
+  for (const auto& contract : callee.contracts) {
+    if (contract.kind != ContractKind::Requires || !contract.expr) {
+      continue;
+    }
+    if (contract.expr->kind == Expr::Kind::Ident && contract.expr->ident == "false") {
+      return true;
+    }
+    if (contract.expr->kind != Expr::Kind::BinOp || !contract.expr->lhs || !contract.expr->rhs) {
+      continue;
+    }
+    const Expr* lhs = contract.expr->lhs.get();
+    const Expr* rhs = contract.expr->rhs.get();
+    const Expr* arg = nullptr;
+    const Expr* literal = nullptr;
+    bool parameter_on_left = false;
+    for (std::size_t i = 0; i < callee.params.size() && i < call.args.size(); ++i) {
+      if (lhs->kind == Expr::Kind::Ident && callee.params[i].name == lhs->ident) {
+        arg = call.args[i].get();
+        literal = rhs;
+        parameter_on_left = true;
+        break;
+      }
+      if (rhs->kind == Expr::Kind::Ident && callee.params[i].name == rhs->ident) {
+        arg = call.args[i].get();
+        literal = lhs;
+        break;
+      }
+    }
+    if (!arg || !literal || arg->kind != Expr::Kind::IntLit || literal->kind != Expr::Kind::IntLit) {
+      continue;
+    }
+    const std::int64_t left = parameter_on_left ? arg->int_value : literal->int_value;
+    const std::int64_t right = parameter_on_left ? literal->int_value : arg->int_value;
+    const auto holds = compare_literal_numbers(contract.expr->bin_op, left, right);
+    if (holds.has_value() && !*holds) {
+      return true;
+    }
+  }
+  return false;
 }
 
 struct AliasEntry {
@@ -128,6 +260,9 @@ struct Ctx {
     }
     if (a->kind == TyKind::Array) {
       return a->array_size == b->array_size && same_kind(a->elem, b->elem);
+    }
+    if (a->kind == TyKind::Simd) {
+      return a->simd_lanes == b->simd_lanes;
     }
     if (a->kind == TyKind::List || a->kind == TyKind::Dict || a->kind == TyKind::Tuple) {
       if (a->tuple_variadic != b->tuple_variadic) {
@@ -260,9 +395,33 @@ struct Ctx {
     return same_kind(value, expected);
   }
 
+  static void collect_refinement_bounds(const Expr& expr, const std::string& variable,
+                                        std::int64_t& upper_bound) {
+    if (expr.kind == Expr::Kind::BinOp && expr.lhs && expr.rhs) {
+      if (expr.bin_op == BinOp::And) {
+        collect_refinement_bounds(*expr.lhs, variable, upper_bound);
+        collect_refinement_bounds(*expr.rhs, variable, upper_bound);
+        return;
+      }
+      if (expr.bin_op == BinOp::Lt && expr.lhs->kind == Expr::Kind::Ident &&
+          expr.lhs->ident == variable && expr.rhs->kind == Expr::Kind::IntLit) {
+        upper_bound = expr.rhs->int_value;
+      }
+    }
+  }
+
   TyPtr resolve_type_expr(const TypeExpr& te) {
     if (te.kind == TypeKind::Refinement) {
-      return resolve_type_expr(*te.refinement_base);
+      TyPtr base = resolve_type_expr(*te.refinement_base);
+      std::int64_t upper_bound = -1;
+      if (te.refinement_pred) {
+        collect_refinement_bounds(*te.refinement_pred, te.refinement_var, upper_bound);
+      }
+      if (upper_bound >= 0) {
+        base->bounded_index = true;
+        base->array_size = upper_bound;
+      }
+      return base;
     }
     if (te.kind == TypeKind::Callable) {
       auto t = std::make_shared<Ty>();
@@ -297,6 +456,22 @@ struct Ctx {
       return t;
     }
     if (te.kind == TypeKind::TypeApp) {
+      if (te.name == "simd") {
+        if (te.type_args.size() != 1 || te.array_size <= 0) {
+          diags.error(loc(te.span), "simd requires an element type and positive lane count");
+          return make_int();
+        }
+        const TyPtr elem = resolve_type_expr(*te.type_args[0]);
+        if (elem->kind != TyKind::Float) {
+          diags.error(loc(te.span), "simd currently requires f64 elements");
+          return make_int();
+        }
+        if (te.array_size != 4) {
+          diags.error(loc(te.span), "unsupported SIMD lane count");
+          return make_int();
+        }
+        return make_simd(te.array_size);
+      }
       if (te.name == "list" || te.name == "dict" || te.name == "tuple") {
         return resolve_builtin_collection(te);
       }
@@ -501,11 +676,35 @@ struct Ctx {
           (void)type_of(*e.args[2]);
           return make_int();
         }
+        if (e.ident == "__li_simd_splat_f64" && e.args.size() == 1) {
+          (void)type_of(*e.args[0]);
+          return make_simd(4);
+        }
+        if (e.ident == "__li_simd_mul_f64" && e.args.size() == 2) {
+          const TyPtr left = type_of(*e.args[0]);
+          const TyPtr right = type_of(*e.args[1]);
+          if (left->kind != TyKind::Simd || right->kind != TyKind::Simd ||
+              left->simd_lanes != right->simd_lanes) {
+            diags.error(loc(e.span), "SIMD operands must have matching lane types");
+          }
+          return make_simd(4);
+        }
+        if (e.ident == "__li_horiz_sum_f64" && e.args.size() == 1) {
+          const TyPtr arg = type_of(*e.args[0]);
+          if (arg->kind != TyKind::Simd) {
+            diags.error(loc(e.span), "SIMD horizontal sum requires a SIMD value");
+          }
+          return make_float();
+        }
         const auto pit = procs.find(e.ident);
         if (pit != procs.end()) {
           const ProcDecl& callee = *pit->second;
           for (const auto& arg : e.args) {
             (void)type_of(*arg);
+          }
+          if (literal_requires_is_false(callee, e)) {
+            diags.error(loc(e.span),
+                        "E0304: call to '" + callee.name + "' violates its requires clause");
           }
           if (callee.ret_type) {
             return resolve_type_expr(*callee.ret_type);
@@ -540,6 +739,12 @@ struct Ctx {
           const auto i = e.index->int_value;
           if (i < 0 || i >= base->array_size) {
             diags.error(loc(e.span), "array index out of range");
+          }
+        } else if (e.index->kind == Expr::Kind::Ident && base->requires_bounded_index) {
+          const auto index_it = locals.find(e.index->ident);
+          if (index_it == locals.end() || !index_it->second->bounded_index ||
+              index_it->second->array_size > base->array_size) {
+            diags.error(loc(e.span), "array index must be constant or refinement-bounded");
           }
         }
         return base->elem;
@@ -626,6 +831,19 @@ struct Ctx {
     }
     if (s.kind == Stmt::Kind::While) {
       if (s.cond) {
+        // A canonical counted-loop guard proves the loop index is bounded
+        // while the body executes: `while i < N`. Keep this local inference
+        // deliberately narrow; all other dynamic indices still need a
+        // refinement-typed index.
+        if (s.cond->kind == Expr::Kind::BinOp && s.cond->bin_op == BinOp::Lt &&
+            s.cond->lhs && s.cond->rhs && s.cond->lhs->kind == Expr::Kind::Ident &&
+            s.cond->rhs->kind == Expr::Kind::IntLit) {
+          const auto it = locals.find(s.cond->lhs->ident);
+          if (it != locals.end()) {
+            it->second->bounded_index = true;
+            it->second->array_size = s.cond->rhs->int_value;
+          }
+        }
         type_of(*s.cond);
       }
       for (const auto& inner : s.while_body) {
@@ -634,14 +852,20 @@ struct Ctx {
       return;
     }
     if (s.kind == Stmt::Kind::For) {
-      locals[s.for_index] = make_int();
+      auto index_type = make_int();
+      index_type->bounded_index = true;
+      index_type->array_size = s.for_end;
+      locals[s.for_index] = index_type;
       for (const auto& inner : s.for_body) {
         check_stmt(inner);
       }
       return;
     }
     if (s.kind == Stmt::Kind::ParallelFor) {
-      locals[s.par_index] = make_int();
+      auto index_type = make_int();
+      index_type->bounded_index = true;
+      index_type->array_size = s.par_end;
+      locals[s.par_index] = index_type;
       for (const auto& inner : s.par_body) {
         check_stmt(inner);
       }
@@ -696,20 +920,44 @@ struct Ctx {
     if (!has_ensures) {
       diags.error(loc(p.span), "proc missing ensures clause");
     }
+    if (p.ret_type && !is_unit_type(*p.ret_type)) {
+      for (const auto& c : p.contracts) {
+        if (c.kind == ContractKind::Ensures && c.expr && is_false_literal(*c.expr)) {
+          diags.error(loc(c.span), "E0303: `ensures false` is impossible for a value-returning procedure");
+          break;
+        }
+        if (postcondition_is_false_for_literal_return(p, c)) {
+          diags.error(loc(c.span),
+                      "E0303: postcondition is false for the procedure's literal return value");
+          break;
+        }
+        if (!allow_open_vc() && c.kind == ContractKind::Ensures && c.expr &&
+            is_true_literal(*c.expr)) {
+          diags.error(loc(c.span),
+                      "E0303: `ensures true` is not allowed for value-returning procedures; "
+                      "relate `result` to the computation");
+          break;
+        }
+      }
+    }
     std::optional<TyPtr> ret_ty;
     if (p.ret_type) {
       ret_ty = resolve_type_expr(*p.ret_type);
     }
     for (const auto& param : p.params) {
       const TyPtr pt = resolve_type_expr(param.type);
+      if (pt->kind == TyKind::Array && !param.type.is_var) {
+        pt->requires_bounded_index = true;
+      }
       locals[param.name] = pt;
     }
     for (const auto& s : p.body) {
-      if (s.kind == Stmt::Kind::Return && s.expr && ret_ty) {
+      if (s.kind == Stmt::Kind::Return && s.expr) {
         const TyPtr got = type_of(*s.expr);
-        if (!assignable(got, *ret_ty)) {
+        if (ret_ty && !assignable(got, *ret_ty)) {
           diags.error(loc(s.span), "return type mismatch for generic type parameter");
         }
+        continue;
       }
       check_stmt(s);
     }
