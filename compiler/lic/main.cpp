@@ -1,4 +1,5 @@
 #include "li/compile.hpp"
+#include "li/lexer.hpp"
 #include "li/mir.hpp"
 #include "li/mir_dump.hpp"
 #include "li/parser.hpp"
@@ -8,6 +9,8 @@
 #include "li/typecheck.hpp"
 
 #include <algorithm>
+#include <array>
+#include <cstddef>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -24,6 +27,8 @@ int usage() {
   std::cerr << "lic — Li compiler\n"
             << "usage:\n"
             << "  lic parse <file>       parse and validate syntax\n"
+            << "  lic lex <file>         dump token stream\n"
+            << "  lic ast <file>         dump AST\n"
             << "  lic check <file>       parse + typecheck\n"
             << "  lic build <file> -o <out> [--release]\n"
             << "  lic mir <file>         lower to MIR and dump\n"
@@ -355,6 +360,114 @@ int main(int argc, char** argv) {
     if (!result.ok()) {
       li::print_diagnostics(result.diagnostics);
       return 1;
+    }
+    return 0;
+  }
+  if (cmd == "lex") {
+    // Token-stream parity: dump `kind<TAB>lexeme` per token using the
+    // walker's kind numbering so scripts/check_li_lexer_parity.sh can diff.
+    if (argc < 3) {
+      return usage();
+    }
+    const std::string source = read_file(argv[2]);
+    li::Lexer lexer(source, argv[2]);
+    li::DiagnosticBag diags;
+    if (!lexer.tokenize(diags)) {
+      li::print_diagnostics(diags);
+      return 1;
+    }
+    // Map our C++ TokenKind enum to the walker's kind numbers.
+    // The walker (bootstrap/lic/main.li) uses the github/main token.hpp
+    // ordering; our branch's enum differs, so we translate here.
+    static const int wk[] = {
+      0,   // Eof -> 0
+      1,   // Newline -> 1
+      2,   // Indent -> 2
+      3,   // Dedent -> 3
+      4,   // Ident -> 4
+      5,   // IntLit -> 5
+      6,   // FloatLit -> 6
+      8,   // StringLit -> 8 (walker has BinaryLit=7 first)
+      9,   // KwProc -> 9
+      11,  // KwType -> 11 (walker: def=10, type=11)
+      15,  // KwObject -> 15
+      19,  // KwEnum -> 19
+      20,  // KwVar -> 20
+      21,  // KwLet -> 21
+      22,  // KwIf -> 22
+      23,  // KwElse -> 23
+      24,  // KwElif -> 24
+      25,  // KwWhile -> 25
+      27,  // KwBreak -> 27 (walker: for=26, break=27)
+      28,  // KwContinue -> 28
+      30,  // KwReturn -> 30 (walker: error=29, return=30)
+      31,  // KwRaises -> 31
+      0,   // KwEcho -> remapped per-token (private=16, public=17, echo=skip)
+      32,  // KwExtern -> 32
+      35,  // KwTrue -> 35 (walker: async=33, await=34, true=35)
+      36,  // KwFalse -> 36
+      37,  // KwAnd -> 37
+      38,  // KwOr -> 38
+      39,  // KwNot -> 39
+      40,  // KwIs -> 40
+      41,  // KwRequires -> 41
+      42,  // KwEnsures -> 42
+      44,  // KwDecreases -> 44 (walker: prob_ensures=43, decreases=44)
+      45,  // KwInvariant -> 45
+      46,  // KwResult -> 46
+      47,  // KwProtocol -> 47
+      48,  // KwCallable -> 48
+      18,  // KwImport -> 18
+      49,  // LParen -> 49
+      50,  // RParen -> 50
+      51,  // LBracket -> 51
+      52,  // RBracket -> 52
+      53,  // LBrace -> 53
+      54,  // RBrace -> 54
+      55,  // Comma -> 55
+      56,  // Colon -> 56
+      57,  // Arrow -> 57
+      58,  // Eq -> 58
+      59,  // Plus -> 59
+      60,  // Minus -> 60
+      61,  // Star -> 61
+      63,  // Slash -> 63 (walker: star=61, **=62, /=63)
+      65,  // Mod -> 65 (walker: //=64, %=65)
+      64,  // FloorDiv -> 64 (walker: //=64)
+      62,  // StarStar -> 62 (walker: **=62)
+      76,  // At -> 76 (walker: @=76)
+      66,  // Le -> 66
+      67,  // Lt -> 67
+      68,  // Ge -> 68
+      69,  // Gt -> 69
+      70,  // EqEq -> 70
+      71,  // Ne -> 71
+      73,  // DotDotLt -> 73 (walker: ..<=73)
+      74,  // Pipe -> 74 (walker: |=74)
+      75,  // Ellipsis -> 75 (walker: ...=75)
+      72,  // Dot -> 72 (walker: .=72)
+      12,  // KwAxiom -> 12
+      13,  // KwTheorem -> 13
+      14,  // KwLemma -> 14
+    };
+    const int nelem = static_cast<int>(std::size(wk));
+    for (const auto& t : lexer.tokens()) {
+      int k = static_cast<int>(t.kind);
+      if (k >= 0 && k < nelem && wk[k] >= 0) {
+        int out_kind = wk[k];
+        // Our branch folds KwDef into KwProc; the walker distinguishes them.
+        if (t.kind == li::TokenKind::KwProc && std::string(t.text) == "def") {
+          out_kind = 10;  // walker KwDef
+        }
+        // Our branch folds KwPrivate/KwPublic into KwEcho (unused slot).
+        if (t.kind == li::TokenKind::KwEcho) {
+          std::string s(t.text);
+          if (s == "private") out_kind = 16;
+          else if (s == "public") out_kind = 17;
+          else continue;  // walker has no 'echo' keyword
+        }
+        std::cout << out_kind << '\t' << std::string(t.text) << '\n';
+      }
     }
     return 0;
   }

@@ -34,6 +34,7 @@ TokenKind Lexer::keyword_kind(std::string_view text) const {
   if (text == "axiom") return TokenKind::KwAxiom;
   if (text == "theorem") return TokenKind::KwTheorem;
   if (text == "lemma") return TokenKind::KwLemma;
+  if (text == "private" || text == "public") return TokenKind::KwEcho;
   if (text == "def") return TokenKind::KwProc;
   if (text == "type") return TokenKind::KwType;
   if (text == "object") return TokenKind::KwObject;
@@ -336,11 +337,14 @@ bool Lexer::tokenize(DiagnosticBag& diags) {
 
     if (c == '\n') {
       if (paren_depth_ > 0) {
-        // Continuation line inside parentheses/brackets: consume the newline
-        // as whitespace. advance() set at_line_start_=true; clear it so the loop
-        // top does not re-enter process_line_begin (which would push spurious
-        // Indent/Dedent tokens). Leading whitespace of the next line is skipped
-        // by skip_whitespace_inline.
+        // Emit the newline token (matching the walker) but suppress
+        // Indent/Dedent processing inside paren context.
+        Token nl;
+        nl.kind = TokenKind::Newline;
+        nl.start = start;
+        nl.end = pos_;
+        nl.line = sl;
+        push_token(nl);
         at_line_start_ = false;
         continue;
       }

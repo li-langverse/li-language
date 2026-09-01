@@ -1047,11 +1047,12 @@ TypeAlias Parser::parse_type_alias() {
     alias.alias_kind = AliasKind::Object;
     i++;
     skip_newlines();
-    while (at(TokenKind::Ident)) {
+    while (at(TokenKind::Ident) || at(TokenKind::KwEcho)) {
       TypeField field;
       field.public_field = true;
-      if (cur().text == "public" && peek(1).kind == TokenKind::Ident) {
-        field.public_field = true;
+      if (at(TokenKind::KwEcho) && (std::string(cur().text) == "public" || std::string(cur().text) == "private") &&
+          peek(1).kind == TokenKind::Ident) {
+        field.public_field = (std::string(cur().text) == "public");
         i++;
       }
       field.name = std::string(cur().text);
