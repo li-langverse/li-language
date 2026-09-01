@@ -1,0 +1,7 @@
+# Security: an impossible postcondition must be rejected at check time.
+def main() -> int
+  requires true
+  ensures false
+  decreases 0
+=
+  return 0

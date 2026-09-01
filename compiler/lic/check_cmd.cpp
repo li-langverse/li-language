@@ -176,7 +176,7 @@ bool run_frontend_check(const char* path, const std::string& source, Module& out
   }
 
   run_advisory_passes(*parsed.module, path, advisory_opts, diags);
-  auto checked = typecheck_module(*parsed.module);
+  auto checked = typecheck_module(*parsed.module, parsed.module->procs.size());
   for (const auto& d : checked.diagnostics.items()) {
     append_diagnostic(diags, d);
   }

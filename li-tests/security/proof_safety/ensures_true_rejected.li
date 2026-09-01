@@ -1,0 +1,7 @@
+# Security: ensures true on value-returning proc must fail.
+# A postcondition must relate result to the computation; bare true is unsound.
+def main() -> int
+  requires true
+  ensures true
+=
+  return 0

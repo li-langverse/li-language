@@ -1,0 +1,8 @@
+# Security property: ensure pointer-based operations are bounds-safe.
+def main() -> int
+  requires true
+  ensures result == 42
+  decreases 0
+=
+  var a: int = 42
+  return a

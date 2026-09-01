@@ -16,13 +16,11 @@ struct Span {
 struct Expr;
 struct TypeExpr;
 
-enum class Visibility { Public, Private };
-
 struct TypeField {
   std::string name;
   std::unique_ptr<TypeExpr> type;
   bool optional = false;
-  Visibility visibility = Visibility::Public;
+  bool public_field = true;
 };
 
 enum class TypeKind { Named, Array, Refinement, TypeApp, Callable, GenericParam, NamedTuple };
@@ -43,7 +41,7 @@ struct TypeExpr {
   bool tuple_variadic = false;
 };
 
-enum class AliasKind { Type, TypedDict, Enum, Object, Trait };
+enum class AliasKind { Type, TypedDict, Enum, Object };
 
 struct Param {
   Span span;
@@ -51,87 +49,41 @@ struct Param {
   TypeExpr type;
 };
 
-enum class ContractKind { Requires, Ensures, Decreases, Invariant, ProbEnsures };
+enum class ContractKind { Requires, Ensures, Decreases, Invariant };
 
+// Ordering is part of the MIR dump ABI: the self-hosted walker emits these
+// exact binop codes (Le=8, Ge=10, And=14, ...), so Pow/MatMul/Implies must
+// stay in position between FloorDiv and Le.
 enum class BinOp {
-  Add, Sub, Mul, Div, Mod, FloorDiv, Pow, MatMul, Le, Lt, Ge, Gt, Eq, Ne, And, Or, Implies
+  Add, Sub, Mul, Div, Mod, FloorDiv, Pow, MatMul, Le, Lt, Ge, Gt, Eq, Ne, And,
+  Or, Implies
 };
 
 struct Expr {
-  enum class Kind {
-    IntLit,
-    FloatLit,
-    BinaryLit,
-    StringLit,
-    Ident,
-    BinOp,
-    Call,
-    UnaryNot,
-    UnaryMinus,
-    Index,
-    FieldAccess,
-    MethodCall,
-    Await,
-  };
+  enum class Kind { IntLit, FloatLit, StringLit, Ident, BinOp, Call, UnaryNot, UnaryMinus, Index, Await, Field };
   Kind kind = Kind::IntLit;
   Span span;
   std::int64_t int_value = 0;
   double float_value = 0.0;
   std::string ident;
   std::string str_value;
-  /// Literal suffix (`f32`, `i32`, `u`, …) when present on numeric literals.
-  std::string lit_suffix;
   BinOp bin_op = BinOp::Add;
   std::unique_ptr<Expr> lhs;
   std::unique_ptr<Expr> rhs;
   std::unique_ptr<Expr> operand;
   std::unique_ptr<Expr> base;
   std::unique_ptr<Expr> index;
-  std::string field_name;
   std::vector<std::unique_ptr<Expr>> args;
-};
-
-struct ImportDecl {
-  Span span;
-  std::string module;
-  std::string alias;
 };
 
 struct Contract {
   ContractKind kind;
   Span span;
   std::unique_ptr<Expr> expr;
-  /// Monte Carlo hypothesis for `prob_ensures` (e.g. OsRngUniform).
-  std::string prob_given;
-  /// MC trial count; 0 = use `lic build --prob-check` default.
-  std::int64_t prob_samples = 0;
-};
-
-struct DecoratorArg {
-  std::string name;
-  std::unique_ptr<Expr> value;
-};
-
-struct Decorator {
-  Span span;
-  std::string name;
-  std::vector<DecoratorArg> args;
 };
 
 struct Stmt {
-  enum class Kind {
-    Return,
-    If,
-    While,
-    For,
-    ParallelFor,
-    Break,
-    Continue,
-    Expr,
-    VarDecl,
-    Borrow,
-    Assign,
-  };
+  enum class Kind { Return, If, While, Expr, VarDecl, Borrow, Assign, Break, Continue, ParallelFor, For };
   Kind kind = Kind::Return;
   Span span;
   std::unique_ptr<Expr> expr;
@@ -143,42 +95,50 @@ struct Stmt {
   TypeExpr var_type;
   std::unique_ptr<Expr> init;
   bool borrow_mut = false;
-  // for i in start..<end  (serial)
-  std::string for_iter;
-  std::int64_t for_start = 0;
-  std::int64_t for_end = 0;
-  std::vector<Contract> for_contracts;
-  std::vector<Stmt> for_body;
-  // parallel for i in start..<end
-  std::string par_iter;
+  // ParallelFor: `parallel for <par_index> in <par_start>..<<par_end>` with
+  // the body in par_body (walker lowers it into a synthetic __li_par_* fn).
+  std::string par_index;
   std::int64_t par_start = 0;
   std::int64_t par_end = 0;
-  std::vector<Contract> par_contracts;
   std::vector<Stmt> par_body;
-  std::vector<Decorator> decorators;
+  // For: `for <for_index> in <for_start>..<<for_end>` with the body in
+  // for_body. `for_vectorized`/`for_lanes` come from a statement-level
+  // `@vectorized(lanes=N)` decorator directly above the for (walker gates
+  // ArraySimdScope INS 49 enter/exit on ftmp 4095).
+  std::string for_index;
+  std::int64_t for_start = 0;
+  std::int64_t for_end = 0;
+  std::vector<Stmt> for_body;
+  bool for_vectorized = false;
+  std::int64_t for_lanes = 0;
 };
 
-struct ErrorDecl {
-  Span span;
+// One `@name` / `@name(args)` line in a decorator list attached to a def.
+struct Decorator {
   std::string name;
-  std::string message_template;
+  std::int64_t lanes = 0;
+  bool vectorized = false;
+  bool no_vectorize = false;
+  bool parallel = false;
+  bool disjoint = false;
+  bool cpu = false;
+  bool is_async = false;
 };
 
 struct ProcDecl {
   Span span;
   std::string name;
-  Visibility visibility = Visibility::Public;
   bool is_extern = false;
-  bool is_async = false;
-  std::vector<Decorator> decorators;
   std::vector<std::string> type_params;
-  /// Parallel to `type_params` — trait name after `:` (e.g. `def f[T: Hash]`).
-  std::vector<std::string> type_param_bounds;
   std::vector<Param> params;
   std::optional<TypeExpr> ret_type;
   std::vector<std::string> raises;
   std::vector<Contract> contracts;
   std::vector<Stmt> body;
+  std::vector<Decorator> decorators;
+  /** `async def` keyword (bare form): sets the FN async bit but, unlike the
+   *  @async decorator, emits no DEC line. */
+  bool is_async = false;
 };
 
 struct TypeAlias {
@@ -186,35 +146,22 @@ struct TypeAlias {
   std::string name;
   std::vector<std::string> type_params;
   AliasKind alias_kind = AliasKind::Type;
-  /// For `type Derived = object of Base` — nominal supertype (static subtyping only).
-  std::string base_object;
   TypeExpr definition;
   std::vector<TypeField> fields;
   std::vector<std::string> enum_variants;
-  /// Required method signatures for `type Name = trait` (bodies empty).
-  std::vector<ProcDecl> trait_methods;
 };
 
-/// A math axiom or theorem declared in Li source (proof-db layer).
-///
-/// `axiom`   — trusted declaration, no proof (tiny trusted base).
-/// `theorem`/`lemma` — a proposition that lic must discharge (Layer 2+);
-/// the proposition is a bool expression over `params`; `->` is implication.
-struct TheoremDecl {
+struct ImportDecl {
   Span span;
-  std::string name;
-  bool is_axiom = false;
-  bool is_lemma = false;
-  std::vector<Param> params;
-  std::unique_ptr<Expr> proposition;
+  std::string module;
+  std::string alias;
+  bool has_alias = false;
 };
 
 struct Module {
-  std::vector<ImportDecl> imports;
   std::vector<TypeAlias> types;
-  std::vector<ErrorDecl> errors;
   std::vector<ProcDecl> procs;
-  std::vector<TheoremDecl> theorems;
+  std::vector<ImportDecl> imports;
 };
 
 std::string debug_expr(const Expr& e, int indent = 0);

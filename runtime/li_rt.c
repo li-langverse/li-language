@@ -190,9 +190,35 @@ void li_rt_preg_clear(void) {
 
 #define LI_RT_IMPORT_PATH_MAX 32
 static const char* li_rt_import_paths[LI_RT_IMPORT_PATH_MAX];
+static const char* li_rt_import_contents[LI_RT_IMPORT_PATH_MAX];
 static int         li_rt_import_path_count = 0;
+static int         li_rt_import_content_count = 0;
 
-void li_rt_import_paths_clear(void) { li_rt_import_path_count = 0; }
+void li_rt_import_paths_clear(void) {
+  li_rt_import_path_count = 0;
+  li_rt_import_content_count = 0;
+}
+
+void li_rt_import_content_store(const char* content) {
+  if (content != NULL && li_rt_import_content_count < LI_RT_IMPORT_PATH_MAX) {
+    li_rt_import_contents[li_rt_import_content_count++] = content;
+  }
+}
+
+const char* li_rt_import_content_get(int idx) {
+  if (idx < 0 || idx >= li_rt_import_content_count) return NULL;
+  return li_rt_import_contents[idx];
+}
+
+void li_rt_import_content_insert(int idx, const char* content) {
+  if (content == NULL || idx < 0 || idx > li_rt_import_content_count ||
+      li_rt_import_content_count >= LI_RT_IMPORT_PATH_MAX) return;
+  for (int i = li_rt_import_content_count; i > idx; --i) {
+    li_rt_import_contents[i] = li_rt_import_contents[i - 1];
+  }
+  li_rt_import_contents[idx] = content;
+  li_rt_import_content_count++;
+}
 
 /* Store a resolved path at the next index. Called after each successful
  * li_rt_resolve_import in the Li walker. */
@@ -205,6 +231,21 @@ void li_rt_import_path_store(const char* path) {
     li_rt_import_paths[li_rt_import_path_count] = dup;
     li_rt_import_path_count++;
   }
+}
+
+/* Insert a canonical path at `idx`, preserving the order of the content
+ * pointer queue maintained by the self-hosted walker. */
+void li_rt_import_path_insert(int idx, const char* path) {
+  if (path == NULL || idx < 0 || idx > li_rt_import_path_count ||
+      li_rt_import_path_count >= LI_RT_IMPORT_PATH_MAX) return;
+  for (int i = li_rt_import_path_count; i > idx; --i) {
+    li_rt_import_paths[i] = li_rt_import_paths[i - 1];
+  }
+  size_t len = strlen(path);
+  char* dup = (char*)malloc(len + 1);
+  if (dup) { memcpy(dup, path, len + 1); }
+  li_rt_import_paths[idx] = dup;
+  li_rt_import_path_count++;
 }
 
 /* Retrieve the stored path for import index `idx`. Returns NULL if out of range. */
@@ -697,7 +738,122 @@ int32_t li_rt_mir_synth_name_add(const char* text) {
   return li_rt_mir_objname_add(text, 0, -1, 0, 0);
 }
 
+/* Create a nested objname: parent printed name + "_" + field text.
+ * Returns a synthesized entry (be < 0) printed verbatim by objname_out. */
+int32_t li_rt_mir_objname_add_nested(int32_t parent_idx, const char* text,
+                                     int32_t fs, int32_t fe) {
+  if (parent_idx < 0 || parent_idx >= li_rt_objname_n) {
+    return li_rt_mir_objname_add(text, 0, -1, 0, 0);
+  }
+  /* Build: __li_o_<base>_<field>_<new_field> by printing parent + "_" + field */
+  char buf[1024];
+  int off = 0;
+  /* Print parent as it would appear */
+  if (li_rt_objname_be[parent_idx] < 0) {
+    /* Synthesized parent: just copy its text */
+    const char* pt = li_rt_objname_text[parent_idx];
+    while (*pt && off < (int)sizeof(buf) - 256) buf[off++] = *pt++;
+  } else {
+    /* Normal parent: __li_o_<base>_<field> */
+    const char* prefix = "__li_o_";
+    for (const char* p = prefix; *p; p++) buf[off++] = *p;
+    const char* src = li_rt_objname_text[parent_idx];
+    for (int i = li_rt_objname_bs[parent_idx]; i < li_rt_objname_be[parent_idx]; i++) {
+      buf[off++] = src[i];
+    }
+    buf[off++] = '_';
+    for (int i = li_rt_objname_fs[parent_idx]; i < li_rt_objname_fe[parent_idx]; i++) {
+      buf[off++] = src[i];
+    }
+  }
+  buf[off++] = '_';
+  /* Append new field text */
+  for (int i = fs; i < fe && off < (int)sizeof(buf) - 1; i++) {
+    buf[off++] = text[i];
+  }
+  buf[off] = '\0';
+  return li_rt_mir_synth_name_add(strdup(buf));
+}
+
 void li_rt_mir_objname_clear(void) { li_rt_objname_n = 0; }
+
+/* Register a compound prefix for objname recursive copy: builds
+ * __li_o_<base>_<field> or __li_o___cr<N>_<field> as a synth entry.
+ * src_is_cr=1 uses __li_o___cr<crid> prefix, otherwise __li_o_<base> prefix. */
+int32_t li_rt_mir_objname_reg_prefix(const char* text, int32_t base_s, int32_t base_e,
+                                     int32_t fs, int32_t fe,
+                                     int32_t src_is_cr, int32_t crid,
+                                     const char* fsrc) {
+  char buf[1024];
+  int off = 0;
+  if (src_is_cr == 1) {
+    const char* prefix = "__li_o___cr";
+    for (const char* p = prefix; *p; p++) buf[off++] = *p;
+    /* Append crid as decimal */
+    char tmp[16]; int tn = 0;
+    int v = crid;
+    if (v == 0) { tmp[tn++] = '0'; } else {
+      while (v > 0) { tmp[tn++] = '0' + v % 10; v /= 10; }
+    }
+    for (int i = tn - 1; i >= 0; i--) buf[off++] = tmp[i];
+  } else if (src_is_cr == 3) {
+    const char* prefix = "__li_o_wb";
+    for (const char* p = prefix; *p; p++) buf[off++] = *p;
+    char tmp[16]; int tn = 0;
+    int v = crid;
+    if (v == 0) { tmp[tn++] = '0'; } else {
+      while (v > 0) { tmp[tn++] = '0' + v % 10; v /= 10; }
+    }
+    for (int i = tn - 1; i >= 0; i--) buf[off++] = tmp[i];
+  } else {
+    const char* prefix = "__li_o_";
+    for (const char* p = prefix; *p; p++) buf[off++] = *p;
+    for (int i = base_s; i < base_e; i++) buf[off++] = text[i];
+  }
+  buf[off++] = '_';
+  const char* ftext = (fsrc != NULL) ? fsrc : text;
+  for (int i = fs; i < fe; i++) buf[off++] = ftext[i];
+  buf[off] = '\0';
+  return li_rt_mir_synth_name_add(strdup(buf));
+}
+
+#define LI_RT_FIELDPATH_MAX 1024
+static int32_t li_rt_fieldpath_parent[LI_RT_FIELDPATH_MAX];
+static const char* li_rt_fieldpath_text[LI_RT_FIELDPATH_MAX];
+static int32_t li_rt_fieldpath_s[LI_RT_FIELDPATH_MAX];
+static int32_t li_rt_fieldpath_e[LI_RT_FIELDPATH_MAX];
+static int32_t li_rt_fieldpath_n = 1;
+
+int32_t li_rt_mir_fieldpath_add(int32_t parent, const char* text, int32_t s, int32_t e) {
+  if (parent < 0 || parent >= li_rt_fieldpath_n || text == NULL || e <= s) return 0;
+  if (li_rt_fieldpath_n >= LI_RT_FIELDPATH_MAX) return 0;
+  const int32_t idx = li_rt_fieldpath_n++;
+  li_rt_fieldpath_parent[idx] = parent;
+  li_rt_fieldpath_text[idx] = text;
+  li_rt_fieldpath_s[idx] = s;
+  li_rt_fieldpath_e[idx] = e;
+  return idx;
+}
+
+int32_t li_rt_mir_fieldpath_out(int32_t idx) {
+  if (idx <= 0 || idx >= li_rt_fieldpath_n) return 0;
+  int32_t chain[64];
+  int32_t n = 0;
+  int32_t cur = idx;
+  while (cur > 0 && cur < li_rt_fieldpath_n && n < 64) {
+    chain[n++] = cur;
+    cur = li_rt_fieldpath_parent[cur];
+  }
+  for (int32_t i = n - 1; i >= 0; --i) {
+    if (i != n - 1) fputc('_', stdout);
+    li_rt_mir_esc(li_rt_fieldpath_text[chain[i]], li_rt_fieldpath_s[chain[i]],
+                  li_rt_fieldpath_e[chain[i]]);
+  }
+  return 0;
+}
+
+
+
 
 /* Proc-name registry for cross-file call resolution.
  * Stores one NUL-terminated name per proc ID (max 128 procs, 63 chars each).

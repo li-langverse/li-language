@@ -1,7 +1,6 @@
 #include "li/borrowck.hpp"
 
-#include "li/error_codes.hpp"
-
+#include <algorithm>
 #include <map>
 #include <set>
 #include <string>
@@ -33,15 +32,11 @@ struct BorrowCtx {
       return;
     }
     if (it->second.moved) {
-      diag_error(diags, loc(span), ErrorCode::E0311,
-                 "Variable `" + name + "` was moved and cannot be used again.",
-                 "Use the new owner, or borrow before the move if you need shared access.");
+      diags.error(loc(span), "use after move of `" + name + "`");
       return;
     }
     if (it->second.mut_borrows > 0) {
-      diag_error(diags, loc(span), ErrorCode::E0310,
-                 "Cannot read `" + name + "` while a mutable borrow is still active.",
-                 "End the `borrow mut` scope (or drop the binding) before using the value.");
+      diags.error(loc(span), "cannot use `" + name + "` while mut borrow is active");
     }
   }
 
@@ -66,16 +61,6 @@ struct BorrowCtx {
         }
         check_call_moves(e);
         break;
-      case Expr::Kind::MethodCall:
-        if (e.base) {
-          check_expr_uses(*e.base);
-        }
-        for (const auto& arg : e.args) {
-          if (arg) {
-            check_expr_uses(*arg);
-          }
-        }
-        break;
       case Expr::Kind::Index:
         if (e.base) {
           check_expr_uses(*e.base);
@@ -89,16 +74,6 @@ struct BorrowCtx {
           check_expr_uses(*e.operand);
         }
         break;
-      case Expr::Kind::UnaryMinus:
-        if (e.operand) {
-          check_expr_uses(*e.operand);
-        }
-        break;
-      case Expr::Kind::Await:
-        if (e.operand) {
-          check_expr_uses(*e.operand);
-        }
-        break;
       default:
         break;
     }
@@ -106,20 +81,23 @@ struct BorrowCtx {
 
   bool param_is_var(const TypeExpr& ty) { return ty.is_var; }
 
-  // Scalars (int/float/i64/bool/…) are copied by value in the ABI, so passing
-  // one to a non-`var` param does not move the caller's binding. Only array and
-  // object params carry ownership; `var` params are by-reference either way.
-  bool scalar_param_type(const TypeExpr& ty) {
+  // Scalar values (int/float/bool/ptr/int64/str/unit and refinements of them)
+  // are copied when passed by value; only non-scalar heap values (arrays,
+  // objects, lists, dicts) are moved, per Li's copy/move semantics.
+  bool param_is_scalar(const TypeExpr& ty) {
     if (ty.kind == TypeKind::Refinement) {
-      return ty.refinement_base ? scalar_param_type(*ty.refinement_base) : false;
+      if (ty.refinement_base) {
+        return param_is_scalar(*ty.refinement_base);
+      }
+      return true;
     }
-    if (ty.kind == TypeKind::Named) {
-      return ty.name == "int" || ty.name == "float" || ty.name == "i64" ||
-             ty.name == "int64" || ty.name == "bool" || ty.name == "f32" ||
-             ty.name == "f64" || ty.name == "u32" || ty.name == "u64" ||
-             ty.name == "unit";
+    if (ty.kind != TypeKind::Named) {
+      return false;
     }
-    return false;
+    return ty.name == "int" || ty.name == "int64" || ty.name == "i64" ||
+           ty.name == "long" || ty.name == "float" || ty.name == "float64" ||
+           ty.name == "f64" || ty.name == "bool" || ty.name == "ptr" ||
+           ty.name == "str" || ty.name == "unit";
   }
 
   void check_call_moves(const Expr& call) {
@@ -132,7 +110,11 @@ struct BorrowCtx {
       if (!call.args[n] || call.args[n]->kind != Expr::Kind::Ident) {
         continue;
       }
-      if (param_is_var(callee.params[n].type) || scalar_param_type(callee.params[n].type)) {
+      if (param_is_var(callee.params[n].type)) {
+        continue;
+      }
+      // Scalars are copied, not moved, on by-value call.
+      if (param_is_scalar(callee.params[n].type)) {
         continue;
       }
       const std::string& name = call.args[n]->ident;
@@ -153,17 +135,12 @@ struct BorrowCtx {
     auto& state = locals[src];
     if (s.borrow_mut) {
       if (state.mut_borrows > 0 || state.imm_borrows > 0) {
-        diag_error(diags, loc(s.span), ErrorCode::E0310,
-                   "Cannot take `borrow mut` of `" + src +
-                       "` while another borrow is still active.",
-                   "Wait until existing `borrow` / `borrow mut` bindings go out of scope.");
+        diags.error(loc(s.span), "cannot borrow mut while existing borrow of `" + src + "` is active");
       }
       state.mut_borrows++;
     } else {
       if (state.mut_borrows > 0) {
-        diag_error(diags, loc(s.span), ErrorCode::E0310,
-                   "Cannot take `borrow imm` of `" + src + "` while a mutable borrow is active.",
-                   "Release the `borrow mut` binding first.");
+        diags.error(loc(s.span), "cannot borrow imm while mut borrow of `" + src + "` is active");
       }
       state.imm_borrows++;
     }
@@ -236,11 +213,6 @@ struct BorrowCtx {
 };
 
 bool type_mentions_heap(const TypeExpr& te) {
-  if (te.kind == TypeKind::Named &&
-      (te.name == "str" || te.name == "bytes" || te.name == "stringview" ||
-       te.name == "Bytes" || te.name == "StringView")) {
-    return true;
-  }
   if (te.kind == TypeKind::TypeApp &&
       (te.name == "list" || te.name == "dict" || te.name == "set")) {
     return true;
@@ -256,130 +228,88 @@ bool type_mentions_heap(const TypeExpr& te) {
   return false;
 }
 
-bool stmt_mentions_print(const Stmt& s) {
-  if (s.expr) {
-    if (s.expr->kind == Expr::Kind::Call && s.expr->ident == "print") {
+bool expr_mentions_io(const Expr& e,
+                       const std::map<std::string, const ProcDecl*>& proc_map) {
+  if (e.kind == Expr::Kind::Call) {
+    const bool builtin_output =
+        (e.ident == "echo" || e.ident == "print") && proc_map.count(e.ident) == 0;
+    if (builtin_output) {
       return true;
     }
-    if (s.expr->kind == Expr::Kind::Ident && s.expr->ident == "print") {
-      return true;
-    }
-  }
-  if (s.kind == Stmt::Kind::If) {
-    for (const auto& inner : s.then_body) {
-      if (stmt_mentions_print(inner)) {
+    for (const auto& arg : e.args) {
+      if (arg && expr_mentions_io(*arg, proc_map)) {
         return true;
       }
     }
+    return false;
+  }
+  if (e.lhs && expr_mentions_io(*e.lhs, proc_map)) {
+    return true;
+  }
+  if (e.rhs && expr_mentions_io(*e.rhs, proc_map)) {
+    return true;
+  }
+  if (e.operand && expr_mentions_io(*e.operand, proc_map)) {
+    return true;
+  }
+  if (e.base && expr_mentions_io(*e.base, proc_map)) {
+    return true;
+  }
+  if (e.index && expr_mentions_io(*e.index, proc_map)) {
+    return true;
   }
   return false;
 }
 
-bool proc_mentions_print(const ProcDecl& p) {
-  for (const auto& s : p.body) {
-    if (stmt_mentions_print(s)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-bool proc_has_decorator(const ProcDecl& p, const std::string& name) {
-  for (const auto& d : p.decorators) {
-    if (d.name == name) {
-      return true;
-    }
-  }
-  return false;
-}
-
-bool proc_is_async(const ProcDecl& p) {
-  return p.is_async || proc_has_decorator(p, "async");
-}
-
-bool expr_has_await(const Expr& e) {
-  if (e.kind == Expr::Kind::Await) {
+bool stmt_mentions_io(const Stmt& s,
+                      const std::map<std::string, const ProcDecl*>& proc_map) {
+  if (s.expr && expr_mentions_io(*s.expr, proc_map)) {
     return true;
   }
-  switch (e.kind) {
-    case Expr::Kind::BinOp:
-      return (e.lhs && expr_has_await(*e.lhs)) || (e.rhs && expr_has_await(*e.rhs));
-    case Expr::Kind::Call:
-      for (const auto& arg : e.args) {
-        if (arg && expr_has_await(*arg)) {
-          return true;
-        }
-      }
-      return false;
-    case Expr::Kind::MethodCall:
-      if (e.base && expr_has_await(*e.base)) {
-        return true;
-      }
-      for (const auto& arg : e.args) {
-        if (arg && expr_has_await(*arg)) {
-          return true;
-        }
-      }
-      return false;
-    case Expr::Kind::UnaryNot:
-      return e.operand && expr_has_await(*e.operand);
-    case Expr::Kind::UnaryMinus:
-      return e.operand && expr_has_await(*e.operand);
-    case Expr::Kind::Index:
-      return (e.base && expr_has_await(*e.base)) || (e.index && expr_has_await(*e.index));
-    case Expr::Kind::FieldAccess:
-      return e.base && expr_has_await(*e.base);
-    default:
-      return false;
-  }
-}
-
-bool stmt_has_await(const Stmt& s) {
-  if (s.expr && expr_has_await(*s.expr)) {
+  if (s.cond && expr_mentions_io(*s.cond, proc_map)) {
     return true;
   }
-  if (s.init && expr_has_await(*s.init)) {
+  if (s.init && expr_mentions_io(*s.init, proc_map)) {
     return true;
   }
-  if (s.cond && expr_has_await(*s.cond)) {
-    return true;
-  }
-  for (const auto& child : s.then_body) {
-    if (stmt_has_await(child)) {
+  for (const auto& inner : s.then_body) {
+    if (stmt_mentions_io(inner, proc_map)) {
       return true;
     }
   }
   if (s.else_body) {
-    for (const auto& child : *s.else_body) {
-      if (stmt_has_await(child)) {
+    for (const auto& inner : *s.else_body) {
+      if (stmt_mentions_io(inner, proc_map)) {
         return true;
       }
     }
   }
-  for (const auto& child : s.while_body) {
-    if (stmt_has_await(child)) {
+  for (const auto& inner : s.while_body) {
+    if (stmt_mentions_io(inner, proc_map)) {
       return true;
     }
   }
-  for (const auto& child : s.for_body) {
-    if (stmt_has_await(child)) {
+  for (const auto& inner : s.for_body) {
+    if (stmt_mentions_io(inner, proc_map)) {
       return true;
     }
   }
-  for (const auto& child : s.par_body) {
-    if (stmt_has_await(child)) {
+  for (const auto& inner : s.par_body) {
+    if (stmt_mentions_io(inner, proc_map)) {
       return true;
     }
   }
   return false;
 }
 
-void collect_calls(const ProcDecl& p, std::vector<std::string>& out) {
+bool proc_mentions_io(const ProcDecl& p,
+                      const std::map<std::string, const ProcDecl*>& proc_map) {
   for (const auto& s : p.body) {
-    if (s.expr && s.expr->kind == Expr::Kind::Call) {
-      out.push_back(s.expr->ident);
+    if (stmt_mentions_io(s, proc_map)) {
+      return true;
     }
   }
+  return false;
 }
 
 bool proc_mentions_heap(const ProcDecl& p) {
@@ -410,34 +340,30 @@ bool has_effect(const std::vector<std::string>& raises, const std::string& name)
 
 }  // namespace
 
-void borrow_check_module(const Module& module, DiagnosticBag& diags) {
+void borrow_check_module(const Module& module, DiagnosticBag& diags,
+                         std::size_t main_proc_count) {
   std::map<std::string, const ProcDecl*> proc_map;
   for (const auto& proc : module.procs) {
     proc_map[proc.name] = &proc;
   }
   BorrowCtx ctx{ {}, {}, {}, proc_map, diags, "module" };
-  for (const auto& proc : module.procs) {
-    ctx.check_proc(proc);
+  // Only the main module's own proc bodies are borrow-checked; imported procs
+  // are in scope (proc_map) for call resolution but are lowered without a
+  // borrow-check pass (see typecheck_module).
+  const std::size_t check_count = std::min(main_proc_count, module.procs.size());
+  for (std::size_t n = 0; n < check_count; ++n) {
+    ctx.check_proc(module.procs[n]);
   }
-}
-
-bool extern_call_skips_io_effect(const std::string& callee) {
-  if (callee == "li_rt_volatile_sink_f64") {
-    return true;
-  }
-  if (callee.rfind("li_reduce_sum_", 0) == 0) {
-    return true;
-  }
-  return false;
 }
 
 bool proc_mentions_extern_call(const ProcDecl& p,
                                const std::map<std::string, const ProcDecl*>& proc_map) {
   for (const auto& s : p.body) {
-    if (s.expr && s.expr->kind == Expr::Kind::Call && s.expr->ident != "print") {
+    if (s.expr && s.expr->kind == Expr::Kind::Call &&
+        s.expr->ident != "echo" &&
+        (s.expr->ident != "print" || proc_map.find("print") != proc_map.end())) {
       const auto it = proc_map.find(s.expr->ident);
-      if (it != proc_map.end() && it->second->is_extern &&
-          !extern_call_skips_io_effect(s.expr->ident)) {
+      if (it != proc_map.end() && it->second->is_extern) {
         return true;
       }
     }
@@ -445,56 +371,29 @@ bool proc_mentions_extern_call(const ProcDecl& p,
   return false;
 }
 
-void effects_check_module(const Module& module, DiagnosticBag& diags) {
+void effects_check_module(const Module& module, DiagnosticBag& diags,
+                          std::size_t main_proc_count) {
   std::map<std::string, const ProcDecl*> proc_map;
   for (const auto& proc : module.procs) {
     proc_map[proc.name] = &proc;
   }
-  for (const auto& proc : module.procs) {
+  // Only the main module's own proc bodies are effects-checked; imported procs
+  // are in scope (proc_map) but are lowered without an effects-check pass.
+  const std::size_t check_count = std::min(main_proc_count, module.procs.size());
+  for (std::size_t n = 0; n < check_count; ++n) {
+    const ProcDecl& proc = module.procs[n];
     if (proc.is_extern) {
       continue;
     }
     const SourceLoc loc{ "module", 1, 1, proc.span.start };
-    if (proc_mentions_print(proc) && !has_effect(proc.raises, "IO")) {
-      diags.error(loc, "proc calls print but does not declare raises IO");
+    if (proc_mentions_io(proc, proc_map) && !has_effect(proc.raises, "IO")) {
+      diags.error(loc, "proc calls echo or print but does not declare raises IO");
     }
     if (proc_mentions_extern_call(proc, proc_map) && !has_effect(proc.raises, "IO")) {
       diags.error(loc, "proc calls extern but does not declare raises IO");
     }
     if (proc_mentions_heap(proc) && !has_effect(proc.raises, "Alloc")) {
       diags.error(loc, "proc uses heap type but does not declare raises Alloc");
-    }
-  }
-  for (const auto& proc : module.procs) {
-    if (proc.is_extern) {
-      continue;
-    }
-    const SourceLoc loc{"module", 1, 1, proc.span.start};
-    if (proc_is_async(proc) && !has_effect(proc.raises, "Async")) {
-      diags.error(loc, "async proc does not declare raises Async");
-    }
-    for (const auto& s : proc.body) {
-      if (stmt_has_await(s) && !proc_is_async(proc)) {
-        diags.error(loc, "await is only allowed in async proc");
-        break;
-      }
-    }
-    std::vector<std::string> calls;
-    collect_calls(proc, calls);
-    for (const std::string& callee_name : calls) {
-      const auto it = proc_map.find(callee_name);
-      if (it == proc_map.end()) {
-        continue;
-      }
-      const ProcDecl& callee = *it->second;
-      if (has_effect(callee.raises, "Net") && !has_effect(proc.raises, "Net")) {
-        diags.error(loc, "proc calls `" + callee_name +
-                             "` which raises Net but caller does not declare raises Net");
-      }
-      if (has_effect(callee.raises, "Async") && !has_effect(proc.raises, "Async")) {
-        diags.error(loc, "proc calls `" + callee_name +
-                             "` which raises Async but caller does not declare raises Async");
-      }
     }
   }
 }

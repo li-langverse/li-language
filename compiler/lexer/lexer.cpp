@@ -30,15 +30,13 @@ char Lexer::advance() {
 void Lexer::push_token(Token t) { tokens_.push_back(std::move(t)); }
 
 TokenKind Lexer::keyword_kind(std::string_view text) const {
-  if (text == "proc") return TokenKind::KwProc;
-  if (text == "def") return TokenKind::KwDef;
-  if (text == "type") return TokenKind::KwType;
+  if (text == "import") return TokenKind::KwImport;
   if (text == "axiom") return TokenKind::KwAxiom;
   if (text == "theorem") return TokenKind::KwTheorem;
   if (text == "lemma") return TokenKind::KwLemma;
-  if (text == "private") return TokenKind::KwPrivate;
-  if (text == "public") return TokenKind::KwPublic;
-  if (text == "import") return TokenKind::KwImport;
+  if (text == "private" || text == "public") return TokenKind::KwEcho;
+  if (text == "def") return TokenKind::KwProc;
+  if (text == "type") return TokenKind::KwType;
   if (text == "object") return TokenKind::KwObject;
   if (text == "enum") return TokenKind::KwEnum;
   if (text == "var") return TokenKind::KwVar;
@@ -47,15 +45,12 @@ TokenKind Lexer::keyword_kind(std::string_view text) const {
   if (text == "else") return TokenKind::KwElse;
   if (text == "elif") return TokenKind::KwElif;
   if (text == "while") return TokenKind::KwWhile;
-  if (text == "for") return TokenKind::KwFor;
   if (text == "break") return TokenKind::KwBreak;
   if (text == "continue") return TokenKind::KwContinue;
-  if (text == "error") return TokenKind::KwError;
   if (text == "return") return TokenKind::KwReturn;
   if (text == "raises") return TokenKind::KwRaises;
+  if (text == "echo") return TokenKind::KwEcho;
   if (text == "extern") return TokenKind::KwExtern;
-  if (text == "async") return TokenKind::KwAsync;
-  if (text == "await") return TokenKind::KwAwait;
   if (text == "true") return TokenKind::KwTrue;
   if (text == "false") return TokenKind::KwFalse;
   if (text == "and") return TokenKind::KwAnd;
@@ -64,7 +59,6 @@ TokenKind Lexer::keyword_kind(std::string_view text) const {
   if (text == "is") return TokenKind::KwIs;
   if (text == "requires") return TokenKind::KwRequires;
   if (text == "ensures") return TokenKind::KwEnsures;
-  if (text == "prob_ensures") return TokenKind::KwProbEnsures;
   if (text == "decreases") return TokenKind::KwDecreases;
   if (text == "invariant") return TokenKind::KwInvariant;
   if (text == "result") return TokenKind::KwResult;
@@ -257,69 +251,6 @@ bool Lexer::lex_number(Token& out, bool is_float_start) {
     out.kind = TokenKind::IntLit;
     out.int_value = int_value;
   }
-  lex_literal_suffix(out, is_float);
-  return true;
-}
-
-void Lexer::lex_literal_suffix(Token& out, const bool is_float) {
-  if (at_end()) {
-    return;
-  }
-  if (!is_float && peek() == 'u') {
-    const std::size_t u_pos = pos_;
-    advance();
-    if (at_end() || !(std::isalnum(static_cast<unsigned char>(peek())) || peek() == '_')) {
-      out.lit_suffix = "u";
-      return;
-    }
-    pos_ = u_pos;
-  }
-  if (!(std::isalpha(static_cast<unsigned char>(peek())) || peek() == '_')) {
-    return;
-  }
-  const std::size_t suffix_start = pos_;
-  while (!at_end()) {
-    const char ch = peek();
-    if (std::isalnum(static_cast<unsigned char>(ch)) || ch == '_') {
-      advance();
-    } else {
-      break;
-    }
-  }
-  if (pos_ > suffix_start) {
-    out.lit_suffix =
-        std::string(std::string_view(source_).substr(suffix_start, pos_ - suffix_start));
-  }
-}
-
-bool Lexer::lex_binary_literal(Token& out) {
-  const std::size_t start = pos_;
-  const std::size_t sl = line_;
-  const std::size_t sc = column_;
-  advance();
-  if (!at_end() && peek() == 'b') {
-    advance();
-  } else {
-    return false;
-  }
-  const std::size_t bits_start = pos_;
-  while (!at_end() && (peek() == '0' || peek() == '1')) {
-    advance();
-  }
-  if (pos_ == bits_start) {
-    return false;
-  }
-  out.start = start;
-  out.end = pos_;
-  out.line = sl;
-  out.column = sc;
-  out.kind = TokenKind::BinaryLit;
-  out.text = std::string_view(source_).substr(bits_start, pos_ - bits_start);
-  out.int_value = 0;
-  for (const char bit : out.text) {
-    out.int_value = (out.int_value << 1) + (bit == '1' ? 1 : 0);
-  }
-  out.lit_suffix.clear();
   return true;
 }
 
@@ -405,6 +336,18 @@ bool Lexer::tokenize(DiagnosticBag& diags) {
     const char c = advance();
 
     if (c == '\n') {
+      if (paren_depth_ > 0) {
+        // Emit the newline token (matching the walker) but suppress
+        // Indent/Dedent processing inside paren context.
+        Token nl;
+        nl.kind = TokenKind::Newline;
+        nl.start = start;
+        nl.end = pos_;
+        nl.line = sl;
+        push_token(nl);
+        at_line_start_ = false;
+        continue;
+      }
       Token nl;
       nl.kind = TokenKind::Newline;
       nl.start = start;
@@ -427,10 +370,10 @@ bool Lexer::tokenize(DiagnosticBag& diags) {
     };
 
     switch (c) {
-      case '(': single(TokenKind::LParen); continue;
-      case ')': single(TokenKind::RParen); continue;
-      case '[': single(TokenKind::LBracket); continue;
-      case ']': single(TokenKind::RBracket); continue;
+      case '(': single(TokenKind::LParen); paren_depth_++; continue;
+      case ')': single(TokenKind::RParen); paren_depth_--; continue;
+      case '[': single(TokenKind::LBracket); paren_depth_++; continue;
+      case ']': single(TokenKind::RBracket); paren_depth_--; continue;
       case '{': single(TokenKind::LBrace); continue;
       case '}': single(TokenKind::RBrace); continue;
       case ',': single(TokenKind::Comma); continue;
@@ -461,14 +404,13 @@ bool Lexer::tokenize(DiagnosticBag& diags) {
             return false;
           }
         } else {
+          // Single `.` — object field access (`obj.field`). The outer loop's
+          // advance() has already consumed the dot, so just emit the token.
           single(TokenKind::Dot);
         }
         continue;
-      case '@': single(TokenKind::At); continue;
       case '|': single(TokenKind::Pipe); continue;
-      case '+':
-        single(TokenKind::Plus);
-        continue;
+      case '+': single(TokenKind::Plus); continue;
       case '-':
         if (peek() == '>') {
           advance();
@@ -481,22 +423,15 @@ bool Lexer::tokenize(DiagnosticBag& diags) {
         }
         continue;
       case '*':
-        if (peek() == '*') {
-          advance();
-          single(TokenKind::StarStar);
-        } else {
-          single(TokenKind::Star);
-        }
+        if (peek() == '*') { advance(); single(TokenKind::StarStar); }
+        else { single(TokenKind::Star); }
         continue;
       case '/':
-        if (peek() == '/') {
-          advance();
-          single(TokenKind::SlashSlash);
-        } else {
-          single(TokenKind::Slash);
-        }
+        if (peek() == '/') { advance(); single(TokenKind::FloorDiv); }
+        else { single(TokenKind::Slash); }
         continue;
-      case '%': single(TokenKind::Percent); continue;
+      case '%': single(TokenKind::Mod); continue;
+      case '@': single(TokenKind::At); continue;
       case '=':
         if (peek() == '=') {
           advance();
@@ -540,17 +475,6 @@ bool Lexer::tokenize(DiagnosticBag& diags) {
         lex_string(t);
         push_token(t);
         continue;
-      case '0':
-        if (peek() == 'b') {
-          pos_ = start;
-          line_ = sl;
-          column_ = sc;
-          if (lex_binary_literal(t)) {
-            push_token(t);
-            continue;
-          }
-        }
-        [[fallthrough]];
       default:
         if (std::isdigit(static_cast<unsigned char>(c))) {
           pos_ = start;

@@ -8,13 +8,17 @@
 
 namespace li {
 
+// NOTE: the enumerator ORDER is part of the MIR dump ABI. The self-hosted
+// walker (bootstrap/lic/main.li) emits these exact numeric opcodes, so the
+// order below must match the walker's emitter constants (StoreInt=26,
+// BinOpInt=30, Label=43, Jump=44, BranchIfZero=45, ...). The reduced subset
+// used by lower_to_mir is a prefix of this enum; the extra members document
+// ops the walker can emit for decorator/async/object code.
 enum class MirOp {
   ReturnVoid,
   ReturnInt,
   ReturnFloat,
   ReturnIdent,
-  /** Pack locals named `ident + "_" + layout[i].name` into LLVM struct return (scalars or
-   *  fixed arrays as `[N x T]` aggregates). */
   ReturnObject,
   EchoInt,
   EchoString,
@@ -26,19 +30,14 @@ enum class MirOp {
   ArrayStoreFloat,
   ArrayLoadFloat,
   ArrayDotF64,
-  /** Element of `array[M, array[N, float]]`; row=int_value/index_ident, col=rhs_int/lhs_ident */
   ArrayLoad2DF64,
   ArrayStore2DF64,
-  /** C[M,N] = A[M,K] @ B[K,N] — nested `array[M, array[K, float]]`; M=int_value, K=rhs_int, N=lhs_int */
   ArrayMatMul2DF64,
   ArraySumF64,
   ArraySumI64,
-  /** Element-wise binop into `ident` from `lhs_ident` and `rhs_ident` (length `int_value`). */
   ArrayBinOpF64,
   ArrayBinOpI64,
-  /** `dest[i] = scale * lhs[i]` — scale in `rhs_ident` (float local) or `float_value` if literal. */
   ArrayScaleF64,
-  /** `rhs[i] = scale * lhs[i] + rhs[i]` — scale in `ident`, lhs=x, rhs=y. */
   ArrayAxpyF64,
   LocalAllocInt,
   LocalAllocI64,
@@ -48,11 +47,8 @@ enum class MirOp {
   LoadIntToIdent,
   BinOpInt,
   BinOpFloat,
-  /** `ident = lhs_ident * rhs_ident + float_value` (LLVM fmuladd) — horner / FMA chains */
   FmaFloatF64,
-  /** Chained fmuladd: ident = fma(lhs_ident, ident, float_value) repeated int_value times (SSA). */
   HornerFmaUnroll,
-  /** acc = acc * x^4 + (1+x+x²+x³); lhs_is_literal, float_value = const x; int_value = supersteps. */
   HornerStepPow4,
   LocalAllocFloat,
   LocalAllocSimdF64,
@@ -68,7 +64,6 @@ enum class MirOp {
   AsyncAwait,
   AsyncFrameEnter,
   AsyncFrameLeave,
-  /** Push/pop scoped array SIMD: int_value 1=enable, 0=pop (pairs with `@vectorized` on `for`). */
   ArraySimdScope,
 };
 
@@ -91,6 +86,8 @@ struct MirParam {
   bool is_float = false;
   bool is_string = false;
   bool is_i64 = false;
+  bool is_array = false;
+  int array_size = 0;
   bool is_simd_f64 = false;
   std::int64_t simd_lanes = 0;
   /** When >0, slot is `ident + "_" + name` as ArrayAlloc; LLVM uses `[N x scalar]` in structs. */
@@ -173,19 +170,11 @@ struct MirModule {
   std::vector<MirFn> functions;
   bool uses_openmp = false;
   bool uses_async = false;
-  /** Link runtime/li_rt_httpd.c when MIR calls httpd routing/config symbols. */
   bool needs_rt_httpd = false;
-  /** Link runtime/li_rt_net.c when MIR calls socket/epoll/proxy symbols. */
   bool needs_rt_net = false;
-  /** Link runtime/li_rt_log.c when MIR calls li_log_* symbols. */
   bool needs_rt_log = false;
-  /** When true: MIR stability pass + strict FP codegen (no fast-math reassociation). */
   bool fp_numerically_stable = false;
 };
-
-/** Count `def` decorators with {@link MirDecorator::vectorized}. */
-std::size_t count_mir_vectorized_proc(const MirModule& mir);
-std::size_t count_mir_parallel_disjoint_proven(const MirModule& mir);
 
 MirModule lower_to_mir(const Module& module);
 

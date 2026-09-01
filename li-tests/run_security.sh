@@ -45,12 +45,11 @@ run_no_crash() {
   pass=$((pass + 1))
 }
 
-for f in "$ROOT"/security/*.li; do
-  [[ -f "$f" ]] || continue
-  base="$(basename "$f")"
+while IFS= read -r f; do
+  base="${f#$ROOT/security/}"
   run_no_crash "parse $base" "$LIC" parse "$f"
   run_no_crash "check $base" "$LIC" check "$f"
-done
+done < <(find "$ROOT/security" -type f -name '*.li' -print | sort)
 
 # Generated stress (not committed): huge comment line
 tmp="$(mktemp -t li-huge.XXXXXX.li)"

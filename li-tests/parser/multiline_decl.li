@@ -1,0 +1,20 @@
+# Focused parser test: multi-line parameter lists and call arguments.
+# Regression guard for the self-hosting enabler added to the C++ parser.
+def add3(a: int,
+  b: int,
+  c: int) -> int
+  requires true
+  ensures result == a + b + c
+  decreases 0
+=
+  return a + b + c
+
+def main() -> int
+  requires true
+  ensures result >= 0
+  decreases 0
+=
+  var r: int = add3(1,
+    2,
+    3)
+  return r

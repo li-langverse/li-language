@@ -73,7 +73,19 @@ extern def li_rt_import_paths_clear() -> int
 extern def li_rt_import_path_store(path: ptr) -> int
   requires true
   ensures true
+extern def li_rt_import_path_insert(idx: int, path: ptr) -> int
+  requires true
+  ensures true
 extern def li_rt_import_path_get(idx: int) -> ptr
+  requires true
+  ensures true
+extern def li_rt_import_content_store(content: ptr) -> int
+  requires true
+  ensures true
+extern def li_rt_import_content_insert(idx: int, content: ptr) -> int
+  requires true
+  ensures true
+extern def li_rt_import_content_get(idx: int) -> ptr
   requires true
   ensures true
 extern def li_rt_type_src_store(idx: int, src: ptr) -> int
@@ -121,7 +133,7 @@ extern def li_rt_mir_f64_neg(id: int) -> int
 extern def li_rt_mir_int(text: var ptr,  s: int,  e: int) -> int
   requires true
   ensures true
-extern def li_rt_mir_int64_out(text: var ptr,  s: int,  e: int) -> int
+extern def li_rt_mir_int64_out(text: var ptr,  s: int,  e: int,  neg: int) -> int
   requires true
   ensures true
 extern def li_rt_mir_esc(text: var ptr,  s: int,  e: int) -> int
@@ -140,6 +152,30 @@ extern def li_rt_mir_objname_add(text: var ptr,  bs: int,  be: int,  fs: int,  f
   requires true
   ensures true
 extern def li_rt_mir_objname_out(idx: int) -> int
+  requires true
+  ensures true
+extern def li_rt_mir_objname_get_text(idx: int) -> ptr
+  requires true
+  ensures true
+extern def li_rt_mir_objname_get_bs(idx: int) -> int
+  requires true
+  ensures true
+extern def li_rt_mir_objname_get_be(idx: int) -> int
+  requires true
+  ensures true
+extern def li_rt_mir_objname_add_nested(parent_idx: int, text: var ptr, fs: int, fe: int) -> int
+  requires true
+  ensures true
+extern def li_rt_mir_synth_name_add(text: var ptr) -> int
+  requires true
+  ensures true
+extern def li_rt_mir_objname_reg_prefix(text: var ptr, base_s: int, base_e: int, fs: int, fe: int, src_is_cr: int, crid: int, fsrc: var ptr) -> int
+  requires true
+  ensures true
+extern def li_rt_mir_fieldpath_add(parent: int, text: var ptr, s: int, e: int) -> int
+  requires true
+  ensures true
+extern def li_rt_mir_fieldpath_out(idx: int) -> int
   requires true
   ensures true
 extern def li_rt_mir_pname_store(pid: int,  src: var ptr,  s: int,  e: int) -> int
@@ -6219,7 +6255,7 @@ def d_alloc(darena: var array[65536, int],  dasp: var array[1, int],  kind: int,
 
 # Emit INS with a mangled name like __li_o_<base>_<field>
 # format: INS op iv 0 <mangled_name>      0 0 0 1  0 <flags> ...
-def mir_ins_mangled(src: var ptr, op: int, iv: int, base_s: int, base_e: int, fld_s: int, fld_e: int, flag1: int, flag2: int, val: int, lastop: var array[1, int], rhs_s: int, rhs_e: int, rhs_t: int, fld_src_fallback: int) raises IO -> int
+def mir_ins_mangled(src: var ptr, op: int, iv: int, base_s: int, base_e: int, fld_s: int, fld_e: int, flag1: int, flag2: int, val: int, lastop: var array[1, int], rhs_s: int, rhs_e: int, rhs_t: int, rhs_p_s: int, rhs_p_e: int, rhs_f_s: int, rhs_f_e: int, fld_src_fallback: int, arr_flt: int) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -6235,27 +6271,48 @@ def mir_ins_mangled(src: var ptr, op: int, iv: int, base_s: int, base_e: int, fl
   li_rt_mir_str("__li_o_")
   li_rt_mir_esc(src, base_s, base_e)
   li_rt_mir_str("_")
-  # Field names: positions are always from the type's source (stored during
-  # mir_obj_reg_field). Use the type source to read them.
-  var fs2: ptr = li_rt_type_src_get(-1)
-  if fs2 == 0:
+  # Field name slices: the alloc/copy paths read type-declared field positions
+  # that are relative to the type's defining file, which the caller stored in
+  # the -1 type-source slot. But user-written field access/stores (out.detail,
+  # fld_src_fallback != 0) carry offsets relative to this caller's src buffer,
+  # regardless of where the object type is declared - so they must read from src.
+  # Reading them from -1 picks up whatever unrelated type was last registered,
+  # which for an imported-typed local object is the wrong buffer (NUL/garbage,
+  # and it shifts across runs). Honor the caller's src for the fallback flag.
+  if fld_src_fallback == 1:
     li_rt_mir_esc(src, fld_s, fld_e)
   else:
-    li_rt_mir_esc(fs2, fld_s, fld_e)
+    var fs2: ptr = li_rt_type_src_get(-1)
+    if fs2 == 0:
+      li_rt_mir_esc(src, fld_s, fld_e)
+    else:
+      li_rt_mir_esc(fs2, fld_s, fld_e)
   # empty name cells: str_value, callee, lhs_ident (each needs its own
   # separator space, so 4 spaces land before rhs_ident like C++ mir_dump)
   li_rt_ast_space()
   li_rt_ast_space()
   li_rt_ast_space()
   li_rt_ast_space()
-  # rhs_ident: plain source ident (rhs_s/rhs_e) or lowered temp (rhs_t,
-  # printed __t<idx>) — matches C++ StoreInt/StoreFloat; empty rhs emits no
-  # content (its separator is the 4th pre-space above)
-  if rhs_t >= 0:
-    li_rt_mir_label(0, rhs_t)
+  # rhs_ident: plain source ident, scalar lowered temp, object call result,
+  # or a nested object field path. The negative encoding -2-crid is private
+  # to this emitter and prints the aggregate call-result slot used by C++ MIR.
+  if rhs_p_s >= 0:
+    li_rt_mir_str("__li_o_")
+    li_rt_mir_esc(src, rhs_s, rhs_e)
+    li_rt_mir_str("_")
+    li_rt_mir_esc(src, rhs_p_s, rhs_p_e)
+    li_rt_mir_str("_")
+    li_rt_mir_esc(src, rhs_f_s, rhs_f_e)
   else:
-    if rhs_s >= 0:
-      li_rt_mir_esc(src, rhs_s, rhs_e)
+    if rhs_t >= 0:
+      li_rt_mir_label(0, rhs_t)
+    else:
+      if rhs_t <= -2:
+        li_rt_mir_str("__li_o___cr")
+        li_rt_ast_int(-2 - rhs_t)
+      else:
+        if rhs_s >= 0:
+          li_rt_mir_esc(src, rhs_s, rhs_e)
   # label cell (empty)
   li_rt_ast_space()
   # f18..f21
@@ -6275,7 +6332,10 @@ def mir_ins_mangled(src: var ptr, op: int, iv: int, base_s: int, base_e: int, fl
   li_rt_ast_space()
   li_rt_ast_int(flag2)
   li_rt_ast_space()
-  li_rt_ast_int(val)
+  if rhs_s >= 0:
+    li_rt_mir_int64_out(src,  rhs_s,  rhs_e,  0)
+  else:
+    li_rt_ast_int(val)
   li_rt_ast_space()
   li_rt_ast_int(0)
   li_rt_ast_space()
@@ -6293,7 +6353,7 @@ def mir_ins_mangled(src: var ptr, op: int, iv: int, base_s: int, base_e: int, fl
   li_rt_ast_space()
   li_rt_ast_int(0)
   li_rt_ast_space()
-  li_rt_ast_int(0)
+  li_rt_ast_int(arr_flt)
   li_rt_ast_nl()
   lastop[0] = op
   return 0
@@ -6317,9 +6377,15 @@ def mir_ins_mangled_nested(src: var ptr, op: int, iv: int, base_s: int, base_e: 
   li_rt_mir_str("__li_o_")
   li_rt_mir_esc(src, base_s, base_e)
   li_rt_mir_str("_")
-  li_rt_mir_esc(src, p_s, p_e)
+  # Field positions are type-source-relative (captured by mir_obj_reg_field
+  # against the type's defining file), so read p_s/p_e and fld_s/fld_e from
+  # the type source stored during allocation, not the caller's src buffer.
+  var nsrc2: ptr = li_rt_type_src_get(-1)
+  if nsrc2 == 0:
+    nsrc2 = src
+  li_rt_mir_esc(nsrc2, p_s, p_e)
   li_rt_mir_str("_")
-  li_rt_mir_esc(src, fld_s, fld_e)
+  li_rt_mir_esc(nsrc2, fld_s, fld_e)
   # empty name cells: str_value, callee, lhs_ident (4 spaces before rhs)
   li_rt_ast_space()
   li_rt_ast_space()
@@ -6385,29 +6451,27 @@ def mir_obj_alloc_fields(src: var ptr,  ts: var array[131072, int],  te: var arr
   var fa_a: array[2, int]
   while i_a < nf_a:
     mir_obj_field_name(itmp, type_idx, i_a, fa_a)
-    var f_s_a: int = fa_a[0]
-    var f_e_a: int = fa_a[1]
     var sub_a: int = mir_obj_field_obj_type(src, ts, te, itmp, type_idx, i_a)
     if sub_a >= 0:
-      mir_obj_alloc_fields(src,  ts,  te,  itmp,  base_s,  base_e,  sub_a,  f_s_a,  f_e_a, lastop)
+      mir_obj_alloc_fields(src, ts, te, itmp, base_s, base_e, sub_a, fa_a[0], fa_a[1], lastop)
     else:
       var elems_a: int = mir_obj_field_elems(itmp, type_idx, i_a)
       if elems_a > 0:
         if p_s >= 0:
-          mir_ins_mangled_nested(src, 9, elems_a, base_s, base_e, p_s, p_e, f_s_a, f_e_a, 0, 1, 0, lastop)
+          mir_ins_mangled_nested(src, 9, elems_a, base_s, base_e, p_s, p_e, fa_a[0], fa_a[1], 0, 1, 0, lastop)
         else:
-          mir_ins_mangled(src, 9, elems_a, base_s, base_e, f_s_a, f_e_a, 0, 1, 0, lastop, -1, -1, -1, 0)
+          mir_ins_mangled(src, 9, elems_a, base_s, base_e, fa_a[0], fa_a[1], 0, 1, 0, lastop, -1, -1, -1, -1, -1, -1, -1, 0, mir_obj_field_float(itmp, type_idx, i_a))
       else:
         if mir_obj_field_float(itmp, type_idx, i_a) == 1:
           if p_s >= 0:
-            mir_ins_mangled_nested(src, 35, 0, base_s, base_e, p_s, p_e, f_s_a, f_e_a, 0, 1, 0, lastop)
+            mir_ins_mangled_nested(src, 35, 0, base_s, base_e, p_s, p_e, fa_a[0], fa_a[1], 0, 1, 0, lastop)
           else:
-            mir_ins_mangled(src, 35, 0, base_s, base_e, f_s_a, f_e_a, 0, 1, 0, lastop, -1, -1, -1, 0)
+            mir_ins_mangled(src, 35, 0, base_s, base_e, fa_a[0], fa_a[1], 0, 1, 0, lastop, -1, -1, -1, -1, -1, -1, -1, 0, 0)
         else:
           if p_s >= 0:
-            mir_ins_mangled_nested(src, 24, 0, base_s, base_e, p_s, p_e, f_s_a, f_e_a, 0, 1, 0, lastop)
+            mir_ins_mangled_nested(src, 24, 0, base_s, base_e, p_s, p_e, fa_a[0], fa_a[1], 0, 1, 0, lastop)
           else:
-            mir_ins_mangled(src, 24, 0, base_s, base_e, f_s_a, f_e_a, 0, 1, 0, lastop, -1, -1, -1, 0)
+            mir_ins_mangled(src, 24, 0, base_s, base_e, fa_a[0], fa_a[1], 0, 1, 0, lastop, -1, -1, -1, -1, -1, -1, -1, 0, 0)
     i_a = i_a + 1
   return 0
 
@@ -6563,12 +6627,6 @@ def mir_cr_call_line(src: var ptr,  ts: var array[131072, int],  te: var array[1
   li_rt_ast_space()
   li_rt_ast_int(0)
   li_rt_ast_nl()
-  # OBJ return layout
-  var nf_c2: int = mir_obj_field_count(itmp, obj_ti)
-  var fi_c2: int = 0
-  while fi_c2 < nf_c2:
-    mir_obj_line(src,  ts,  te,  itmp,  obj_ti,  fi_c2)
-    fi_c2 = fi_c2 + 1
   lastop[0] = 8
   return 0
 
@@ -6585,7 +6643,8 @@ def mir_wb_alloc_fields(src: var ptr,  ts: var array[131072, int],  te: var arra
   li_rt_type_src_store(-1, tsrc)
   var nf_w: int = mir_obj_field_count(itmp, type_idx)
   var fa_w: array[2, int]
-  var i_w: int = 0  while i_w < nf_w:
+  var i_w: int = 0
+  while i_w < nf_w:
     mir_obj_field_name(itmp, type_idx, i_w, fa_w)
     var sub_w: int = mir_obj_field_obj_type(src, ts, te, itmp, type_idx, i_w)
     if sub_w >= 0:
@@ -6898,9 +6957,184 @@ def mir_obj_field_float(itmp: var array[4096, int], type_idx: int, field_idx: in
   var fbase: int = peek4096(itmp, 3001 + type_idx * 6 + 3)
   return peek4096(itmp, 3401 + (fbase + field_idx) + 0)
 
-# Emit the field copy (or element-wise array-field copy) for whole-object
-# assignment/init: dst.<field> <- src.<field>. src_is_cr=1 means the source is
-# the call-result slot __li_o___cr<crid>.
+# Recursive helper: emit CopyObj/StoreFloat for every leaf field of an
+# object type, building compound prefix names via the objname registry.
+# dst_oi/src_oi are objname indices for the base prefix (e.g. __li_o_d, __li_o___cr71).
+def mir_obj_emit_copy_r(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], itmp: var array[4096, int],  type_idx: int,  dst_oi: int,  src_oi: int,  tc: var array[1, int]) raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var nf: int = mir_obj_field_count(itmp, type_idx)
+  var i: int = 0
+  var fa_r: array[2, int]
+  var tsrc_r: ptr = li_rt_type_src_get(type_idx)
+  if tsrc_r == 0:
+    tsrc_r = src
+  while i < nf:
+    mir_obj_field_name(itmp, type_idx, i, fa_r)
+    var sub_r: int = mir_obj_field_obj_type(src, ts, te, itmp, type_idx, i)
+    if sub_r >= 0:
+      # Sub-object: recurse with nested objname for both dst and src
+      var ndst: int = li_rt_mir_objname_add_nested(dst_oi, tsrc_r, fa_r[0], fa_r[1])
+      var nsrc: int = li_rt_mir_objname_add_nested(src_oi, tsrc_r, fa_r[0], fa_r[1])
+      mir_obj_emit_copy_r(src, ts, te, itmp, sub_r, ndst, nsrc, tc)
+    else:
+      var fel_r: int = mir_obj_field_elems(itmp, type_idx, i)
+      if fel_r == 0:
+        # Scalar leaf: emit CopyObj/StoreFloat
+        var cop_r: int = 26
+        if mir_obj_field_float(itmp, type_idx, i) == 1:
+          cop_r = 28
+        li_rt_mir_str("INS")
+        li_rt_ast_space()
+        li_rt_ast_int(cop_r)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        var ndst2: int = li_rt_mir_objname_add_nested(dst_oi, tsrc_r, fa_r[0], fa_r[1])
+        li_rt_mir_objname_out(ndst2)
+        li_rt_ast_space()
+        li_rt_ast_space()
+        li_rt_ast_space()
+        li_rt_ast_space()
+        var nsrc2: int = li_rt_mir_objname_add_nested(src_oi, tsrc_r, fa_r[0], fa_r[1])
+        li_rt_mir_objname_out(nsrc2)
+        li_rt_ast_space()
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(1)
+        li_rt_ast_space()
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_space()
+        li_rt_ast_int(0)
+        li_rt_ast_nl()
+      else:
+        # Array leaf: element-wise load/store
+        var e_r: int = 0
+        while e_r < fel_r:
+          var t_r: int = tc[0]
+          tc[0] = t_r + 1
+          li_rt_mir_str("INS")
+          li_rt_ast_space()
+          li_rt_ast_int(11)
+          li_rt_ast_space()
+          li_rt_ast_int(e_r)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_mir_objname_out(src_oi)
+          li_rt_mir_str("_")
+          li_rt_mir_esc(tsrc_r, fa_r[0], fa_r[1])
+          li_rt_ast_space()
+          li_rt_ast_space()
+          li_rt_ast_space()
+          li_rt_mir_str("__t")
+          li_rt_ast_int(t_r)
+          li_rt_ast_space()
+          li_rt_ast_space()
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(1)
+          li_rt_ast_space()
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(1)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_nl()
+          li_rt_mir_str("INS")
+          li_rt_ast_space()
+          li_rt_ast_int(10)
+          li_rt_ast_space()
+          li_rt_ast_int(e_r)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_mir_objname_out(dst_oi)
+          li_rt_mir_str("_")
+          li_rt_mir_esc(tsrc_r, fa_r[0], fa_r[1])
+          li_rt_ast_space()
+          li_rt_ast_space()
+          li_rt_ast_space()
+          li_rt_ast_space()
+          li_rt_mir_str("__t")
+          li_rt_ast_int(t_r)
+          li_rt_ast_space()
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(1)
+          li_rt_ast_space()
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_space()
+          li_rt_ast_int(0)
+          li_rt_ast_nl()
+          e_r = e_r + 1
+    i = i + 1
+  return 0
+
 def mir_obj_emit_copy(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], itmp: var array[4096, int],  obj_ti: int,  fidx: int,  dst_s: int,  dst_e: int,  src_s: int,  src_e: int,  src_is_cr: int,  crid: int,  tc: var array[1, int]) raises IO -> int
   requires true
   ensures result == 0
@@ -6911,10 +7145,31 @@ def mir_obj_emit_copy(src: var ptr,  ts: var array[131072, int],  te: var array[
   mir_obj_field_name(itmp, obj_ti, fidx, fa)
   var fs: int = fa[0]
   var fe: int = fa[1]
+  var sub_obj: int = mir_obj_field_obj_type(src, ts, te, itmp, obj_ti, fidx)
+  # Object-valued fields use one aggregate base copy; their flattened leaf
+  # slots are described separately in the enclosing OBJ/PARAM layout.
   # Field positions are from the type's source (stored during mir_obj_reg_field)
   var tsrc: ptr = li_rt_type_src_get(obj_ti)
   if tsrc == 0:
     tsrc = src
+  # Sub-object fields: recurse to emit individual leaf copies with compound
+  # prefix names (e.g. __li_o_d_tier_tier_id). Mirrors C++ emit_copy_object_slots_r.
+  if sub_obj >= 0:
+    # Register compound prefixes via C helper (avoids Li move-semantics issues)
+    # Determine dst prefix type: src_is_cr==2 means dst is wb temp
+    var dst_cr: int = 0
+    var dst_crid: int = 0
+    if src_is_cr == 2:
+      dst_cr = 3
+      dst_crid = crid
+    var dst_oi: int = li_rt_mir_objname_reg_prefix(src, dst_s, dst_e, fs, fe, dst_cr, dst_crid, tsrc)
+    # Determine src prefix type: src_is_cr==1 means cr, src_is_cr==3 means wb
+    var src_cr: int = src_is_cr
+    if src_is_cr == 2:
+      src_cr = 0
+    var src_oi: int = li_rt_mir_objname_reg_prefix(src, src_s, src_e, fs, fe, src_cr, crid, tsrc)
+    mir_obj_emit_copy_r(src, ts, te, itmp, sub_obj, dst_oi, src_oi, tc)
+    return 0
   if fel == 0:
     var cop: int = 26
     if mir_obj_field_float(itmp, obj_ti, fidx) == 1:
@@ -7187,8 +7442,14 @@ def mir_obj_reg_field(itmp: var array[4096, int], src: var ptr, fs: int, fe: int
   set4096(itmp, 3201 + nf * 2 + 1, fe)
   set4096(itmp, 3401 + nf + 0, fflt)
   set4096(itmp, 3501 + nf + 0, elems)
-  set4096(itmp, 3601 + nf * 2 + 0, tname_s)
-  set4096(itmp, 3601 + nf * 2 + 1, tname_e)
+  # Store the declared field-type identity by value (hash, length). The
+  # original token spans are not reusable after an imported file is re-lexed.
+  if tname_s >= 0 and tname_e > tname_s:
+    set4096(itmp, 3601 + nf * 2 + 0, mir_name_hash(src, tname_s, tname_e))
+    set4096(itmp, 3601 + nf * 2 + 1, tname_e - tname_s)
+  else:
+    set4096(itmp, 3601 + nf * 2 + 0, 0)
+    set4096(itmp, 3601 + nf * 2 + 1, 0)
   set4096(itmp, 3801 + nf, mir_name_hash(src, fs, fe))
   set4096(itmp, 3200, nf + 1)
   return 0
@@ -7199,11 +7460,39 @@ def mir_obj_field_obj_type(src: var ptr, ts: var array[131072, int], te: var arr
   decreases 0
 =
   var fbase: int = peek4096(itmp, 3001 + type_idx * 6 + 3)
-  var tns: int = peek4096(itmp, 3601 + (fbase + field_idx) * 2 + 0)
-  var tne: int = peek4096(itmp, 3601 + (fbase + field_idx) * 2 + 1)
-  if tns < 0 or tne <= tns:
+  var h: int = peek4096(itmp, 3601 + (fbase + field_idx) * 2 + 0)
+  var nlen: int = peek4096(itmp, 3601 + (fbase + field_idx) * 2 + 1)
+  if h == 0 or nlen == 0:
     return -1
-  return mir_obj_find_type(src, ts, te, itmp, tns, tne)
+  # The declared type identity is stored by value during collection; no
+  # caller token buffer or declaring-source span is needed for this lookup.
+  var nobj_src: int = peek4096(itmp, 3000)
+  var oi: int = 0
+  while oi < nobj_src:
+    if peek4096(itmp, 3701 + oi) == h and peek4096(itmp, 3731 + oi) == nlen:
+      return oi
+    oi = oi + 1
+  return -1
+
+# Simpler sub-object check that doesn't require ts/te arrays.
+# Returns the sub-object type index or -1 if the field is not an object.
+def mir_field_is_subobj(itmp: var array[4096, int], type_idx: int, field_idx: int) -> int
+  requires true
+  ensures result >= -1
+  decreases 0
+=
+  var fbase: int = peek4096(itmp, 3001 + type_idx * 6 + 3)
+  var h: int = peek4096(itmp, 3601 + (fbase + field_idx) * 2 + 0)
+  var nlen: int = peek4096(itmp, 3601 + (fbase + field_idx) * 2 + 1)
+  if h == 0 or nlen == 0:
+    return -1
+  var nobj_src: int = peek4096(itmp, 3000)
+  var oi: int = 0
+  while oi < nobj_src:
+    if peek4096(itmp, 3701 + oi) == h and peek4096(itmp, 3731 + oi) == nlen:
+      return oi
+    oi = oi + 1
+  return -1
 
 # float-ness of a descriptor (mirrors is_float_expr on the AST)
 def mir_desc_float(darena: var array[65536, int],  rec: int,  src: var ptr, ts: var array[131072, int],  te: var array[131072, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  fatok: var array[512, int], nfa: var array[1, int], itmp: var array[4096, int]) -> int
@@ -7340,9 +7629,7 @@ def mir_ins_line(src: var ptr,  f: var array[44, int],  op: int,  iv: int,  fid:
   li_rt_ast_int(f[26])
   li_rt_ast_space()
   if f[37] != 0:
-    if f[41] == 1:
-      li_rt_mir_str("-")
-    li_rt_mir_int64_out(src,  f[37],  f[38])
+    li_rt_mir_int64_out(src,  f[37],  f[38],  f[41])
   else:
     li_rt_ast_int(f[27])
   li_rt_ast_space()
@@ -7351,9 +7638,7 @@ def mir_ins_line(src: var ptr,  f: var array[44, int],  op: int,  iv: int,  fid:
   li_rt_ast_int(f[29])
   li_rt_ast_space()
   if f[39] != 0:
-    if f[42] == 1:
-      li_rt_mir_str("-")
-    li_rt_mir_int64_out(src,  f[39],  f[40])
+    li_rt_mir_int64_out(src,  f[39],  f[40],  f[42])
   else:
     li_rt_ast_int(f[30])
   li_rt_ast_space()
@@ -7463,6 +7748,49 @@ def mir_arg_line(src: var ptr,  il: int,  iv: int,  ifl: int,  fid: int, id_s: i
   li_rt_ast_nl()
   return 0
 
+# Recursive helper: emit ARG lines for every leaf field of a sub-object.
+# parent_oi is the objname index for the parent compound name prefix.
+def mir_arg_obj_line_r(src: var ptr, itmp: var array[4096, int], type_idx: int, parent_oi: int, iai: int, is_var: int) raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var nf_a: int = mir_obj_field_count(itmp, type_idx)
+  var i_a: int = 0
+  var fa_a: array[2, int]
+  var tsrc_a: ptr = li_rt_type_src_get(type_idx)
+  if tsrc_a == 0:
+    tsrc_a = src
+  while i_a < nf_a:
+    mir_obj_field_name(itmp, type_idx, i_a, fa_a)
+    var sub_a: int = mir_field_is_subobj(itmp, type_idx, i_a)
+    if sub_a >= 0:
+      var noi: int = li_rt_mir_objname_add_nested(parent_oi, tsrc_a, fa_a[0], fa_a[1])
+      mir_arg_obj_line_r(src, itmp, sub_a, noi, iai, is_var)
+    else:
+      var noi2: int = li_rt_mir_objname_add_nested(parent_oi, tsrc_a, fa_a[0], fa_a[1])
+      li_rt_mir_str("ARG")
+      li_rt_ast_space()
+      li_rt_ast_int(0)
+      li_rt_ast_space()
+      li_rt_ast_int(0)
+      li_rt_ast_space()
+      li_rt_ast_int(0)
+      li_rt_ast_space()
+      li_rt_ast_int(0)
+      li_rt_ast_space()
+      li_rt_mir_objname_out(noi2)
+      li_rt_ast_space()
+      li_rt_ast_int(0)
+      li_rt_ast_space()
+      li_rt_ast_space()
+      li_rt_ast_int(iai)
+      li_rt_ast_space()
+      li_rt_ast_int(is_var)
+      li_rt_ast_nl()
+    i_a = i_a + 1
+  return 0
+
 def mir_arg_obj_line(src: var ptr, base_s: int, base_e: int, itmp: var array[4096, int], type_idx: int, field_idx: int, iai: int, is_var: int) raises IO -> int
   requires true
   ensures result == 0
@@ -7470,6 +7798,15 @@ def mir_arg_obj_line(src: var ptr, base_s: int, base_e: int, itmp: var array[409
 =
   var fa: array[2, int]
   mir_obj_field_name(itmp, type_idx, field_idx, fa)
+  var sub_a2: int = mir_field_is_subobj(itmp, type_idx, field_idx)
+  if sub_a2 >= 0:
+    # Sub-object: emit flattened ARG lines for each leaf field
+    var ao_tsrc2: ptr = li_rt_type_src_get(type_idx)
+    if ao_tsrc2 == 0:
+      ao_tsrc2 = src
+    var base_oi: int = li_rt_mir_objname_reg_prefix(src, base_s, base_e, fa[0], fa[1], 0, 0, ao_tsrc2)
+    mir_arg_obj_line_r(src, itmp, sub_a2, base_oi, iai, is_var)
+    return 0
   li_rt_mir_str("ARG")
   li_rt_ast_space()
   li_rt_ast_int(0)
@@ -7505,6 +7842,15 @@ def mir_arg_wb_line(src: var ptr, itmp: var array[4096, int], type_idx: int, fie
 =
   var fw: array[2, int]
   mir_obj_field_name(itmp, type_idx, field_idx, fw)
+  var sub_wb: int = mir_field_is_subobj(itmp, type_idx, field_idx)
+  if sub_wb >= 0:
+    # Sub-object: emit flattened ARG lines using wb prefix
+    var ao_tsrc3: ptr = li_rt_type_src_get(type_idx)
+    if ao_tsrc3 == 0:
+      ao_tsrc3 = src
+    var wb_oi2: int = li_rt_mir_objname_reg_prefix(src, 0, 0, fw[0], fw[1], 3, wbid, ao_tsrc3)
+    mir_arg_obj_line_r(src, itmp, sub_wb, wb_oi2, iai, is_var)
+    return 0
   li_rt_mir_str("ARG")
   li_rt_ast_space()
   li_rt_ast_int(0)
@@ -7913,6 +8259,17 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
         set65536(darena, rec + 2,nidx)
         set65536(darena, rec + 3,ffloat_obj)
         return 0
+    # Nested field access: base is already an object-field (kind 12).
+    # (draw.tier).fps_target -> __li_o_draw_tier_fps_target
+    if peek65536(darena, fbase + 0) == 12:
+      var pnidx: int = peek65536(darena, fbase + 2)
+      var nidx2: int = li_rt_mir_objname_add_nested(pnidx, src, fld_s, fld_e)
+      var ffloat_obj2: int = peek65536(darena, fbase + 3)
+      set65536(darena, rec + 0, 12)
+      set65536(darena, rec + 1, 0)
+      set65536(darena, rec + 2, nidx2)
+      set65536(darena, rec + 3, ffloat_obj2)
+      return 0
     # fallback: treat as LoadIntToIdent from the base expression
     if mir_lower_expr(darena,  dasp,  fbase,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
       return 1
@@ -8989,6 +9346,9 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
     var cp_wbid: int = -1
     var cp_ti: int = -1
     var cp_nf: int = 0
+    var cr_obj_id: int = -1
+    var cr_obj_ti: int = -1
+    var cr_args_emitted: int = 0
     if is_callproc == 1:
       # Detect var-Object first-arg write-back: if the callee's first param
       # is `var Object` and the caller's first arg is an Object ident,
@@ -9030,6 +9390,32 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
           tc[0] = crid2 + 1
           mir_cr_alloc_fields(src,  ts,  te,  itmp,  crid2,  robj_ti,  -1,  -1)
           mir_cr_call_line(src,  ts,  te,  itmp,  crid2,  peek65536(darena, rec + 1),  peek65536(darena, rec + 2),  robj_ti,  lastop)
+          cr_obj_id = crid2
+          cr_obj_ti = robj_ti
+          # Emit simple call arguments immediately after INS 8. The scratch
+          # argument array is not stable across recursive object-slot
+          # allocation, while descriptor spans remain source-backed.
+          var crai: int = 0
+          while crai < peek65536(darena, rec + 4):
+            var crarec: int = peek65536(darena, peek65536(darena, rec + 5) + crai)
+            var crak: int = peek65536(darena, crarec + 0)
+            if crak == 0:
+              mir_arg_line(src, 1, peek65536(darena, crarec + 1), 0, -1, 0, 0, 0, 0, 0, 0, 0, 0)
+            else:
+              if crak == 1:
+                mir_arg_line(src, 0, 0, 1, peek65536(darena, crarec + 1), 0, 0, 0, 0, 0, 0, 0, 0)
+              else:
+                if crak == 2:
+                  mir_arg_line(src, 0, 0, 0, -1, 0, 0, 0, 1, peek65536(darena, crarec + 1), peek65536(darena, crarec + 2), 0, 0)
+                else:
+                  if crak == 3:
+                    mir_arg_line(src, 0, 0, 0, -1, peek65536(darena, crarec + 1), peek65536(darena, crarec + 2), 1, 0, 0, 0, 0, 0)
+                  else:
+                    if crak == 8:
+                      # Lowered ident: is_tmp in rec+1, temp id in rec+2
+                      mir_arg_line(src, 0, 0, 0, -1, peek65536(darena, crarec + 2), 0, 2, 0, 0, 0, 0, 0)
+            crai = crai + 1
+          cr_args_emitted = 1
           mir_mk_name(darena,  rec,  3,  crid2,  robj_ti)
         else:
           var c8: int = tc[0]
@@ -9104,7 +9490,7 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
         tc[0] = c9b + 1
         mir_mk_name(darena,  rec,  1,  c9b,  0)
     var bi: int = 0
-    while bi < nab[0]:
+    while bi < nab[0] and cr_args_emitted == 0:
       if bi == 0 and cp_wbid >= 0:
         # First arg is a var-Object: emit wb slots as is_var_ref=1 args
         var wbi: int = 0
@@ -9137,6 +9523,19 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
                 else:
                   mir_arg_line(src, 0, 0, 0, -1, peek128(abuf, bi + 1), 0, 2, 0, 0, 0, 0, 0)
       bi = bi + 4
+    # Object-return calls emit their arguments from immutable descriptors
+    # after return-slot allocation. The scratch buffer may still contain
+    # stale records, so use the explicit object-call marker rather than its
+    # size when deciding whether to replay.
+    # The object-return branch above emits its arguments immediately after
+    # INS 8. Keep the scratch-buffer loop below from replaying them.
+    # CallProc dumps arguments before the return-object layout.
+    if cr_obj_ti >= 0:
+      var cr_nf_after: int = mir_obj_field_count(itmp, cr_obj_ti)
+      var cr_fi_after: int = 0
+      while cr_fi_after < cr_nf_after:
+        mir_obj_line(src,  ts,  te,  itmp,  cr_obj_ti,  cr_fi_after)
+        cr_fi_after = cr_fi_after + 1
     # copy-back: arg object slots <- wb slots (write-back case only)
     if cp_wbid >= 0:
       var cbi: int = 0
@@ -9975,7 +10374,7 @@ def mir_return(darena: var array[65536, int],  dasp: var array[1, int], src: var
                 var rfs: int = peek65536(darena, rec + 2)
                 var rfe: int = peek65536(darena, rec + 3)
                 if peek65536(darena, rfb + 0) == 3:
-                  mir_ins_mangled(src, 3, 0, peek65536(darena, rfb + 1), peek65536(darena, rfb + 2), rfs, rfe, 0, 1, 0, lastop, -1, -1, -1, 1)
+                  mir_ins_mangled(src, 3, 0, peek65536(darena, rfb + 1), peek65536(darena, rfb + 2), rfs, rfe, 0, 1, 0, lastop, -1, -1, -1, -1, -1, -1, -1, 1, 0)
                 else:
                   var f5f: array[44, int]
                   mir_fdef(f5f)
@@ -10168,6 +10567,27 @@ def mir_var_decl(darena: var array[65536, int],  dasp: var array[1, int], src: v
           li_rt_ast_space()
           li_rt_ast_int(0)
           li_rt_ast_nl()
+          # Object-return CallProc arguments precede its OBJ layout. Replay
+          # the immutable call descriptors before printing the return layout.
+          var aci: int = 0
+          while aci < peek65536(darena, rec + 4):
+            var acrec: int = peek65536(darena, peek65536(darena, rec + 5) + aci)
+            var ack: int = peek65536(darena, acrec + 0)
+            if ack == 0:
+              mir_arg_line(src, 1, peek65536(darena, acrec + 1), 0, -1, 0, 0, 0, 0, 0, 0, 0, 0)
+            else:
+              if ack == 1:
+                mir_arg_line(src, 0, 0, 1, peek65536(darena, acrec + 1), 0, 0, 0, 0, 0, 0, 0, 0)
+              else:
+                if ack == 2:
+                  mir_arg_line(src, 0, 0, 0, -1, 0, 0, 0, 1, peek65536(darena, acrec + 1), peek65536(darena, acrec + 2), 0, 0)
+                else:
+                  if ack == 3:
+                    mir_arg_line(src, 0, 0, 0, -1, peek65536(darena, acrec + 1), peek65536(darena, acrec + 2), 1, 0, 0, 0, 0, 0)
+                  else:
+                    if ack == 8:
+                      mir_arg_line(src, 0, 0, 0, -1, peek65536(darena, acrec + 2), 0, 2, 0, 0, 0, 0, 0)
+            aci = aci + 1
           var fc: int = 0
           while fc < nfld:
             mir_obj_field_name(itmp, obj_ti, fc, ff_arr)
@@ -10222,6 +10642,7 @@ def mir_var_decl(darena: var array[65536, int],  dasp: var array[1, int], src: v
       f28[1] = peek_tk(te, vn + 0)
       f28[2] = 1
       var fidv: int = -1
+      var f28_emitted: int = 0
       if peek65536(darena, rec + 0) == 1:
         fidv = peek65536(darena, rec + 1)
       else:
@@ -10231,12 +10652,86 @@ def mir_var_decl(darena: var array[65536, int],  dasp: var array[1, int], src: v
           f28[13] = peek65536(darena, rec + 2)
           f28[14] = 1
         else:
-          if mir_lower_expr(darena,  dasp,  rec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
-            return 1
-          f28[26] = 0
-          f28[12] = peek65536(darena, rec + 2)
-          f28[14] = 2
-      mir_ins_line(src,  f28,  28,  0,  fidv,  lastop)
+          if peek65536(darena, rec + 0) == 9:
+            # Field access init: var x: float = obj.field
+            # Emit INS 28 0 0 <dest> __li_o_<base>_<field> directly
+            var rfbase: int = peek65536(darena, rec + 1)
+            if peek65536(darena, rfbase + 0) == 3:
+              li_rt_mir_str("INS")
+              li_rt_ast_space()
+              li_rt_ast_int(28)
+              li_rt_ast_space()
+              li_rt_ast_int(0)
+              li_rt_ast_space()
+              li_rt_ast_int(0)
+              li_rt_ast_space()
+              li_rt_mir_esc(src, peek_tk(ts, vn + 0), peek_tk(te, vn + 0))
+              # str_value, callee, lhs_ident (empty)
+              li_rt_ast_space()
+              li_rt_ast_space()
+              li_rt_ast_space()
+              li_rt_ast_space()
+              li_rt_mir_str("__li_o_")
+              li_rt_mir_esc(src, peek65536(darena, rfbase + 1), peek65536(darena, rfbase + 2))
+              li_rt_mir_str("_")
+              var fs28: ptr = li_rt_type_src_get(-1)
+              if fs28 == 0:
+                li_rt_mir_esc(src, peek65536(darena, rec + 2), peek65536(darena, rec + 3))
+              else:
+                li_rt_mir_esc(fs28, peek65536(darena, rec + 2), peek65536(darena, rec + 3))
+              # label, f18..f21
+              li_rt_ast_space()
+              li_rt_ast_space()
+              li_rt_ast_int(0)
+              li_rt_ast_space()
+              li_rt_ast_int(0)
+              li_rt_ast_space()
+              li_rt_ast_int(0)
+              li_rt_ast_space()
+              li_rt_ast_int(1)
+              # index_ident (empty)
+              li_rt_ast_space()
+              li_rt_ast_space()
+              li_rt_ast_int(0)
+              li_rt_ast_space()
+              li_rt_ast_int(0)
+              li_rt_ast_space()
+              li_rt_ast_int(0)
+              li_rt_ast_space()
+              li_rt_ast_int(0)
+              li_rt_ast_space()
+              li_rt_ast_int(0)
+              li_rt_ast_space()
+              li_rt_ast_int(0)
+              li_rt_ast_space()
+              li_rt_ast_int(0)
+              li_rt_ast_space()
+              li_rt_ast_int(0)
+              li_rt_ast_space()
+              li_rt_ast_int(0)
+              li_rt_ast_space()
+              li_rt_ast_int(0)
+              li_rt_ast_space()
+              li_rt_ast_int(0)
+              li_rt_ast_space()
+              li_rt_ast_int(0)
+              li_rt_ast_nl()
+              lastop[0] = 28
+              f28_emitted = 1
+            else:
+              if mir_lower_expr(darena,  dasp,  rec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+                return 1
+              f28[26] = 0
+              f28[12] = peek65536(darena, rec + 2)
+              f28[14] = 2
+          else:
+            if mir_lower_expr(darena,  dasp,  rec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+              return 1
+            f28[26] = 0
+            f28[12] = peek65536(darena, rec + 2)
+            f28[14] = 2
+      if f28_emitted == 0:
+        mir_ins_line(src,  f28,  28,  0,  fidv,  lastop)
   else:
     if ty == 2 or ty == 3 or ty == 4:
       var f25: array[44, int]
@@ -10253,6 +10748,7 @@ def mir_var_decl(darena: var array[65536, int],  dasp: var array[1, int], src: v
         f27[0] = peek_tk(ts, vn + 0)
         f27[1] = peek_tk(te, vn + 0)
         f27[2] = 1
+        var f27_emitted: int = 0
         if peek65536(darena, rec + 0) == 2:
           f27[28] = 1
           f27[3] = peek65536(darena, rec + 1)
@@ -10269,12 +10765,87 @@ def mir_var_decl(darena: var array[65536, int],  dasp: var array[1, int], src: v
               f27[13] = peek65536(darena, rec + 2)
               f27[14] = 1
             else:
-              if mir_lower_expr(darena,  dasp,  rec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
-                return 1
-              f27[26] = 0
-              f27[12] = peek65536(darena, rec + 2)
-              f27[14] = 2
-        mir_ins_line(src,  f27,  27,  0,  -1,  lastop)
+              if peek65536(darena, rec + 0) == 9:
+                var rfb27: int = peek65536(darena, rec + 1)
+                if peek65536(darena, rfb27 + 0) == 3:
+                  li_rt_mir_str("INS")
+                  li_rt_ast_space()
+                  li_rt_ast_int(26)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_mir_esc(src, peek_tk(ts, vn + 0), peek_tk(te, vn + 0))
+                  # str_value, callee, lhs_ident (empty)
+                  li_rt_ast_space()
+                  li_rt_ast_space()
+                  li_rt_ast_space()
+                  li_rt_ast_space()
+                  li_rt_mir_str("__li_o_")
+                  li_rt_mir_esc(src, peek65536(darena, rfb27 + 1), peek65536(darena, rfb27 + 2))
+                  li_rt_mir_str("_")
+                  var fs27: ptr = li_rt_type_src_get(-1)
+                  if fs27 == 0:
+                    li_rt_mir_esc(src, peek65536(darena, rec + 2), peek65536(darena, rec + 3))
+                  else:
+                    li_rt_mir_esc(fs27, peek65536(darena, rec + 2), peek65536(darena, rec + 3))
+                  li_rt_ast_space()
+                  li_rt_ast_space()
+                  li_rt_ast_space()
+                  li_rt_ast_space()
+                  li_rt_ast_space()
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(1)
+                  # index_ident (empty)
+                  li_rt_ast_space()
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_nl()
+                  lastop[0] = 26
+                  f27_emitted = 1
+                else:
+                  if mir_lower_expr(darena,  dasp,  rec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+                    return 1
+                  f27[26] = 0
+                  f27[12] = peek65536(darena, rec + 2)
+                  f27[14] = 2
+              else:
+                if mir_lower_expr(darena,  dasp,  rec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+                  return 1
+                f27[26] = 0
+                f27[12] = peek65536(darena, rec + 2)
+                f27[14] = 2
+        if f27_emitted == 0:
+          mir_ins_line(src,  f27,  27,  0,  -1,  lastop)
     else:
       if ty == 5:
         var f9: array[44, int]
@@ -10456,6 +11027,9 @@ def mir_var_decl(darena: var array[65536, int],  dasp: var array[1, int], src: v
           if peek65536(darena, rec + 0) == 0:
             f26[26] = 1
             f26[27] = peek65536(darena, rec + 1)
+            f26[37] = peek65536(darena, rec + 2)
+            f26[38] = peek65536(darena, rec + 3)
+            f26[41] = peek65536(darena, rec + 4)
           else:
             if peek65536(darena, rec + 0) == 3:
               f26[26] = 0
@@ -10484,7 +11058,8 @@ def mir_assign(darena: var array[65536, int],  dasp: var array[1, int],  lrec: i
     var fld_e_a: int = peek65536(darena, lrec + 3)
     if peek65536(darena, fbase_a + 0) == 3:
       var base_s_a: int = peek65536(darena, fbase_a + 1)
-      var base_e_a: int = peek65536(darena, fbase_a + 2)      var obj_type_a: int = mir_obj_find_var(src, ts, te, itmp, base_s_a, base_e_a)
+      var base_e_a: int = peek65536(darena, fbase_a + 2)
+      var obj_type_a: int = mir_obj_find_var(src, ts, te, itmp, base_s_a, base_e_a)
       if obj_type_a >= 0:
         var fidx_a: int = mir_obj_find_field(src, itmp, obj_type_a, fld_s_a, fld_e_a)
         var fflt_a: int = 0
@@ -10498,6 +11073,10 @@ def mir_assign(darena: var array[65536, int],  dasp: var array[1, int],  lrec: i
           var sf_rhs_s: int = -1
           var sf_rhs_e: int = -1
           var sf_rhs_t: int = -1
+          var sf_rhs_p_s: int = -1
+          var sf_rhs_p_e: int = -1
+          var sf_rhs_f_s: int = -1
+          var sf_rhs_f_e: int = -1
           var sf_rhs_mangled: int = 0
           var sf_lit: int = 0
           var sf_lit_val: int = 0
@@ -10515,12 +11094,25 @@ def mir_assign(darena: var array[65536, int],  dasp: var array[1, int],  lrec: i
                   sf_rhs_s = peek65536(darena, rfb_f + 1)
                   sf_rhs_e = peek65536(darena, rfb_f + 2)
                   sf_rhs_mangled = 1
+                else:
+                  if peek65536(darena, rfb_f + 0) == 9:
+                    var rfb_inner: int = peek65536(darena, rfb_f + 1)
+                    if peek65536(darena, rfb_inner + 0) == 3:
+                      sf_rhs_s = peek65536(darena, rfb_inner + 1)
+                      sf_rhs_e = peek65536(darena, rfb_inner + 2)
+                      sf_rhs_p_s = peek65536(darena, rfb_f + 2)
+                      sf_rhs_p_e = peek65536(darena, rfb_f + 3)
+                      sf_rhs_f_s = peek65536(darena, rfb_f + 2)
+                  sf_rhs_f_e = peek65536(darena, rrec + 3)
               else:
-                if mir_lower_expr(darena,  dasp,  rrec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+                if mir_lower_expr(darena,  dasp,  rrec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef,  pei,  pvar) == 1:
                   return 1
                 if peek65536(darena, rrec + 0) == 8:
                   if peek65536(darena, rrec + 1) == 1:
                     sf_rhs_t = peek65536(darena, rrec + 2)
+                  else:
+                    if peek65536(darena, rrec + 1) == 3:
+                      sf_rhs_t = -2 - peek65536(darena, rrec + 2)
           li_rt_mir_str("INS")
           li_rt_ast_space()
           li_rt_ast_int(28)
@@ -10542,16 +11134,24 @@ def mir_assign(darena: var array[65536, int],  dasp: var array[1, int],  lrec: i
           li_rt_ast_space()
           li_rt_ast_space()
           li_rt_ast_space()
-          # rhs_ident: raw ident, mangled source slot, lowered temp, or empty
-          if sf_rhs_t >= 0:
-            li_rt_mir_label(0, sf_rhs_t)
+          # rhs_ident: raw ident, nested mangled slot, lowered temp, or empty
+          if sf_rhs_p_s >= 0:
+            li_rt_mir_str("__li_o_")
+            li_rt_mir_esc(src, sf_rhs_s, sf_rhs_e)
+            li_rt_mir_str("_")
+            li_rt_mir_esc(src, sf_rhs_p_s, sf_rhs_p_e)
+            li_rt_mir_str("_")
+            li_rt_mir_esc(src, sf_rhs_f_s, sf_rhs_f_e)
           else:
-            if sf_rhs_s >= 0:
-              if sf_rhs_mangled == 1:
-                li_rt_mir_str("__li_o_")
-                li_rt_mir_esc(src, sf_rhs_s, sf_rhs_e)
-              else:
-                li_rt_mir_esc(src, sf_rhs_s, sf_rhs_e)
+            if sf_rhs_t >= 0:
+              li_rt_mir_label(0, sf_rhs_t)
+            else:
+              if sf_rhs_s >= 0:
+                if sf_rhs_mangled == 1:
+                  li_rt_mir_str("__li_o_")
+                  li_rt_mir_esc(src, sf_rhs_s, sf_rhs_e)
+                else:
+                  li_rt_mir_esc(src, sf_rhs_s, sf_rhs_e)
           # label cell (empty)
           li_rt_ast_space()
           # f18..f21
@@ -10598,6 +11198,10 @@ def mir_assign(darena: var array[65536, int],  dasp: var array[1, int],  lrec: i
         var sf_rhs_s: int = -1
         var sf_rhs_e: int = -1
         var sf_rhs_t: int = -1
+        var sf_rhs_p_s: int = -1
+        var sf_rhs_p_e: int = -1
+        var sf_rhs_f_s: int = -1
+        var sf_rhs_f_e: int = -1
         if peek65536(darena, rrec + 0) == 0:
           sf_lit = 1
           sf_val = peek65536(darena, rrec + 1)
@@ -10608,14 +11212,42 @@ def mir_assign(darena: var array[65536, int],  dasp: var array[1, int],  lrec: i
             sf_rhs_s = peek65536(darena, rrec + 1)
             sf_rhs_e = peek65536(darena, rrec + 2)
           else:
-            if mir_lower_expr(darena,  dasp,  rrec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
-              return 1
+            var sf_nested: int = 0
+            if peek65536(darena, rrec + 0) == 9:
+              var sf_outer_base: int = peek65536(darena, rrec + 1)
+              if peek65536(darena, sf_outer_base + 0) == 9:
+                var sf_inner_base: int = peek65536(darena, sf_outer_base + 1)
+                if peek65536(darena, sf_inner_base + 0) == 3:
+                  sf_rhs_s = peek65536(darena, sf_inner_base + 1)
+                  sf_rhs_e = peek65536(darena, sf_inner_base + 2)
+                  sf_rhs_p_s = peek65536(darena, sf_outer_base + 2)
+                  sf_rhs_p_e = peek65536(darena, sf_outer_base + 3)
+                  sf_rhs_f_s = peek65536(darena, rrec + 2)
+                  sf_rhs_f_e = peek65536(darena, rrec + 3)
+                  sf_nested = 1
+            if sf_nested == 0:
+              if mir_lower_expr(darena,  dasp,  rrec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef,  pei,  pvar) == 1:
+                return 1
             sf_lit = 0
             sf_val = 0
             if peek65536(darena, rrec + 0) == 8:
               if peek65536(darena, rrec + 1) == 1:
                 sf_rhs_t = peek65536(darena, rrec + 2)
-        mir_ins_mangled(src, 26, 0, base_s_a, base_e_a, fld_s_a, fld_e_a, 0, sf_lit, sf_val, lastop, sf_rhs_s, sf_rhs_e, sf_rhs_t, 1)
+              else:
+                if peek65536(darena, rrec + 1) == 3:
+                  sf_rhs_t = -2 - peek65536(darena, rrec + 2)
+            if peek65536(darena, rrec + 0) == 9:
+              var rfb_i: int = peek65536(darena, rrec + 1)
+              if peek65536(darena, rfb_i + 0) == 9:
+                var rfb_root: int = peek65536(darena, rfb_i + 1)
+                if peek65536(darena, rfb_root + 0) == 3:
+                  sf_rhs_s = peek65536(darena, rfb_root + 1)
+                  sf_rhs_e = peek65536(darena, rfb_root + 2)
+                  sf_rhs_p_s = peek65536(darena, rfb_i + 2)
+                  sf_rhs_p_e = peek65536(darena, rfb_i + 3)
+                  sf_rhs_f_s = peek65536(darena, rrec + 2)
+                  sf_rhs_f_e = peek65536(darena, rrec + 3)
+        mir_ins_mangled(src, 26, 0, base_s_a, base_e_a, fld_s_a, fld_e_a, 0, sf_lit, sf_val, lastop, sf_rhs_s, sf_rhs_e, sf_rhs_t, sf_rhs_p_s, sf_rhs_p_e, sf_rhs_f_s, sf_rhs_f_e, 1, 0)
         return 0
   if peek65536(darena, lrec + 0) == 5:
     var base: int = peek65536(darena, lrec + 1)
@@ -10641,7 +11273,7 @@ def mir_assign(darena: var array[65536, int],  dasp: var array[1, int],  lrec: i
                 iv9 = -2
             if iv9 >= 0:
               if peek65536(darena, rrec + 0) == 0:
-                mir_ins_mangled(src, 10, iv9, peek65536(darena, fb9 + 1), peek65536(darena, fb9 + 2), fs9, fe9, 0, 1, peek65536(darena, rrec + 1), lastop, -1, -1, -1, 1)
+                mir_ins_mangled(src, 10, iv9, peek65536(darena, fb9 + 1), peek65536(darena, fb9 + 2), fs9, fe9, 0, 1, peek65536(darena, rrec + 1), lastop, -1, -1, -1, -1, -1, -1, -1, 1, 0)
                 return 0
               if peek65536(darena, rrec + 0) == 3:
                 var isrc9: int = mir_obj_find_var(src,  ts,  te,  itmp,  peek65536(darena, rrec + 1),  peek65536(darena, rrec + 2))
@@ -10649,7 +11281,7 @@ def mir_assign(darena: var array[65536, int],  dasp: var array[1, int],  lrec: i
                   # a.xs[i] = b.ys[j] is uncommon; fall through to generic (temp) path
                   iv9 = -3
               if iv9 >= 0:
-                mir_ins_mangled(src, 10, iv9, peek65536(darena, fb9 + 1), peek65536(darena, fb9 + 2), fs9, fe9, 0, 1, peek65536(darena, rrec + 1), lastop, -1, -1, -1, 1)
+                mir_ins_mangled(src, 10, iv9, peek65536(darena, fb9 + 1), peek65536(darena, fb9 + 2), fs9, fe9, 0, 1, peek65536(darena, rrec + 1), lastop, -1, -1, -1, -1, -1, -1, -1, 1, 0)
                 return 0
     if peek65536(darena, base + 0) == 5:
       var mat: int = peek65536(darena, base + 1)
@@ -10760,6 +11392,9 @@ def mir_assign(darena: var array[65536, int],  dasp: var array[1, int],  lrec: i
       if peek65536(darena, rrec + 0) == 0:
         f[26] = 1
         f[27] = peek65536(darena, rrec + 1)
+        f[37] = peek65536(darena, rrec + 2)
+        f[38] = peek65536(darena, rrec + 3)
+        f[41] = peek65536(darena, rrec + 4)
       else:
         if peek65536(darena, rrec + 0) == 3:
           f[26] = 0
@@ -11088,9 +11723,12 @@ def mir_retparam_line(src: var ptr,  ts: var array[131072, int],  te: var array[
   mir_obj_field_name(itmp, type_idx, field_idx, fa)
   var fflt: int = mir_obj_field_float(itmp, type_idx, field_idx)
   var felems_r: int = mir_obj_field_elems(itmp, type_idx, field_idx)
+  var tsrc: ptr = li_rt_type_src_get(type_idx)
+  if tsrc == 0:
+    tsrc = src
   li_rt_mir_str("RETPARAM")
   li_rt_ast_space()
-  li_rt_ast_text(src,  fa[0],  fa[1])
+  li_rt_ast_text(tsrc,  fa[0],  fa[1])
   li_rt_ast_space()
   li_rt_ast_int(fflt)
   li_rt_ast_space()
@@ -11121,11 +11759,14 @@ def mir_retparam_line_nested(src: var ptr,  ts: var array[131072, int],  te: var
   mir_obj_field_name(itmp, type_idx, field_idx, fa2)
   var fflt2: int = mir_obj_field_float(itmp, type_idx, field_idx)
   var felems_r2: int = mir_obj_field_elems(itmp, type_idx, field_idx)
+  var tsrc2: ptr = li_rt_type_src_get(type_idx)
+  if tsrc2 == 0:
+    tsrc2 = src
   li_rt_mir_str("RETPARAM")
   li_rt_ast_space()
-  li_rt_ast_text(src,  p_s,  p_e)
+  li_rt_ast_text(tsrc2,  p_s,  p_e)
   li_rt_mir_str("_")
-  li_rt_ast_text(src,  fa2[0],  fa2[1])
+  li_rt_ast_text(tsrc2,  fa2[0],  fa2[1])
   li_rt_ast_space()
   li_rt_ast_int(fflt2)
   li_rt_ast_space()
@@ -11170,40 +11811,60 @@ def mir_obj_retparams(src: var ptr,  ts: var array[131072, int],  te: var array[
     i_r = i_r + 1
   return 0
 
-def mir_obj_line(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], itmp: var array[4096, int],  type_idx: int,  field_idx: int) raises IO -> int
+def mir_obj_line_r(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], itmp: var array[4096, int],  type_idx: int,  field_idx: int,  parent_path: int) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
 =
   var fa: array[2, int]
   mir_obj_field_name(itmp, type_idx, field_idx, fa)
-  var fflt: int = mir_obj_field_float(itmp, type_idx, field_idx)
-  var felems_o: int = mir_obj_field_elems(itmp, type_idx, field_idx)
   var obj_tsrc: ptr = li_rt_type_src_get(type_idx)
   if obj_tsrc == 0:
     obj_tsrc = src
-  li_rt_mir_str("OBJ")
-  li_rt_ast_space()
-  li_rt_ast_text(obj_tsrc,  fa[0],  fa[1])
-  li_rt_ast_space()
-  li_rt_ast_int(fflt)
-  li_rt_ast_space()
-  li_rt_ast_int(0)
-  li_rt_ast_space()
-  li_rt_ast_int(0)
-  li_rt_ast_space()
-  li_rt_ast_int(0)
-  li_rt_ast_space()
-  li_rt_ast_int(0)
-  li_rt_ast_space()
-  li_rt_ast_int(felems_o)
-  li_rt_ast_space()
-  li_rt_ast_int(0)
-  li_rt_ast_space()
-  li_rt_ast_int(0)
-  li_rt_ast_space()
-  li_rt_ast_int(0)
-  li_rt_ast_nl()
+  var sub: int = mir_obj_field_obj_type(src, ts, te, itmp, type_idx, field_idx)
+  var path: int = li_rt_mir_fieldpath_add(parent_path, obj_tsrc, fa[0], fa[1])
+  if sub >= 0:
+    var sn: int = mir_obj_field_count(itmp, sub)
+    var si: int = 0
+    while si < sn:
+      mir_obj_line_r(src, ts, te, itmp, sub, si, path)
+      si = si + 1
+  else:
+    var fflt: int = mir_obj_field_float(itmp, type_idx, field_idx)
+    var felems_o: int = mir_obj_field_elems(itmp, type_idx, field_idx)
+    li_rt_mir_str("OBJ")
+    li_rt_ast_space()
+    if parent_path == 0:
+      li_rt_ast_text(obj_tsrc, fa[0], fa[1])
+    else:
+      li_rt_mir_fieldpath_out(path)
+    li_rt_ast_space()
+    li_rt_ast_int(fflt)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(felems_o)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_nl()
+  return 0
+
+def mir_obj_line(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], itmp: var array[4096, int],  type_idx: int,  field_idx: int) raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  mir_obj_line_r(src, ts, te, itmp, type_idx, field_idx, 0)
   return 0
 
 def mir_dec_line(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], name_tok: int,  lanes: int,  vectorized: int,  parallel: int,  disjoint: int) raises IO -> int
@@ -11280,43 +11941,63 @@ def mir_param_line(src: var ptr,  ts: var array[131072, int],  te: var array[131
   return 0
 
 # Emit one flattened object parameter, e.g. Vec3 a -> __li_o_a_x.
-def mir_obj_param_line(src: var ptr, ts: var array[131072, int], te: var array[131072, int], itmp: var array[4096, int], type_idx: int, base_s: int, base_e: int, field_idx: int, is_var: int) raises IO -> int
+def mir_obj_param_line_r(src: var ptr, ts: var array[131072, int], te: var array[131072, int], itmp: var array[4096, int], type_idx: int, base_s: int, base_e: int, field_idx: int, is_var: int, parent_path: int) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
 =
   var fa: array[2, int]
   mir_obj_field_name(itmp, type_idx, field_idx, fa)
-  var ffloat: int = mir_obj_field_float(itmp, type_idx, field_idx)
-  var felems: int = mir_obj_field_elems(itmp, type_idx, field_idx)
-  li_rt_mir_str("PARAM")
-  li_rt_ast_space()
-  li_rt_mir_str("__li_o_")
-  li_rt_mir_esc(src, base_s, base_e)
-  li_rt_mir_str("_")
   var op_tsrc: ptr = li_rt_type_src_get(type_idx)
   if op_tsrc == 0:
     op_tsrc = src
-  li_rt_mir_esc(op_tsrc,  fa[0],  fa[1])
-  li_rt_ast_space()
-  li_rt_ast_int(ffloat)
-  li_rt_ast_space()
-  li_rt_ast_int(0)
-  li_rt_ast_space()
-  li_rt_ast_int(0)
-  li_rt_ast_space()
-  li_rt_ast_int(0)
-  li_rt_ast_space()
-  li_rt_ast_int(0)
-  li_rt_ast_space()
-  li_rt_ast_int(felems)
-  li_rt_ast_space()
-  li_rt_ast_int(0)
-  li_rt_ast_space()
-  li_rt_ast_int(0)
-  li_rt_ast_space()
-  li_rt_ast_int(is_var)
-  li_rt_ast_nl()
+  var sub: int = mir_obj_field_obj_type(src, ts, te, itmp, type_idx, field_idx)
+  var path: int = li_rt_mir_fieldpath_add(parent_path, op_tsrc, fa[0], fa[1])
+  if sub >= 0:
+    var sn: int = mir_obj_field_count(itmp, sub)
+    var si: int = 0
+    while si < sn:
+      mir_obj_param_line_r(src, ts, te, itmp, sub, base_s, base_e, si, is_var, path)
+      si = si + 1
+  else:
+    var ffloat: int = mir_obj_field_float(itmp, type_idx, field_idx)
+    var felems: int = mir_obj_field_elems(itmp, type_idx, field_idx)
+    li_rt_mir_str("PARAM")
+    li_rt_ast_space()
+    li_rt_mir_str("__li_o_")
+    li_rt_mir_esc(src, base_s, base_e)
+    li_rt_mir_str("_")
+    if parent_path == 0:
+      li_rt_mir_esc(op_tsrc, fa[0], fa[1])
+    else:
+      li_rt_mir_fieldpath_out(path)
+    li_rt_ast_space()
+    li_rt_ast_int(ffloat)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(felems)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(0)
+    li_rt_ast_space()
+    li_rt_ast_int(is_var)
+    li_rt_ast_nl()
+  return 0
+
+def mir_obj_param_line(src: var ptr, ts: var array[131072, int], te: var array[131072, int], itmp: var array[4096, int], type_idx: int, base_s: int, base_e: int, field_idx: int, is_var: int) raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  mir_obj_param_line_r(src, ts, te, itmp, type_idx, base_s, base_e, field_idx, is_var, 0)
   return 0
 
 def mir_emit_object_params(src: var ptr, ts: var array[131072, int], te: var array[131072, int], itmp: var array[4096, int], type_idx: int, base_s: int, base_e: int, is_var: int) raises IO -> int
@@ -11945,13 +12626,19 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
                   fld_float = 1
                 if ty_tok + 2 < n[0] and tok_is(src, ts, te, ty_tok, "array") == 1 and tok_is(src, ts, te, ty_tok + 1, "[") == 1:
                   fld_elems = li_rt_mir_int(src,  peek_tk(ts, ty_tok + 2),  peek_tk(te, ty_tok + 2))
+                  # Check element type inside array[N, elem]: array[8, float] -> float
+                  if ty_tok + 4 < n[0] and tok_is(src, ts, te, ty_tok + 3, ",") == 1:
+                    var elem_tok: int = ty_tok + 4
+                    if tok_is(src, ts, te, elem_tok, "float") == 1 or tok_is(src, ts, te, elem_tok, "float64") == 1 or tok_is(src, ts, te, elem_tok, "float32") == 1 or tok_is(src, ts, te, elem_tok, "f64") == 1 or tok_is(src, ts, te, elem_tok, "f32") == 1:
+                      fld_float = 1
               # skip : and type tokens until newline
               while chk < n[0] and peek_tk(tk, chk) != 1:
                 chk = chk + 1
               # skip newlines
               while chk < n[0] and peek_tk(tk, chk) == 1:
                 chk = chk + 1
-              mir_obj_reg_field(itmp, src, fld_s, fld_e, fld_float, fld_elems, fld_tn_s, fld_tn_e)
+              if mode == 0:
+                mir_obj_reg_field(itmp, src, fld_s, fld_e, fld_float, fld_elems, fld_tn_s, fld_tn_e)
               nfields = nfields + 1
             # Inheritance: `type Dog = object of Animal` — C++ for_each_object_field
             # recurses into the base first, so base fields precede derived fields.
@@ -11988,7 +12675,8 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
                 set4096(itmp, 3200, merged_base + base_nf + nfields)
                 reg_nf = base_nf + nfields
                 reg_fb = merged_base
-            mir_obj_reg_type(itmp, src, ts, te, obj_type_start, obj_type_end, reg_nf, reg_fb, base_s, base_e)
+            if mode == 0:
+              mir_obj_reg_type(itmp, src, ts, te, obj_type_start, obj_type_end, reg_nf, reg_fb, base_s, base_e)
       skip_newlines(tk,  n,  pi,  err)
       continue
     if k == 29:
@@ -12130,7 +12818,6 @@ def mir_module(src: var ptr,  file_path: ptr, tk: var array[131072, int],  ts: v
   var pcount: array[1, int]
   pcount[0] = 0
   # ---- Pre-scan main for imports, store resolved file contents ----
-  var imp_files: array[16, ptr]
   var imp_n: array[1, int]
   imp_n[0] = 0
   li_rt_import_paths_clear()
@@ -12159,7 +12846,7 @@ def mir_module(src: var ptr,  file_path: ptr, tk: var array[131072, int],  ts: v
       var f2: ptr = li_rt_resolve_import(file_path,  mn2)
       if f2 != 0:
         if imp_n[0] < 16:
-          imp_files[imp_n[0]] = f2
+          li_rt_import_content_store(f2)
           li_rt_import_path_store(li_rt_resolve_import_last_path())
           imp_n[0] = imp_n[0] + 1
       continue
@@ -12167,8 +12854,9 @@ def mir_module(src: var ptr,  file_path: ptr, tk: var array[131072, int],  ts: v
   # ---- Transitive import resolution: scan each resolved import for ITS imports ----
   var scan_idx: int = 0
   while scan_idx < imp_n[0]:
+    var insert_at: int = scan_idx + 1
     n[0] = 0
-    var lex_ok: int = lex_source(imp_files[scan_idx], tk, ts, te, n, 0)
+    var lex_ok: int = lex_source(li_rt_import_content_get(scan_idx), tk, ts, te, n, 0)
     if lex_ok == 0:
       pi[0] = 0
       err[0] = 0
@@ -12187,11 +12875,11 @@ def mir_module(src: var ptr,  file_path: ptr, tk: var array[131072, int],  ts: v
               ime2 = peek_tk(te, pi[0] + 0)
               pi[0] = pi[0] + 1
           if cur_kind(tk, n, pi, err) == 4:
-            if tok_is(imp_files[scan_idx], ts, te, pi[0], "as") == 1:
+            if tok_is(li_rt_import_content_get(scan_idx), ts, te, pi[0], "as") == 1:
               pi[0] = pi[0] + 1
               if cur_kind(tk, n, pi, err) == 4:
                 pi[0] = pi[0] + 1
-          var mn3: ptr = bytes_slice_i(imp_files[scan_idx], ims2, ime2 - ims2)
+          var mn3: ptr = bytes_slice_i(li_rt_import_content_get(scan_idx), ims2, ime2 - ims2)
           var f3: ptr = li_rt_resolve_import(li_rt_import_path_get(scan_idx), mn3)
           if f3 != 0:
             var dup: int = 0
@@ -12201,7 +12889,7 @@ def mir_module(src: var ptr,  file_path: ptr, tk: var array[131072, int],  ts: v
             # Deduplicate by canonical resolved path as well as pointer.
             var new_path: ptr = li_rt_resolve_import_last_path()
             while jj < imp_n[0]:
-              if imp_files[jj] == f3:
+              if li_rt_import_content_get(jj) == f3:
                 dup = 1
               else:
                 var old_path: ptr = li_rt_import_path_get(jj)
@@ -12211,9 +12899,10 @@ def mir_module(src: var ptr,  file_path: ptr, tk: var array[131072, int],  ts: v
               jj = jj + 1
             if dup == 0:
               if imp_n[0] < 16:
-                imp_files[imp_n[0]] = f3
-                li_rt_import_path_store(li_rt_resolve_import_last_path())
+                li_rt_import_content_insert(insert_at, f3)
+                li_rt_import_path_insert(insert_at, li_rt_resolve_import_last_path())
                 imp_n[0] = imp_n[0] + 1
+                insert_at = insert_at + 1
           continue
         pi[0] = pi[0] + 1
     scan_idx = scan_idx + 1
@@ -12231,12 +12920,12 @@ def mir_module(src: var ptr,  file_path: ptr, tk: var array[131072, int],  ts: v
   var ii: int = 0
   while ii < imp_n[0]:
     n[0] = 0
-    if lex_source(imp_files[ii],  tk,  ts,  te,  n, 0) == 0:
+    if lex_source(li_rt_import_content_get(ii),  tk,  ts,  te,  n, 0) == 0:
       pi[0] = 0
       err[0] = 0
       li_rt_pn_set(pn[0])
       set32768(ftmp, 4096 + ii * 2, li_rt_pn_get())
-      if mir_walk(imp_files[ii],  tk,  ts,  te,  n,  pi,  err,  0, tc,  lastop,  ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  pcount) == 1:
+      if mir_walk(li_rt_import_content_get(ii),  tk,  ts,  te,  n,  pi,  err,  0, tc,  lastop,  ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef,  pei,  pvar,  pmx,  pmc,  pcount) == 1:
         return 1
       set32768(ftmp, 4097 + ii * 2, li_rt_pn_get())
       pn[0] = li_rt_pn_get()
@@ -12258,7 +12947,7 @@ def mir_module(src: var ptr,  file_path: ptr, tk: var array[131072, int],  ts: v
     # std/runtime/seam.li is a declaration-only ABI manifest. Its names are
     # not executable calls and must not contribute runtime-link flags; package
     # bodies remain scanned normally.
-    if li_rt_str_prefix(imp_files[scan_i], "# Trusted runtime ABI") == 0:
+    if li_rt_str_prefix(li_rt_import_content_get(scan_i), "# Trusted runtime ABI") == 0:
       # Package manifests select runtime modules at the module level. Keep
       # this path-based mapping alongside call-name scanning so imported
       # extern declarations remain correct even when their token stream is
@@ -12272,10 +12961,10 @@ def mir_module(src: var ptr,  file_path: ptr, tk: var array[131072, int],  ts: v
         if li_rt_str_contains(scan_path, "/li-log/") == 1:
           set32768(ftmp, 4088, 1)
       n[0] = 0
-      if lex_source(imp_files[scan_i], tk, ts, te, n, 0) == 0:
-        if mir_scan_rt_flags(imp_files[scan_i], tk, ts, te, n, ftmp, ptok, pex, pn) == 1:
+      if lex_source(li_rt_import_content_get(scan_i), tk, ts, te, n, 0) == 0:
+        if mir_scan_rt_flags(li_rt_import_content_get(scan_i), tk, ts, te, n, ftmp, ptok, pex, pn) == 1:
           return 1
-        par_total = par_total + mir_count_parallel(imp_files[scan_i], tk, ts, te, n)
+        par_total = par_total + mir_count_parallel(li_rt_import_content_get(scan_i), tk, ts, te, n)
     scan_i = scan_i + 1
   n[0] = 0
   if lex_source(src, tk, ts, te, n, 0) == 1:
@@ -12309,7 +12998,7 @@ def mir_module(src: var ptr,  file_path: ptr, tk: var array[131072, int],  ts: v
   # ---- Emit imports (re-lex each import; mir_proc reads from C globals) ----
   ii = 0
   while ii < imp_n[0]:
-    var f3: ptr = imp_files[ii]
+    var f3: ptr = li_rt_import_content_get(ii)
     n[0] = 0
     if lex_source(f3,  tk,  ts,  te,  n, 0) == 0:
       pi[0] = 0

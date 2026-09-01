@@ -5,7 +5,9 @@
 
 namespace li {
 
-void borrow_check_module(const Module& module, DiagnosticBag& diags);
-void effects_check_module(const Module& module, DiagnosticBag& diags);
+void borrow_check_module(const Module& module, DiagnosticBag& diags,
+                         std::size_t main_proc_count);
+void effects_check_module(const Module& module, DiagnosticBag& diags,
+                          std::size_t main_proc_count);
 
 }  // namespace li

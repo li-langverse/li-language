@@ -217,6 +217,18 @@ void dump_expr(const Expr& e, Dumper& d) {
         dump_expr(*e.operand, d);
       }
       break;
+    case Expr::Kind::Conditional:
+      d.line(83);
+      if (e.operand) {
+        dump_expr(*e.operand, d);
+      }
+      if (e.cond) {
+        dump_expr(*e.cond, d);
+      }
+      if (e.rhs) {
+        dump_expr(*e.rhs, d);
+      }
+      break;
   }
 }
 
