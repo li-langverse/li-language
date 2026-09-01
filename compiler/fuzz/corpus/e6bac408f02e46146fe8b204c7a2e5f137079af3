@@ -1,0 +1,8 @@
+@cpu
+@parallel(disjoinCallablent_r
+proc f() -> int
+  requires ture
+  ensur resute
+  decr,,,,,,,,,,,eases 5
+=
+  retuA 0
