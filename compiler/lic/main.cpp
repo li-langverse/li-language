@@ -402,7 +402,7 @@ int main(int argc, char** argv) {
       28,  // KwContinue -> 28
       30,  // KwReturn -> 30 (walker: error=29, return=30)
       31,  // KwRaises -> 31
-      0,   // KwEcho -> remapped per-token (private=16, public=17, echo=skip)
+      -1,  // KwEcho -> remapped per-token (private=16, public=17, echo=skip)
       32,  // KwExtern -> 32
       35,  // KwTrue -> 35 (walker: async=33, await=34, true=35)
       36,  // KwFalse -> 36
@@ -453,18 +453,22 @@ int main(int argc, char** argv) {
     const int nelem = static_cast<int>(std::size(wk));
     for (const auto& t : lexer.tokens()) {
       int k = static_cast<int>(t.kind);
+      // Our branch folds KwPrivate/KwPublic into KwEcho (unused enum slot).
+      if (t.kind == li::TokenKind::KwEcho) {
+        std::string s(t.text);
+        if (s == "private") {
+          std::cout << 16 << '\t' << s << '\n';
+        } else if (s == "public") {
+          std::cout << 17 << '\t' << s << '\n';
+        }
+        // 'echo' has no walker equivalent; skip it.
+        continue;
+      }
       if (k >= 0 && k < nelem && wk[k] >= 0) {
         int out_kind = wk[k];
         // Our branch folds KwDef into KwProc; the walker distinguishes them.
         if (t.kind == li::TokenKind::KwProc && std::string(t.text) == "def") {
           out_kind = 10;  // walker KwDef
-        }
-        // Our branch folds KwPrivate/KwPublic into KwEcho (unused slot).
-        if (t.kind == li::TokenKind::KwEcho) {
-          std::string s(t.text);
-          if (s == "private") out_kind = 16;
-          else if (s == "public") out_kind = 17;
-          else continue;  // walker has no 'echo' keyword
         }
         std::cout << out_kind << '\t' << std::string(t.text) << '\n';
       }
