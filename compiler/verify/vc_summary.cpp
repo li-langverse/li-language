@@ -12,9 +12,6 @@ void count_contracts(const std::vector<Contract>& contracts, VcSummary& out) {
       case ContractKind::Ensures:
         ++out.ensures_count;
         break;
-      case ContractKind::ProbEnsures:
-        ++out.prob_ensures_count;
-        break;
       case ContractKind::Decreases:
         ++out.decreases_count;
         break;
@@ -27,8 +24,6 @@ void count_contracts(const std::vector<Contract>& contracts, VcSummary& out) {
 
 void walk_stmts(const std::vector<Stmt>& stmts, VcSummary& out) {
   for (const auto& s : stmts) {
-    count_contracts(s.par_contracts, out);
-    count_contracts(s.for_contracts, out);
     walk_stmts(s.then_body, out);
     if (s.else_body) {
       walk_stmts(*s.else_body, out);
@@ -48,15 +43,8 @@ VcSummary summarize_vcs(const Module& module) {
     count_contracts(proc.contracts, out);
     walk_stmts(proc.body, out);
   }
-  for (const auto& thm : module.theorems) {
-    if (thm.is_axiom) {
-      ++out.axiom_count;
-    } else if (thm.is_lemma) {
-      ++out.lemma_count;
-    } else {
-      ++out.theorem_count;
-    }
-  }
+  // The branch AST drops theorem/axiom/lemma declarations (parsed and
+  // validated only), so the proof-db counters stay 0.
   return out;
 }
 

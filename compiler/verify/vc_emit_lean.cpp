@@ -63,7 +63,7 @@ const TypeAlias* find_type_alias(const Module& module, const std::string& name) 
 
 const Expr* object_receiver_root(const Expr& e) {
   const Expr* cur = &e;
-  while (cur && cur->kind == Expr::Kind::FieldAccess) {
+  while (cur && cur->kind == Expr::Kind::Field) {
     cur = cur->base.get();
   }
   if (cur && cur->kind == Expr::Kind::Ident) {
@@ -685,11 +685,18 @@ void emit_call_site_requires(std::ostream& out, const Module& module, const Proc
     if (mc == nullptr || !mc->base) {
       continue;
     }
+    // The branch AST has no method-call node, so `methods` is always empty;
+    // the loop below is kept for the case where method syntax lands.
+    const std::string field_name =
+        (mc->index && mc->index->kind == Expr::Kind::Ident) ? mc->index->ident : std::string();
+    if (field_name.empty()) {
+      continue;
+    }
     const std::string type_name = object_type_name_from_method_receiver(caller, *mc->base);
     if (type_name.empty()) {
       continue;
     }
-    const std::string callee_name = type_name + "_" + mc->field_name;
+    const std::string callee_name = type_name + "_" + field_name;
     const ProcDecl* callee = find_proc_by_name(module, callee_name);
     if (callee == nullptr) {
       continue;
@@ -728,10 +735,6 @@ void walk_contracts(std::ostream& out, const Module& module, const ProcDecl& pro
         emit_contract_def(out, module, proc, "invariant", inv++, c, vc_suffix, loop_iter,
                           native_closed);
         break;
-      case ContractKind::ProbEnsures:
-        emit_contract_def(out, module, proc, "prob_ensures", ens++, c, vc_suffix, loop_iter,
-                          native_closed);
-        break;
     }
   }
 }
@@ -755,14 +758,6 @@ bool write_vcs_lean(const Module& module, const std::string& path, std::string* 
     }
     out << "namespace " << proc_section(proc.name) << "\n\n";
     walk_contracts(out, module, proc, proc.contracts, "", nullptr, native_closed);
-    std::size_t par_idx = 0;
-    for (const auto& stmt : proc.body) {
-      if (stmt.kind == Stmt::Kind::ParallelFor && !stmt.par_contracts.empty()) {
-        const std::string suffix = "_par" + std::to_string(par_idx++);
-        walk_contracts(out, module, proc, stmt.par_contracts, suffix,
-                       stmt.par_iter.empty() ? nullptr : &stmt.par_iter, native_closed);
-      }
-    }
     emit_call_site_requires(out, module, proc, native_closed);
     out << "\nend " << proc_section(proc.name) << "\n\n";
   }

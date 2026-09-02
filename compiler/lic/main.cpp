@@ -7,6 +7,7 @@
 #include "li/proof_cli.hpp"
 #include "li/smoke_llvm.hpp"
 #include "li/typecheck.hpp"
+#include "li/vc_emit.hpp"
 
 #include <algorithm>
 #include <array>
@@ -42,6 +43,18 @@ std::string read_file(const char* path) {
   std::ostringstream ss;
   ss << in.rdbuf();
   return ss.str();
+}
+
+// Repo-relative build path (LI_REPO_ROOT/build/<rel>, fallback "build/<rel>").
+// Mirrors li::repo_build_path without pulling the common library into lic.
+std::string repo_build_path(const char* relative) {
+  std::string prefix;
+  if (const char* root = std::getenv("LI_REPO_ROOT")) {
+    prefix = std::string(root) + "/build";
+  } else {
+    prefix = "build";
+  }
+  return prefix + "/" + relative;
 }
 
 // ---- Import resolution (mirrors li_rt_resolve_import in runtime/li_rt.c) ----
@@ -537,6 +550,19 @@ int main(int argc, char** argv) {
     std::string err;
     if (!li::compile_module(module, output, release, extra_flags, &err)) {
       std::cerr << "build failed: " << err << '\n';
+      return 1;
+    }
+    // AutoVC emission: every build regenerates build/generated/AutoVC.lean so
+    // the Lean discharge tooling (li-tests/tooling/discharge_*_lean.sh and the
+    // lake-build CI stage) can typecheck the proof obligations. Restore of the
+    // slice dropped in the c132e1a9 squash merge; emission only — the
+    // build-gating checks live in the tooling scripts.
+    const std::string vc_lean = repo_build_path("generated/AutoVC.lean");
+    std::error_code fs_err;
+    std::filesystem::create_directories(std::filesystem::path(vc_lean).parent_path(), fs_err);
+    std::size_t native_closed = 0;
+    if (!li::write_vcs_lean(module, vc_lean, &err, &native_closed)) {
+      std::cerr << "vc emit: " << err << '\n';
       return 1;
     }
     return 0;

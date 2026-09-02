@@ -48,8 +48,6 @@ Node clone_expr(const Expr& e) {
   n->str_value = e.str_value;
   n->ident = e.ident;
   n->bin_op = e.bin_op;
-  n->field_name = e.field_name;
-  n->lit_suffix = e.lit_suffix;
   if (e.lhs) {
     n->lhs = clone_expr(*e.lhs);
   }
@@ -417,8 +415,6 @@ std::string canon(const Expr& e) {
       return "V" + e.ident;
     case Expr::Kind::StringLit:
       return key("Str", e.str_value);
-    case Expr::Kind::BinaryLit:
-      return "I" + std::to_string(e.int_value);
     case Expr::Kind::UnaryNot:
       return key("Not", e.operand ? canon(*e.operand) : std::string());
     case Expr::Kind::UnaryMinus:
@@ -426,8 +422,11 @@ std::string canon(const Expr& e) {
     case Expr::Kind::Index:
       return key("Idx", (e.base ? canon(*e.base) : std::string()) + "," +
                             (e.index ? canon(*e.index) : std::string()));
-    case Expr::Kind::FieldAccess:
-      return key("Fld", (e.base ? canon(*e.base) : std::string()) + "." + e.field_name);
+    case Expr::Kind::Field:
+      return key("Fld", (e.base ? canon(*e.base) : std::string()) + "." +
+                            (e.index && e.index->kind == Expr::Kind::Ident
+                                 ? e.index->ident
+                                 : std::string()));
     case Expr::Kind::Call: {
       std::string body = e.ident + "(";
       for (std::size_t n = 0; n < e.args.size(); ++n) {
@@ -439,8 +438,6 @@ std::string canon(const Expr& e) {
       body += ")";
       return key("Call", body);
     }
-    case Expr::Kind::MethodCall:
-      return key("MCall", e.field_name);
     case Expr::Kind::Await:
       return key("Await", e.operand ? canon(*e.operand) : std::string());
     case Expr::Kind::BinOp: {
@@ -1124,18 +1121,9 @@ bool fold_numeric_equal(const Expr& a, const Expr& b) {
 
 TheoremDischargeResult discharge_theorems_natively(const Module& module) {
   TheoremDischargeResult out;
-  for (const auto& thm : module.theorems) {
-    if (thm.is_axiom) {
-      ++out.axiom_count;
-      continue;
-    }
-    if (!thm.proposition || discharge_prop_natively(*thm.proposition) != NativeDischarge::Proved) {
-      ++out.open_count;
-      out.open_names.push_back(thm.name);
-      continue;
-    }
-    ++out.proved_count;
-  }
+  // The branch AST drops theorem/axiom declarations entirely (parsed and
+  // validated only), so there is nothing to discharge at the C++ level.
+  (void)module;
   return out;
 }
 

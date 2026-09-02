@@ -100,7 +100,6 @@ std::unique_ptr<Expr> substitute_ident(const Expr& e, const std::string& from,
   out->str_value = e.str_value;
   out->ident = e.ident;
   out->bin_op = e.bin_op;
-  out->field_name = e.field_name;
   if (e.kind == Expr::Kind::Ident && e.ident == from) {
     out->ident = to;
     return out;

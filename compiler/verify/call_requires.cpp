@@ -90,7 +90,6 @@ std::unique_ptr<Expr> clone_expr(const Expr& e) {
   out->str_value = e.str_value;
   out->ident = e.ident;
   out->bin_op = e.bin_op;
-  out->field_name = e.field_name;
   if (e.lhs) {
     out->lhs = clone_expr(*e.lhs);
   }
@@ -230,17 +229,18 @@ std::unique_ptr<Expr> substitute_call_params(
 }
 
 std::optional<std::string> object_field_const_key(const Expr& e) {
-  if (e.kind != Expr::Kind::FieldAccess || !e.base) {
+  if (e.kind != Expr::Kind::Field || !e.base) {
     return std::nullopt;
   }
   const Expr* root = e.base.get();
-  while (root && root->kind == Expr::Kind::FieldAccess) {
+  while (root && root->kind == Expr::Kind::Field) {
     root = root->base.get();
   }
   if (!root || root->kind != Expr::Kind::Ident) {
     return std::nullopt;
   }
-  return root->ident + "." + e.field_name;
+  return root->ident + "." +
+         (e.index && e.index->kind == Expr::Kind::Ident ? e.index->ident : std::string());
 }
 
 std::optional<std::string> array_index_const_key(const Expr& e) {
@@ -306,7 +306,7 @@ void note_array_index_const_assign(const Expr& lhs, const Expr& rhs,
 
 std::unique_ptr<Expr> fold_const_int_locals(
     const Expr& expr, const std::map<std::string, std::int64_t>& const_int_locals) {
-  if (expr.kind == Expr::Kind::FieldAccess) {
+  if (expr.kind == Expr::Kind::Field) {
     const auto key = object_field_const_key(expr);
     if (key) {
       const auto it = const_int_locals.find(*key);
@@ -393,7 +393,7 @@ std::unique_ptr<Expr> fold_const_locals(
       }
       return clone_expr(e);
     }
-    if (e.kind == Expr::Kind::Index || e.kind == Expr::Kind::FieldAccess) {
+    if (e.kind == Expr::Kind::Index || e.kind == Expr::Kind::Field) {
       const auto key =
           e.kind == Expr::Kind::Index ? array_index_const_key(e) : object_field_const_key(e);
       if (key) {
@@ -413,7 +413,7 @@ std::unique_ptr<Expr> fold_const_locals(
   };
   auto out = clone_expr(expr);
   if (out->kind == Expr::Kind::Ident || out->kind == Expr::Kind::Index ||
-      out->kind == Expr::Kind::FieldAccess) {
+      out->kind == Expr::Kind::Field) {
     if (auto lit = fold_one(*out)) {
       return lit;
     }
@@ -840,9 +840,10 @@ std::optional<RequiresViolationExplanation> explain_refinement_violation(
 }
 
 void collect_method_calls_in_expr(const Expr& e, std::vector<const Expr*>& out) {
-  if (e.kind == Expr::Kind::MethodCall) {
-    out.push_back(&e);
-  }
+  // The branch AST has no method-call node (`obj.m(args)` is not yet part of
+  // the postfix grammar), so nothing to collect; kept for the header API.
+  (void)e;
+  (void)out;
   if (e.lhs) {
     collect_method_calls_in_expr(*e.lhs, out);
   }
