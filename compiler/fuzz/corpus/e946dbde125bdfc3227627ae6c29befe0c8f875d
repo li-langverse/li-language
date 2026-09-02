@@ -1,0 +1,4 @@
+c p() -> int
+  requires true
+  ensures trut
+  dProtocon 0

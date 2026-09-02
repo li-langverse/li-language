@@ -1,0 +1,5 @@
+c p() -> int
+  requires true
+  ensures trutypede 0
+=
+  return 0

@@ -1,0 +1,8 @@
+proc p() -> int
+  res true
+  ensures true
+  decreases 0
+=
+ 0
+=
+  return 0
