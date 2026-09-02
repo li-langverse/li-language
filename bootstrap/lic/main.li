@@ -405,7 +405,7 @@ def a_line_i_text_i(d: int,  code: int,  v1: int,  src: var ptr, s: int,  e: int
     li_rt_ast_nl()
   return 0
 
-def int_text_value(src: var ptr,  ts: var array[131072,  int],  te: var array[131072,  int], i: int) -> int
+def int_text_value(src: var ptr,  ts: var array[262144,  int],  te: var array[262144,  int], i: int) -> int
   requires true
   ensures result >= 0
   decreases 0
@@ -595,16 +595,16 @@ def set6(buf: var array[6, int], p: Pos6, v: int) -> int
   buf[p] = v
   return v
 
-type Pos131072 = {p: int | 0 <= p and p < 131072}
+type Pos262144 = {p: int | 0 <= p and p < 262144}
 
-def peek_tk(buf: var array[131072,  int],  p: Pos131072) -> int
+def peek_tk(buf: var array[262144,  int],  p: Pos262144) -> int
   requires true
   ensures result == buf[p]
   decreases 0
 =
   return buf[p]
 
-def set_tk(buf: var array[131072,  int],  p: Pos131072,  v: int) -> int
+def set_tk(buf: var array[262144,  int],  p: Pos262144,  v: int) -> int
   requires true
   ensures result == v
   decreases 0
@@ -653,7 +653,7 @@ def print_usage() raises IO -> int
 # `emit == 1` so the `parse` subcommand re-dumps the exact stream it consumed
 # (token-stream parity vs the C++ parser).
 
-def store_token(tk: var array[131072,  int],  ts: var array[131072,  int], te: var array[131072,  int],  n: var array[1,  int],  src: var ptr, emit: int,  code: int,  s: int,  e: int) raises IO -> int
+def store_token(tk: var array[262144,  int],  ts: var array[262144,  int], te: var array[262144,  int],  n: var array[1,  int],  src: var ptr, emit: int,  code: int,  s: int,  e: int) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -671,7 +671,7 @@ def store_token(tk: var array[131072,  int],  ts: var array[131072,  int], te: v
   n[0] = n[0] + 1
   return 0
 
-def lex_source(src: var ptr,  tk: var array[131072,  int],  ts: var array[131072,  int], te: var array[131072,  int],  n: var array[1,  int], emit: int) raises IO -> int
+def lex_source(src: var ptr,  tk: var array[262144,  int],  ts: var array[262144,  int], te: var array[262144,  int],  n: var array[1,  int], emit: int) raises IO -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -1121,7 +1121,7 @@ def lex_source(src: var ptr,  tk: var array[131072,  int],  ts: var array[131072
 # conditions in a sticky `err` flag: err == 1 <=> C++ diagnostics non-empty.
 # Spans / AST values are irrelevant for accept/reject parity and are omitted.
 
-def cur_kind(tk: var array[131072,  int],  n: var array[1,  int], pi: var array[1,  int],  err: var array[1,  int]) -> int
+def cur_kind(tk: var array[262144,  int],  n: var array[1,  int], pi: var array[1,  int],  err: var array[1,  int]) -> int
   requires true
   ensures result >= 0
   decreases 0
@@ -1132,7 +1132,7 @@ def cur_kind(tk: var array[131072,  int],  n: var array[1,  int], pi: var array[
     err[0] = 1
   return peek_tk(tk,  i)
 
-def peek_off(tk: var array[131072,  int],  n: var array[1,  int], pi: var array[1,  int],  off: int) -> int
+def peek_off(tk: var array[262144,  int],  n: var array[1,  int], pi: var array[1,  int],  off: int) -> int
   requires true
   ensures result >= 0
   decreases 0
@@ -1142,7 +1142,7 @@ def peek_off(tk: var array[131072,  int],  n: var array[1,  int], pi: var array[
     j = n[0] - 1
   return peek_tk(tk,  j)
 
-def accept_k(tk: var array[131072,  int],  n: var array[1,  int], pi: var array[1,  int],  err: var array[1,  int],  k: int) -> int
+def accept_k(tk: var array[262144,  int],  n: var array[1,  int], pi: var array[1,  int],  err: var array[1,  int],  k: int) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -1152,7 +1152,7 @@ def accept_k(tk: var array[131072,  int],  n: var array[1,  int], pi: var array[
     return 1
   return 0
 
-def expect_k(tk: var array[131072,  int],  n: var array[1,  int], pi: var array[1,  int],  err: var array[1,  int],  k: int) -> int
+def expect_k(tk: var array[262144,  int],  n: var array[1,  int], pi: var array[1,  int],  err: var array[1,  int],  k: int) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -1162,7 +1162,7 @@ def expect_k(tk: var array[131072,  int],  n: var array[1,  int], pi: var array[
   err[0] = 1
   return 0
 
-def skip_newlines(tk: var array[131072,  int],  n: var array[1,  int], pi: var array[1,  int],  err: var array[1,  int]) -> int
+def skip_newlines(tk: var array[262144,  int],  n: var array[1,  int], pi: var array[1,  int],  err: var array[1,  int]) -> int
   requires true
   ensures result == 0
   decreases 0
@@ -1171,7 +1171,7 @@ def skip_newlines(tk: var array[131072,  int],  n: var array[1,  int], pi: var a
     pi[0] = pi[0] + 1
   return 0
 
-def skip_param_layout(tk: var array[131072,  int],  n: var array[1,  int], pi: var array[1,  int],  err: var array[1,  int]) -> int
+def skip_param_layout(tk: var array[262144,  int],  n: var array[1,  int], pi: var array[1,  int],  err: var array[1,  int]) -> int
   requires true
   ensures result == 0
   decreases 0
@@ -1181,7 +1181,7 @@ def skip_param_layout(tk: var array[131072,  int],  n: var array[1,  int], pi: v
     pi[0] = pi[0] + 1
   return 0
 
-def tok_is(src: var ptr,  ts: var array[131072,  int],  te: var array[131072,  int], i: int,  s: ptr) -> int
+def tok_is(src: var ptr,  ts: var array[262144,  int],  te: var array[262144,  int], i: int,  s: ptr) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -1200,7 +1200,7 @@ def tok_is(src: var ptr,  ts: var array[131072,  int],  te: var array[131072,  i
 
 # Compare the text of two tokens (by span), so the same identifier can be
 # matched across signature and body positions.
-def tok_eq(src: var ptr, ts: var array[131072, int], te: var array[131072, int], i: int, j: int) -> int
+def tok_eq(src: var ptr, ts: var array[262144, int], te: var array[262144, int], i: int, j: int) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -1259,7 +1259,7 @@ def prec_of(k: int) -> int
     return 6
   return -1
 
-def at_fn_kw(tk: var array[131072,  int],  n: var array[1,  int], pi: var array[1,  int],  err: var array[1,  int]) -> int
+def at_fn_kw(tk: var array[262144,  int],  n: var array[1,  int], pi: var array[1,  int],  err: var array[1,  int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -1271,7 +1271,7 @@ def at_fn_kw(tk: var array[131072,  int],  n: var array[1,  int], pi: var array[
     return 1
   return 0
 
-def consume_for_kw(src: var ptr,  tk: var array[131072,  int],  ts: var array[131072,  int], te: var array[131072,  int],  n: var array[1,  int], pi: var array[1,  int],  err: var array[1,  int]) -> int
+def consume_for_kw(src: var ptr,  tk: var array[262144,  int],  ts: var array[262144,  int], te: var array[262144,  int],  n: var array[1,  int], pi: var array[1,  int],  err: var array[1,  int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -1285,7 +1285,7 @@ def consume_for_kw(src: var ptr,  tk: var array[131072,  int],  ts: var array[13
       return 1
   return 0
 
-def parse_postfix(src: var ptr,  tk: var array[131072,  int],  ts: var array[131072,  int], te: var array[131072,  int],  n: var array[1,  int], pi: var array[1,  int],  err: var array[1,  int],  d: int) -> int
+def parse_postfix(src: var ptr,  tk: var array[262144,  int],  ts: var array[262144,  int], te: var array[262144,  int],  n: var array[1,  int], pi: var array[1,  int],  err: var array[1,  int],  d: int) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -1343,7 +1343,7 @@ def parse_postfix(src: var ptr,  tk: var array[131072,  int],  ts: var array[131
     loop = 0
   return 1
 
-def parse_primary(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
+def parse_primary(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -1410,7 +1410,7 @@ def parse_primary(src: var ptr, tk: var array[131072, int], ts: var array[131072
   err[0] = 1
   return 0
 
-def parse_expr(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], min_prec: int, d: int) -> int
+def parse_expr(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], min_prec: int, d: int) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -1454,7 +1454,7 @@ def parse_expr(src: var ptr, tk: var array[131072, int], ts: var array[131072, i
       return 0
   return 1
 
-def parse_contract_expr(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
+def parse_contract_expr(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -1462,7 +1462,7 @@ def parse_contract_expr(src: var ptr, tk: var array[131072, int], ts: var array[
   skip_newlines(tk, n, pi, err)
   return parse_expr(src, tk, ts, te, n, pi, err, 0, d)
 
-def parse_type(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
+def parse_type(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -1624,7 +1624,7 @@ def parse_type(src: var ptr, tk: var array[131072, int], ts: var array[131072, i
     a_line_text_i(d, src, 20, peek_tk(ts, nt + 0), peek_tk(te, nt + 0), isv)
   return 1
 
-def parse_type_params(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int, rec: int) -> int
+def parse_type_params(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int, rec: int) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -1661,7 +1661,7 @@ def parse_type_params(src: var ptr, tk: var array[131072, int], ts: var array[13
   expect_k(tk, n, pi, err, 52)
   return 1
 
-def parse_param(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
+def parse_param(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -1675,7 +1675,7 @@ def parse_param(src: var ptr, tk: var array[131072, int], ts: var array[131072, 
   parse_type(src, tk, ts, te, n, pi, err, d)
   return 1
 
-def parse_contract(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
+def parse_contract(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -1727,7 +1727,7 @@ def parse_contract(src: var ptr, tk: var array[131072, int], ts: var array[13107
   skip_newlines(tk, n, pi, err)
   return 1
 
-def parse_block(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
+def parse_block(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -1754,7 +1754,7 @@ def parse_block(src: var ptr, tk: var array[131072, int], ts: var array[131072, 
   expect_k(tk, n, pi, err, 3)
   return 1
 
-def parse_decorator_value(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
+def parse_decorator_value(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -1799,7 +1799,7 @@ def parse_decorator_value(src: var ptr, tk: var array[131072, int], ts: var arra
   err[0] = 1
   return 1
 
-def parse_decorator(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
+def parse_decorator(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -1838,7 +1838,7 @@ def parse_decorator(src: var ptr, tk: var array[131072, int], ts: var array[1310
     expect_k(tk, n, pi, err, 50)
   return 1
 
-def parse_decorator_list(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
+def parse_decorator_list(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -1849,7 +1849,7 @@ def parse_decorator_list(src: var ptr, tk: var array[131072, int], ts: var array
     skip_newlines(tk, n, pi, err)
   return 1
 
-def parse_for(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
+def parse_for(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -1888,7 +1888,7 @@ def parse_for(src: var ptr, tk: var array[131072, int], ts: var array[131072, in
   parse_block(src, tk, ts, te, n, pi, err, d)
   return 1
 
-def parse_parallel_for(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
+def parse_parallel_for(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -1958,7 +1958,7 @@ def parse_parallel_for(src: var ptr, tk: var array[131072, int], ts: var array[1
     a_line(d, 52)
   return 1
 
-def parse_stmt(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
+def parse_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -2112,7 +2112,7 @@ def parse_stmt(src: var ptr, tk: var array[131072, int], ts: var array[131072, i
   skip_newlines(tk, n, pi, err)
   return 1
 
-def parse_proc(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], is_extern: int, is_async: int, d: int, skip_hdr: int) -> int
+def parse_proc(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], is_extern: int, is_async: int, d: int, skip_hdr: int) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -2246,7 +2246,7 @@ def parse_proc(src: var ptr, tk: var array[131072, int], ts: var array[131072, i
   parse_block(src, tk, ts, te, n, pi, err, d)
   return 1
 
-def parse_error_decl(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
+def parse_error_decl(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -2267,7 +2267,7 @@ def parse_error_decl(src: var ptr, tk: var array[131072, int], ts: var array[131
     a_line_text_text(d, src, 2, peek_tk(ts, en + 0), peek_tk(te, en + 0), peek_tk(ts, et + 0), peek_tk(te, et + 0))
   return 1
 
-def parse_import(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
+def parse_import(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -2301,7 +2301,7 @@ def parse_import(src: var ptr, tk: var array[131072, int], ts: var array[131072,
       a_line_text_text(d, src, 1, peek_tk(ts, fi), peek_tk(te, li), peek_tk(ts, fi), peek_tk(te, li))
   return 1
 
-def parse_theorem(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], is_axiom: int, is_lemma: int, d: int) -> int
+def parse_theorem(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], is_axiom: int, is_lemma: int, d: int) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -2329,7 +2329,7 @@ def parse_theorem(src: var ptr, tk: var array[131072, int], ts: var array[131072
   skip_newlines(tk, n, pi, err)
   return 1
 
-def parse_trait_method(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
+def parse_trait_method(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -2391,7 +2391,7 @@ def parse_trait_method(src: var ptr, tk: var array[131072, int], ts: var array[1
   skip_newlines(tk, n, pi, err)
   return 1
 
-def parse_trait_methods(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
+def parse_trait_methods(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -2418,7 +2418,7 @@ def parse_trait_methods(src: var ptr, tk: var array[131072, int], ts: var array[
     break
   return 1
 
-def parse_type_fields(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
+def parse_type_fields(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -2484,7 +2484,7 @@ def parse_type_fields(src: var ptr, tk: var array[131072, int], ts: var array[13
     skip_newlines(tk, n, pi, err)
   return 1
 
-def emit_tp_lines(d: int, src: var ptr, ts: var array[131072, int], te: var array[131072, int], tbuf: var array[16, int], ntp: var array[1, int]) -> int
+def emit_tp_lines(d: int, src: var ptr, ts: var array[262144, int], te: var array[262144, int], tbuf: var array[16, int], ntp: var array[1, int]) -> int
   requires true
   ensures result == 0
   decreases 0
@@ -2496,7 +2496,7 @@ def emit_tp_lines(d: int, src: var ptr, ts: var array[131072, int], te: var arra
     ti = ti + 1
   return 0
 
-def parse_type_alias(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
+def parse_type_alias(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -2598,7 +2598,7 @@ def parse_type_alias(src: var ptr, tk: var array[131072, int], ts: var array[131
   skip_newlines(tk, n, pi, err)
   return 1
 
-def parse_module(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
+def parse_module(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -2731,7 +2731,7 @@ def parse_module(src: var ptr, tk: var array[131072, int], ts: var array[131072,
 #   sym_aux: proc arity / (unused); sym_n: count
 
 # ---- type-name classification (returns a type code, or 14 unknown) ----
-def tc_prim_type(src: var ptr, ts: var array[131072, int], te: var array[131072, int], i: int) -> int
+def tc_prim_type(src: var ptr, ts: var array[262144, int], te: var array[262144, int], i: int) -> int
   requires true
   ensures result >= 0
   decreases 0
@@ -2843,7 +2843,7 @@ def tc_bits(t: int) -> int
   return -1
 
 # ---- type parsing (returns a type code; consumes tokens) ----
-def tc_parse_type(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], sym_s: var array[256, int], sym_kind: var array[256, int], sym_ty: var array[256, int], sym_n: var array[1, int]) -> int
+def tc_parse_type(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], sym_s: var array[256, int], sym_kind: var array[256, int], sym_ty: var array[256, int], sym_n: var array[1, int]) -> int
   requires true
   ensures result >= 0
   decreases 0
@@ -2965,7 +2965,7 @@ def tc_parse_type(src: var ptr, tk: var array[131072, int], ts: var array[131072
 
 # Consume the RHS of a type alias (`= object | trait | enum | typedict | type`),
 # mirroring parse_type_alias; returns the tc type code (14 for named/object).
-def tc_skip_alias_rhs(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], sym_s: var array[256, int], sym_kind: var array[256, int], sym_ty: var array[256, int], sym_n: var array[1, int]) -> int
+def tc_skip_alias_rhs(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], sym_s: var array[256, int], sym_kind: var array[256, int], sym_ty: var array[256, int], sym_n: var array[1, int]) -> int
   requires true
   ensures result >= 0
   decreases 0
@@ -3015,7 +3015,7 @@ def tc_skip_alias_rhs(src: var ptr, tk: var array[131072, int], ts: var array[13
   return tc_parse_type(src, tk, ts, te, n, pi, err, sym_s, sym_kind, sym_ty, sym_n)
 
 # ---- symbol lookups ----
-def tc_find_proc(src: var ptr, ts: var array[131072, int], te: var array[131072, int], sym_s: var array[256, int], sym_kind: var array[256, int], sym_ty: var array[256, int], sym_n: var array[1, int], i: int) -> int
+def tc_find_proc(src: var ptr, ts: var array[262144, int], te: var array[262144, int], sym_s: var array[256, int], sym_kind: var array[256, int], sym_ty: var array[256, int], sym_n: var array[1, int], i: int) -> int
   requires true
   ensures result >= -1
   decreases 0
@@ -3028,7 +3028,7 @@ def tc_find_proc(src: var ptr, ts: var array[131072, int], te: var array[131072,
     k = k + 1
   return -1
 
-def tc_proc_arity(src: var ptr, ts: var array[131072, int], te: var array[131072, int], sym_s: var array[256, int], sym_kind: var array[256, int], sym_aux: var array[256, int], sym_n: var array[1, int], i: int) -> int
+def tc_proc_arity(src: var ptr, ts: var array[262144, int], te: var array[262144, int], sym_s: var array[256, int], sym_kind: var array[256, int], sym_aux: var array[256, int], sym_n: var array[1, int], i: int) -> int
   requires true
   ensures result >= -1
   decreases 0
@@ -3041,7 +3041,7 @@ def tc_proc_arity(src: var ptr, ts: var array[131072, int], te: var array[131072
     k = k + 1
   return -1
 
-def tc_local_type(src: var ptr, ts: var array[131072, int], te: var array[131072, int], sym_s: var array[256, int], sym_kind: var array[256, int], sym_ty: var array[256, int], sym_n: var array[1, int], i: int) -> int
+def tc_local_type(src: var ptr, ts: var array[262144, int], te: var array[262144, int], sym_s: var array[256, int], sym_kind: var array[256, int], sym_ty: var array[256, int], sym_n: var array[1, int], i: int) -> int
   requires true
   ensures result >= -1
   decreases 0
@@ -3056,7 +3056,7 @@ def tc_local_type(src: var ptr, ts: var array[131072, int], te: var array[131072
   return best_ty
 
 # ---- expression type inference (returns a type code; consumes tokens) ----
-def tc_expr(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], min_prec: int, sym_s: var array[256, int], sym_kind: var array[256, int], sym_ty: var array[256, int], sym_aux: var array[256, int], sym_n: var array[1, int]) -> int
+def tc_expr(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], min_prec: int, sym_s: var array[256, int], sym_kind: var array[256, int], sym_ty: var array[256, int], sym_aux: var array[256, int], sym_n: var array[1, int]) -> int
   requires true
   ensures result >= 0
   decreases 0
@@ -3109,7 +3109,7 @@ def tc_binop_type(l: int, opk: int, r: int, err: var array[1, int]) -> int
       return 0
   return 14
 
-def tc_primary(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], sym_s: var array[256, int], sym_kind: var array[256, int], sym_ty: var array[256, int], sym_aux: var array[256, int], sym_n: var array[1, int]) -> int
+def tc_primary(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], sym_s: var array[256, int], sym_kind: var array[256, int], sym_ty: var array[256, int], sym_aux: var array[256, int], sym_n: var array[1, int]) -> int
   requires true
   ensures result >= 0
   decreases 0
@@ -3186,7 +3186,7 @@ def tc_primary(src: var ptr, tk: var array[131072, int], ts: var array[131072, i
   err[0] = 1
   return 14
 
-def tc_postfix(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], t: int, sym_s: var array[256, int], sym_kind: var array[256, int], sym_ty: var array[256, int], sym_aux: var array[256, int], sym_n: var array[1, int]) -> int
+def tc_postfix(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], t: int, sym_s: var array[256, int], sym_kind: var array[256, int], sym_ty: var array[256, int], sym_aux: var array[256, int], sym_n: var array[1, int]) -> int
   requires true
   ensures result >= 0
   decreases 0
@@ -3226,7 +3226,7 @@ def tc_postfix(src: var ptr, tk: var array[131072, int], ts: var array[131072, i
   return t
 
 # ---- statement walker (checks return types; consumes tokens) ----
-def tc_stmt(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], cur_ret: var array[1, int], sym_s: var array[256, int], sym_kind: var array[256, int], sym_ty: var array[256, int], sym_aux: var array[256, int], sym_n: var array[1, int]) -> int
+def tc_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], cur_ret: var array[1, int], sym_s: var array[256, int], sym_kind: var array[256, int], sym_ty: var array[256, int], sym_aux: var array[256, int], sym_n: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -3313,7 +3313,7 @@ def tc_stmt(src: var ptr, tk: var array[131072, int], ts: var array[131072, int]
     tc_expr(src, tk, ts, te, n, pi, err, 0, sym_s, sym_kind, sym_ty, sym_aux, sym_n)
   return 1
 
-def tc_block(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], cur_ret: var array[1, int], sym_s: var array[256, int], sym_kind: var array[256, int], sym_ty: var array[256, int], sym_aux: var array[256, int], sym_n: var array[1, int]) -> int
+def tc_block(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], cur_ret: var array[1, int], sym_s: var array[256, int], sym_kind: var array[256, int], sym_ty: var array[256, int], sym_aux: var array[256, int], sym_n: var array[1, int]) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -3337,7 +3337,7 @@ def tc_block(src: var ptr, tk: var array[131072, int], ts: var array[131072, int
   return 1
 
 # ---- record a local/param type ----
-def tc_record_local(src: var ptr, ts: var array[131072, int], te: var array[131072, int], sym_s: var array[256, int], sym_kind: var array[256, int], sym_ty: var array[256, int], sym_n: var array[1, int], i: int, t: int) -> int
+def tc_record_local(src: var ptr, ts: var array[262144, int], te: var array[262144, int], sym_s: var array[256, int], sym_kind: var array[256, int], sym_ty: var array[256, int], sym_n: var array[1, int], i: int, t: int) -> int
   requires true
   ensures result == 0
   decreases 0
@@ -3358,7 +3358,7 @@ def tc_record_local(src: var ptr, ts: var array[131072, int], te: var array[1310
   return 0
 
 # ---- generic type params: record `[T, U, ...]` as kind 4 (type var) ----
-def tc_record_type_params(tk: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], sym_s: var array[256, int], sym_kind: var array[256, int], sym_ty: var array[256, int], sym_n: var array[1, int]) -> int
+def tc_record_type_params(tk: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], sym_s: var array[256, int], sym_kind: var array[256, int], sym_ty: var array[256, int], sym_n: var array[1, int]) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -3392,7 +3392,7 @@ def tc_record_type_params(tk: var array[131072, int], n: var array[1, int], pi: 
 
 
 # ---- consume an optional `raises A, B, ...` clause ----
-def tc_skip_raises(tk: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int]) -> int
+def tc_skip_raises(tk: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int]) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -3412,7 +3412,7 @@ def tc_skip_raises(tk: var array[131072, int], n: var array[1, int], pi: var arr
   return 1
 
 # ---- proc signature collection (pass 1) ----
-def tc_record_proc(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], is_extern: int, sym_s: var array[256, int], sym_kind: var array[256, int], sym_ty: var array[256, int], sym_aux: var array[256, int], sym_n: var array[1, int]) -> int
+def tc_record_proc(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], is_extern: int, sym_s: var array[256, int], sym_kind: var array[256, int], sym_ty: var array[256, int], sym_aux: var array[256, int], sym_n: var array[1, int]) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -3459,7 +3459,7 @@ def tc_record_proc(src: var ptr, tk: var array[131072, int], ts: var array[13107
   return 1
 
 # ---- pass 1 tail skip: contracts (and body for non-extern procs) ----
-def tc_skip_proc_tail(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], is_extern: int) -> int
+def tc_skip_proc_tail(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], is_extern: int) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -3481,7 +3481,7 @@ def tc_skip_proc_tail(src: var ptr, tk: var array[131072, int], ts: var array[13
   return 1
 
 # ---- contract collection + well-formedness (E0301/2/3) ----
-def tc_collect_contracts(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], is_extern: int, ret_ty: int, sym_s: var array[256, int], sym_kind: var array[256, int], sym_ty: var array[256, int], sym_aux: var array[256, int], sym_n: var array[1, int]) -> int
+def tc_collect_contracts(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], is_extern: int, ret_ty: int, sym_s: var array[256, int], sym_kind: var array[256, int], sym_ty: var array[256, int], sym_aux: var array[256, int], sym_n: var array[1, int]) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -3524,7 +3524,7 @@ def tc_collect_contracts(src: var ptr, tk: var array[131072, int], ts: var array
   return 1
 
 # ---- pass 2: check a proc body ----
-def tc_check_proc_body(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], ret_ty: int, cur_ret: var array[1, int], sym_s: var array[256, int], sym_kind: var array[256, int], sym_ty: var array[256, int], sym_aux: var array[256, int], sym_n: var array[1, int]) -> int
+def tc_check_proc_body(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], ret_ty: int, cur_ret: var array[1, int], sym_s: var array[256, int], sym_kind: var array[256, int], sym_ty: var array[256, int], sym_aux: var array[256, int], sym_n: var array[1, int]) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -3537,7 +3537,7 @@ def tc_check_proc_body(src: var ptr, tk: var array[131072, int], ts: var array[1
   return 1
 
 # ---- skip a param in pass 2 (types already recorded in pass 1) ----
-def tc_skip_param(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], sym_s: var array[256, int], sym_kind: var array[256, int], sym_ty: var array[256, int], sym_n: var array[1, int]) -> int
+def tc_skip_param(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], sym_s: var array[256, int], sym_kind: var array[256, int], sym_ty: var array[256, int], sym_n: var array[1, int]) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -3551,7 +3551,7 @@ def tc_skip_param(src: var ptr, tk: var array[131072, int], ts: var array[131072
   tc_parse_type(src, tk, ts, te, n, pi, err, sym_s, sym_kind, sym_ty, sym_n)
   return 1
 
-def tc_record_param(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], sym_s: var array[256, int], sym_kind: var array[256, int], sym_ty: var array[256, int], sym_n: var array[1, int]) -> int
+def tc_record_param(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], sym_s: var array[256, int], sym_kind: var array[256, int], sym_ty: var array[256, int], sym_n: var array[1, int]) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -3573,7 +3573,7 @@ def tc_record_param(src: var ptr, tk: var array[131072, int], ts: var array[1310
   return 1
 
 # ---- top-level: collect types + procs, then check each proc ----
-def check_source(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int]) -> int
+def check_source(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -3752,7 +3752,7 @@ def check_source(src: var ptr, tk: var array[131072, int], ts: var array[131072,
 
 # ---- Layer 4b: effect checking (raises IO / Alloc / Net / Async) ----
 # Effect bits: IO=1, Alloc=2, Net=4, Async=8 (bitmask; each added once).
-def fx_eff_bit(src: var ptr, ts: var array[131072, int], te: var array[131072, int], i: int) -> int
+def fx_eff_bit(src: var ptr, ts: var array[262144, int], te: var array[262144, int], i: int) -> int
   requires true
   ensures result >= 0
   decreases 0
@@ -3788,7 +3788,7 @@ def fx_add_eff(used: var array[1, int], b: int) -> int
       used[0] = used[0] + b
   return 0
 
-def fx_is_heap(src: var ptr, ts: var array[131072, int], te: var array[131072, int], i: int) -> int
+def fx_is_heap(src: var ptr, ts: var array[262144, int], te: var array[262144, int], i: int) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -3811,7 +3811,7 @@ def fx_is_heap(src: var ptr, ts: var array[131072, int], te: var array[131072, i
     return 1
   return 0
 
-def fx_proc_ext(src: var ptr, ts: var array[131072, int], te: var array[131072, int], pn: var array[256, int], pext: var array[256, int], pcnt: var array[1, int], name_tok: int) -> int
+def fx_proc_ext(src: var ptr, ts: var array[262144, int], te: var array[262144, int], pn: var array[256, int], pext: var array[256, int], pcnt: var array[1, int], name_tok: int) -> int
   requires true
   ensures result >= -1
   decreases 0
@@ -3823,7 +3823,7 @@ def fx_proc_ext(src: var ptr, ts: var array[131072, int], te: var array[131072, 
     k = k + 1
   return -1
 
-def fx_proc_eff(src: var ptr, ts: var array[131072, int], te: var array[131072, int], pn: var array[256, int], peff: var array[256, int], pcnt: var array[1, int], name_tok: int) -> int
+def fx_proc_eff(src: var ptr, ts: var array[262144, int], te: var array[262144, int], pn: var array[256, int], peff: var array[256, int], pcnt: var array[1, int], name_tok: int) -> int
   requires true
   ensures result >= -1
   decreases 0
@@ -3835,7 +3835,7 @@ def fx_proc_eff(src: var ptr, ts: var array[131072, int], te: var array[131072, 
     k = k + 1
   return -1
 
-def fx_skip_typeparams(tk: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int]) -> int
+def fx_skip_typeparams(tk: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int]) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -3855,7 +3855,7 @@ def fx_skip_typeparams(tk: var array[131072, int], n: var array[1, int], pi: var
     expect_k(tk, n, pi, err, 52)
   return 1
 
-def fx_skip_params(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], heap: var array[1, int]) -> int
+def fx_skip_params(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], heap: var array[1, int]) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -3881,7 +3881,7 @@ def fx_skip_params(src: var ptr, tk: var array[131072, int], ts: var array[13107
   expect_k(tk, n, pi, err, 50)
   return 1
 
-def fx_record_raises(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], decl: var array[1, int]) -> int
+def fx_record_raises(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], decl: var array[1, int]) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -3902,7 +3902,7 @@ def fx_record_raises(src: var ptr, tk: var array[131072, int], ts: var array[131
   skip_newlines(tk, n, pi, err)
   return 1
 
-def fx_skip_decorators(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], pend: var array[1, int]) -> int
+def fx_skip_decorators(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], pend: var array[1, int]) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -3927,14 +3927,14 @@ def fx_skip_decorators(src: var ptr, tk: var array[131072, int], ts: var array[1
     skip_newlines(tk, n, pi, err)
   return 1
 
-def fx_skip_typealias(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int]) -> int
+def fx_skip_typealias(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int]) -> int
   requires true
   ensures result == 1
   decreases 0
 =
   return parse_type_alias(src, tk, ts, te, n, pi, err, 0)
 
-def fx_scan_expr(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], pn: var array[256, int], peff: var array[256, int], pext: var array[256, int], pcnt: var array[1, int], used: var array[1, int], await_seen: var array[1, int]) -> int
+def fx_scan_expr(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], pn: var array[256, int], peff: var array[256, int], pext: var array[256, int], pcnt: var array[1, int], used: var array[1, int], await_seen: var array[1, int]) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -3966,7 +3966,7 @@ def fx_scan_expr(src: var ptr, tk: var array[131072, int], ts: var array[131072,
     pi[0] = pi[0] + 1
   return 1
 
-def fx_scan_block(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], pn: var array[256, int], peff: var array[256, int], pext: var array[256, int], pcnt: var array[1, int], used: var array[1, int], await_seen: var array[1, int]) -> int
+def fx_scan_block(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], pn: var array[256, int], peff: var array[256, int], pext: var array[256, int], pcnt: var array[1, int], used: var array[1, int], await_seen: var array[1, int]) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -3988,7 +3988,7 @@ def fx_scan_block(src: var ptr, tk: var array[131072, int], ts: var array[131072
   expect_k(tk, n, pi, err, 3)
   return 1
 
-def fx_scan_stmt(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], pn: var array[256, int], peff: var array[256, int], pext: var array[256, int], pcnt: var array[1, int], used: var array[1, int], await_seen: var array[1, int]) -> int
+def fx_scan_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], pn: var array[256, int], peff: var array[256, int], pext: var array[256, int], pcnt: var array[1, int], used: var array[1, int], await_seen: var array[1, int]) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -4045,7 +4045,7 @@ def fx_scan_stmt(src: var ptr, tk: var array[131072, int], ts: var array[131072,
     fx_scan_expr(src, tk, ts, te, n, pi, err, pn, peff, pext, pcnt, used, await_seen)
   return 1
 
-def effects_check(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int]) -> int
+def effects_check(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -4261,7 +4261,7 @@ def set256(buf: var array[256, int], p: Pos256, v: int) -> int
   buf[p] = v
   return v
 
-def bk_scalar_name(src: var ptr, ts: var array[131072, int], te: var array[131072, int], i: int) -> int
+def bk_scalar_name(src: var ptr, ts: var array[262144, int], te: var array[262144, int], i: int) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -4288,7 +4288,7 @@ def bk_scalar_name(src: var ptr, ts: var array[131072, int], te: var array[13107
     return 1
   return 0
 
-def bk_proc_index(src: var ptr, ts: var array[131072, int], te: var array[131072, int], bp_name: var array[256, int], bp_cnt: var array[1, int], name_tok: int) -> int
+def bk_proc_index(src: var ptr, ts: var array[262144, int], te: var array[262144, int], bp_name: var array[256, int], bp_cnt: var array[1, int], name_tok: int) -> int
   requires true
   ensures result >= -1
   decreases 0
@@ -4313,7 +4313,7 @@ def bk_param_moves(bp_np: var array[256, int], bp_pv: var array[4096, int], bp_p
     return 0
   return 1
 
-def bk_check_use(src: var ptr, ts: var array[131072, int], te: var array[131072, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_n: var array[1, int], name_tok: int, err: var array[1, int]) -> int
+def bk_check_use(src: var ptr, ts: var array[262144, int], te: var array[262144, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_n: var array[1, int], name_tok: int, err: var array[1, int]) -> int
   requires true
   ensures result == 0
   decreases 0
@@ -4332,7 +4332,7 @@ def bk_check_use(src: var ptr, ts: var array[131072, int], te: var array[131072,
     k = k + 1
   return 0
 
-def bk_mark_moved(src: var ptr, ts: var array[131072, int], te: var array[131072, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_n: var array[1, int], name_tok: int) -> int
+def bk_mark_moved(src: var ptr, ts: var array[262144, int], te: var array[262144, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_n: var array[1, int], name_tok: int) -> int
   requires true
   ensures result == 0
   decreases 0
@@ -4345,7 +4345,7 @@ def bk_mark_moved(src: var ptr, ts: var array[131072, int], te: var array[131072
     k = k + 1
   return 0
 
-def bk_check_expr(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], min_prec: int, bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_n: var array[1, int]) -> int
+def bk_check_expr(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], min_prec: int, bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_n: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -4368,7 +4368,7 @@ def bk_check_expr(src: var ptr, tk: var array[131072, int], ts: var array[131072
       return 0
   return 1
 
-def bk_check_primary(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_n: var array[1, int]) -> int
+def bk_check_primary(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_n: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -4419,7 +4419,7 @@ def bk_check_primary(src: var ptr, tk: var array[131072, int], ts: var array[131
   err[0] = 1
   return 0
 
-def bk_check_postfix(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_n: var array[1, int]) -> int
+def bk_check_postfix(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_n: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -4450,7 +4450,7 @@ def bk_check_postfix(src: var ptr, tk: var array[131072, int], ts: var array[131
     loop = 0
   return 1
 
-def bk_check_stmt(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_ib: var array[256, int], ls_n: var array[1, int]) -> int
+def bk_check_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_ib: var array[256, int], ls_n: var array[1, int]) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -4568,7 +4568,7 @@ def bk_check_stmt(src: var ptr, tk: var array[131072, int], ts: var array[131072
   bk_check_expr(src, tk, ts, te, n, pi, err, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n)
   return 1
 
-def bk_check_block(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_ib: var array[256, int], ls_n: var array[1, int]) -> int
+def bk_check_block(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_ib: var array[256, int], ls_n: var array[1, int]) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -4590,7 +4590,7 @@ def bk_check_block(src: var ptr, tk: var array[131072, int], ts: var array[13107
   expect_k(tk, n, pi, err, 3)
   return 1
 
-def bk_skip_params_rec(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], idx: int) -> int
+def bk_skip_params_rec(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], idx: int) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -4627,7 +4627,7 @@ def bk_skip_params_rec(src: var ptr, tk: var array[131072, int], ts: var array[1
   expect_k(tk, n, pi, err, 50)
   return 1
 
-def bk_skip_params_decl(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_ib: var array[256, int], ls_n: var array[1, int]) -> int
+def bk_skip_params_decl(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_ib: var array[256, int], ls_n: var array[1, int]) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -4656,7 +4656,7 @@ def bk_skip_params_decl(src: var ptr, tk: var array[131072, int], ts: var array[
   expect_k(tk, n, pi, err, 50)
   return 1
 
-def borrow_check(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int]) -> int
+def borrow_check(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -4812,7 +4812,7 @@ def borrow_check(src: var ptr, tk: var array[131072, int], ts: var array[131072,
 # ---- Layer 4d: encapsulation / visibility / trait / object checks ----
 # Mirrors compiler/types/{policy,typecheck}.cpp object/trait semantics.
 
-def ec_find_obj(src: var ptr, ts: var array[131072, int], te: var array[131072, int], ob_name: var array[256, int], ob_cnt: var array[1, int], name_tok: int) -> int
+def ec_find_obj(src: var ptr, ts: var array[262144, int], te: var array[262144, int], ob_name: var array[256, int], ob_cnt: var array[1, int], name_tok: int) -> int
   requires true
   ensures result >= -1
   decreases 0
@@ -4824,7 +4824,7 @@ def ec_find_obj(src: var ptr, ts: var array[131072, int], te: var array[131072, 
     k = k + 1
   return -1
 
-def ec_find_trait(src: var ptr, ts: var array[131072, int], te: var array[131072, int], tr_name: var array[64, int], tr_cnt: var array[1, int], name_tok: int) -> int
+def ec_find_trait(src: var ptr, ts: var array[262144, int], te: var array[262144, int], tr_name: var array[64, int], tr_cnt: var array[1, int], name_tok: int) -> int
   requires true
   ensures result >= -1
   decreases 0
@@ -4836,7 +4836,7 @@ def ec_find_trait(src: var ptr, ts: var array[131072, int], te: var array[131072
     k = k + 1
   return -1
 
-def ec_name_joins(src: var ptr, ts: var array[131072, int], te: var array[131072, int], a: int, b: int, f: int) -> int
+def ec_name_joins(src: var ptr, ts: var array[262144, int], te: var array[262144, int], a: int, b: int, f: int) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -4860,7 +4860,7 @@ def ec_name_joins(src: var ptr, ts: var array[131072, int], te: var array[131072
     j = j + 1
   return 1
 
-def ec_has_prefix_join(src: var ptr, ts: var array[131072, int], te: var array[131072, int], a: int, f: int) -> int
+def ec_has_prefix_join(src: var ptr, ts: var array[262144, int], te: var array[262144, int], a: int, f: int) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -4878,7 +4878,7 @@ def ec_has_prefix_join(src: var ptr, ts: var array[131072, int], te: var array[1
     return 0
   return 1
 
-def ec_same_suffix(src: var ptr, ts: var array[131072, int], te: var array[131072, int], a: int, b: int, f: int, g: int) -> int
+def ec_same_suffix(src: var ptr, ts: var array[262144, int], te: var array[262144, int], a: int, b: int, f: int, g: int) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -4913,7 +4913,7 @@ def ec_same_suffix(src: var ptr, ts: var array[131072, int], te: var array[13107
     j = j + 1
   return 1
 
-def ec_underscore(src: var ptr, ts: var array[131072, int], te: var array[131072, int], tok: int) -> int
+def ec_underscore(src: var ptr, ts: var array[262144, int], te: var array[262144, int], tok: int) -> int
   requires true
   ensures result >= -1
   decreases 0
@@ -4927,7 +4927,7 @@ def ec_underscore(src: var ptr, ts: var array[131072, int], te: var array[131072
     j = j + 1
   return -1
 
-def ec_ident_used(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], bind_tok: int) -> int
+def ec_ident_used(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], bind_tok: int) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -4941,7 +4941,7 @@ def ec_ident_used(src: var ptr, tk: var array[131072, int], ts: var array[131072
     j = j + 1
   return 0
 
-def ec_field_idx(src: var ptr, ts: var array[131072, int], te: var array[131072, int], fd_name: var array[256, int], fd_owner: var array[256, int], fd_cnt: var array[1, int], ob_idx: int, name_tok: int) -> int
+def ec_field_idx(src: var ptr, ts: var array[262144, int], te: var array[262144, int], fd_name: var array[256, int], fd_owner: var array[256, int], fd_cnt: var array[1, int], ob_idx: int, name_tok: int) -> int
   requires true
   ensures result >= -1
   decreases 0
@@ -4954,7 +4954,7 @@ def ec_field_idx(src: var ptr, ts: var array[131072, int], te: var array[131072,
     k = k + 1
   return -1
 
-def ec_obj_impl_trait(src: var ptr, ts: var array[131072, int], te: var array[131072, int], tm_name: var array[256, int], tm_owner: var array[256, int], tm_cnt: var array[1, int], ep_name: var array[256, int], ep_cnt: var array[1, int], ob_tok: int, tr_idx: int) -> int
+def ec_obj_impl_trait(src: var ptr, ts: var array[262144, int], te: var array[262144, int], tm_name: var array[256, int], tm_owner: var array[256, int], tm_cnt: var array[1, int], ep_name: var array[256, int], ep_cnt: var array[1, int], ob_tok: int, tr_idx: int) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -4973,7 +4973,7 @@ def ec_obj_impl_trait(src: var ptr, ts: var array[131072, int], te: var array[13
     m = m + 1
   return 1
 
-def ec_capture_type_tok(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int]) -> int
+def ec_capture_type_tok(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int]) -> int
   requires true
   ensures result >= -1
   decreases 0
@@ -4986,7 +4986,7 @@ def ec_capture_type_tok(src: var ptr, tk: var array[131072, int], ts: var array[
   parse_type(src, tk, ts, te, n, pi, err, 0)
   return tt
 
-def ec_record_proc(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], is_priv: int, is_ovr: int, ep_name: var array[256, int], ep_priv: var array[256, int], ep_self: var array[256, int], ep_ret: var array[256, int], ep_bnd: var array[256, int], ep_ovr: var array[256, int], ep_cnt: var array[1, int]) -> int
+def ec_record_proc(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], is_priv: int, is_ovr: int, ep_name: var array[256, int], ep_priv: var array[256, int], ep_self: var array[256, int], ep_ret: var array[256, int], ep_bnd: var array[256, int], ep_ovr: var array[256, int], ep_cnt: var array[1, int]) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -5059,7 +5059,7 @@ def ec_record_proc(src: var ptr, tk: var array[131072, int], ts: var array[13107
     break
   return 1
 
-def ec_parse_fields(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], ob_idx: int, fd_name: var array[256, int], fd_priv: var array[256, int], fd_type: var array[256, int], fd_owner: var array[256, int], fd_cnt: var array[1, int]) -> int
+def ec_parse_fields(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], ob_idx: int, fd_name: var array[256, int], fd_priv: var array[256, int], fd_type: var array[256, int], fd_owner: var array[256, int], fd_cnt: var array[1, int]) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -5102,7 +5102,7 @@ def ec_parse_fields(src: var ptr, tk: var array[131072, int], ts: var array[1310
     skip_newlines(tk, n, pi, err)
   return 1
 
-def ec_parse_trait_methods(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], tr_idx: int, tm_name: var array[256, int], tm_owner: var array[256, int], tm_cnt: var array[1, int]) -> int
+def ec_parse_trait_methods(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], tr_idx: int, tm_name: var array[256, int], tm_owner: var array[256, int], tm_cnt: var array[1, int]) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -5154,7 +5154,7 @@ def ec_parse_trait_methods(src: var ptr, tk: var array[131072, int], ts: var arr
 # Locals (params + `var x: T`) are tracked per proc; only plain-idents whose
 # declared type names a locally-declared object are checked.
 
-def pl_find_ty(src: var ptr, ts: var array[131072, int], te: var array[131072, int], pl_name: var array[256, int], pl_ty: var array[256, int], pl_n: var array[1, int], name_tok: int) -> int
+def pl_find_ty(src: var ptr, ts: var array[262144, int], te: var array[262144, int], pl_name: var array[256, int], pl_ty: var array[256, int], pl_n: var array[1, int], name_tok: int) -> int
   requires true
   ensures result >= -1
   decreases 0
@@ -5166,7 +5166,7 @@ def pl_find_ty(src: var ptr, ts: var array[131072, int], te: var array[131072, i
     k = k + 1
   return -1
 
-def ec_tok_text(src: var ptr, ts: var array[131072, int], te: var array[131072, int], tok: int) raises IO -> ptr
+def ec_tok_text(src: var ptr, ts: var array[262144, int], te: var array[262144, int], tok: int) raises IO -> ptr
   requires true
   ensures result >= 0
   decreases 0
@@ -5185,7 +5185,7 @@ def ec_text_eq(a: ptr, b: ptr) -> int
 # Collect `type X = object` decls from an already-lexed (imported) token
 # stream into text tables: im_ob (object names), im_fd_name/im_fd_priv/
 # im_fd_owner (fields with visibility). Returns 0.
-def ec_collect_import_objects(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], im_ob: var array[64, ptr], im_fd_name: var array[256, ptr], im_fd_priv: var array[256, int], im_fd_owner: var array[256, int], im_ob_cnt: var array[1, int], im_fd_cnt: var array[1, int]) -> int
+def ec_collect_import_objects(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], im_ob: var array[64, ptr], im_fd_name: var array[256, ptr], im_fd_priv: var array[256, int], im_fd_owner: var array[256, int], im_ob_cnt: var array[1, int], im_fd_cnt: var array[1, int]) -> int
   requires true
   ensures result == 0
   decreases 0
@@ -5310,7 +5310,7 @@ def pl_add_local(pl_name: var array[256, int], pl_ty: var array[256, int], pl_n:
     pl_n[0] = pl_n[0] + 1
   return 0
 
-def pl_proc_bound(src: var ptr, ts: var array[131072, int], te: var array[131072, int], ep_name: var array[256, int], ep_bnd: var array[256, int], ep_cnt: var array[1, int], name_tok: int) -> int
+def pl_proc_bound(src: var ptr, ts: var array[262144, int], te: var array[262144, int], ep_name: var array[256, int], ep_bnd: var array[256, int], ep_cnt: var array[1, int], name_tok: int) -> int
   requires true
   ensures result >= -1
   decreases 0
@@ -5323,7 +5323,7 @@ def pl_proc_bound(src: var ptr, ts: var array[131072, int], te: var array[131072
     q = q + 1
   return -1
 
-def pl_obj_has_method(src: var ptr, ts: var array[131072, int], te: var array[131072, int], ob_name: var array[256, int], ob_cnt: var array[1, int], ep_name: var array[256, int], ep_cnt: var array[1, int], ob_tok: int, method_tok: int) -> int
+def pl_obj_has_method(src: var ptr, ts: var array[262144, int], te: var array[262144, int], ob_name: var array[256, int], ob_cnt: var array[1, int], ep_name: var array[256, int], ep_cnt: var array[1, int], ob_tok: int, method_tok: int) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -5335,7 +5335,7 @@ def pl_obj_has_method(src: var ptr, ts: var array[131072, int], te: var array[13
     q = q + 1
   return 0
 
-def pl_check_expr(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], min_prec: int, cur: var array[1, int], ob_name: var array[256, int], ob_cnt: var array[1, int], tr_name: var array[64, int], tr_cnt: var array[1, int], fd_name: var array[256, int], fd_priv: var array[256, int], fd_owner: var array[256, int], fd_cnt: var array[1, int], tm_name: var array[256, int], tm_owner: var array[256, int], tm_cnt: var array[1, int], ep_name: var array[256, int], ep_bnd: var array[256, int], ep_cnt: var array[1, int], im_ob: var array[64, ptr], im_fd_name: var array[256, ptr], im_fd_priv: var array[256, int], im_fd_owner: var array[256, int], im_ob_cnt: var array[1, int], im_fd_cnt: var array[1, int], pl_name: var array[256, int], pl_ty: var array[256, int], pl_n: var array[1, int]) -> int
+def pl_check_expr(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], min_prec: int, cur: var array[1, int], ob_name: var array[256, int], ob_cnt: var array[1, int], tr_name: var array[64, int], tr_cnt: var array[1, int], fd_name: var array[256, int], fd_priv: var array[256, int], fd_owner: var array[256, int], fd_cnt: var array[1, int], tm_name: var array[256, int], tm_owner: var array[256, int], tm_cnt: var array[1, int], ep_name: var array[256, int], ep_bnd: var array[256, int], ep_cnt: var array[1, int], im_ob: var array[64, ptr], im_fd_name: var array[256, ptr], im_fd_priv: var array[256, int], im_fd_owner: var array[256, int], im_ob_cnt: var array[1, int], im_fd_cnt: var array[1, int], pl_name: var array[256, int], pl_ty: var array[256, int], pl_n: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -5358,7 +5358,7 @@ def pl_check_expr(src: var ptr, tk: var array[131072, int], ts: var array[131072
       return 0
   return 1
 
-def pl_check_primary(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], cur: var array[1, int], ob_name: var array[256, int], ob_cnt: var array[1, int], tr_name: var array[64, int], tr_cnt: var array[1, int], fd_name: var array[256, int], fd_priv: var array[256, int], fd_owner: var array[256, int], fd_cnt: var array[1, int], tm_name: var array[256, int], tm_owner: var array[256, int], tm_cnt: var array[1, int], ep_name: var array[256, int], ep_bnd: var array[256, int], ep_cnt: var array[1, int], im_ob: var array[64, ptr], im_fd_name: var array[256, ptr], im_fd_priv: var array[256, int], im_fd_owner: var array[256, int], im_ob_cnt: var array[1, int], im_fd_cnt: var array[1, int], pl_name: var array[256, int], pl_ty: var array[256, int], pl_n: var array[1, int]) -> int
+def pl_check_primary(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], cur: var array[1, int], ob_name: var array[256, int], ob_cnt: var array[1, int], tr_name: var array[64, int], tr_cnt: var array[1, int], fd_name: var array[256, int], fd_priv: var array[256, int], fd_owner: var array[256, int], fd_cnt: var array[1, int], tm_name: var array[256, int], tm_owner: var array[256, int], tm_cnt: var array[1, int], ep_name: var array[256, int], ep_bnd: var array[256, int], ep_cnt: var array[1, int], im_ob: var array[64, ptr], im_fd_name: var array[256, ptr], im_fd_priv: var array[256, int], im_fd_owner: var array[256, int], im_ob_cnt: var array[1, int], im_fd_cnt: var array[1, int], pl_name: var array[256, int], pl_ty: var array[256, int], pl_n: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -5426,7 +5426,7 @@ def pl_check_primary(src: var ptr, tk: var array[131072, int], ts: var array[131
   err[0] = 1
   return 0
 
-def pl_check_postfix(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], cur: var array[1, int], ob_name: var array[256, int], ob_cnt: var array[1, int], tr_name: var array[64, int], tr_cnt: var array[1, int], fd_name: var array[256, int], fd_priv: var array[256, int], fd_owner: var array[256, int], fd_cnt: var array[1, int], tm_name: var array[256, int], tm_owner: var array[256, int], tm_cnt: var array[1, int], ep_name: var array[256, int], ep_bnd: var array[256, int], ep_cnt: var array[1, int], im_ob: var array[64, ptr], im_fd_name: var array[256, ptr], im_fd_priv: var array[256, int], im_fd_owner: var array[256, int], im_ob_cnt: var array[1, int], im_fd_cnt: var array[1, int], pl_name: var array[256, int], pl_ty: var array[256, int], pl_n: var array[1, int]) -> int
+def pl_check_postfix(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], cur: var array[1, int], ob_name: var array[256, int], ob_cnt: var array[1, int], tr_name: var array[64, int], tr_cnt: var array[1, int], fd_name: var array[256, int], fd_priv: var array[256, int], fd_owner: var array[256, int], fd_cnt: var array[1, int], tm_name: var array[256, int], tm_owner: var array[256, int], tm_cnt: var array[1, int], ep_name: var array[256, int], ep_bnd: var array[256, int], ep_cnt: var array[1, int], im_ob: var array[64, ptr], im_fd_name: var array[256, ptr], im_fd_priv: var array[256, int], im_fd_owner: var array[256, int], im_ob_cnt: var array[1, int], im_fd_cnt: var array[1, int], pl_name: var array[256, int], pl_ty: var array[256, int], pl_n: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -5486,7 +5486,7 @@ def pl_check_postfix(src: var ptr, tk: var array[131072, int], ts: var array[131
     loop = 0
   return 1
 
-def pl_check_block(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], ob_name: var array[256, int], ob_cnt: var array[1, int], tr_name: var array[64, int], tr_cnt: var array[1, int], fd_name: var array[256, int], fd_priv: var array[256, int], fd_owner: var array[256, int], fd_cnt: var array[1, int], tm_name: var array[256, int], tm_owner: var array[256, int], tm_cnt: var array[1, int], ep_name: var array[256, int], ep_bnd: var array[256, int], ep_cnt: var array[1, int], im_ob: var array[64, ptr], im_fd_name: var array[256, ptr], im_fd_priv: var array[256, int], im_fd_owner: var array[256, int], im_ob_cnt: var array[1, int], im_fd_cnt: var array[1, int], pl_name: var array[256, int], pl_ty: var array[256, int], pl_n: var array[1, int]) -> int
+def pl_check_block(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], ob_name: var array[256, int], ob_cnt: var array[1, int], tr_name: var array[64, int], tr_cnt: var array[1, int], fd_name: var array[256, int], fd_priv: var array[256, int], fd_owner: var array[256, int], fd_cnt: var array[1, int], tm_name: var array[256, int], tm_owner: var array[256, int], tm_cnt: var array[1, int], ep_name: var array[256, int], ep_bnd: var array[256, int], ep_cnt: var array[1, int], im_ob: var array[64, ptr], im_fd_name: var array[256, ptr], im_fd_priv: var array[256, int], im_fd_owner: var array[256, int], im_ob_cnt: var array[1, int], im_fd_cnt: var array[1, int], pl_name: var array[256, int], pl_ty: var array[256, int], pl_n: var array[1, int]) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -5510,7 +5510,7 @@ def pl_check_block(src: var ptr, tk: var array[131072, int], ts: var array[13107
   expect_k(tk, n, pi, err, 3)
   return 1
 
-def pl_check_stmt(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], cur: var array[1, int], ob_name: var array[256, int], ob_cnt: var array[1, int], tr_name: var array[64, int], tr_cnt: var array[1, int], fd_name: var array[256, int], fd_priv: var array[256, int], fd_owner: var array[256, int], fd_cnt: var array[1, int], tm_name: var array[256, int], tm_owner: var array[256, int], tm_cnt: var array[1, int], ep_name: var array[256, int], ep_bnd: var array[256, int], ep_cnt: var array[1, int], im_ob: var array[64, ptr], im_fd_name: var array[256, ptr], im_fd_priv: var array[256, int], im_fd_owner: var array[256, int], im_ob_cnt: var array[1, int], im_fd_cnt: var array[1, int], pl_name: var array[256, int], pl_ty: var array[256, int], pl_n: var array[1, int]) -> int
+def pl_check_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], cur: var array[1, int], ob_name: var array[256, int], ob_cnt: var array[1, int], tr_name: var array[64, int], tr_cnt: var array[1, int], fd_name: var array[256, int], fd_priv: var array[256, int], fd_owner: var array[256, int], fd_cnt: var array[1, int], tm_name: var array[256, int], tm_owner: var array[256, int], tm_cnt: var array[1, int], ep_name: var array[256, int], ep_bnd: var array[256, int], ep_cnt: var array[1, int], im_ob: var array[64, ptr], im_fd_name: var array[256, ptr], im_fd_priv: var array[256, int], im_fd_owner: var array[256, int], im_ob_cnt: var array[1, int], im_fd_cnt: var array[1, int], pl_name: var array[256, int], pl_ty: var array[256, int], pl_n: var array[1, int]) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -5593,7 +5593,7 @@ def pl_check_stmt(src: var ptr, tk: var array[131072, int], ts: var array[131072
   pl_check_expr(src, tk, ts, te, n, pi, err, 0, cur, ob_name, ob_cnt, tr_name, tr_cnt, fd_name, fd_priv, fd_owner, fd_cnt, tm_name, tm_owner, tm_cnt, ep_name, ep_bnd, ep_cnt, im_ob, im_fd_name, im_fd_priv, im_fd_owner, im_ob_cnt, im_fd_cnt, pl_name, pl_ty, pl_n)
   return 1
 
-def pl_scan_proc(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], ob_name: var array[256, int], ob_cnt: var array[1, int], tr_name: var array[64, int], tr_cnt: var array[1, int], fd_name: var array[256, int], fd_priv: var array[256, int], fd_owner: var array[256, int], fd_cnt: var array[1, int], tm_name: var array[256, int], tm_owner: var array[256, int], tm_cnt: var array[1, int], im_ob: var array[64, ptr], im_fd_name: var array[256, ptr], im_fd_priv: var array[256, int], im_fd_owner: var array[256, int], im_ob_cnt: var array[1, int], im_fd_cnt: var array[1, int], ep_name: var array[256, int], ep_bnd: var array[256, int], ep_cnt: var array[1, int]) -> int
+def pl_scan_proc(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], ob_name: var array[256, int], ob_cnt: var array[1, int], tr_name: var array[64, int], tr_cnt: var array[1, int], fd_name: var array[256, int], fd_priv: var array[256, int], fd_owner: var array[256, int], fd_cnt: var array[1, int], tm_name: var array[256, int], tm_owner: var array[256, int], tm_cnt: var array[1, int], im_ob: var array[64, ptr], im_fd_name: var array[256, ptr], im_fd_priv: var array[256, int], im_fd_owner: var array[256, int], im_ob_cnt: var array[1, int], im_fd_cnt: var array[1, int], ep_name: var array[256, int], ep_bnd: var array[256, int], ep_cnt: var array[1, int]) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -5642,7 +5642,7 @@ def pl_scan_proc(src: var ptr, tk: var array[131072, int], ts: var array[131072,
       pl_check_block(src, tk, ts, te, n, pi, err, ob_name, ob_cnt, tr_name, tr_cnt, fd_name, fd_priv, fd_owner, fd_cnt, tm_name, tm_owner, tm_cnt, ep_name, ep_bnd, ep_cnt, im_ob, im_fd_name, im_fd_priv, im_fd_owner, im_ob_cnt, im_fd_cnt, pl_name, pl_ty, pl_n)
   return 1
 
-def ec_skip_body(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int]) -> int
+def ec_skip_body(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int]) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -5653,7 +5653,7 @@ def ec_skip_body(src: var ptr, tk: var array[131072, int], ts: var array[131072,
     parse_block(src, tk, ts, te, n, pi, err, 0)
   return 1
 
-def encap_check(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int]) raises IO -> int
+def encap_check(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int]) raises IO -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -6006,7 +6006,7 @@ def encap_check(src: var ptr, tk: var array[131072, int], ts: var array[131072, 
 
 # ---------------------------------------------------------------- driver --
 
-def parse_file(src: var ptr, tk: var array[131072, int], ts: var array[131072, int], te: var array[131072, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int, emit_tok: int) raises IO -> int
+def parse_file(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int, emit_tok: int) raises IO -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -6052,7 +6052,7 @@ def mir_slice_eq(src: var ptr,  s1: int,  e1: int,  s2: int,  e2: int) -> int
   return 1
 
 # Is the name [s,e) one of the float source names (token indices in ftok)?
-def mir_name_float(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], s: int,  e: int,  ftok: var array[4096, int],  nft: var array[1, int]) -> int
+def mir_name_float(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], s: int,  e: int,  ftok: var array[4096, int],  nft: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -6065,7 +6065,7 @@ def mir_name_float(src: var ptr,  ts: var array[131072, int],  te: var array[131
   return 0
 
 # Is the name [s,e) one of the i64 source names (token indices in itok)?
-def mir_name_farray(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], s: int,  e: int,  fatok: var array[512, int],  nfa: var array[1, int]) -> int
+def mir_name_farray(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], s: int,  e: int,  fatok: var array[512, int],  nfa: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -6080,7 +6080,7 @@ def mir_name_farray(src: var ptr,  ts: var array[131072, int],  te: var array[13
 # Local matrix names use a side table in fatok[62], separate from the
 # float-array and int-array tables. This lets nested matrix loads participate
 # in float classification without pretending the matrix is a 1D array.
-def mir_name_matrix_local(src: var ptr, ts: var array[131072, int], te: var array[131072, int], s: int, e: int, fatok: var array[512, int]) -> int
+def mir_name_matrix_local(src: var ptr, ts: var array[262144, int], te: var array[262144, int], s: int, e: int, fatok: var array[512, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -6095,7 +6095,7 @@ def mir_name_matrix_local(src: var ptr, ts: var array[131072, int], te: var arra
 
 # Size of the 1D float array named [s,e) (from the proc/param tables), else 0.
 # Mirrors the C++ `float_array_sizes` map seeded by seed_float_array_params.
-def mir_farray_size(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], s: int,  e: int,  ptok2: var array[512, int],  pelems: var array[512, int],  pef: var array[512, int],  pp0: var array[128, int],  ppn: var array[128, int],  pn: var array[1, int],  fatok: var array[512, int],  nfa: var array[1, int]) -> int
+def mir_farray_size(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], s: int,  e: int,  ptok2: var array[512, int],  pelems: var array[512, int],  pef: var array[512, int],  pp0: var array[128, int],  ppn: var array[128, int],  pn: var array[1, int],  fatok: var array[512, int],  nfa: var array[1, int]) -> int
   requires true
   ensures result >= 0
   decreases 0
@@ -6137,7 +6137,7 @@ def mir_farray_tmp_size(darena: var array[65536, int], rec: int, ftmp: var array
 # Int array entries are stored in fatok after float entries:
 #   fatok[0..2*nfa-1] = float arrays, fatok[2*nfa..2*nfa+2*nia-1] = int arrays
 # nia (int array count) is stored at fatok[63].
-def mir_iarray_size(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], s: int,  e: int,  fatok: var array[512, int],  nfa: var array[1, int]) -> int
+def mir_iarray_size(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], s: int,  e: int,  fatok: var array[512, int],  nfa: var array[1, int]) -> int
   requires true
   ensures result >= 0
   decreases 0
@@ -6155,7 +6155,7 @@ def mir_iarray_size(src: var ptr,  ts: var array[131072, int],  te: var array[13
 # matok stores triples: (name_token, rows, cols) for each matrix.
 # The C++ matrix_names set holds only local (var-declared) matrices; matrix
 # params are not seeded, so 2D loads/stores on params fall through to no-emit.
-def mir_name_matrix(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], s: int,  e: int,  matok: var array[512, int],  nmat: var array[1, int]) -> int
+def mir_name_matrix(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], s: int,  e: int,  matok: var array[512, int],  nmat: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -6169,7 +6169,7 @@ def mir_name_matrix(src: var ptr,  ts: var array[131072, int],  te: var array[13
 
 # Look up matrix dims for name [s,e). Returns rows via ret[0], cols via ret[1].
 # Returns 1 if found, 0 if not.
-def mir_mat_dims(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], s: int,  e: int,  matok: var array[512, int],  nmat: var array[1, int], ret: var array[2, int]) -> int
+def mir_mat_dims(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], s: int,  e: int,  matok: var array[512, int],  nmat: var array[1, int], ret: var array[2, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -6186,7 +6186,7 @@ def mir_mat_dims(src: var ptr,  ts: var array[131072, int],  te: var array[13107
 # Resolve matrix dimensions for an expression descriptor. Source identifiers
 # use the normal token-keyed matrix table; a kind-8 temporary uses a negative
 # key (-1-temp_id), allowing chained `(A @ B) @ D` lowering.
-def mir_mat_operand_dims(darena: var array[65536, int], rec: int, src: var ptr, ts: var array[131072, int], te: var array[131072, int], matok: var array[512, int], nmat: var array[1, int], ret: var array[2, int]) -> int
+def mir_mat_operand_dims(darena: var array[65536, int], rec: int, src: var ptr, ts: var array[262144, int], te: var array[262144, int], matok: var array[512, int], nmat: var array[1, int], ret: var array[2, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -6205,7 +6205,7 @@ def mir_mat_operand_dims(darena: var array[65536, int], rec: int, src: var ptr, 
         k = k + 1
   return 0
 
-def mir_name_i64(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], s: int,  e: int,  itok: var array[4096, int],  nit: var array[1, int]) -> int
+def mir_name_i64(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], s: int,  e: int,  itok: var array[4096, int],  nit: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -6436,7 +6436,7 @@ def mir_ins_mangled_nested(src: var ptr, op: int, iv: int, base_s: int, base_e: 
 # Recursively emit LocalAlloc (INS 24/35/9) for every leaf field of an object
 # type, flattening nested object fields into compound mangled slots. p_s/p_e
 # is the enclosing object field name (-1 at the top level).
-def mir_obj_alloc_fields(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], itmp: var array[4096, int],  base_s: int,  base_e: int,  type_idx: int,  p_s: int,  p_e: int, lastop: var array[1, int]) raises IO -> int
+def mir_obj_alloc_fields(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], itmp: var array[4096, int],  base_s: int,  base_e: int,  type_idx: int,  p_s: int,  p_e: int, lastop: var array[1, int]) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -6477,7 +6477,7 @@ def mir_obj_alloc_fields(src: var ptr,  ts: var array[131072, int],  te: var arr
 
 # Recursively emit LocalAlloc for a return-object cr<N> temp, flattening
 # nested object fields: __li_o___cr<N>[_<parent>_]<leaf>.
-def mir_cr_alloc_fields(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], itmp: var array[4096, int],  crid: int,  type_idx: int,  p_s: int,  p_e: int) raises IO -> int
+def mir_cr_alloc_fields(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], itmp: var array[4096, int],  crid: int,  type_idx: int,  p_s: int,  p_e: int) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -6567,7 +6567,7 @@ def mir_cr_alloc_fields(src: var ptr,  ts: var array[131072, int],  te: var arra
 # Emit the CallProc line for a call that returns an object: INS 8 with
 # ident = __li_o___cr<crid>, callee name, then the OBJ return layout. The cr
 # slot LocalAllocs are emitted by mir_cr_alloc_fields before this.
-def mir_cr_call_line(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], itmp: var array[4096, int],  crid: int,  cal_s: int,  cal_e: int,  obj_ti: int,  lastop: var array[1, int]) raises IO -> int
+def mir_cr_call_line(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], itmp: var array[4096, int],  crid: int,  cal_s: int,  cal_e: int,  obj_ti: int,  lastop: var array[1, int]) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -6632,7 +6632,7 @@ def mir_cr_call_line(src: var ptr,  ts: var array[131072, int],  te: var array[1
 
 # Recursively emit LocalAlloc for a method-call write-back temp wb<N>,
 # flattening nested object fields: __li_o_wb<N>[_<parent>_]<leaf>.
-def mir_wb_alloc_fields(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], itmp: var array[4096, int],  crid: int,  type_idx: int,  p_s: int,  p_e: int) raises IO -> int
+def mir_wb_alloc_fields(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], itmp: var array[4096, int],  crid: int,  type_idx: int,  p_s: int,  p_e: int) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -6875,7 +6875,7 @@ def mir_name_hash(src: var ptr, s: int, e: int) -> int
     i = i + 1
   return h
 
-def mir_obj_reg_type(itmp: var array[4096, int], src: var ptr, ts: var array[131072, int], te: var array[131072, int],
+def mir_obj_reg_type(itmp: var array[4096, int], src: var ptr, ts: var array[262144, int], te: var array[262144, int],
   type_start: int, type_end: int, nf: int, fbase: int, base_start: int, base_end: int) raises IO -> int
   requires true
   ensures result == 0
@@ -6897,7 +6897,7 @@ def mir_obj_reg_type(itmp: var array[4096, int], src: var ptr, ts: var array[131
   set4096(itmp, 3000, i + 1)
   return 0
 
-def mir_obj_find_type(src: var ptr, ts: var array[131072, int], te: var array[131072, int],
+def mir_obj_find_type(src: var ptr, ts: var array[262144, int], te: var array[262144, int],
   itmp: var array[4096, int], name_start: int, name_end: int) -> int
   requires true
   ensures result >= -1
@@ -6960,7 +6960,7 @@ def mir_obj_field_float(itmp: var array[4096, int], type_idx: int, field_idx: in
 # Recursive helper: emit CopyObj/StoreFloat for every leaf field of an
 # object type, building compound prefix names via the objname registry.
 # dst_oi/src_oi are objname indices for the base prefix (e.g. __li_o_d, __li_o___cr71).
-def mir_obj_emit_copy_r(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], itmp: var array[4096, int],  type_idx: int,  dst_oi: int,  src_oi: int,  tc: var array[1, int]) raises IO -> int
+def mir_obj_emit_copy_r(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], itmp: var array[4096, int],  type_idx: int,  dst_oi: int,  src_oi: int,  tc: var array[1, int]) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -7135,7 +7135,7 @@ def mir_obj_emit_copy_r(src: var ptr,  ts: var array[131072, int],  te: var arra
     i = i + 1
   return 0
 
-def mir_obj_emit_copy(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], itmp: var array[4096, int],  obj_ti: int,  fidx: int,  dst_s: int,  dst_e: int,  src_s: int,  src_e: int,  src_is_cr: int,  crid: int,  tc: var array[1, int]) raises IO -> int
+def mir_obj_emit_copy(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], itmp: var array[4096, int],  obj_ti: int,  fidx: int,  dst_s: int,  dst_e: int,  src_s: int,  src_e: int,  src_is_cr: int,  crid: int,  tc: var array[1, int]) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -7412,7 +7412,7 @@ def mir_obj_reg_var(itmp: var array[4096, int], var_start: int, var_end: int, ty
   set4096(itmp, 3300, k + 1)
   return 0
 
-def mir_obj_find_var(src: var ptr, ts: var array[131072, int], te: var array[131072, int],
+def mir_obj_find_var(src: var ptr, ts: var array[262144, int], te: var array[262144, int],
   itmp: var array[4096, int], name_start: int, name_end: int) -> int
   requires true
   ensures result >= -1
@@ -7454,7 +7454,7 @@ def mir_obj_reg_field(itmp: var array[4096, int], src: var ptr, fs: int, fe: int
   set4096(itmp, 3200, nf + 1)
   return 0
 
-def mir_obj_field_obj_type(src: var ptr, ts: var array[131072, int], te: var array[131072, int], itmp: var array[4096, int], type_idx: int, field_idx: int) -> int
+def mir_obj_field_obj_type(src: var ptr, ts: var array[262144, int], te: var array[262144, int], itmp: var array[4096, int], type_idx: int, field_idx: int) -> int
   requires true
   ensures result >= -1
   decreases 0
@@ -7495,7 +7495,7 @@ def mir_field_is_subobj(itmp: var array[4096, int], type_idx: int, field_idx: in
   return -1
 
 # float-ness of a descriptor (mirrors is_float_expr on the AST)
-def mir_desc_float(darena: var array[65536, int],  rec: int,  src: var ptr, ts: var array[131072, int],  te: var array[131072, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  fatok: var array[512, int], nfa: var array[1, int], itmp: var array[4096, int]) -> int
+def mir_desc_float(darena: var array[65536, int],  rec: int,  src: var ptr, ts: var array[262144, int],  te: var array[262144, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  fatok: var array[512, int], nfa: var array[1, int], itmp: var array[4096, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -7879,7 +7879,7 @@ def mir_arg_wb_line(src: var ptr, itmp: var array[4096, int], type_idx: int, fie
   return 0
 
 # ---- expression parse (descriptor build, no emission) ----
-def mir_parse_postfix(darena: var array[65536, int],  dasp: var array[1, int], src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  rec: int) -> int
+def mir_parse_postfix(darena: var array[65536, int],  dasp: var array[1, int], src: var ptr,  tk: var array[262144, int],  ts: var array[262144, int], te: var array[262144, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  rec: int) -> int
   requires true
   ensures result >= -1
   decreases 0
@@ -7939,7 +7939,7 @@ def mir_parse_postfix(darena: var array[65536, int],  dasp: var array[1, int], s
     loop = 0
   return rec
 
-def mir_parse_primary(darena: var array[65536, int],  dasp: var array[1, int], src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int]) raises IO -> int
+def mir_parse_primary(darena: var array[65536, int],  dasp: var array[1, int], src: var ptr,  tk: var array[262144, int],  ts: var array[262144, int], te: var array[262144, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int]) raises IO -> int
   requires true
   ensures result >= -1
   decreases 0
@@ -8009,7 +8009,7 @@ def mir_parse_primary(darena: var array[65536, int],  dasp: var array[1, int], s
   err[0] = 1
   return -1
 
-def mir_parse_expr(darena: var array[65536, int],  dasp: var array[1, int], src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  min_prec: int) -> int
+def mir_parse_expr(darena: var array[65536, int],  dasp: var array[1, int], src: var ptr,  tk: var array[262144, int],  ts: var array[262144, int], te: var array[262144, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  min_prec: int) -> int
   requires true
   ensures result >= -1
   decreases 0
@@ -8060,7 +8060,7 @@ def mir_parse_expr(darena: var array[65536, int],  dasp: var array[1, int], src:
   return left
 
 # ---- lowering helpers ----
-def mir_proc_find(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], s: int,  e: int,  ptok: var array[128, int],  pn: var array[1, int]) -> int
+def mir_proc_find(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], s: int,  e: int,  ptok: var array[128, int],  pn: var array[1, int]) -> int
   requires true
   ensures result >= -1
   decreases 0
@@ -8084,7 +8084,7 @@ def mir_proc_find(src: var ptr,  ts: var array[131072, int],  te: var array[1310
 
 # Find the proc whose name is the mangled method callee `Type_method`
 # (type-name span ty_s..ty_e, method-name span ms..me). Returns the pid or -1.
-def mir_method_pid(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], ty_s: int,  ty_e: int,  ms: int,  me: int,  ptok: var array[128, int],  pn: var array[1, int]) -> int
+def mir_method_pid(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], ty_s: int,  ty_e: int,  ms: int,  me: int,  ptok: var array[128, int],  pn: var array[1, int]) -> int
   requires true
   ensures result >= -1
   decreases 0
@@ -8105,7 +8105,7 @@ def mir_method_pid(src: var ptr,  ts: var array[131072, int],  te: var array[131
   return -1
 
 # Is the first param of proc pid a `var Object` (write-back receiver)?
-def mir_method_first_var(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], pid: int,  pp0: var array[128, int],  pvar: var array[512, int]) -> int
+def mir_method_first_var(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], pid: int,  pp0: var array[128, int],  pvar: var array[512, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -8136,7 +8136,7 @@ def mir_mk_name(darena: var array[65536, int],  rec: int,  is_tmp: int,  v1: int
   return 0
 
 # Lower one descriptor to a name (kind 8 in place), emitting INS/ARG lines.
-def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec: int, src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  itok: var array[4096, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[512, int],  nfa: var array[1, int], matok: var array[512, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int]) -> int
+def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec: int, src: var ptr,  tk: var array[262144, int],  ts: var array[262144, int], te: var array[262144, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  itok: var array[4096, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[512, int],  nfa: var array[1, int], matok: var array[512, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -9565,7 +9565,7 @@ def mir_emit_jump_label(src: var ptr,  lastop: var array[1, int],  op: int,  pfx
   mir_ins_line(src,  f,  op,  0,  -1,  lastop)
   return 0
 
-def mir_lower_cond(darena: var array[65536, int],  dasp: var array[1, int],  crec: int, src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  itok: var array[4096, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[512, int],  nfa: var array[1, int], matok: var array[512, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int]) -> int
+def mir_lower_cond(darena: var array[65536, int],  dasp: var array[1, int],  crec: int, src: var ptr,  tk: var array[262144, int],  ts: var array[262144, int], te: var array[262144, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  itok: var array[4096, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[512, int],  nfa: var array[1, int], matok: var array[512, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -9610,7 +9610,7 @@ def mir_name_cells(darena: var array[65536, int],  rec: int,  f: var array[44, i
 # iteration var), lowers the body into it, appends an implicit return, and
 # emits an OmpParallelFor (INS 42) dispatch in the caller. The par FN replays
 # before the enclosing FN via the runtime hold buffers.
-def mir_parallel(darena: var array[65536, int],  dasp: var array[1, int], src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  itok: var array[4096, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[512, int],  nfa: var array[1, int], matok: var array[512, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], retf_proc: int,  reti64_proc: int, lhead: var array[32, int],  lexit: var array[32, int],  nlp: var array[1, int]) raises IO -> int
+def mir_parallel(darena: var array[65536, int],  dasp: var array[1, int], src: var ptr,  tk: var array[262144, int],  ts: var array[262144, int], te: var array[262144, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  itok: var array[4096, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[512, int],  nfa: var array[1, int], matok: var array[512, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], retf_proc: int,  reti64_proc: int, lhead: var array[32, int],  lexit: var array[32, int],  nlp: var array[1, int]) raises IO -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -9727,7 +9727,7 @@ def mir_parallel(darena: var array[65536, int],  dasp: var array[1, int], src: v
   skip_newlines(tk,  n,  pi,  err)
   return 0
 
-def mir_stmts(darena: var array[65536, int],  dasp: var array[1, int], src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  itok: var array[4096, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[512, int],  nfa: var array[1, int], matok: var array[512, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], retf_proc: int,  reti64_proc: int, lhead: var array[32, int],  lexit: var array[32, int],  nlp: var array[1, int]) -> int
+def mir_stmts(darena: var array[65536, int],  dasp: var array[1, int], src: var ptr,  tk: var array[262144, int],  ts: var array[262144, int], te: var array[262144, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  itok: var array[4096, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[512, int],  nfa: var array[1, int], matok: var array[512, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], retf_proc: int,  reti64_proc: int, lhead: var array[32, int],  lexit: var array[32, int],  nlp: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -9754,7 +9754,7 @@ def mir_stmts(darena: var array[65536, int],  dasp: var array[1, int], src: var 
   expect_k(tk,  n,  pi,  err, 3)
   return 0
 
-def mir_stmt(darena: var array[65536, int],  dasp: var array[1, int], src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  itok: var array[4096, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[512, int],  nfa: var array[1, int], matok: var array[512, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], retf_proc: int,  reti64_proc: int, lhead: var array[32, int],  lexit: var array[32, int],  nlp: var array[1, int]) -> int
+def mir_stmt(darena: var array[65536, int],  dasp: var array[1, int], src: var ptr,  tk: var array[262144, int],  ts: var array[262144, int], te: var array[262144, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  itok: var array[4096, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[512, int],  nfa: var array[1, int], matok: var array[512, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], retf_proc: int,  reti64_proc: int, lhead: var array[32, int],  lexit: var array[32, int],  nlp: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -9876,7 +9876,7 @@ def mir_stmt(darena: var array[65536, int],  dasp: var array[1, int], src: var p
   skip_newlines(tk,  n,  pi,  err)
   return 0
 
-def mir_if(darena: var array[65536, int],  dasp: var array[1, int], src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  itok: var array[4096, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[512, int],  nfa: var array[1, int], matok: var array[512, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], retf_proc: int,  reti64_proc: int, lhead: var array[32, int],  lexit: var array[32, int],  nlp: var array[1, int]) -> int
+def mir_if(darena: var array[65536, int],  dasp: var array[1, int], src: var ptr,  tk: var array[262144, int],  ts: var array[262144, int], te: var array[262144, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  itok: var array[4096, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[512, int],  nfa: var array[1, int], matok: var array[512, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], retf_proc: int,  reti64_proc: int, lhead: var array[32, int],  lexit: var array[32, int],  nlp: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -9923,7 +9923,7 @@ def mir_if(darena: var array[65536, int],  dasp: var array[1, int], src: var ptr
   mir_emit_jump_label(src,  lastop,  43,  1,  el)
   return 0
 
-def mir_while(darena: var array[65536, int],  dasp: var array[1, int], src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  itok: var array[4096, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[512, int],  nfa: var array[1, int], matok: var array[512, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], retf_proc: int,  reti64_proc: int, lhead: var array[32, int],  lexit: var array[32, int],  nlp: var array[1, int]) -> int
+def mir_while(darena: var array[65536, int],  dasp: var array[1, int], src: var ptr,  tk: var array[262144, int],  ts: var array[262144, int], te: var array[262144, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  itok: var array[4096, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[512, int],  nfa: var array[1, int], matok: var array[512, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], retf_proc: int,  reti64_proc: int, lhead: var array[32, int],  lexit: var array[32, int],  nlp: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -9960,7 +9960,7 @@ def mir_while(darena: var array[65536, int],  dasp: var array[1, int], src: var 
   skip_newlines(tk,  n,  pi,  err)
   return 0
 
-def mir_for(darena: var array[65536, int],  dasp: var array[1, int], src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  itok: var array[4096, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[512, int],  nfa: var array[1, int], matok: var array[512, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], retf_proc: int,  reti64_proc: int, lhead: var array[32, int],  lexit: var array[32, int],  nlp: var array[1, int]) -> int
+def mir_for(darena: var array[65536, int],  dasp: var array[1, int], src: var ptr,  tk: var array[262144, int],  ts: var array[262144, int], te: var array[262144, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  itok: var array[4096, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[512, int],  nfa: var array[1, int], matok: var array[512, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], retf_proc: int,  reti64_proc: int, lhead: var array[32, int],  lexit: var array[32, int],  nlp: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -10074,7 +10074,7 @@ def mir_for(darena: var array[65536, int],  dasp: var array[1, int], src: var pt
   skip_newlines(tk,  n,  pi,  err)
   return 0
 
-def mir_rec_name_i64(darena: var array[65536, int],  rec: int,  src: var ptr, ts: var array[131072, int],  te: var array[131072, int], itok: var array[4096, int],  nit: var array[1, int], itmp: var array[4096, int]) -> int
+def mir_rec_name_i64(darena: var array[65536, int],  rec: int,  src: var ptr, ts: var array[262144, int],  te: var array[262144, int], itok: var array[4096, int],  nit: var array[1, int], itmp: var array[4096, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -10083,7 +10083,7 @@ def mir_rec_name_i64(darena: var array[65536, int],  rec: int,  src: var ptr, ts
     return peek4096(itmp, peek65536(darena, rec + 2))
   return mir_name_i64(src,  ts,  te,  peek65536(darena, rec + 2),  peek65536(darena, rec + 3),  itok,  nit)
 
-def mir_type_info(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  ti: var array[6, int]) -> int
+def mir_type_info(src: var ptr,  tk: var array[262144, int],  ts: var array[262144, int], te: var array[262144, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  ti: var array[6, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -10249,7 +10249,7 @@ def mir_type_info(src: var ptr,  tk: var array[131072, int],  ts: var array[1310
         d2 = 1
   return 0
 
-def mir_try_fma(darena: var array[65536, int],  lrec: int,  rrec: int,  src: var ptr, ts: var array[131072, int],  te: var array[131072, int], lastop: var array[1, int]) -> int
+def mir_try_fma(darena: var array[65536, int],  lrec: int,  rrec: int,  src: var ptr, ts: var array[262144, int],  te: var array[262144, int], lastop: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -10298,7 +10298,7 @@ def mir_try_fma(darena: var array[65536, int],  lrec: int,  rrec: int,  src: var
   mir_ins_line(src,  f,  32,  0,  adfid,  lastop)
   return 1
 
-def mir_return(darena: var array[65536, int],  dasp: var array[1, int], src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  itok: var array[4096, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[512, int],  nfa: var array[1, int], matok: var array[512, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], retf_proc: int,  reti64_proc: int, lhead: var array[32, int],  lexit: var array[32, int],  nlp: var array[1, int]) -> int
+def mir_return(darena: var array[65536, int],  dasp: var array[1, int], src: var ptr,  tk: var array[262144, int],  ts: var array[262144, int], te: var array[262144, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  itok: var array[4096, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[512, int],  nfa: var array[1, int], matok: var array[512, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], retf_proc: int,  reti64_proc: int, lhead: var array[32, int],  lexit: var array[32, int],  nlp: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -10470,7 +10470,7 @@ def mir_return(darena: var array[65536, int],  dasp: var array[1, int], src: var
   skip_newlines(tk,  n,  pi,  err)
   return 0
 
-def mir_var_decl(darena: var array[65536, int],  dasp: var array[1, int], src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  itok: var array[4096, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[512, int],  nfa: var array[1, int], matok: var array[512, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], retf_proc: int,  reti64_proc: int, lhead: var array[32, int],  lexit: var array[32, int],  nlp: var array[1, int]) -> int
+def mir_var_decl(darena: var array[65536, int],  dasp: var array[1, int], src: var ptr,  tk: var array[262144, int],  ts: var array[262144, int], te: var array[262144, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  itok: var array[4096, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[512, int],  nfa: var array[1, int], matok: var array[512, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], retf_proc: int,  reti64_proc: int, lhead: var array[32, int],  lexit: var array[32, int],  nlp: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -11046,7 +11046,7 @@ def mir_var_decl(darena: var array[65536, int],  dasp: var array[1, int], src: v
   skip_newlines(tk,  n,  pi,  err)
   return 0
 
-def mir_assign(darena: var array[65536, int],  dasp: var array[1, int],  lrec: int,  rrec: int, src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  itok: var array[4096, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[512, int],  nfa: var array[1, int], matok: var array[512, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], retf_proc: int,  reti64_proc: int, lhead: var array[32, int],  lexit: var array[32, int],  nlp: var array[1, int]) -> int
+def mir_assign(darena: var array[65536, int],  dasp: var array[1, int],  lrec: int,  rrec: int, src: var ptr,  tk: var array[262144, int],  ts: var array[262144, int], te: var array[262144, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  tc: var array[1, int],  lastop: var array[1, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  itok: var array[4096, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[512, int],  nfa: var array[1, int], matok: var array[512, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], retf_proc: int,  reti64_proc: int, lhead: var array[32, int],  lexit: var array[32, int],  nlp: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -11689,7 +11689,7 @@ def mir_assign(darena: var array[65536, int],  dasp: var array[1, int],  lrec: i
   err[0] = 1
   return 1
 
-def mir_fn_line(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], name_tok: int,  retf: int,  reti64: int,  retvoid: int,  retobj: int,  is_extern: int,  no_vec: int,  is_async_fn: int) raises IO -> int
+def mir_fn_line(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], name_tok: int,  retf: int,  reti64: int,  retvoid: int,  retobj: int,  is_extern: int,  no_vec: int,  is_async_fn: int) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -11714,7 +11714,7 @@ def mir_fn_line(src: var ptr,  ts: var array[131072, int],  te: var array[131072
   li_rt_ast_nl()
   return 0
 
-def mir_retparam_line(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], itmp: var array[4096, int],  type_idx: int,  field_idx: int) raises IO -> int
+def mir_retparam_line(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], itmp: var array[4096, int],  type_idx: int,  field_idx: int) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -11750,7 +11750,7 @@ def mir_retparam_line(src: var ptr,  ts: var array[131072, int],  te: var array[
   li_rt_ast_nl()
   return 0
 
-def mir_retparam_line_nested(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], itmp: var array[4096, int],  type_idx: int,  field_idx: int,  p_s: int,  p_e: int) raises IO -> int
+def mir_retparam_line_nested(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], itmp: var array[4096, int],  type_idx: int,  field_idx: int,  p_s: int,  p_e: int) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -11790,7 +11790,7 @@ def mir_retparam_line_nested(src: var ptr,  ts: var array[131072, int],  te: var
 
 # Recursively emit RETPARAM lines for a return object, flattening nested
 # object fields into compound names (swapchain_viewport_w etc.).
-def mir_obj_retparams(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], itmp: var array[4096, int],  type_idx: int,  p_s: int,  p_e: int) raises IO -> int
+def mir_obj_retparams(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], itmp: var array[4096, int],  type_idx: int,  p_s: int,  p_e: int) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -11811,7 +11811,7 @@ def mir_obj_retparams(src: var ptr,  ts: var array[131072, int],  te: var array[
     i_r = i_r + 1
   return 0
 
-def mir_obj_line_r(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], itmp: var array[4096, int],  type_idx: int,  field_idx: int,  parent_path: int) raises IO -> int
+def mir_obj_line_r(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], itmp: var array[4096, int],  type_idx: int,  field_idx: int,  parent_path: int) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -11859,7 +11859,7 @@ def mir_obj_line_r(src: var ptr,  ts: var array[131072, int],  te: var array[131
     li_rt_ast_nl()
   return 0
 
-def mir_obj_line(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], itmp: var array[4096, int],  type_idx: int,  field_idx: int) raises IO -> int
+def mir_obj_line(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], itmp: var array[4096, int],  type_idx: int,  field_idx: int) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -11867,7 +11867,7 @@ def mir_obj_line(src: var ptr,  ts: var array[131072, int],  te: var array[13107
   mir_obj_line_r(src, ts, te, itmp, type_idx, field_idx, 0)
   return 0
 
-def mir_dec_line(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], name_tok: int,  lanes: int,  vectorized: int,  parallel: int,  disjoint: int) raises IO -> int
+def mir_dec_line(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], name_tok: int,  lanes: int,  vectorized: int,  parallel: int,  disjoint: int) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -11886,7 +11886,7 @@ def mir_dec_line(src: var ptr,  ts: var array[131072, int],  te: var array[13107
   li_rt_ast_nl()
   return 0
 
-def mir_param_line(src: var ptr,  ts: var array[131072, int],  te: var array[131072, int], name_tok: int,  ty: int,  elems: int,  ef: int,  ei: int,  is_var: int,  mx: int,  mc: int) raises IO -> int
+def mir_param_line(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], name_tok: int,  ty: int,  elems: int,  ef: int,  ei: int,  is_var: int,  mx: int,  mc: int) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -11941,7 +11941,7 @@ def mir_param_line(src: var ptr,  ts: var array[131072, int],  te: var array[131
   return 0
 
 # Emit one flattened object parameter, e.g. Vec3 a -> __li_o_a_x.
-def mir_obj_param_line_r(src: var ptr, ts: var array[131072, int], te: var array[131072, int], itmp: var array[4096, int], type_idx: int, base_s: int, base_e: int, field_idx: int, is_var: int, parent_path: int) raises IO -> int
+def mir_obj_param_line_r(src: var ptr, ts: var array[262144, int], te: var array[262144, int], itmp: var array[4096, int], type_idx: int, base_s: int, base_e: int, field_idx: int, is_var: int, parent_path: int) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -11992,7 +11992,7 @@ def mir_obj_param_line_r(src: var ptr, ts: var array[131072, int], te: var array
     li_rt_ast_nl()
   return 0
 
-def mir_obj_param_line(src: var ptr, ts: var array[131072, int], te: var array[131072, int], itmp: var array[4096, int], type_idx: int, base_s: int, base_e: int, field_idx: int, is_var: int) raises IO -> int
+def mir_obj_param_line(src: var ptr, ts: var array[262144, int], te: var array[262144, int], itmp: var array[4096, int], type_idx: int, base_s: int, base_e: int, field_idx: int, is_var: int) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -12000,7 +12000,7 @@ def mir_obj_param_line(src: var ptr, ts: var array[131072, int], te: var array[1
   mir_obj_param_line_r(src, ts, te, itmp, type_idx, base_s, base_e, field_idx, is_var, 0)
   return 0
 
-def mir_emit_object_params(src: var ptr, ts: var array[131072, int], te: var array[131072, int], itmp: var array[4096, int], type_idx: int, base_s: int, base_e: int, is_var: int) raises IO -> int
+def mir_emit_object_params(src: var ptr, ts: var array[262144, int], te: var array[262144, int], itmp: var array[4096, int], type_idx: int, base_s: int, base_e: int, is_var: int) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -12012,7 +12012,7 @@ def mir_emit_object_params(src: var ptr, ts: var array[131072, int], te: var arr
     j = j + 1
   return 0
 
-def mir_skip_raises(tk: var array[131072, int],  n: var array[1, int],  pi: var array[1, int],  err: var array[1, int]) -> int
+def mir_skip_raises(tk: var array[262144, int],  n: var array[1, int],  pi: var array[1, int],  err: var array[1, int]) -> int
 
   requires true
   ensures result == 0
@@ -12030,7 +12030,7 @@ def mir_skip_raises(tk: var array[131072, int],  n: var array[1, int],  pi: var 
           done = 1
   return 0
 
-def mir_skip_contracts(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int]) -> int
+def mir_skip_contracts(src: var ptr,  tk: var array[262144, int],  ts: var array[262144, int], te: var array[262144, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int]) -> int
   requires true
   ensures result == 0
   decreases 0
@@ -12043,7 +12043,7 @@ def mir_skip_contracts(src: var ptr,  tk: var array[131072, int],  ts: var array
     break
   return 0
 
-def mir_collect_proc(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  is_extern: int,  pid: int, ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  ptok2: var array[512, int], pty: var array[512, int],  pelems: var array[512, int],  pef: var array[512, int],  pei: var array[512, int], pvar: var array[512, int],  pmx: var array[512, int],  pmc: var array[512, int],  itmp: var array[4096, int],  pcount: var array[1, int]) raises IO -> int
+def mir_collect_proc(src: var ptr,  tk: var array[262144, int],  ts: var array[262144, int], te: var array[262144, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  is_extern: int,  pid: int, ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  ptok2: var array[512, int], pty: var array[512, int],  pelems: var array[512, int],  pef: var array[512, int],  pei: var array[512, int], pvar: var array[512, int],  pmx: var array[512, int],  pmc: var array[512, int],  itmp: var array[4096, int],  pcount: var array[1, int]) raises IO -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -12178,7 +12178,7 @@ def mir_collect_proc(src: var ptr,  tk: var array[131072, int],  ts: var array[1
   parse_block(src,  tk,  ts,  te,  n,  pi,  err, 0)
   return 0
 
-def mir_proc(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  is_extern: int,  pid: int, tc: var array[1, int],  lastop: var array[1, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  itok: var array[4096, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[512, int],  nfa: var array[1, int], matok: var array[512, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], pmx: var array[512, int],  pmc: var array[512, int]) raises IO -> int
+def mir_proc(src: var ptr,  tk: var array[262144, int],  ts: var array[262144, int], te: var array[262144, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  is_extern: int,  pid: int, tc: var array[1, int],  lastop: var array[1, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  itok: var array[4096, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[512, int],  nfa: var array[1, int], matok: var array[512, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], pmx: var array[512, int],  pmc: var array[512, int]) raises IO -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -12355,7 +12355,7 @@ def mir_proc(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
   li_rt_mir_hold_flush_close()
   return 0
 
-def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  mode: int, tc: var array[1, int],  lastop: var array[1, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  itok: var array[4096, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[512, int],  nfa: var array[1, int], matok: var array[512, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], pmx: var array[512, int],  pmc: var array[512, int], pcount: var array[1, int]) raises IO -> int
+def mir_walk(src: var ptr,  tk: var array[262144, int],  ts: var array[262144, int], te: var array[262144, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  mode: int, tc: var array[1, int],  lastop: var array[1, int], ftok: var array[4096, int],  nft: var array[1, int], ftmp: var array[32768, int],  itok: var array[4096, int],  nit: var array[1, int], itmp: var array[4096, int],  fatok: var array[512, int],  nfa: var array[1, int], matok: var array[512, int],  nmat: var array[1, int], ptok: var array[128, int],  pex: var array[128, int], pp0: var array[128, int],  ppn: var array[128, int], pret: var array[128, int],  pn: var array[1, int], ptok2: var array[512, int],  pty: var array[512, int], pelems: var array[512, int],  pef: var array[512, int], pei: var array[512, int],  pvar: var array[512, int], pmx: var array[512, int],  pmc: var array[512, int], pcount: var array[1, int]) raises IO -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -12709,7 +12709,7 @@ def mir_walk(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, i
 # runtime-link flags in ftmp cells (4086=needs_rt_httpd, 4087=needs_rt_net,
 # 4088=needs_rt_log), mirroring mir_runtime_link.cpp's prefix rules. A call
 # site is `ident(` where ident resolves to a collected extern proc.
-def mir_scan_rt_flags(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  ftmp: var array[32768, int],  ptok: var array[128, int],  pex: var array[128, int],  pn: var array[1, int]) -> int
+def mir_scan_rt_flags(src: var ptr,  tk: var array[262144, int],  ts: var array[262144, int], te: var array[262144, int],  n: var array[1, int],  ftmp: var array[32768, int],  ptok: var array[128, int],  pex: var array[128, int],  pn: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -12761,7 +12761,7 @@ def mir_scan_rt_flags(src: var ptr,  tk: var array[131072, int],  ts: var array[
 # Count `parallel for` statements in the currently-lexed token stream. The
 # C++ lower_to_mir pushes one __li_par_* function per parallel-for, so the
 # MIR header function count is procs + parallel count and uses_openmp = 1.
-def mir_count_parallel(src: var ptr,  tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int]) -> int
+def mir_count_parallel(src: var ptr,  tk: var array[262144, int],  ts: var array[262144, int], te: var array[262144, int],  n: var array[1, int]) -> int
   requires true
   ensures result >= 0
   decreases 0
@@ -12775,7 +12775,7 @@ def mir_count_parallel(src: var ptr,  tk: var array[131072, int],  ts: var array
     i = i + 1
   return cnt
 
-def mir_module(src: var ptr,  file_path: ptr, tk: var array[131072, int],  ts: var array[131072, int], te: var array[131072, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int]) raises IO -> int
+def mir_module(src: var ptr,  file_path: ptr, tk: var array[262144, int],  ts: var array[262144, int], te: var array[262144, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int]) raises IO -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -13022,9 +13022,9 @@ def main() raises IO -> int
     return 0
   if strcmp(li_rt_argv(1), "smoke") == 0:
     return 0
-  var tk: array[131072, int]
-  var ts: array[131072, int]
-  var te: array[131072, int]
+  var tk: array[262144, int]
+  var ts: array[262144, int]
+  var te: array[262144, int]
   var n: array[1, int]
   var pi: array[1, int]
   var err: array[1, int]

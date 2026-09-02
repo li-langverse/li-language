@@ -61,6 +61,7 @@ TokenKind Lexer::keyword_kind(std::string_view text) const {
   if (text == "ensures") return TokenKind::KwEnsures;
   if (text == "decreases") return TokenKind::KwDecreases;
   if (text == "invariant") return TokenKind::KwInvariant;
+  if (text == "prob_ensures") return TokenKind::KwInvariant;
   if (text == "result") return TokenKind::KwResult;
   if (text == "Protocol") return TokenKind::KwProtocol;
   if (text == "Callable") return TokenKind::KwCallable;

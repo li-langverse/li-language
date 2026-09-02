@@ -642,6 +642,11 @@ std::vector<std::string> Parser::parse_type_params() {
       }
       params.push_back(std::string(cur().text));
       i++;
+      // Constrained param `H: Hash` — the walker accepts the bound and
+      // ignores it (no generic constraint checking exists).
+      if (accept(TokenKind::Colon)) {
+        (void)parse_type();
+      }
     } while (accept(TokenKind::Comma));
     skip_newlines();
   }
@@ -675,12 +680,39 @@ Contract Parser::parse_contract() {
     c.kind = ContractKind::Ensures;
   } else if (kw.kind == TokenKind::KwDecreases) {
     c.kind = ContractKind::Decreases;
+  } else if (kw.kind == TokenKind::KwInvariant) {
+    c.kind = ContractKind::Invariant;
   } else {
     c.kind = ContractKind::Invariant;
   }
   c.span = {kw.start, kw.end};
   i++;
   c.expr = parse_contract_expr();
+  // `prob_ensures` (walker kw 43 — our lexer folds it into KwInvariant) may
+  // carry a `given <dist>` / `samples <n>` tail, optionally repeated. The
+  // walker consumes it without recording AST.
+  if (kw.kind == TokenKind::KwInvariant) {
+    for (;;) {
+      skip_newlines();
+      if (at(TokenKind::Ident) && cur().text == "given") {
+        i++;
+        if (!at(TokenKind::Ident)) {
+          diags.error(loc(cur()), "expected distribution name after given");
+          return c;
+        }
+        i++;
+      } else if (at(TokenKind::Ident) && cur().text == "samples") {
+        i++;
+        if (!at(TokenKind::IntLit)) {
+          diags.error(loc(cur()), "expected sample count after samples");
+          return c;
+        }
+        i++;
+      } else {
+        break;
+      }
+    }
+  }
   skip_newlines();
   return c;
 }
@@ -892,6 +924,52 @@ Stmt Parser::parse_stmt() {
       }
       return fs;
     }
+    if (at(TokenKind::Ident) && cur().text == "parallel") {
+      // `@parallel(disjoint=...)` directly above a `parallel for` loop —
+      // the decorator's disjoint flag rides on the same ParallelFor node.
+      i++;  // 'parallel'
+      if (at(TokenKind::Ident) && cur().text == "for") {
+        i++;
+      }
+      Stmt ps;
+      ps.kind = Stmt::Kind::ParallelFor;
+      ps.span = {cur().start, cur().end};
+      if (at(TokenKind::Ident)) {
+        ps.par_index = std::string(cur().text);
+        i++;
+      }
+      if (at(TokenKind::Ident) && cur().text == "in") {
+        i++;
+      }
+      if (at(TokenKind::IntLit)) {
+        ps.par_start = cur().int_value;
+        i++;
+      }
+      if (at(TokenKind::DotDotLt)) {
+        i++;
+      }
+      if (at(TokenKind::IntLit)) {
+        ps.par_end = cur().int_value;
+        i++;
+      }
+      skip_newlines();
+      if (accept(TokenKind::Indent)) {
+        skip_newlines();
+        while (at(TokenKind::KwRequires) || at(TokenKind::KwEnsures) ||
+               at(TokenKind::KwDecreases) || at(TokenKind::KwInvariant)) {
+          (void)parse_contract();
+        }
+        expect(TokenKind::Dedent, "dedent");
+        skip_newlines();
+      }
+      if (accept(TokenKind::Eq)) {
+        skip_newlines();
+        if (at(TokenKind::Indent)) {
+          ps.par_body = parse_block();
+        }
+      }
+      return ps;
+    }
     diags.error(loc(cur()), "expected for statement after decorator");
     return s;
   }
@@ -916,7 +994,12 @@ Stmt Parser::parse_stmt() {
     s.kind = Stmt::Kind::Return;
     s.span = {t.start, t.end};
     i++;
-    s.expr = parse_expr();
+    // Bare `return` (no expression) is valid in unit-returning procs;
+    // the walker and the MIR lowerer (ReturnVoid) accept it.
+    if (!at(TokenKind::Newline) && !at(TokenKind::Indent) &&
+        !at(TokenKind::Dedent) && !at(TokenKind::Eof)) {
+      s.expr = parse_expr();
+    }
     skip_newlines();
     return s;
   }
@@ -929,10 +1012,41 @@ Stmt Parser::parse_stmt() {
     expect(TokenKind::Colon, "':'");
     skip_newlines();
     s.then_body = parse_block();
+    // `elif` chains lower as nested ifs in else_body (matches the walker's
+    // mir_if recursion with a shared merge label). The first elif goes in the
+    // else slot, and each further elif nests inside the previous one's else.
+    Stmt* tail = nullptr;   // deepest elif built so far
+    Stmt* holder = &s;      // statement whose else slot receives the next if
+    if (at(TokenKind::KwElif)) {
+      s.else_body = std::vector<Stmt>{};
+      tail = &s.else_body->emplace_back();
+    }
+    while (tail != nullptr && at(TokenKind::KwElif)) {
+      const Token et = cur();
+      tail->kind = Stmt::Kind::If;
+      tail->span = {et.start, et.end};
+      i++;
+      tail->cond = parse_expr();
+      expect(TokenKind::Colon, "':'");
+      skip_newlines();
+      tail->then_body = parse_block();
+      holder = tail;
+      if (at(TokenKind::KwElif)) {
+        tail->else_body = std::vector<Stmt>{};
+        tail = &tail->else_body->emplace_back();
+      } else {
+        tail = nullptr;
+      }
+    }
     if (accept(TokenKind::KwElse)) {
       expect(TokenKind::Colon, "':'");
       skip_newlines();
-      s.else_body = parse_block();
+      if (holder != &s) {
+        // Final else attaches to the deepest elif.
+        holder->else_body = parse_block();
+      } else {
+        s.else_body = parse_block();
+      }
     }
     return s;
   }
@@ -1042,11 +1156,68 @@ TypeAlias Parser::parse_type_alias() {
     }
     return alias;
   }
+  if (at(TokenKind::Ident) && cur().text == "trait") {
+    // `type X = trait` — signature-only methods (walker parse_trait_methods:
+    // each is `[private|public] def name(params) -> ret` + contracts, no '='
+    // body). Methods are dropped; only accept/reject parity matters here.
+    i++;
+    skip_newlines();
+    for (;;) {
+      skip_newlines();
+      if (at(TokenKind::KwEcho) &&
+          (std::string(cur().text) == "private" || std::string(cur().text) == "public")) {
+        i++;
+      }
+      if (!at(TokenKind::KwProc)) {
+        break;
+      }
+      i++;  // 'def'
+      if (!at(TokenKind::Ident)) {
+        diags.error(loc(cur()), "expected trait method name");
+        return alias;
+      }
+      i++;
+      if (!expect(TokenKind::LParen, "'('")) {
+        return alias;
+      }
+      brace_depth_++;
+      if (!at(TokenKind::RParen)) {
+        do {
+          skip_newlines();
+          (void)parse_param();
+        } while (accept(TokenKind::Comma));
+        skip_newlines();
+      }
+      brace_depth_--;
+      expect(TokenKind::RParen, "')'");
+      if (accept(TokenKind::Arrow)) {
+        (void)parse_type();
+      }
+      skip_newlines();
+      while (at(TokenKind::KwRequires) || at(TokenKind::KwEnsures) ||
+             at(TokenKind::KwDecreases) || at(TokenKind::KwInvariant)) {
+        (void)parse_contract();
+      }
+    }
+    skip_newlines();
+    return alias;
+  }
   if (at(TokenKind::KwObject)) {
     // `type X = object` — comma indented `[public] field: type` lines.
+    // `object of Base` names a parent object (walker accepts the ident and
+    // emits the same OBJ header with kind 3).
     alias.alias_kind = AliasKind::Object;
     i++;
     skip_newlines();
+    if (at(TokenKind::Ident) && cur().text == "of") {
+      i++;
+      if (!at(TokenKind::Ident)) {
+        diags.error(loc(cur()), "expected base object name after 'of'");
+        return alias;
+      }
+      i++;
+      skip_newlines();
+    }
     while (at(TokenKind::Ident) || at(TokenKind::KwEcho)) {
       TypeField field;
       field.public_field = true;

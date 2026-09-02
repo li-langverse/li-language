@@ -466,9 +466,27 @@ int main(int argc, char** argv) {
       }
       if (k >= 0 && k < nelem && wk[k] >= 0) {
         int out_kind = wk[k];
-        // Our branch folds KwDef into KwProc; the walker distinguishes them.
+        // Our branch folds KwDef into KwProc and treats `for` as a plain
+        // Ident; the walker distinguishes both.
         if (t.kind == li::TokenKind::KwProc && std::string(t.text) == "def") {
           out_kind = 10;  // walker KwDef
+        }
+        if (t.kind == li::TokenKind::Ident && std::string(t.text) == "for") {
+          out_kind = 26;  // walker KwFor
+        }
+        // Our branch folds `prob_ensures` into KwInvariant (walker kw 43);
+        // emit the walker's kind so token streams stay byte-identical.
+        if (t.kind == li::TokenKind::KwInvariant && std::string(t.text) == "prob_ensures") {
+          out_kind = 43;
+        }
+        // `async`/`await` are plain idents in our branch (walker kw 33/34).
+        if (t.kind == li::TokenKind::Ident) {
+          const std::string s(t.text);
+          if (s == "async") {
+            out_kind = 33;
+          } else if (s == "await") {
+            out_kind = 34;
+          }
         }
         std::cout << out_kind << '\t' << std::string(t.text) << '\n';
       }
