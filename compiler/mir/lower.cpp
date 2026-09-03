@@ -303,6 +303,26 @@ bool emit_array_scale_into(const Expr& binop, const std::string& dest,
   return true;
 }
 
+// Slot path for a (possibly nested) object-field access rooted at an object
+// var: `s.swapchain.adapter_ok` -> "s_swapchain_adapter_ok" (each component
+// joins with `_`, mirroring the walker's mangled leaf names). Returns "" when
+// the chain does not root in an object var (call results, etc.), in which
+// case callers keep their legacy single-level fallback.
+std::string obj_field_slot_chain(const Expr& e) {
+  if (e.kind == Expr::Kind::Ident) {
+    return g_object_vars.count(e.ident) > 0 ? e.ident : "";
+  }
+  if (e.kind == Expr::Kind::Field && e.base && e.index &&
+      e.index->kind == Expr::Kind::Ident) {
+    const std::string base = obj_field_slot_chain(*e.base);
+    if (base.empty()) {
+      return "";
+    }
+    return base + "_" + e.index->ident;
+  }
+  return "";
+}
+
 std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirInsn>& out,
                           std::unordered_set<std::string>& float_names,
                           std::unordered_set<std::string>& float_arrays) {
@@ -334,6 +354,12 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
       // `obj.field` reads lower to the object's per-field scalar slot
       // __li_o_<var>_<field> (walker mir_obj_field_read mangles the slot).
       // No INS is emitted; the slot name is used directly as an operand.
+      const std::string chain = obj_field_slot_chain(e);
+      if (!chain.empty()) {
+        // Nested path (e.g. s.swapchain.adapter_ok): every component joins
+        // into the slot name __li_o_s_swapchain_adapter_ok.
+        return "__li_o_" + chain;
+      }
       std::string base;
       std::string field;
       if (e.base && e.base->kind == Expr::Kind::Ident) {
