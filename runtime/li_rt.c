@@ -597,15 +597,23 @@ int32_t li_rt_mir_int(const char* text, int32_t start, int32_t end) {
 
 /* Print a decimal int literal slice with its full 64-bit value (the Li int
  * cells are 32-bit, so big literals are printed from the source span at
- * emission time to match the C++ i64 MIR dump fields). */
-int32_t li_rt_mir_int64_out(const char* text, int32_t start, int32_t end) {
+ * emission time to match the C++ i64 MIR dump fields). The walker calls this
+ * with a fourth `neg` argument (the literal's negated marker) and the span
+ * covering only the digits, so the sign must come from the flag, not from
+ * the source slice. */
+int32_t li_rt_mir_int64_out(const char* text, int32_t start, int32_t end, int32_t neg) {
   if (text == NULL || start < 0 || end <= start) {
     fputc('0', stdout);
     return 0;
   }
-  int64_t v = 0;
+  /* Normalize negation flag: only exactly 1 means negated. */
+  neg = (neg == 1) ? 1 : 0;
+  /* Use unsigned accumulation to avoid int64 overflow for INT64_MIN
+   * (9223372036854775808 = 2^63 wraps negative in signed math). */
+  uint64_t v = 0;
   int32_t i = start;
-  if (text[i] == '-') {
+  if (text[i] == '-' && !neg) {
+    neg = 1;
     ++i;
   }
   for (; i < end; ++i) {
@@ -614,11 +622,11 @@ int32_t li_rt_mir_int64_out(const char* text, int32_t start, int32_t end) {
       v = v * 10 + (c - '0');
     }
   }
-  if (start < end && text[start] == '-') {
-    printf("%lld", (long long)-v);
-  } else {
-    printf("%lld", (long long)v);
+  if (neg) {
+    /* Negate using unsigned to avoid UB on INT64_MIN */
+    v = (uint64_t)0 - v;
   }
+  printf("%lld", (long long)(int64_t)v);
   return 0;
 }
 

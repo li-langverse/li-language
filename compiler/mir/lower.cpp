@@ -1,4 +1,5 @@
 #include "li/mir.hpp"
+#include "li/mir_types.hpp"
 
 #include <algorithm>
 #include <functional>
@@ -48,6 +49,11 @@ std::unordered_map<std::string, std::vector<ObjectField>> g_object_types;
 // Object-typed locals (var name -> type name), seeded per-proc from VarDecls
 // and params so Field reads/stores know how to mangle the slot.
 std::unordered_map<std::string, std::string> g_object_vars;
+// itok-equivalent: names of scalar pointer-width (str/bytes/StringView/ptr/i64)
+// params and locals plus pointer-width call temps. The walker registers these
+// in its itok table (mir_proc/mir_var_decl ty 2/3/4) and consults it for
+// ReturnIdent's ret_is_i64 bit (mir_return ri via mir_name_i64).
+std::unordered_set<std::string> g_i64_names;
 
 bool is_array_ident(const std::string& n) {
   return g_array_sizes.count(n) > 0 || g_matrices.count(n) > 0 ||
@@ -786,10 +792,7 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
           float_names.insert(dest);
         } else if (callee->ret_type &&
                    (callee->ret_type->kind == TypeKind::Array ||
-                    is_i64_type_name(callee->ret_type->name) ||
-                    is_string_type_name(callee->ret_type->name) ||
-                    callee->ret_type->name == "bytes" ||
-                    callee->ret_type->name == "StringView")) {
+                    is_ptr_width_type_name(callee->ret_type->name))) {
           // Walker rd 3/4/5 (array, str/bytes/ptr/i64) set ret_is_i64;
           // int (rd 1) and objects (rd 6) keep 0, so Named alone must not
           // imply the bit.
@@ -820,10 +823,9 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
           callee->ret_type->name != "unit") {
         const std::string dest = fresh_temp();
         ins.ident = dest;
-        if (callee->ret_type->name == "ptr" || callee->ret_type->name == "int64" ||
-            callee->ret_type->name == "i64" ||
-            is_string_type_name(callee->ret_type->name)) {
-          // Walker ret descriptor: str/ptr/i64 are pointer-width (rd 3/4/5).
+        if (is_ptr_width_type_name(callee->ret_type->name)) {
+          // Walker ret descriptor: rd 3/4 (str/bytes/ptr/i64) extern calls
+          // set both is_i64 (f31) and ret_is_i64 (f20); int (rd 1) stays 0.
           ins.is_i64 = true;
           ins.ret_is_i64 = true;
         } else if (is_float_type_name(callee->ret_type->name)) {
@@ -975,8 +977,9 @@ void lower_echo_arg(const Expr& arg, const Module& module, std::vector<MirInsn>&
   out.push_back(std::move(ins));
 }
 
-void lower_return_expr(const Expr& e, bool returns_float, const Module& module,
-                       std::vector<MirInsn>& out, std::unordered_set<std::string>& float_names,
+void lower_return_expr(const Expr& e, bool returns_float, bool returns_i64,
+                       const Module& module, std::vector<MirInsn>& out,
+                       std::unordered_set<std::string>& float_names,
                        std::unordered_set<std::string>& float_arrays) {
   MirInsn ins;
   if (e.kind == Expr::Kind::IntLit) {
@@ -1007,7 +1010,25 @@ void lower_return_expr(const Expr& e, bool returns_float, const Module& module,
       ins.op = MirOp::ReturnIdent;
       ins.ident = e.ident;
       ins.ret_is_float = returns_float || float_names.count(e.ident) > 0;
+      // Walker mir_return ri: the enclosing proc's reti64 bit OR the name's
+      // itok membership (mir_name_i64 over the str/bytes/ptr/i64 registry).
+      ins.ret_is_i64 = returns_i64 || g_i64_names.count(e.ident) > 0;
     }
+  } else if (e.kind == Expr::Kind::Field) {
+    // `return o.field` -> INS 3 with the flattened slot name (walker
+    // mir_return rk==9: mir_ins_mangled op 3, fld_src_fallback=1, flag2=1
+    // -> rhs_is_literal=1; all ret bits 0).
+    std::string base;
+    std::string field;
+    if (e.base && e.base->kind == Expr::Kind::Ident) {
+      base = e.base->ident;
+    }
+    if (e.index && e.index->kind == Expr::Kind::Ident) {
+      field = e.index->ident;
+    }
+    ins.op = MirOp::ReturnIdent;
+    ins.ident = "__li_o_" + base + "_" + field;
+    ins.rhs_is_literal = true;
   } else if (e.kind == Expr::Kind::Await) {
     // `return await x` lowers to a bare ReturnVoid (walker mir_return kk==34:
     // async calls are lowered at the LLVM level, not emitted as MIR).
@@ -1024,8 +1045,7 @@ void lower_return_expr(const Expr& e, bool returns_float, const Module& module,
       const auto callee = std::find_if(module.procs.begin(), module.procs.end(),
                                        [&](const ProcDecl& p) { return p.name == e.ident; });
       if (callee != module.procs.end() && callee->ret_type) {
-        if (is_i64_type_name(callee->ret_type->name) ||
-            is_string_type_name(callee->ret_type->name) ||
+        if (returns_i64 || is_ptr_width_type_name(callee->ret_type->name) ||
             callee->ret_type->kind == TypeKind::Array) {
           ins.ret_is_i64 = true;
         }
@@ -1038,10 +1058,11 @@ void lower_return_expr(const Expr& e, bool returns_float, const Module& module,
 }
 
 void lower_stmts(const std::vector<Stmt>& stmts, const Module& module, bool returns_float,
-                 std::vector<MirInsn>& out, std::unordered_set<std::string>& float_names,
+                 bool returns_i64, std::vector<MirInsn>& out,
+                 std::unordered_set<std::string>& float_names,
                  std::unordered_set<std::string>& float_arrays);
 
-void lower_stmt(const Stmt& stmt, const Module& module, bool returns_float,
+void lower_stmt(const Stmt& stmt, const Module& module, bool returns_float, bool returns_i64,
                 std::vector<MirInsn>& out, std::unordered_set<std::string>& float_names,
                 std::unordered_set<std::string>& float_arrays) {
   switch (stmt.kind) {
@@ -1051,7 +1072,8 @@ void lower_stmt(const Stmt& stmt, const Module& module, bool returns_float,
         ins.op = MirOp::ReturnVoid;
         out.push_back(std::move(ins));
       } else {
-        lower_return_expr(*stmt.expr, returns_float, module, out, float_names, float_arrays);
+        lower_return_expr(*stmt.expr, returns_float, returns_i64, module, out, float_names,
+                          float_arrays);
       }
       break;
     case Stmt::Kind::VarDecl: {
@@ -1070,7 +1092,9 @@ void lower_stmt(const Stmt& stmt, const Module& module, bool returns_float,
                                                     : MirOp::LocalAllocInt;
           alloc.ident = field_ident;
           alloc.int_value = f.array_elems;
-          alloc.array_is_float = f.is_float;
+          // Walker contract: only the ArrayAlloc line (INS 9) carries the
+          // float-array bit (f[32]); scalar float allocs (INS 35) leave it 0.
+          alloc.array_is_float = f.array_elems > 0 && f.is_float;
           alloc.array_is_i64 = f.is_i64;
           if (f.array_elems > 0) {
             g_array_sizes[field_ident] = f.array_elems;
@@ -1202,16 +1226,23 @@ void lower_stmt(const Stmt& stmt, const Module& module, bool returns_float,
           }
           (void)lower_expr_to(*stmt.init, module, out, float_names, float_arrays);
         }
-      } else if (is_i64_type_name(stmt.var_type.name)) {
+      } else if (is_ptr_width_type_name(stmt.var_type.name)) {
+        // Walker var-decl ty 2/3/4 (str/string, bytes/StringView, ptr/i64):
+        // LocalAllocI64, register in itok, StoreI64 init.
         MirInsn ins;
         ins.op = MirOp::LocalAllocI64;
         ins.ident = stmt.var_name;
         out.push_back(std::move(ins));
+        g_i64_names.insert(stmt.var_name);
         if (stmt.init) {
           MirInsn store;
           store.op = MirOp::StoreI64;
           store.ident = stmt.var_name;
-          if (stmt.init->kind == Expr::Kind::IntLit) {
+          if (stmt.init->kind == Expr::Kind::StringLit) {
+            store.rhs_is_literal = true;
+            store.rhs_is_string = true;
+            store.str_value = stmt.init->str_value;
+          } else if (stmt.init->kind == Expr::Kind::IntLit) {
             store.rhs_is_literal = true;
             store.rhs_int = stmt.init->int_value;
           } else if (stmt.init->kind == Expr::Kind::Ident) {
@@ -1576,11 +1607,13 @@ void lower_stmt(const Stmt& stmt, const Module& module, bool returns_float,
       const std::string else_label = fresh_label("else_");
       const std::string merge_label = fresh_label("merge_");
       push_branch_if_zero(out, cond_tmp, else_label);
-      lower_stmts(stmt.then_body, module, returns_float, out, float_names, float_arrays);
+      lower_stmts(stmt.then_body, module, returns_float, returns_i64, out, float_names,
+                  float_arrays);
       if (stmt.else_body) {
         push_jump_if_open(out, merge_label);
         push_label(out, else_label);
-        lower_stmts(*stmt.else_body, module, returns_float, out, float_names, float_arrays);
+        lower_stmts(*stmt.else_body, module, returns_float, returns_i64, out, float_names,
+                    float_arrays);
         push_label(out, merge_label);
       } else {
         push_label(out, else_label);
@@ -1617,7 +1650,7 @@ void lower_stmt(const Stmt& stmt, const Module& module, bool returns_float,
       g_in_parallel = true;
       while_head_labels.clear();
       while_exit_labels.clear();
-      lower_stmts(stmt.par_body, module, false, par_fn.body, float_names, float_arrays);
+      lower_stmts(stmt.par_body, module, false, false, par_fn.body, float_names, float_arrays);
       g_in_parallel = false;
       MirInsn ret;
       ret.op = MirOp::ReturnVoid;
@@ -1675,7 +1708,8 @@ void lower_stmt(const Stmt& stmt, const Module& module, bool returns_float,
         enter.int_value = 1;
         out.push_back(std::move(enter));
       }
-      lower_stmts(stmt.for_body, module, returns_float, out, float_names, float_arrays);
+      lower_stmts(stmt.for_body, module, returns_float, returns_i64, out, float_names,
+                  float_arrays);
       if (stmt.for_vectorized) {
         MirInsn exit;
         exit.op = MirOp::ArraySimdScope;
@@ -1713,7 +1747,8 @@ void lower_stmt(const Stmt& stmt, const Module& module, bool returns_float,
       push_label(out, head_label);
       const std::string cond_tmp = lower_expr_to(*stmt.cond, module, out, float_names, float_arrays);
       push_branch_if_zero(out, cond_tmp, exit_label);
-      lower_stmts(stmt.while_body, module, returns_float, out, float_names, float_arrays);
+      lower_stmts(stmt.while_body, module, returns_float, returns_i64, out, float_names,
+                  float_arrays);
       push_jump_if_open(out, head_label);
       push_label(out, exit_label);
       while_head_labels.pop_back();
@@ -1760,10 +1795,11 @@ void lower_stmt(const Stmt& stmt, const Module& module, bool returns_float,
 }
 
 void lower_stmts(const std::vector<Stmt>& stmts, const Module& module, bool returns_float,
-                 std::vector<MirInsn>& out, std::unordered_set<std::string>& float_names,
+                 bool returns_i64, std::vector<MirInsn>& out,
+                 std::unordered_set<std::string>& float_names,
                  std::unordered_set<std::string>& float_arrays) {
   for (const auto& stmt : stmts) {
-    lower_stmt(stmt, module, returns_float, out, float_names, float_arrays);
+    lower_stmt(stmt, module, returns_float, returns_i64, out, float_names, float_arrays);
     if (!out.empty() &&
         (out.back().op == MirOp::ReturnVoid || out.back().op == MirOp::ReturnInt ||
          out.back().op == MirOp::ReturnFloat || out.back().op == MirOp::ReturnIdent ||
@@ -1947,10 +1983,10 @@ MirModule lower_to_mir(const Module& module) {
     if (proc.ret_type) {
       fn.returns_float = is_float_type_name(proc.ret_type->name);
       fn.returns_void = proc.ret_type->name == "unit";
-      // Walker reti64: pointer-width return — int64/ptr AND str/string all
-      // set the bit (mir_proc reti64 mirrors the PARAM is_i64 rule).
-      fn.returns_i64 = is_i64_type_name(proc.ret_type->name) ||
-                       is_string_type_name(proc.ret_type->name);
+      // Walker reti64: mir_proc sets the bit for ret == 3 or ret == 4, i.e.
+      // str/string (rd 2), bytes/StringView (rd 3) and ptr/int64/i64/long
+      // (rd 4) — the pointer-width set; arrays (rd 5) and ints (rd 1) do not.
+      fn.returns_i64 = is_ptr_width_type_name(proc.ret_type->name);
       // Object-typed return -> FN returns_object bit + one RETPARAM per field
       // (walker mir_proc: type stored as vt(0) object -> retobj=1; the return
       // slot is packed field-by-field and emitted as RETURN + OBJ layout).
@@ -1972,6 +2008,7 @@ MirModule lower_to_mir(const Module& module) {
       fn.returns_void = true;
     }
     std::vector<std::pair<std::string, std::string>> obj_params;
+    std::vector<std::string> i64_params;
     for (const auto& p : proc.params) {
       // Object-typed param -> flatten to one PARAM slot per field named
       // __li_o_<param>_<field> (walker mir_proc: object param type vt(0) is
@@ -1997,7 +2034,9 @@ MirModule lower_to_mir(const Module& module) {
       MirParam mp;
       mp.name = p.name;
       mp.is_float = is_float_type_name(p.type.name);
-      mp.is_string = is_string_type_name(p.type.name);
+      // Walker mir_param_line ps: ty == 2 or ty == 3 — str/string AND
+      // bytes/StringView all set the is_string slot.
+      mp.is_string = is_str_bytes_type_name(p.type.name);
       if (p.type.kind == TypeKind::Array && p.type.elem) {
         // Walker PARAM layout (mir_param_line): array[N, float] -> is_float=1,
         // fixed_array_elems=N, is_i64=0; array[N, ptr|str|i64] elements are
@@ -2017,10 +2056,17 @@ MirModule lower_to_mir(const Module& module) {
                       is_string_type_name(p.type.elem->name);
         }
       } else {
-        // Walker PARAM is_i64: scalar int64/ptr AND str params both set the
-        // pointer-width bit (mir_param_line ty==2 -> pi2=1); byte arrays too.
+        // Walker PARAM is_i64: ty == 4 or ty == 2 (ptr/i64 AND str/string)
+        // set the pointer-width bit; bytes/StringView (ty 3) deliberately do
+        // not (they only set is_string above).
         mp.is_i64 = is_i64_type_name(p.type.name) ||
                     is_string_type_name(p.type.name);
+      }
+      // Walker itok: scalar pointer-width params (ty 2/3/4) register under
+      // the param name; used for ReturnIdent's ret_is_i64 bit. Seeded into
+      // g_i64_names after the per-proc reset below, like obj_params.
+      if (is_ptr_width_type_name(p.type.name)) {
+        i64_params.push_back(p.name);
       }
       // Walker is_var: only `var array[...]` params (collect sets preg(10)
       // from ti[1] for array types only; matrix params force 0 in
@@ -2038,8 +2084,12 @@ MirModule lower_to_mir(const Module& module) {
       g_matrix_params.clear();
       g_par_fns.clear();
       g_object_vars.clear();
+      g_i64_names.clear();
       for (const auto& op : obj_params) {
         g_object_vars[op.first] = op.second;
+      }
+      for (const auto& ip : i64_params) {
+        g_i64_names.insert(ip);
       }
       std::unordered_set<std::string> float_names;
       std::unordered_set<std::string> float_arrays;
@@ -2054,7 +2104,8 @@ MirModule lower_to_mir(const Module& module) {
         leave.op = MirOp::AsyncFrameLeave;
         fn.body.push_back(std::move(leave));
       }
-      lower_stmts(proc.body, module, fn.returns_float, fn.body, float_names, float_arrays);
+      lower_stmts(proc.body, module, fn.returns_float, fn.returns_i64, fn.body, float_names,
+                  float_arrays);
       append_implicit_return(fn.body);
       g_cur_proc = nullptr;
       mir.uses_async = mir.uses_async || fn.is_async;

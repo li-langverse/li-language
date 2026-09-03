@@ -1,4 +1,5 @@
 #include "li/mir_abi.hpp"
+#include "li/mir_types.hpp"
 
 #include <sstream>
 
@@ -15,13 +16,8 @@ const ProcDecl* find_proc_by_name(const Module& module, const std::string& name)
   return nullptr;
 }
 
-bool type_is_pointer_width_ret(const std::string& name) {
-  return name == "ptr" || name == "int64" || name == "i64" || name == "long" || name == "str" ||
-         name == "string" || name == "bytes" || name == "StringView";
-}
-
 bool extern_should_return_i8_ptr(const ProcDecl& proc) {
-  return proc.is_extern && proc.ret_type && type_is_pointer_width_ret(proc.ret_type->name) &&
+  return proc.is_extern && proc.ret_type && is_ptr_width_type_name(proc.ret_type->name) &&
          proc.ret_type->name != "unit";
 }
 
@@ -92,7 +88,7 @@ bool verify_mir_extern_abi(const Module& module, const MirModule& mir, std::stri
       if (!callee || !callee->ret_type || callee->ret_type->name == "unit") {
         continue;
       }
-      if (!type_is_pointer_width_ret(callee->ret_type->name)) {
+      if (!is_ptr_width_type_name(callee->ret_type->name)) {
         continue;
       }
       if (!ins.ret_is_i64) {

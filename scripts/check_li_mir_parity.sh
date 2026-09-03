@@ -95,34 +95,57 @@ for f in "${CORPUS[@]}"; do
 done
 
 if [[ "${LI_MIR_FULL_SWEEP:-0}" == "1" ]]; then
-  checked=0
-  mismatch=0
+  # Full-corpus classification sweep (non-short-circuiting): bucket every
+  # *.li by acceptance and, for both-accept files, byte-exactness. Evidence
+  # for REAL-GAP files lands under ${MIR_OUT:-<tmp>} so divergences are
+  # reproducible. Bucket semantics match the labels: CPP-ONLY means the C++
+  # host accepts but the li walker rejects; LI-ONLY is the reverse (the
+  # frontend-gap bucket the C++ still rejects).
+  n_match=0; n_known=0; n_real=0; n_cpp_only=0; n_li_only=0; n_neither=0; n_total=0
+  OUT="${MIR_OUT:-$TMP/sweep}"
+  mkdir -p "$OUT"
+  : > "$OUT/results.txt"
   while IFS= read -r f; do
     cpp=0; li=0
     "$LIC" mir "$f" >/dev/null 2>&1 && cpp=1
-    "$LI" mir "$f" >/dev/null 2>&1 && li=1
+    "$LI"  mir "$f" >/dev/null 2>&1 && li=1
+    rel="${f#$ROOT/}"
+    n_total=$((n_total + 1))
     if [[ "$cpp" == "1" && "$li" == "0" ]]; then
-      # Li frontend gap: C++ accepts but Li rejects (generics, objects, etc.)
-      checked=$((checked + 1))
-      continue
+      echo "CPP-ONLY $rel" >> "$OUT/results.txt"; n_cpp_only=$((n_cpp_only + 1)); continue
     fi
     if [[ "$cpp" == "0" && "$li" == "1" ]]; then
-      checked=$((checked + 1))
-      continue
+      echo "LI-ONLY $rel" >> "$OUT/results.txt"; n_li_only=$((n_li_only + 1)); continue
     fi
-    if [[ "$cpp" == "1" ]]; then
-      "$LIC" mir "$f" > "$TMP/cpp_mir.txt" 2>/dev/null
-      "$LI" mir "$f" > "$TMP/li_mir.txt" 2>/dev/null
-      if ! diff -q "$TMP/cpp_mir.txt" "$TMP/li_mir.txt" >/dev/null 2>&1; then
-        mismatch=$((mismatch + 1))
-      fi
+    if [[ "$cpp" == "0" && "$li" == "0" ]]; then
+      echo "NEITHER $rel" >> "$OUT/results.txt"; n_neither=$((n_neither + 1)); continue
     fi
-    checked=$((checked + 1))
+    "$LIC" mir "$f" > "$OUT/cpp.mir" 2>/dev/null
+    "$LI"  mir "$f" > "$OUT/li.mir"  2>/dev/null
+    if diff -q "$OUT/cpp.mir" "$OUT/li.mir" >/dev/null 2>&1; then
+      echo "MATCH $rel" >> "$OUT/results.txt"; n_match=$((n_match + 1)); continue
+    fi
+    # Known intentional diff: C++ suppresses the post-terminator merge jump
+    # (INS 44) after if/else where the walker still emits it. Signature: every
+    # diff hunk is a '<' Jump line present only in the walker (diff order is
+    # li.mir then cpp.mir), with no '>' side carrying a Jump.
+    difftxt="$(diff "$OUT/li.mir" "$OUT/cpp.mir" || true)"
+    add_only="$(printf '%s\n' "$difftxt" | grep '^<' | grep -c 'INS 44' || true)"
+    del_only="$(printf '%s\n' "$difftxt" | grep '^>' | grep -c 'INS 44' || true)"
+    total_lines="$(printf '%s\n' "$difftxt" | grep -c '^[<>]' || true)"
+    if [[ "$add_only" -gt 0 && "$del_only" == "0" && "$total_lines" == "$add_only" ]]; then
+      echo "KNOWN-DIFF $rel" >> "$OUT/results.txt"; n_known=$((n_known + 1))
+    else
+      echo "REAL-GAP $rel" >> "$OUT/results.txt"; n_real=$((n_real + 1))
+      cp "$OUT/li.mir" "$OUT/$(echo "$rel" | tr '/' '_').li.mir"
+      cp "$OUT/cpp.mir" "$OUT/$(echo "$rel" | tr '/' '_').cpp.mir"
+    fi
   done < <(find "$ROOT/bootstrap" "$ROOT/examples" "$ROOT/li-tests" "$ROOT/packages" \
              "$ROOT/proof-db" -name "*.li" -type f \
              -not -path "$ROOT/bootstrap/lic/main.li" \
-             2>/dev/null)
-  echo "  full sweep: $checked files, $mismatch MIR mismatches (known Li frontend gaps)"
+             2>/dev/null | sort)
+  echo "match=$n_match known-diff=$n_known real-gap=$n_real cpp-only=$n_cpp_only li-only=$n_li_only neither=$n_neither (total $n_total)" \
+    | tee "$OUT/summary.txt"
 fi
 
 echo "check_li_mir_parity: ok (${#CORPUS[@]} corpus files, byte-exact MIR dumps)"

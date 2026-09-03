@@ -82,7 +82,13 @@ void dump_arg(const MirArg& a, D& d) {
 
 void dump_insn(const MirInsn& i, D& d) {
   d.o << "INS";
-  d.sp(); d.f(static_cast<std::int64_t>(i.op));
+  d.sp();
+  // The walker emits 1D array loads as op 11 (ArrayLoadInt) for BOTH int and
+  // float arrays; ArrayLoadFloat (13) exists only in this enum, so float
+  // loads must dump as 11 to match. Stores keep their distinct ops (10/12).
+  const std::int64_t dump_op =
+      i.op == MirOp::ArrayLoadFloat ? 11 : static_cast<std::int64_t>(i.op);
+  d.f(dump_op);
   d.sp(); d.f(i.int_value);
   d.sp(); d.f(i.float_value);
   d.sp(); d.f(i.ident);
