@@ -1977,22 +1977,56 @@ MirModule lower_to_mir(const Module& module) {
   g_in_parallel = false;
   MirModule mir;
   g_object_types.clear();
+  // Collect every object alias first so nested object fields resolve
+  // regardless of declaration/import order (module.types holds the merged
+  // main + imported aliases in walker order). Nested object fields flatten
+  // to their leaves with compound names (parent_leaf), matching the walker's
+  // DFS leaf expansion (mir_obj_alloc_fields / mir_obj_retparams / OBJ).
+  // Only a field whose type is a registered object alias recurses; array
+  // fields (even of object elements) stay single array slots, exactly like
+  // the walker, which never recurses arrays.
+  std::unordered_map<std::string, const TypeAlias*> obj_aliases;
+  for (const auto& alias : module.types) {
+    if (alias.alias_kind == AliasKind::Object) {
+      obj_aliases[alias.name] = &alias;
+    }
+  }
+  std::function<void(const TypeAlias&, const std::string&, std::vector<std::string>&,
+                     std::vector<ObjectField>&)>
+      flatten_alias = [&](const TypeAlias& alias, const std::string& prefix,
+                          std::vector<std::string>& path,
+                          std::vector<ObjectField>& out) {
+        for (const auto& f : alias.fields) {
+          if (f.type && f.type->kind == TypeKind::Named) {
+            const auto sub = obj_aliases.find(f.type->name);
+            if (sub != obj_aliases.end() &&
+                std::find(path.begin(), path.end(), f.type->name) == path.end()) {
+              const std::string next =
+                  prefix.empty() ? f.name : prefix + "_" + f.name;
+              path.push_back(f.type->name);
+              flatten_alias(*sub->second, next, path, out);
+              path.pop_back();
+              continue;
+            }
+          }
+          ObjectField leaf;
+          leaf.name = prefix.empty() ? f.name : prefix + "_" + f.name;
+          if (f.type && f.type->kind == TypeKind::Array && f.type->elem) {
+            leaf.array_elems = f.type->array_size;
+            leaf.is_float = is_float_type_name(f.type->elem->name);
+            leaf.is_i64 = is_pi2_i64_type_name(f.type->elem->name);
+          } else if (f.type && f.type->kind == TypeKind::Named) {
+            leaf.is_float = is_float_type_name(f.type->name);
+            leaf.is_i64 = is_pi2_i64_type_name(f.type->name);
+          }
+          out.push_back(std::move(leaf));
+        }
+      };
   for (const auto& alias : module.types) {
     if (alias.alias_kind == AliasKind::Object) {
       std::vector<ObjectField> fields;
-      for (const auto& f : alias.fields) {
-        ObjectField field;
-        field.name = f.name;
-        if (f.type && f.type->kind == TypeKind::Array && f.type->elem) {
-          field.array_elems = f.type->array_size;
-          field.is_float = is_float_type_name(f.type->elem->name);
-          field.is_i64 = is_pi2_i64_type_name(f.type->elem->name);
-        } else if (f.type && f.type->kind == TypeKind::Named) {
-          field.is_float = is_float_type_name(f.type->name);
-          field.is_i64 = is_pi2_i64_type_name(f.type->name);
-        }
-        fields.push_back(std::move(field));
-      }
+      std::vector<std::string> path{alias.name};
+      flatten_alias(alias, "", path, fields);
       g_object_types[alias.name] = std::move(fields);
     }
   }
