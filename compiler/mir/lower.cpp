@@ -770,6 +770,11 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
             for (const auto& field : g_object_types[callee->params[ai].type.name]) {
               MirArg field_arg;
               field_arg.ident = "__li_o_" + arg.ident + "_" + field.name;
+              // Array-typed object leaves pass by address (walker ARG
+              // is_array_ident), like plain array args; scalar leaves stay 0.
+              if (field.array_elems > 0 || is_array_ident(field_arg.ident)) {
+                field_arg.is_array_ident = true;
+              }
               ins.args.push_back(std::move(field_arg));
             }
             continue;
@@ -809,6 +814,41 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
             layout.fixed_array_elems = field.array_elems;
             ins.object_layout.push_back(std::move(layout));
           }
+        }
+        if (callee->ret_type && callee->ret_type->kind == TypeKind::Named &&
+            g_object_types.count(callee->ret_type->name) > 0) {
+          // Walker rd==6 object-returning call (mir_cr_alloc_fields +
+          // mir_cr_call_line): materialize __li_o___cr<N> leaf allocs BEFORE
+          // the INS 8, name the dest with the cr base (cr ids share the temp
+          // counter), and return that base so callers copy per-leaf slots
+          // (var-decl init / assign / args) exactly like the walker. The OBJ
+          // layout was pushed above; ARG lines still print after the INS 8.
+          const std::string cr_base =
+              "__li_o___cr" + std::to_string(temp_counter++);
+          for (const auto& f : g_object_types[callee->ret_type->name]) {
+            MirInsn alloc;
+            alloc.op = f.array_elems > 0
+                           ? MirOp::ArrayAlloc
+                           : f.is_float ? MirOp::LocalAllocFloat
+                                        : MirOp::LocalAllocInt;
+            alloc.ident = cr_base + "_" + f.name;
+            alloc.int_value = f.array_elems;
+            alloc.array_is_float = f.array_elems > 0 && f.is_float;
+            alloc.array_is_i64 = f.is_i64;
+            if (f.array_elems > 0) {
+              g_array_sizes[alloc.ident] = f.array_elems;
+              if (f.is_float) {
+                float_arrays.insert(alloc.ident);
+              }
+            }
+            out.push_back(std::move(alloc));
+            if (f.is_float && f.array_elems == 0) {
+              float_names.insert(alloc.ident);
+            }
+          }
+          ins.ident = cr_base;
+          out.push_back(std::move(ins));
+          return cr_base;
         }
         if (callee->ret_type && callee->ret_type->name == "unit") {
           // Walker rd==0 (unit): INS 8 with no dest ident and no counter
@@ -1569,13 +1609,20 @@ void lower_stmt(const Stmt& stmt, const Module& module, bool returns_float, bool
         }
         out.push_back(std::move(ins));
       } else if (stmt.init && stmt.init->kind == Expr::Kind::Ident && stmt.expr &&
-                 g_object_vars.count(stmt.init->ident) > 0 &&
-                 stmt.expr->kind == Expr::Kind::Ident &&
-                 g_object_vars.count(stmt.expr->ident) > 0) {
+                 g_object_vars.count(stmt.init->ident) > 0) {
+        // Whole-object assign into an object var: `b = a` copies every leaf
+        // slot of the other object var; `c = make()` (object-returning call)
+        // copies the cr slots (walker mir_obj_emit_copy per field).
         const auto& fields = g_object_types[g_object_vars[stmt.init->ident]];
+        const bool ident_src = stmt.expr->kind == Expr::Kind::Ident &&
+                               g_object_vars.count(stmt.expr->ident) > 0;
+        const std::string src_base =
+            ident_src ? "__li_o_" + stmt.expr->ident
+                      : lower_expr_to(*stmt.expr, module, out, float_names,
+                                      float_arrays);
         for (const auto& f : fields) {
           const std::string dst = "__li_o_" + stmt.init->ident + "_" + f.name;
-          const std::string src = "__li_o_" + stmt.expr->ident + "_" + f.name;
+          const std::string src = src_base + "_" + f.name;
           if (f.array_elems > 0) {
             for (std::int64_t n = 0; n < f.array_elems; ++n) {
               MirInsn load;
