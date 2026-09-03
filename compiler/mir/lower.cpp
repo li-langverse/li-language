@@ -793,6 +793,11 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
               g_object_types.count(callee->params[ai].type.name) > 0 &&
               arg.kind == Expr::Kind::Ident && g_object_vars.count(arg.ident) > 0;
           if (object_arg) {
+            // The walker's first-arg var-object recipe materializes wb<N>
+            // slots instead of passing the object's leaves directly; that
+            // stage is separate, so leave arg 0 on the direct path for now.
+            const bool by_ref =
+                ai > 0 && callee->params[ai].type.is_var;
             for (const auto& field : g_object_types[callee->params[ai].type.name]) {
               MirArg field_arg;
               field_arg.ident = "__li_o_" + arg.ident + "_" + field.name;
@@ -801,6 +806,9 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
               if (field.array_elems > 0 || is_array_ident(field_arg.ident)) {
                 field_arg.is_array_ident = true;
               }
+              // Directly-flattened `var` object args carry the param's
+              // by-ref bit on every leaf (walker mir_arg_obj_line last col).
+              field_arg.is_var_ref = by_ref;
               ins.args.push_back(std::move(field_arg));
             }
             continue;
