@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 # MIR parity sweep: classify every corpus .li as match / known-diff / real-gap.
 # Non-short-circuiting variant of scripts/check_li_mir_parity.sh (same binaries,
-# same find-set), preserving per-file evidence under /tmp/mir-parity.
+# same find-set), preserving per-file evidence under $OUT.
+# Usage:
+#   scripts/mir_parity_sweep.sh
+#   LI_CHECK_BIN=/custom/walker scripts/mir_parity_sweep.sh
+#   OUT=/tmp/mir-parity scripts/mir_parity_sweep.sh
 set -u
-ROOT="/Users/julian/Documents/coding-projects/lic-gap2-proofdb"
-CPP="$ROOT/build/compiler/lic/lic"
-LI=/tmp/li-walker-mir
-OUT=/tmp/mir-parity
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+CPP="${LIC:-$("$ROOT/scripts/resolve-lic.sh")}"
+LI="${LI_CHECK_BIN:-/tmp/li-walker-mir}"
+OUT="${OUT:-/tmp/mir-parity}"
 mkdir -p "$OUT"
 : > "$OUT/results.txt"
 
@@ -34,8 +38,8 @@ while IFS= read -r f; do
   # Diverges: classify by diff shape.
   # Known intentional diff: C++ suppresses the post-terminator merge jump
   # (INS 44) after if/else where the walker still emits it. Signature: every
-  # diff hunk is a '<' C++ Jump line that the walker lacks (no '>' side with
-  # a Jump).
+  # diff hunk is a '<' Jump line present only in the walker (diff order is
+  # li.mir then cpp.mir), with no '>' side carrying a Jump.
   difftxt="$(diff "$OUT/li.mir" "$OUT/cpp.mir")"
   add_only="$(printf '%s\n' "$difftxt" | grep '^<' | grep -c 'INS 44' || true)"
   del_only="$(printf '%s\n' "$difftxt" | grep '^>' | grep -c 'INS 44' || true)"
