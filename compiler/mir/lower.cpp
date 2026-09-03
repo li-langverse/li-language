@@ -1107,15 +1107,35 @@ void lower_return_expr(const Expr& e, bool returns_float, bool returns_i64,
   } else if (e.kind == Expr::Kind::Call || e.kind == Expr::Kind::BinOp ||
              e.kind == Expr::Kind::Index || e.kind == Expr::Kind::UnaryMinus) {
     const std::string tmp = lower_expr_to(e, module, out, float_names, float_arrays);
-    ins.op = MirOp::ReturnIdent;
-    ins.ident = tmp;
-    ins.ret_is_float = returns_float || is_float_expr(e, float_names, float_arrays);
-    // Pointer-width returns (str/ptr/i64/array calls) set the i64 bit on the
-    // ReturnIdent too (walker mir_return rd 3/4/5 -> reti64).
-    if (e.kind == Expr::Kind::Call && !ins.ret_is_float) {
-      const auto callee = std::find_if(module.procs.begin(), module.procs.end(),
-                                       [&](const ProcDecl& p) { return p.name == e.ident; });
-      if (callee != module.procs.end() && callee->ret_type) {
+    // `return <object-returning call>`: the call cr-izes into
+    // __li_o___cr<N> slots, then the return packs them via INS 4 ReturnObject
+    // with the OBJ leaf layout (walker mir_return on a call whose result is
+    // an object). Everything else returns the lowered name via INS 3.
+    const auto callee = std::find_if(module.procs.begin(), module.procs.end(),
+                                     [&](const ProcDecl& p) { return p.name == e.ident; });
+    if (e.kind == Expr::Kind::Call && callee != module.procs.end() &&
+        callee->ret_type && callee->ret_type->kind == TypeKind::Named &&
+        g_object_types.count(callee->ret_type->name) > 0) {
+      ins.op = MirOp::ReturnObject;
+      ins.ident = tmp;
+      for (const auto& f : g_object_types[callee->ret_type->name]) {
+        MirParam fp;
+        fp.name = f.name;
+        fp.is_float = f.is_float;
+        fp.is_i64 = f.is_i64;
+        fp.is_array = f.array_elems > 0;
+        fp.array_size = static_cast<int>(f.array_elems);
+        fp.fixed_array_elems = f.array_elems;
+        ins.object_layout.push_back(std::move(fp));
+      }
+    } else {
+      ins.op = MirOp::ReturnIdent;
+      ins.ident = tmp;
+      ins.ret_is_float = returns_float || is_float_expr(e, float_names, float_arrays);
+      // Pointer-width returns (str/ptr/i64/array calls) set the i64 bit on
+      // the ReturnIdent too (walker mir_return rd 3/4/5 -> reti64).
+      if (e.kind == Expr::Kind::Call && !ins.ret_is_float &&
+          callee != module.procs.end() && callee->ret_type) {
         if (returns_i64 || is_ptr_width_type_name(callee->ret_type->name) ||
             callee->ret_type->kind == TypeKind::Array) {
           ins.ret_is_i64 = true;

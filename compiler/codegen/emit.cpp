@@ -529,6 +529,11 @@ struct EmitCtx {
             }
           } else if (ins.ret_is_float) {
             builder->CreateStore(call, ensure_float_local(ins.ident));
+          } else if (ins.ret_is_i64 || ins.is_i64) {
+            // str/ptr/array-returning user procs carry the pointer-width
+            // result in a ptr local (same ABI as CallExtern); storing it into
+            // the i32 int local truncated the pointer to 32 bits.
+            builder->CreateStore(call, ensure_ptr_local(ins.ident));
           } else {
             builder->CreateStore(call, ensure_int_local(ins.ident));
           }
