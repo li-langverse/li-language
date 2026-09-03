@@ -564,6 +564,49 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
       return dest;
     }
     case Expr::Kind::Call: {
+      // SIMD builtins (walker mir_lower_expr simd_op): __li_simd_splat_f64
+      // (37) / mul (38) / add (39) / horiz_sum (40). Dest is a fresh temp
+      // with simd_lanes=4; splat puts its arg in the rhs slot, mul/add put
+      // arg0 in lhs and arg1 in rhs, horiz_sum puts its arg in lhs. Plain
+      // idents pass through by name; other args lower to temps first.
+      int simd_op = 0;
+      if (e.ident == "__li_simd_splat_f64") {
+        simd_op = 37;
+      } else if (e.ident == "__li_simd_mul_f64") {
+        simd_op = 38;
+      } else if (e.ident == "__li_simd_add_f64") {
+        simd_op = 39;
+      } else if (e.ident == "__li_horiz_sum_f64") {
+        simd_op = 40;
+      }
+      if (simd_op != 0) {
+        const std::string dest = fresh_temp();
+        MirInsn ins;
+        ins.op = simd_op == 37   ? MirOp::SimdSplatF64
+                 : simd_op == 38 ? MirOp::SimdMulF64
+                 : simd_op == 39 ? MirOp::SimdAddF64
+                                 : MirOp::SimdHorizSumF64;
+        ins.ident = dest;
+        ins.simd_lanes = 4;
+        for (std::size_t ai = 0; ai < e.args.size(); ++ai) {
+          // Plain idents pass through by name; any other expr is lowered to
+          // its own materialization insn and leaves an EMPTY span in the simd
+          // insn (walker: lowered args get sd_s == sd_e, so no name prints).
+          if (e.args[ai]->kind != Expr::Kind::Ident) {
+            (void)lower_expr_to(*e.args[ai], module, out, float_names,
+                                float_arrays);
+            continue;
+          }
+          const std::string& name = e.args[ai]->ident;
+          if (simd_op == 37 || ai == 1) {
+            ins.rhs_ident = name;
+          } else {
+            ins.lhs_ident = name;
+          }
+        }
+        out.push_back(std::move(ins));
+        return dest;
+      }
       // Builtin array kernels (self-hosted walker reference, bootstrap/lic/
       // main.li mir_lower_expr k==4): sum/norm/dot/axpy on array operands.
       if (e.ident == "sum" && e.args.size() == 1 &&
@@ -1243,6 +1286,16 @@ void lower_stmt(const Stmt& stmt, const Module& module, bool returns_float, bool
           }
           out.push_back(std::move(store));
         }
+      } else if (stmt.var_type.kind == TypeKind::TypeApp &&
+                 stmt.var_type.name == "simd") {
+        // Walker ty==8 (simd[f64, N]) var-decl: INS 36 LocalAllocSimdF64
+        // with the lane count in the final field; the init expression is
+        // dropped entirely (mir_var_decl ty 8 has no init emission).
+        MirInsn ins;
+        ins.op = MirOp::LocalAllocSimdF64;
+        ins.ident = stmt.var_name;
+        ins.simd_lanes = stmt.var_type.array_size;
+        out.push_back(std::move(ins));
       } else if (is_float_type_name(stmt.var_type.name)) {
         MirInsn ins;
         ins.op = MirOp::LocalAllocFloat;
