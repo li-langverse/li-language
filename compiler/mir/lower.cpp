@@ -71,6 +71,19 @@ bool is_i64_type_name(const std::string& n) {
   return n == "ptr" || n == "int64" || n == "i64" || n == "long";
 }
 
+// Walker ret descriptor (mir_type_info -> mir_proc_info rd): array (rd 5),
+// str/string/bytes/StringView (rd 3) and ptr/int64/i64/long (rd 4) all set
+// the CallProc ret_is_i64 bit. int/bool/i8..i32 (rd 1) and objects (rd 6)
+// keep it 0, so a Named kind alone must not imply the bit.
+bool walker_rd_is_i64(const TypeExpr& t) {
+  if (t.kind == TypeKind::Array) {
+    return true;
+  }
+  const std::string& n = t.name;
+  return n == "str" || n == "string" || n == "bytes" || n == "StringView" ||
+         is_i64_type_name(n);
+}
+
 void push_label(std::vector<MirInsn>& out, const std::string& name) {
   MirInsn ins;
   ins.op = MirOp::Label;
@@ -784,12 +797,9 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
         if (callee->ret_type && is_float_type_name(callee->ret_type->name)) {
           ins.ret_is_float = true;
           float_names.insert(dest);
-        } else if (callee->ret_type &&
-                   (callee->ret_type->kind == TypeKind::Array ||
-                    callee->ret_type->kind == TypeKind::Named ||
-                    is_i64_type_name(callee->ret_type->name) ||
-                    is_string_type_name(callee->ret_type->name))) {
-          // Walker ret descriptor: rd 3/4/5 (str/ptr/i64/array) -> ret_is_i64.
+        } else if (callee->ret_type && walker_rd_is_i64(*callee->ret_type)) {
+          // Walker ret descriptor: rd 3/4/5 (str/bytes/ptr/i64/array) ->
+          // ret_is_i64; int (rd 1) and objects (rd 6) keep 0.
           ins.ret_is_i64 = true;
         }
         out.push_back(std::move(ins));
@@ -1983,6 +1993,9 @@ MirModule lower_to_mir(const Module& module) {
           op.is_array = f.array_elems > 0;
           op.array_size = static_cast<int>(f.array_elems);
           op.fixed_array_elems = f.array_elems;
+          // Walker is_var on flattened object PARAM lines mirrors the
+          // param's `var` bit (mir_obj_param_line_r last field).
+          op.is_var = p.type.is_var;
           fn.params.push_back(std::move(op));
         }
         obj_params.emplace_back(p.name, p.type.name);
