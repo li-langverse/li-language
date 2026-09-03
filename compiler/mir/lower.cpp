@@ -65,18 +65,6 @@ std::string fresh_label(const std::string& prefix) {
   return prefix + std::to_string(temp_counter++);
 }
 
-bool is_float_type_name(const std::string& n) {
-  return n == "float" || n == "f64" || n == "float64";
-}
-
-bool is_string_type_name(const std::string& n) {
-  return n == "str" || n == "string";
-}
-
-bool is_i64_type_name(const std::string& n) {
-  return n == "ptr" || n == "int64" || n == "i64" || n == "long";
-}
-
 void push_label(std::vector<MirInsn>& out, const std::string& name) {
   MirInsn ins;
   ins.op = MirOp::Label;
@@ -1945,12 +1933,10 @@ MirModule lower_to_mir(const Module& module) {
         if (f.type && f.type->kind == TypeKind::Array && f.type->elem) {
           field.array_elems = f.type->array_size;
           field.is_float = is_float_type_name(f.type->elem->name);
-          field.is_i64 = is_i64_type_name(f.type->elem->name) ||
-                        is_string_type_name(f.type->elem->name);
+          field.is_i64 = is_pi2_i64_type_name(f.type->elem->name);
         } else if (f.type && f.type->kind == TypeKind::Named) {
           field.is_float = is_float_type_name(f.type->name);
-          field.is_i64 = is_i64_type_name(f.type->name) ||
-                         is_string_type_name(f.type->name);
+          field.is_i64 = is_pi2_i64_type_name(f.type->name);
         }
         fields.push_back(std::move(field));
       }
@@ -2070,15 +2056,10 @@ MirModule lower_to_mir(const Module& module) {
           mp.is_float = is_float_type_name(p.type.elem->elem->name);
         } else {
           mp.is_float = is_float_type_name(p.type.elem->name);
-          mp.is_i64 = is_i64_type_name(p.type.elem->name) ||
-                      is_string_type_name(p.type.elem->name);
+          mp.is_i64 = is_pi2_i64_type_name(p.type.elem->name);
         }
       } else {
-        // Walker PARAM is_i64: ty == 4 or ty == 2 (ptr/i64 AND str/string)
-        // set the pointer-width bit; bytes/StringView (ty 3) deliberately do
-        // not (they only set is_string above).
-        mp.is_i64 = is_i64_type_name(p.type.name) ||
-                    is_string_type_name(p.type.name);
+        mp.is_i64 = is_pi2_i64_type_name(p.type.name);
       }
       // Walker itok: scalar pointer-width params (ty 2/3/4) register under
       // the param name; used for ReturnIdent's ret_is_i64 bit. Seeded into

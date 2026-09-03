@@ -25,4 +25,26 @@ inline bool is_str_bytes_type_name(const std::string& n) {
   return n == "str" || n == "string" || n == "bytes" || n == "StringView";
 }
 
+// Scalar rd class 1 (float) — mir_proc/var-decl/param float classification.
+inline bool is_float_type_name(const std::string& n) {
+  return n == "float" || n == "f64" || n == "float64";
+}
+
+// Scalar rd class 2 (str/string) — the ty==2 half of the walker's pi2 is_i64
+// rule (object fields/params set is_i64 only for ty 4 or ty 2, not bytes).
+inline bool is_string_type_name(const std::string& n) {
+  return n == "str" || n == "string";
+}
+
+// Scalar rd class 4 (ptr/int64/i64/long) — the ty==4 half of pi2 is_i64.
+inline bool is_i64_type_name(const std::string& n) {
+  return n == "ptr" || n == "int64" || n == "i64" || n == "long";
+}
+
+// Walker mir_param_line/field pi2 (is_i64): ty == 4 or ty == 2 — ptr/i64 AND
+// str/string set the bit; bytes/StringView (ty 3) deliberately do not.
+inline bool is_pi2_i64_type_name(const std::string& n) {
+  return is_i64_type_name(n) || is_string_type_name(n);
+}
+
 }  // namespace li

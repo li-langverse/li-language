@@ -96,6 +96,18 @@ Enforced by CI gates:
 
 The C++ compiler is a **bootstrap host**. Once the language and stdlib are rich enough, `lic` will be rewritten in Li and compiled by the C++ binary. Benchmarks guard against regressions during that transition.
 
+## MIR parity & type classification
+
+The li `mir` subcommand (walker, compiled from `bootstrap/lic/main.li`) is the **reference** for the C++ `lic mir` dump. `scripts/check_li_mir_parity.sh` enforces byte-exact dumps on a 37-file gate; `LI_MIR_FULL_SWEEP=1` classifies every corpus file as match / known-diff / real-gap / cpp-only / li-only / neither.
+
+Single owners to keep in lockstep (all drive a bit emitted by both sides):
+
+- **Walker type-class predicates** — `compiler/mir/include/li/mir_types.hpp` holds every `is_*_type_name` helper (rd classes 1/2/4, pi2 is_i64, pointer-width unions). `compiler/mir/lower.cpp` and `mir_dump.cpp` must never re-derive a type-name list by hand; add the predicate there.
+- **Runtime-link flags** (`needs_rt_net` / httpd / log bits in the MIR header) — `scan_runtime_flags` in `compiler/mir/lower.cpp`, which walks *every* expression-bearing statement position (the walker token-scans all `ident(`).
+- **Dump-vs-codegen presentation remaps** — `compiler/mir/mir_dump.cpp` maps INS 13→11 (the walker emits 1D float loads as op 11; the internal enum keeps `ArrayLoadFloat` so codegen stays float-aware). Add a dump remap only if it actually flips a file.
+
+`compiler/mir/mir_abi.cpp`, `mir_runtime_link.cpp`, and `num_stable.cpp` are **parked, not compiled** on mainline too (only `mir.cpp lower.cpp mir_dump.cpp` build into `li_mir`). Do not delete them to "clean up" — that would fork the tree from main; they are legacy from the E0360/num-stable/httpd feature lines.
+
 ## Related
 
 - [Getting started](../getting-started.md)  
