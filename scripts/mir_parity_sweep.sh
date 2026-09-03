@@ -8,11 +8,24 @@
 #   OUT=/tmp/mir-parity scripts/mir_parity_sweep.sh
 set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+export LI_REPO_ROOT="$ROOT"
 CPP="${LIC:-$("$ROOT/scripts/resolve-lic.sh")}"
-LI="${LI_CHECK_BIN:-/tmp/li-walker-mir}"
 OUT="${OUT:-/tmp/mir-parity}"
 mkdir -p "$OUT"
 : > "$OUT/results.txt"
+
+# Reference walker: honor LI_CHECK_BIN when set, otherwise rebuild it from
+# bootstrap/lic/main.li with the C++ host (same command/flags as
+# check_li_mir_parity.sh) so the sweep never compares against a stale binary.
+if [[ -n "${LI_CHECK_BIN:-}" ]]; then
+  LI="$LI_CHECK_BIN"
+else
+  TMP="$(mktemp -d)"
+  trap 'rm -rf "$TMP"' EXIT
+  LI="$TMP/lic-from-li"
+  "$CPP" build "$ROOT/bootstrap/lic/main.li" -o "$LI" --allow-open-vc --no-lean-verify \
+    >/dev/null 2>&1 || { echo "mir_parity_sweep: could not build bootstrap/lic/main.li with $CPP" >&2; exit 1; }
+fi
 
 n_match=0; n_known=0; n_real=0; n_cpp_only=0; n_li_only=0; n_neither=0
 
