@@ -1883,9 +1883,19 @@ void scan_runtime_flags(const Module& module, MirModule& mir) {
       }
     }
   };
+  // Mirror the walker's token-level `ident(` scan (mir_scan_rt_flags): every
+  // expression-bearing position of every statement is a potential extern call
+  // site — return/assign/borrow RHS (s.expr), var-decl inits (s.init),
+  // if/while conds (s.cond), and for/parallel bodies.
   std::function<void(const Stmt&)> walk_stmt = [&](const Stmt& s) {
     if (s.expr) {
       walk_expr(*s.expr);
+    }
+    if (s.init) {
+      walk_expr(*s.init);
+    }
+    if (s.cond) {
+      walk_expr(*s.cond);
     }
     if (s.kind == Stmt::Kind::If) {
       for (const auto& inner : s.then_body) {
@@ -1898,6 +1908,14 @@ void scan_runtime_flags(const Module& module, MirModule& mir) {
       }
     } else if (s.kind == Stmt::Kind::While) {
       for (const auto& inner : s.while_body) {
+        walk_stmt(inner);
+      }
+    } else if (s.kind == Stmt::Kind::ParallelFor) {
+      for (const auto& inner : s.par_body) {
+        walk_stmt(inner);
+      }
+    } else if (s.kind == Stmt::Kind::For) {
+      for (const auto& inner : s.for_body) {
         walk_stmt(inner);
       }
     }
