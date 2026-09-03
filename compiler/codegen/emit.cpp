@@ -101,6 +101,14 @@ struct EmitCtx {
   llvm::IRBuilder<>* alloc = nullptr;
   std::unordered_map<std::string, llvm::BasicBlock*> labels;
   int str_counter = 0;
+  // `var` object/scalar params (by-ref ABI): name -> {address of the caller's
+  // storage, scalar kind 0=i32 1=f64 2=i64}. Every read/write of these names
+  // derefs the pointer with the recorded kind, so callee mutation propagates
+  // back to the caller.
+  std::unordered_map<std::string, std::pair<llvm::Value*, int>> byrefs;
+  // Per-callee flattened MirParam lists (module-wide), so call sites can pass
+  // by address where the callee declares a `var` param.
+  const std::unordered_map<std::string, const std::vector<MirParam>*>* fn_params = nullptr;
 
   // All stack slots must live in the function entry block so every use is
   // dominated. The main `builder` floats with the current block; emit allocas
@@ -135,6 +143,17 @@ struct EmitCtx {
   }
 
   llvm::Value* load_float(const std::string& name) {
+    if (auto it = byrefs.find(name); it != byrefs.end()) {
+      if (it->second.second == 1) {
+        return builder->CreateLoad(llvm::Type::getDoubleTy(context), it->second.first);
+      }
+      // By-ref int/i64 slot read as float: widen the integer value.
+      return builder->CreateSIToFP(
+          it->second.second == 2
+              ? builder->CreateLoad(i64_ty(context), it->second.first)
+              : builder->CreateLoad(i32_ty(context), it->second.first),
+          llvm::Type::getDoubleTy(context));
+    }
     return builder->CreateLoad(llvm::Type::getDoubleTy(context), ensure_float_local(name));
   }
 
@@ -170,6 +189,18 @@ struct EmitCtx {
   }
 
   llvm::Value* load_int(const std::string& name) {
+    if (auto it = byrefs.find(name); it != byrefs.end()) {
+      if (it->second.second == 2) {
+        return builder->CreateTrunc(builder->CreateLoad(i64_ty(context), it->second.first),
+                                    i32_ty(context));
+      }
+      if (it->second.second == 1) {
+        return builder->CreateFPToSI(
+            builder->CreateLoad(llvm::Type::getDoubleTy(context), it->second.first),
+            i32_ty(context));
+      }
+      return builder->CreateLoad(i32_ty(context), it->second.first);
+    }
     if (auto it = float_locals.find(name); it != float_locals.end()) {
       return builder->CreateFPToSI(
           builder->CreateLoad(llvm::Type::getDoubleTy(context), it->second), i32_ty(context));
@@ -182,6 +213,18 @@ struct EmitCtx {
   }
 
   llvm::Value* load_i64(const std::string& name) {
+    if (auto it = byrefs.find(name); it != byrefs.end()) {
+      if (it->second.second == 2) {
+        return builder->CreateLoad(i64_ty(context), it->second.first);
+      }
+      if (it->second.second == 1) {
+        return builder->CreateFPToSI(
+            builder->CreateLoad(llvm::Type::getDoubleTy(context), it->second.first),
+            i64_ty(context));
+      }
+      return builder->CreateSExt(builder->CreateLoad(i32_ty(context), it->second.first),
+                                 i64_ty(context));
+    }
     if (auto it = i64_locals.find(name); it != i64_locals.end()) {
       return builder->CreateLoad(i64_ty(context), it->second);
     }
@@ -190,6 +233,22 @@ struct EmitCtx {
           builder->CreateLoad(i8_ptr(context), it->second), i64_ty(context));
     }
     return builder->CreateSExt(load_int(name), i64_ty(context));
+  }
+
+  // Store target for a scalar slot: by-ref names store through the incoming
+  // pointer (callee mutation propagates to the caller); everything else lands
+  // in the ordinary typed local.
+  llvm::Value* store_target(const std::string& name, bool is_float, bool is_i64) {
+    if (auto it = byrefs.find(name); it != byrefs.end()) {
+      return it->second.first;
+    }
+    if (is_float) {
+      return ensure_float_local(name);
+    }
+    if (is_i64) {
+      return ensure_i64_local(name);
+    }
+    return ensure_int_local(name);
   }
 
   llvm::Type* array_element_type(const ArraySlot& slot) {
@@ -277,6 +336,9 @@ struct EmitCtx {
     }
     if (arg.is_literal) {
       return int32_val(*builder, context, arg.int_value);
+    }
+    if (arg.is_float_literal) {
+      return llvm::ConstantFP::get(llvm::Type::getDoubleTy(context), arg.float_value);
     }
     if (float_locals.find(arg.ident) != float_locals.end()) {
       return load_float(arg.ident);
@@ -415,14 +477,14 @@ struct EmitCtx {
       case MirOp::StoreInt: {
         llvm::Value* val = ins.rhs_is_literal ? int32_val(*builder, context, ins.rhs_int)
                                               : load_int(ins.rhs_ident);
-        builder->CreateStore(val, ensure_int_local(ins.ident));
+        builder->CreateStore(val, store_target(ins.ident, false, false));
         return true;
       }
       case MirOp::StoreI64: {
         llvm::Value* val = ins.rhs_is_literal
                                ? llvm::ConstantInt::get(i64_ty(context), ins.rhs_int)
                                : load_i64(ins.rhs_ident);
-        builder->CreateStore(val, ensure_i64_local(ins.ident));
+        builder->CreateStore(val, store_target(ins.ident, false, true));
         return true;
       }
       case MirOp::StoreFloat: {
@@ -430,7 +492,7 @@ struct EmitCtx {
                                ? llvm::ConstantFP::get(llvm::Type::getDoubleTy(context),
                                                        ins.float_value)
                                : load_float(ins.rhs_ident);
-        builder->CreateStore(val, ensure_float_local(ins.ident));
+        builder->CreateStore(val, store_target(ins.ident, true, false));
         return true;
       }
       case MirOp::BinOpInt: {
@@ -441,14 +503,14 @@ struct EmitCtx {
                                ? int32_val(*builder, context, ins.rhs_int)
                                : load_int(ins.rhs_ident);
         llvm::Value* result = emit_binop(ins.bin_op, lhs, rhs);
-        builder->CreateStore(result, ensure_int_local(ins.ident));
+        builder->CreateStore(result, store_target(ins.ident, false, false));
         return true;
       }
       case MirOp::BinOpFloat: {
         llvm::Value* lhs = load_float(ins.lhs_ident);
         llvm::Value* rhs = load_float(ins.rhs_ident);
         llvm::Value* result = emit_fbinop(ins.bin_op, lhs, rhs);
-        builder->CreateStore(result, ensure_float_local(ins.ident));
+        builder->CreateStore(result, store_target(ins.ident, true, false));
         return true;
       }
       case MirOp::EchoInt: {
@@ -495,12 +557,43 @@ struct EmitCtx {
         if (!callee) {
           return true;
         }
+        const std::vector<MirParam>* cparams = nullptr;
+        if (fn_params) {
+          if (auto it = fn_params->find(ins.callee); it != fn_params->end()) {
+            cparams = it->second;
+          }
+        }
         std::vector<llvm::Value*> args;
         for (std::size_t ai = 0; ai < ins.args.size(); ++ai) {
           llvm::Argument* parg = ai < callee->arg_size() ? callee->getArg(ai) : nullptr;
-          llvm::Value* val = mir_arg_value(ins.args[ai], parg && parg->getType() == i8_ptr(context));
-          if (parg) {
-            val = coerce_arg(val, parg->getType());
+          const bool callee_var =
+              cparams && ai < cparams->size() &&
+              (*cparams)[ai].is_var && !(*cparams)[ai].is_array &&
+              ins.args[ai].ident.empty() == false;
+          llvm::Value* val = nullptr;
+          if (callee_var) {
+            // `var` scalar/object-leaf param: pass the address of the caller's
+            // slot (or forward the caller's own by-ref pointer unchanged).
+            const MirParam& pp = (*cparams)[ai];
+            const std::string& src = ins.args[ai].ident;
+            if (auto bit = byrefs.find(src); bit != byrefs.end()) {
+              val = bit->second.first;
+            } else if (pp.is_float) {
+              val = ensure_float_local(src);
+            } else if (pp.is_i64) {
+              val = ensure_i64_local(src);
+            } else {
+              val = ensure_int_local(src);
+            }
+            if (parg) {
+              val = coerce_arg(val, parg->getType());
+            }
+          } else {
+            val = mir_arg_value(ins.args[ai],
+                                parg && parg->getType() == i8_ptr(context));
+            if (parg) {
+              val = coerce_arg(val, parg->getType());
+            }
           }
           args.push_back(val);
         }
@@ -661,9 +754,15 @@ bool emit_llvm_ir(const MirModule& mir, const std::string& out_path, std::string
     std::vector<llvm::Type*> param_tys;
     for (const auto& p : fn.params) {
       // Array params always pass by pointer (i64-wide ABI) regardless of the
-      // element type; is_i64 only describes scalar ptr/str params.
-      param_tys.push_back(p.is_array ? i64_ty(context)
-                                     : llvm_scalar(context, p.is_float, p.is_i64));
+      // element type; is_i64 only describes scalar ptr/str params. `var`
+      // scalar/object-leaf params pass the address of the caller's slot so
+      // callee writes propagate back (by-ref ABI).
+      param_tys.push_back(p.is_array
+                              ? i64_ty(context)
+                              : (p.is_var
+                                     ? llvm::PointerType::getUnqual(
+                                           llvm_scalar(context, p.is_float, p.is_i64))
+                                     : llvm_scalar(context, p.is_float, p.is_i64)));
     }
     llvm::FunctionType* fn_ty = llvm::FunctionType::get(ret_ty, param_tys, false);
     const bool argv_main = fn.name == "main" && fn.params.empty();
@@ -673,6 +772,15 @@ bool emit_llvm_ir(const MirModule& mir, const std::string& out_path, std::string
     if (fn.name == "main") {
       user_main = func;
       user_main_argv_wrapper = argv_main;
+    }
+  }
+
+  // Per-callee flattened param lists (non-extern), so CallProc sites can
+  // pass by address wherever the callee declares a `var` param.
+  std::unordered_map<std::string, const std::vector<MirParam>*> fn_params;
+  for (const auto& fn : mir.functions) {
+    if (!fn.is_extern) {
+      fn_params[fn.name] = &fn.params;
     }
   }
 
@@ -696,27 +804,32 @@ bool emit_llvm_ir(const MirModule& mir, const std::string& out_path, std::string
 
     EmitCtx ctx{context, module.get(), func, &builder, ret_ty, fn.returns_float,
                 {}, {}, {}, {}, {}, entry, new llvm::IRBuilder<>(entry)};
+    ctx.fn_params = &fn_params;
 
     unsigned idx = 0;
     for (auto& arg : func->args()) {
       if (idx < fn.params.size()) {
-        arg.setName(fn.params[idx].name);
-        if (fn.params[idx].is_i64 || fn.params[idx].is_array) {
-          builder.CreateStore(&arg, ctx.ensure_i64_local(fn.params[idx].name));
+        const MirParam& mp = fn.params[idx];
+        arg.setName(mp.name);
+        if (mp.is_var && !mp.is_array) {
+          // `var` scalar/object-leaf param: the incoming argument is the
+          // address of the caller's slot; every read/write derefs it.
+          ctx.byrefs[mp.name] = {&arg, mp.is_float ? 1 : (mp.is_i64 ? 2 : 0)};
+        } else if (mp.is_i64 || mp.is_array) {
+          builder.CreateStore(&arg, ctx.ensure_i64_local(mp.name));
           // Register var array params in the arrays map so ArrayStoreInt/
           // ArrayLoadInt can GEP through the pointer.
-          if (fn.params[idx].is_array) {
+          if (mp.is_array) {
             llvm::Value* loaded = ctx.builder->CreateLoad(
-                i64_ty(context), ctx.ensure_i64_local(fn.params[idx].name));
+                i64_ty(context), ctx.ensure_i64_local(mp.name));
             llvm::Value* ptr = ctx.builder->CreateIntToPtr(loaded, i8_ptr(context));
-            ctx.arrays[fn.params[idx].name] =
-                ArraySlot{nullptr, ptr, fn.params[idx].array_size,
-                          fn.params[idx].is_float, fn.params[idx].is_i64};
+            ctx.arrays[mp.name] =
+                ArraySlot{nullptr, ptr, mp.array_size, mp.is_float, mp.is_i64};
           }
-        } else if (fn.params[idx].is_float) {
-          builder.CreateStore(&arg, ctx.ensure_float_local(fn.params[idx].name));
+        } else if (mp.is_float) {
+          builder.CreateStore(&arg, ctx.ensure_float_local(mp.name));
         } else {
-          builder.CreateStore(&arg, ctx.ensure_int_local(fn.params[idx].name));
+          builder.CreateStore(&arg, ctx.ensure_int_local(mp.name));
         }
       }
       idx++;
