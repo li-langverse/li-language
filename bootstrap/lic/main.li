@@ -6332,10 +6332,10 @@ def mir_ins_mangled(src: var ptr, op: int, iv: int, base_s: int, base_e: int, fl
   li_rt_ast_space()
   li_rt_ast_int(flag2)
   li_rt_ast_space()
-  if rhs_s >= 0:
-    li_rt_mir_int64_out(src,  rhs_s,  rhs_e,  0)
-  else:
-    li_rt_ast_int(val)
+  # int_value cell: only literal RHS carries a value here (C++ prints 0 for
+  # ident/nested sources). Parsing the ident span would leak any digits in
+  # the variable name (d5 -> 5).
+  li_rt_ast_int(val)
   li_rt_ast_space()
   li_rt_ast_int(0)
   li_rt_ast_space()
@@ -12862,18 +12862,45 @@ def mir_walk(src: var ptr,  tk: var array[262144, int],  ts: var array[262144, i
                   set4096(itmp, 3601 + (merged_base + bj) * 2 + 1, peek4096(itmp, 3601 + (base_fb + bj) * 2 + 1))
                   set4096(itmp, 3801 + merged_base + bj, peek4096(itmp, 3801 + base_fb + bj))
                   bj = bj + 1
+                # Derived fields that shadow a same-named base field replace
+                # the base descriptor in place (the derived type wins, and
+                # leaf names are mangled by field name so the base copy must
+                # not stay registered). Shadow detection uses the stored name
+                # hash + span length, which are buffer-independent.
+                var sh_n: int = 0
                 var dj: int = 0
                 while dj < nfields:
-                  set4096(itmp, 3201 + (merged_base + base_nf + dj) * 2 + 0, peek4096(itmp, 3201 + (field_base + dj) * 2 + 0))
-                  set4096(itmp, 3201 + (merged_base + base_nf + dj) * 2 + 1, peek4096(itmp, 3201 + (field_base + dj) * 2 + 1))
-                  set4096(itmp, 3401 + (merged_base + base_nf + dj) + 0, peek4096(itmp, 3401 + (field_base + dj) + 0))
-                  set4096(itmp, 3501 + (merged_base + base_nf + dj) + 0, peek4096(itmp, 3501 + (field_base + dj) + 0))
-                  set4096(itmp, 3601 + (merged_base + base_nf + dj) * 2 + 0, peek4096(itmp, 3601 + (field_base + dj) * 2 + 0))
-                  set4096(itmp, 3601 + (merged_base + base_nf + dj) * 2 + 1, peek4096(itmp, 3601 + (field_base + dj) * 2 + 1))
-                  set4096(itmp, 3801 + merged_base + base_nf + dj, peek4096(itmp, 3801 + field_base + dj))
+                  var sh_m: int = -1
+                  var dj_len: int = peek4096(itmp, 3201 + (field_base + dj) * 2 + 1) - peek4096(itmp, 3201 + (field_base + dj) * 2 + 0)
+                  var dj_h: int = peek4096(itmp, 3801 + field_base + dj)
+                  var bj2: int = 0
+                  while bj2 < base_nf:
+                    var bj_len: int = peek4096(itmp, 3201 + (base_fb + bj2) * 2 + 1) - peek4096(itmp, 3201 + (base_fb + bj2) * 2 + 0)
+                    if dj_len == bj_len:
+                      if dj_h == peek4096(itmp, 3801 + base_fb + bj2):
+                        sh_m = bj2
+                    bj2 = bj2 + 1
+                  if sh_m >= 0:
+                    set4096(itmp, 3201 + (merged_base + sh_m) * 2 + 0, peek4096(itmp, 3201 + (field_base + dj) * 2 + 0))
+                    set4096(itmp, 3201 + (merged_base + sh_m) * 2 + 1, peek4096(itmp, 3201 + (field_base + dj) * 2 + 1))
+                    set4096(itmp, 3401 + merged_base + sh_m + 0, peek4096(itmp, 3401 + field_base + dj + 0))
+                    set4096(itmp, 3501 + merged_base + sh_m + 0, peek4096(itmp, 3501 + field_base + dj + 0))
+                    set4096(itmp, 3601 + (merged_base + sh_m) * 2 + 0, peek4096(itmp, 3601 + (field_base + dj) * 2 + 0))
+                    set4096(itmp, 3601 + (merged_base + sh_m) * 2 + 1, peek4096(itmp, 3601 + (field_base + dj) * 2 + 1))
+                    set4096(itmp, 3801 + merged_base + sh_m, dj_h)
+                    sh_n = sh_n + 1
+                  else:
+                    var ap2: int = dj - sh_n
+                    set4096(itmp, 3201 + (merged_base + base_nf + ap2) * 2 + 0, peek4096(itmp, 3201 + (field_base + dj) * 2 + 0))
+                    set4096(itmp, 3201 + (merged_base + base_nf + ap2) * 2 + 1, peek4096(itmp, 3201 + (field_base + dj) * 2 + 1))
+                    set4096(itmp, 3401 + (merged_base + base_nf + ap2) + 0, peek4096(itmp, 3401 + (field_base + dj) + 0))
+                    set4096(itmp, 3501 + (merged_base + base_nf + ap2) + 0, peek4096(itmp, 3501 + (field_base + dj) + 0))
+                    set4096(itmp, 3601 + (merged_base + base_nf + ap2) * 2 + 0, peek4096(itmp, 3601 + (field_base + dj) * 2 + 0))
+                    set4096(itmp, 3601 + (merged_base + base_nf + ap2) * 2 + 1, peek4096(itmp, 3601 + (field_base + dj) * 2 + 1))
+                    set4096(itmp, 3801 + merged_base + base_nf + ap2, dj_h)
                   dj = dj + 1
-                set4096(itmp, 3200, merged_base + base_nf + nfields)
-                reg_nf = base_nf + nfields
+                set4096(itmp, 3200, merged_base + base_nf + nfields - sh_n)
+                reg_nf = base_nf + nfields - sh_n
                 reg_fb = merged_base
             if mode == 0:
               mir_obj_reg_type(itmp, src, ts, te, obj_type_start, obj_type_end, reg_nf, reg_fb, base_s, base_e)
