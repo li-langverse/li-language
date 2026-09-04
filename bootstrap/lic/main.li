@@ -6345,15 +6345,17 @@ def mir_ins_mangled(src: var ptr, op: int, iv: int, base_s: int, base_e: int, fl
   li_rt_ast_space()
   li_rt_ast_int(0)
   li_rt_ast_space()
-  li_rt_ast_int(0)
-  li_rt_ast_space()
-  li_rt_ast_int(0)
-  li_rt_ast_space()
-  li_rt_ast_int(0)
-  li_rt_ast_space()
-  li_rt_ast_int(0)
-  li_rt_ast_space()
+  # array_is_float cell: C++ mir_dump puts the float-array bit here; the
+  # walker previously printed it in the trailing simd_lanes cell.
   li_rt_ast_int(arr_flt)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
+  li_rt_ast_space()
+  li_rt_ast_int(0)
   li_rt_ast_nl()
   lastop[0] = op
   return 0
@@ -6361,7 +6363,7 @@ def mir_ins_mangled(src: var ptr, op: int, iv: int, base_s: int, base_e: int, fl
 # Emit INS with a nested-object mangled name __li_o_<base>_<p>_<fld>
 # (e.g. `s.swapchain.backend_id` -> __li_o_s_swapchain_backend_id). Same
 # field layout as mir_ins_mangled; p_s/p_e is the parent object field.
-def mir_ins_mangled_nested(src: var ptr, op: int, iv: int, base_s: int, base_e: int, p_s: int, p_e: int, fld_s: int, fld_e: int, flag1: int, flag2: int, val: int, lastop: var array[1, int]) raises IO -> int
+def mir_ins_mangled_nested(src: var ptr, op: int, iv: int, base_s: int, base_e: int, p_s: int, p_e: int, fld_s: int, fld_e: int, flag1: int, flag2: int, val: int, lastop: var array[1, int], arr_flt: int) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -6420,7 +6422,8 @@ def mir_ins_mangled_nested(src: var ptr, op: int, iv: int, base_s: int, base_e: 
   li_rt_ast_space()
   li_rt_ast_int(0)
   li_rt_ast_space()
-  li_rt_ast_int(0)
+  # array_is_float cell (mirror mir_ins_mangled)
+  li_rt_ast_int(arr_flt)
   li_rt_ast_space()
   li_rt_ast_int(0)
   li_rt_ast_space()
@@ -6458,18 +6461,18 @@ def mir_obj_alloc_fields(src: var ptr,  ts: var array[262144, int],  te: var arr
       var elems_a: int = mir_obj_field_elems(itmp, type_idx, i_a)
       if elems_a > 0:
         if p_s >= 0:
-          mir_ins_mangled_nested(src, 9, elems_a, base_s, base_e, p_s, p_e, fa_a[0], fa_a[1], 0, 1, 0, lastop)
+          mir_ins_mangled_nested(src, 9, elems_a, base_s, base_e, p_s, p_e, fa_a[0], fa_a[1], 0, 1, 0, lastop, mir_obj_field_float(itmp, type_idx, i_a))
         else:
           mir_ins_mangled(src, 9, elems_a, base_s, base_e, fa_a[0], fa_a[1], 0, 1, 0, lastop, -1, -1, -1, -1, -1, -1, -1, 0, mir_obj_field_float(itmp, type_idx, i_a))
       else:
         if mir_obj_field_float(itmp, type_idx, i_a) == 1:
           if p_s >= 0:
-            mir_ins_mangled_nested(src, 35, 0, base_s, base_e, p_s, p_e, fa_a[0], fa_a[1], 0, 1, 0, lastop)
+            mir_ins_mangled_nested(src, 35, 0, base_s, base_e, p_s, p_e, fa_a[0], fa_a[1], 0, 1, 0, lastop, 0)
           else:
             mir_ins_mangled(src, 35, 0, base_s, base_e, fa_a[0], fa_a[1], 0, 1, 0, lastop, -1, -1, -1, -1, -1, -1, -1, 0, 0)
         else:
           if p_s >= 0:
-            mir_ins_mangled_nested(src, 24, 0, base_s, base_e, p_s, p_e, fa_a[0], fa_a[1], 0, 1, 0, lastop)
+            mir_ins_mangled_nested(src, 24, 0, base_s, base_e, p_s, p_e, fa_a[0], fa_a[1], 0, 1, 0, lastop, 0)
           else:
             mir_ins_mangled(src, 24, 0, base_s, base_e, fa_a[0], fa_a[1], 0, 1, 0, lastop, -1, -1, -1, -1, -1, -1, -1, 0, 0)
     i_a = i_a + 1
@@ -6503,6 +6506,9 @@ def mir_cr_alloc_fields(src: var ptr,  ts: var array[262144, int],  te: var arra
       else:
         if mir_obj_field_float(itmp, type_idx, i_c) == 1:
           cop_c = 35
+      var flt_c: int = 0
+      if cop_c == 9:
+        flt_c = mir_obj_field_float(itmp, type_idx, i_c)
       li_rt_mir_str("INS")
       li_rt_ast_space()
       li_rt_ast_int(cop_c)
@@ -6551,7 +6557,7 @@ def mir_cr_alloc_fields(src: var ptr,  ts: var array[262144, int],  te: var arra
       li_rt_ast_space()
       li_rt_ast_int(0)
       li_rt_ast_space()
-      li_rt_ast_int(0)
+      li_rt_ast_int(flt_c)
       li_rt_ast_space()
       li_rt_ast_int(0)
       li_rt_ast_space()
@@ -7039,6 +7045,9 @@ def mir_obj_emit_copy_r(src: var ptr,  ts: var array[262144, int],  te: var arra
         li_rt_ast_nl()
       else:
         # Array leaf: element-wise load/store
+        var cop_r2: int = 10
+        if mir_obj_field_float(itmp, type_idx, i) == 1:
+          cop_r2 = 12
         var e_r: int = 0
         while e_r < fel_r:
           var t_r: int = tc[0]
@@ -7093,7 +7102,7 @@ def mir_obj_emit_copy_r(src: var ptr,  ts: var array[262144, int],  te: var arra
           li_rt_ast_nl()
           li_rt_mir_str("INS")
           li_rt_ast_space()
-          li_rt_ast_int(10)
+          li_rt_ast_int(cop_r2)
           li_rt_ast_space()
           li_rt_ast_int(e_r)
           li_rt_ast_space()
@@ -7246,7 +7255,10 @@ def mir_obj_emit_copy(src: var ptr,  ts: var array[262144, int],  te: var array[
     li_rt_ast_int(0)
     li_rt_ast_nl()
     return 0
-  # array field: element-wise INS 11 load into temp + INS 10 store
+  # array field: element-wise INS 11 load into temp + INS 10/12 store
+  var cop_a: int = 10
+  if mir_obj_field_float(itmp, obj_ti, fidx) == 1:
+    cop_a = 12
   var e: int = 0
   while e < fel:
     var t: int = tc[0]
@@ -7310,7 +7322,7 @@ def mir_obj_emit_copy(src: var ptr,  ts: var array[262144, int],  te: var array[
     li_rt_ast_nl()
     li_rt_mir_str("INS")
     li_rt_ast_space()
-    li_rt_ast_int(10)
+    li_rt_ast_int(cop_a)
     li_rt_ast_space()
     li_rt_ast_int(e)
     li_rt_ast_space()
@@ -11272,6 +11284,69 @@ def mir_assign(darena: var array[65536, int],  dasp: var array[1, int],  lrec: i
               if peek65536(darena, idx + 0) == 3:
                 iv9 = -2
             if iv9 >= 0:
+              if peek65536(darena, rrec + 0) == 1:
+                var fflt9: int = 0
+                if fidx9 >= 0:
+                  fflt9 = mir_obj_field_float(itmp, ov9, fidx9)
+                if fflt9 == 1:
+                  # Float array-field store: INS 12 with float_value and the
+                  # literal index in int_value (C++ ArrayStoreFloat convention).
+                  li_rt_mir_str("INS")
+                  li_rt_ast_space()
+                  li_rt_ast_int(12)
+                  li_rt_ast_space()
+                  li_rt_ast_int(iv9)
+                  li_rt_ast_space()
+                  li_rt_mir_f64_fmt(peek65536(darena, rrec + 1))
+                  li_rt_ast_space()
+                  li_rt_mir_str("__li_o_")
+                  li_rt_mir_esc(src, peek65536(darena, fb9 + 1), peek65536(darena, fb9 + 2))
+                  li_rt_mir_str("_")
+                  li_rt_mir_esc(src, fs9, fe9)
+                  li_rt_ast_space()
+                  li_rt_ast_space()
+                  li_rt_ast_space()
+                  li_rt_ast_space()
+                  # label cell (empty)
+                  li_rt_ast_space()
+                  # f18..f21
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(1)
+                  # name cell 6 (empty)
+                  li_rt_ast_space()
+                  # f25..f36: rhs_is_literal=1, rhs_int=0 (value in float cell)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(1)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_nl()
+                  return 0
               if peek65536(darena, rrec + 0) == 0:
                 mir_ins_mangled(src, 10, iv9, peek65536(darena, fb9 + 1), peek65536(darena, fb9 + 2), fs9, fe9, 0, 1, peek65536(darena, rrec + 1), lastop, -1, -1, -1, -1, -1, -1, -1, 1, 0)
                 return 0
