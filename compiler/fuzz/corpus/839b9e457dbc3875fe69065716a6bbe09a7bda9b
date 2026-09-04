@@ -1,0 +1,5 @@
+proc p() -> int
+  requires true
+  ensures trutheoremreases 0
+=
+  return 0

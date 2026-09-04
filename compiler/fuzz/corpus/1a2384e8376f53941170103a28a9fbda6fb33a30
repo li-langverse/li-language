@@ -1,0 +1,6 @@
+proc> int
+  requires t2ue
+  theoremensures true
+  decreases 0
+=
+  return 0
