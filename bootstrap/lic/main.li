@@ -9398,6 +9398,18 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
         if pid >= 0:
           robj_ti = mir_obj_find_rettype(itmp, pid)
         if robj_ti >= 0:
+          # Pre-evaluate nested-call args (kind 4) before allocating the cr
+          # dest: C++ evaluates call args first, so the temp counter must be
+          # consumed in arg order before the cr id. mir_lower_expr rewrites
+          # the descriptor to the lowered kind-8 form the replay loop below
+          # emits as the ARG line (previously kind-4 args were dropped).
+          var pp4: int = 0
+          while pp4 < peek65536(darena, rec + 4):
+            var pr4: int = peek65536(darena, peek65536(darena, rec + 5) + pp4)
+            if peek65536(darena, pr4 + 0) == 4:
+              if mir_lower_expr(darena,  dasp,  pr4,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+                return 1
+            pp4 = pp4 + 1
           var crid2: int = tc[0]
           tc[0] = crid2 + 1
           mir_cr_alloc_fields(src,  ts,  te,  itmp,  crid2,  robj_ti,  -1,  -1)
@@ -10549,6 +10561,15 @@ def mir_var_decl(darena: var array[65536, int],  dasp: var array[1, int], src: v
       # CallProc with OBJ layout, then field copies into the var slots.
       if has_init == 1:
         if peek65536(darena, rec + 0) == 4:
+          # Pre-evaluate nested-call args (kind 4) before the cr dest alloc
+          # (counter order must match C++: call args first, then the cr id).
+          var ap4: int = 0
+          while ap4 < peek65536(darena, rec + 4):
+            var ar4: int = peek65536(darena, peek65536(darena, rec + 5) + ap4)
+            if peek65536(darena, ar4 + 0) == 4:
+              if mir_lower_expr(darena,  dasp,  ar4,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+                return 1
+            ap4 = ap4 + 1
           var crid: int = tc[0]
           tc[0] = crid + 1
           mir_cr_alloc_fields(src,  ts,  te,  itmp,  crid,  obj_ti,  -1,  -1)
