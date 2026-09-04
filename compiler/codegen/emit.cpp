@@ -315,6 +315,9 @@ struct EmitCtx {
   }
 
   llvm::Value* emit_fbinop(BinOp op, llvm::Value* lhs, llvm::Value* rhs) {
+    // Compare results follow the int path's 0/1 convention, stored as float
+    // 0.0/1.0 in the float-typed dest the walker's MIR allocates; consumers
+    // load it through load_int (FPToSI) or load_float unchanged.
     switch (op) {
       case BinOp::Add:
         return builder->CreateFAdd(lhs, rhs);
@@ -324,6 +327,24 @@ struct EmitCtx {
         return builder->CreateFMul(lhs, rhs);
       case BinOp::Div:
         return builder->CreateFDiv(lhs, rhs);
+      case BinOp::Lt:
+        return builder->CreateUIToFP(
+            builder->CreateFCmpOLT(lhs, rhs), llvm::Type::getDoubleTy(context));
+      case BinOp::Le:
+        return builder->CreateUIToFP(
+            builder->CreateFCmpOLE(lhs, rhs), llvm::Type::getDoubleTy(context));
+      case BinOp::Gt:
+        return builder->CreateUIToFP(
+            builder->CreateFCmpOGT(lhs, rhs), llvm::Type::getDoubleTy(context));
+      case BinOp::Ge:
+        return builder->CreateUIToFP(
+            builder->CreateFCmpOGE(lhs, rhs), llvm::Type::getDoubleTy(context));
+      case BinOp::Eq:
+        return builder->CreateUIToFP(
+            builder->CreateFCmpOEQ(lhs, rhs), llvm::Type::getDoubleTy(context));
+      case BinOp::Ne:
+        return builder->CreateUIToFP(
+            builder->CreateFCmpONE(lhs, rhs), llvm::Type::getDoubleTy(context));
       default:
         return lhs;
     }

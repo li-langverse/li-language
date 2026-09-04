@@ -782,6 +782,72 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
       }
       const ProcDecl* callee = find_proc(module, e.ident);
       if (callee && !callee->is_extern) {
+        // Walker first-arg var-object recipe (mir_wb_alloc_fields +
+        // mir_obj_emit_copy src_is 2 + mir_arg_wb_line): when the first
+        // param is `var Object` and the first arg is an object var,
+        // materialize __li_o_wb<N> leaf slots, copy the object's leaves in,
+        // pass the wb leaves by ref, and copy back after the call. The wb id
+        // consumes a temp counter before the call's own dest counter.
+        const bool first_var_obj =
+            !callee->params.empty() && e.args.size() >= 1 &&
+            callee->params[0].type.kind == TypeKind::Named &&
+            g_object_types.count(callee->params[0].type.name) > 0 &&
+            callee->params[0].type.is_var &&
+            e.args[0]->kind == Expr::Kind::Ident &&
+            g_object_vars.count(e.args[0]->ident) > 0;
+        std::string wb_base;
+        if (first_var_obj) {
+          wb_base = "__li_o_wb" + std::to_string(temp_counter++);
+          for (const auto& f : g_object_types[callee->params[0].type.name]) {
+            MirInsn alloc;
+            alloc.op = f.array_elems > 0 ? MirOp::ArrayAlloc
+                        : f.is_float ? MirOp::LocalAllocFloat
+                                     : MirOp::LocalAllocInt;
+            alloc.ident = wb_base + "_" + f.name;
+            alloc.int_value = f.array_elems;
+            alloc.array_is_float = f.array_elems > 0 && f.is_float;
+            alloc.array_is_i64 = f.is_i64;
+            if (f.array_elems > 0) {
+              g_array_sizes[alloc.ident] = f.array_elems;
+              if (f.is_float) {
+                float_arrays.insert(alloc.ident);
+              }
+            }
+            out.push_back(std::move(alloc));
+            if (f.is_float && f.array_elems == 0) {
+              float_names.insert(alloc.ident);
+            }
+          }
+          const std::string obj_prefix = "__li_o_" + e.args[0]->ident;
+          for (const auto& f : g_object_types[callee->params[0].type.name]) {
+            if (f.array_elems > 0) {
+              continue;  // no array-leaf var-object in the corpus
+            }
+            MirInsn cpy;
+            cpy.op = f.is_float ? MirOp::StoreFloat : MirOp::StoreInt;
+            cpy.ident = wb_base + "_" + f.name;
+            cpy.rhs_is_literal = false;
+            cpy.rhs_ident = obj_prefix + "_" + f.name;
+            out.push_back(std::move(cpy));
+          }
+        }
+        auto emit_wb_copy_back = [&]() {
+          if (wb_base.empty()) {
+            return;
+          }
+          const std::string obj_prefix = "__li_o_" + e.args[0]->ident;
+          for (const auto& f : g_object_types[callee->params[0].type.name]) {
+            if (f.array_elems > 0) {
+              continue;
+            }
+            MirInsn cpy;
+            cpy.op = f.is_float ? MirOp::StoreFloat : MirOp::StoreInt;
+            cpy.ident = obj_prefix + "_" + f.name;
+            cpy.rhs_is_literal = false;
+            cpy.rhs_ident = wb_base + "_" + f.name;
+            out.push_back(std::move(cpy));
+          }
+        };
         MirInsn ins;
         ins.op = MirOp::CallProc;
         ins.callee = e.ident;
@@ -793,9 +859,17 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
               g_object_types.count(callee->params[ai].type.name) > 0 &&
               arg.kind == Expr::Kind::Ident && g_object_vars.count(arg.ident) > 0;
           if (object_arg) {
-            // The walker's first-arg var-object recipe materializes wb<N>
-            // slots instead of passing the object's leaves directly; that
-            // stage is separate, so leave arg 0 on the direct path for now.
+            if (first_var_obj && ai == 0) {
+              // The wb slots replace the first object's leaves (walker
+              // mir_arg_wb_line: is_var_ref=1, iai=0).
+              for (const auto& field : g_object_types[callee->params[ai].type.name]) {
+                MirArg wb_arg;
+                wb_arg.ident = wb_base + "_" + field.name;
+                wb_arg.is_var_ref = true;
+                ins.args.push_back(std::move(wb_arg));
+              }
+              continue;
+            }
             const bool by_ref =
                 ai > 0 && callee->params[ai].type.is_var;
             for (const auto& field : g_object_types[callee->params[ai].type.name]) {
@@ -882,12 +956,14 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
           }
           ins.ident = cr_base;
           out.push_back(std::move(ins));
+          emit_wb_copy_back();
           return cr_base;
         }
         if (callee->ret_type && callee->ret_type->name == "unit") {
           // Walker rd==0 (unit): INS 8 with no dest ident and no counter
           // consumed (mir_lower_expr mir_mk_name code 2 empty).
           out.push_back(std::move(ins));
+          emit_wb_copy_back();
           return "";
         }
         const std::string dest = fresh_temp();
@@ -904,6 +980,7 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
           ins.ret_is_i64 = true;
         }
         out.push_back(std::move(ins));
+        emit_wb_copy_back();
         return dest;
       }
       MirInsn ins;
