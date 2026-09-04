@@ -9220,10 +9220,19 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
     var aobj: array[128, int]
     var nab: var array[1, int]
     nab[0] = 0
+    # Records pushed for the first argument. The wb write-back replay resumes
+    # after exactly those records, so it needs their real count: a var-Object
+    # first arg is collected as ONE kind-3 record, while a resolved param
+    # type expands into per-field kind-5 records.
+    var fst_recs: array[1, int]
+    fst_recs[0] = 0
+    var nab_a0: array[1, int]
     var ai: int = 0
     while ai < peek65536(darena, rec + 4):
       var arec: int = peek65536(darena, peek65536(darena, rec + 5) + ai)
       var ak: int = peek65536(darena, arec + 0)
+      if ai == 0:
+        nab_a0[0] = nab[0]
       if ak == 2:
         set128(abuf, nab[0],0)
         set128(abuf, nab[0] + 1,1)
@@ -9365,6 +9374,8 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
                 set128(abuf, nab[0],4)
                 set128(abuf, nab[0] + 1,peek65536(darena, arec + 2))
                 nab[0] = nab[0] + 4
+      if ai == 0:
+        fst_recs[0] = (nab[0] - nab_a0[0]) / 4
       ai = ai + 1
     # Declare wb variables outside the if block so they're always
     # initialized (Li allocates stack slots at function scope but only
@@ -9550,10 +9561,11 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
         while wbi < cp_nf:
           mir_arg_wb_line(src, itmp, cp_ti, wbi, cp_wbid, 0, 1)
           wbi = wbi + 1
-        # The original first object was expanded into cp_nf kind-5 records
-        # while collecting args. They are replaced by the write-back records;
-        # resume at the first non-object argument.
-        bi = cp_nf * 4 - 4
+        # The collector stored the first object as fst_recs records (a kind-3
+        # whole-object record, or per-field kind-5 records when the param type
+        # resolved). They are replaced by the write-back records; resume at
+        # the first record after them.
+        bi = fst_recs[0] * 4 - 4
       else:
         var akind: int = peek128(abuf, bi + 0)
         if akind == 0:

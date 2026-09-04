@@ -694,7 +694,7 @@ int32_t li_rt_mir_literal(int32_t idx) {
  * the self-hosted walker's name cells only carry two source positions. So the
  * walker registers the mangled name once (li_rt_mir_objname_add) and name
  * cells reference it by index (li_rt_mir_objname_out). */
-#define LI_RT_OBJNAME_MAX 512
+#define LI_RT_OBJNAME_MAX 8192
 static const char* li_rt_objname_text[LI_RT_OBJNAME_MAX];
 static int32_t li_rt_objname_bs[LI_RT_OBJNAME_MAX];
 static int32_t li_rt_objname_be[LI_RT_OBJNAME_MAX];
