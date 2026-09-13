@@ -4295,7 +4295,15 @@ def bk_scalar_name(src: var ptr, ts: var array[262144, int], te: var array[26214
     return 1
   if tok_is(src, ts, te, i, "int64") == 1:
     return 1
+  if tok_is(src, ts, te, i, "long") == 1:
+    return 1
   if tok_is(src, ts, te, i, "bool") == 1:
+    return 1
+  if tok_is(src, ts, te, i, "ptr") == 1:
+    return 1
+  if tok_is(src, ts, te, i, "str") == 1:
+    return 1
+  if tok_is(src, ts, te, i, "float64") == 1:
     return 1
   if tok_is(src, ts, te, i, "f32") == 1:
     return 1
@@ -4366,17 +4374,17 @@ def bk_mark_moved(src: var ptr, ts: var array[262144, int], te: var array[262144
     k = k + 1
   return 0
 
-def bk_check_expr(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], min_prec: int, bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_n: var array[1, int], rq_proc: var array[256, int], rq_pi: var array[256, int], rq_op: var array[256, int], rq_lit: var array[256, int], rq_left: var array[256, int], rq_n: var array[1, int]) -> int
+def bk_check_expr(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bo: int, min_prec: int, bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_n: var array[1, int], rq_proc: var array[256, int], rq_pi: var array[256, int], rq_op: var array[256, int], rq_lit: var array[256, int], rq_left: var array[256, int], rq_n: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
 =
   if cur_kind(tk, n, pi, err) == 39:
     pi[0] = pi[0] + 1
-    return bk_check_expr(src, tk, ts, te, n, pi, err, 100, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
+    return bk_check_expr(src, tk, ts, te, n, pi, err, bo, 100, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
   if cur_kind(tk, n, pi, err) == 60:
     pi[0] = pi[0] + 1
-  if bk_check_primary(src, tk, ts, te, n, pi, err, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n) == 0:
+  if bk_check_primary(src, tk, ts, te, n, pi, err, bo, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n) == 0:
     return 0
   while 1 == 1:
     var p: int = prec_of(cur_kind(tk, n, pi, err))
@@ -4385,11 +4393,11 @@ def bk_check_expr(src: var ptr, tk: var array[262144, int], ts: var array[262144
     if p < min_prec:
       break
     pi[0] = pi[0] + 1
-    if bk_check_expr(src, tk, ts, te, n, pi, err, p + 1, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n) == 0:
+    if bk_check_expr(src, tk, ts, te, n, pi, err, bo, p + 1, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n) == 0:
       return 0
   return 1
 
-def bk_check_primary(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_n: var array[1, int], rq_proc: var array[256, int], rq_pi: var array[256, int], rq_op: var array[256, int], rq_lit: var array[256, int], rq_left: var array[256, int], rq_n: var array[1, int]) -> int
+def bk_check_primary(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bo: int, bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_n: var array[1, int], rq_proc: var array[256, int], rq_pi: var array[256, int], rq_op: var array[256, int], rq_lit: var array[256, int], rq_left: var array[256, int], rq_n: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -4397,12 +4405,12 @@ def bk_check_primary(src: var ptr, tk: var array[262144, int], ts: var array[262
   var k: int = cur_kind(tk, n, pi, err)
   if k == 34:
     pi[0] = pi[0] + 1
-    if bk_check_primary(src, tk, ts, te, n, pi, err, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n) == 0:
+    if bk_check_primary(src, tk, ts, te, n, pi, err, bo, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n) == 0:
       return 0
-    return bk_check_postfix(src, tk, ts, te, n, pi, err, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
+    return bk_check_postfix(src, tk, ts, te, n, pi, err, bo, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
   if k == 8 or k == 5 or k == 6 or k == 7:
     pi[0] = pi[0] + 1
-    return bk_check_postfix(src, tk, ts, te, n, pi, err, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
+    return bk_check_postfix(src, tk, ts, te, n, pi, err, bo, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
   if k == 4 or k == 46 or k == 35 or k == 36:
     var t4: int = pi[0]
     pi[0] = pi[0] + 1
@@ -4421,9 +4429,9 @@ def bk_check_primary(src: var ptr, tk: var array[262144, int], ts: var array[262
           if cur_kind(tk, n, pi, err) == 4:
             if peek_off(tk, n, pi, 1) == 55 or peek_off(tk, n, pi, 1) == 50:
               arg_plain = 1
-          if bk_check_expr(src, tk, ts, te, n, pi, err, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n) == 0:
+          if bk_check_expr(src, tk, ts, te, n, pi, err, bo, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n) == 0:
             return 0
-          if arg_plain == 1:
+          if arg_plain == 1 and bo == 1:
             var pidx: int = bk_proc_index(src, ts, te, bp_name, bp_cnt, t4)
             if pidx >= 0:
               if bk_param_moves(bp_np, bp_pv, bp_ps, pidx, j) == 1:
@@ -4436,17 +4444,18 @@ def bk_check_primary(src: var ptr, tk: var array[262144, int], ts: var array[262
       expect_k(tk, n, pi, err, 50)
       rq_check_call(src, tk, ts, te, n, pi, err, t4, arg_toks, argc, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
     else:
-      bk_check_use(src, ts, te, ls_name, ls_moved, ls_mb, ls_n, t4, err)
-    return bk_check_postfix(src, tk, ts, te, n, pi, err, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
+      if bo == 1:
+        bk_check_use(src, ts, te, ls_name, ls_moved, ls_mb, ls_n, t4, err)
+    return bk_check_postfix(src, tk, ts, te, n, pi, err, bo, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
   if accept_k(tk, n, pi, err, 49) == 1:
-    if bk_check_expr(src, tk, ts, te, n, pi, err, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n) == 0:
+    if bk_check_expr(src, tk, ts, te, n, pi, err, bo, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n) == 0:
       return 0
     expect_k(tk, n, pi, err, 50)
-    return bk_check_postfix(src, tk, ts, te, n, pi, err, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
+    return bk_check_postfix(src, tk, ts, te, n, pi, err, bo, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
   err[0] = 1
   return 0
 
-def bk_check_postfix(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_n: var array[1, int], rq_proc: var array[256, int], rq_pi: var array[256, int], rq_op: var array[256, int], rq_lit: var array[256, int], rq_left: var array[256, int], rq_n: var array[1, int]) -> int
+def bk_check_postfix(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bo: int, bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_n: var array[1, int], rq_proc: var array[256, int], rq_pi: var array[256, int], rq_op: var array[256, int], rq_lit: var array[256, int], rq_left: var array[256, int], rq_n: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -4467,7 +4476,7 @@ def bk_check_postfix(src: var ptr, tk: var array[262144, int], ts: var array[262
             if argc < 16:
               arg_toks[argc] = at2
               argc = argc + 1
-            if bk_check_expr(src, tk, ts, te, n, pi, err, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n) == 0:
+            if bk_check_expr(src, tk, ts, te, n, pi, err, bo, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n) == 0:
               return 0
             if accept_k(tk, n, pi, err, 55) == 1:
               done = 0
@@ -4478,14 +4487,14 @@ def bk_check_postfix(src: var ptr, tk: var array[262144, int], ts: var array[262
       continue
     if cur_kind(tk, n, pi, err) == 51:
       pi[0] = pi[0] + 1
-      if bk_check_expr(src, tk, ts, te, n, pi, err, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n) == 0:
+      if bk_check_expr(src, tk, ts, te, n, pi, err, bo, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n) == 0:
         return 0
       expect_k(tk, n, pi, err, 52)
       continue
     loop = 0
   return 1
 
-def bk_check_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_ib: var array[256, int], ls_n: var array[1, int], rq_proc: var array[256, int], rq_pi: var array[256, int], rq_op: var array[256, int], rq_lit: var array[256, int], rq_left: var array[256, int], rq_n: var array[1, int]) -> int
+def bk_check_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bo: int, bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_ib: var array[256, int], ls_n: var array[1, int], rq_proc: var array[256, int], rq_pi: var array[256, int], rq_op: var array[256, int], rq_lit: var array[256, int], rq_left: var array[256, int], rq_n: var array[1, int]) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -4498,12 +4507,13 @@ def bk_check_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144
     expect_k(tk, n, pi, err, 56)
     parse_type(src, tk, ts, te, n, pi, err, 0)
     if accept_k(tk, n, pi, err, 58) == 1:
-      bk_check_expr(src, tk, ts, te, n, pi, err, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
-    ls_name[ls_n[0]] = vn
-    ls_moved[ls_n[0]] = 0
-    ls_mb[ls_n[0]] = 0
-    ls_ib[ls_n[0]] = 0
-    ls_n[0] = ls_n[0] + 1
+      bk_check_expr(src, tk, ts, te, n, pi, err, bo, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
+    if bo == 1:
+      ls_name[ls_n[0]] = vn
+      ls_moved[ls_n[0]] = 0
+      ls_mb[ls_n[0]] = 0
+      ls_ib[ls_n[0]] = 0
+      ls_n[0] = ls_n[0] + 1
     return 1
   if k == 4:
     if tok_is(src, ts, te, pi[0], "borrow") == 1:
@@ -4526,7 +4536,7 @@ def bk_check_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144
       if parse_primary(src, tk, ts, te, n, pi, err, 0) == 0:
         return 1
       parse_postfix(src, tk, ts, te, n, pi, err, 0)
-      if src_ident == 1:
+      if src_ident == 1 and bo == 1:
         bk_check_use(src, ts, te, ls_name, ls_moved, ls_mb, ls_n, src_tok, err)
         var k2: int = 0
         while k2 < ls_n[0]:
@@ -4543,11 +4553,12 @@ def bk_check_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144
               ls_ib[k2] = ls_ib[k2] + 1
             k2 = ls_n[0]
           k2 = k2 + 1
-      ls_name[ls_n[0]] = bname
-      ls_moved[ls_n[0]] = 0
-      ls_mb[ls_n[0]] = 0
-      ls_ib[ls_n[0]] = 0
-      ls_n[0] = ls_n[0] + 1
+      if bo == 1:
+        ls_name[ls_n[0]] = bname
+        ls_moved[ls_n[0]] = 0
+        ls_mb[ls_n[0]] = 0
+        ls_ib[ls_n[0]] = 0
+        ls_n[0] = ls_n[0] + 1
       return 1
     if tok_is(src, ts, te, pi[0], "discard") == 1:
       pi[0] = pi[0] + 1
@@ -4557,34 +4568,45 @@ def bk_check_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144
     if cur_kind(tk, n, pi, err) != 1:
       if cur_kind(tk, n, pi, err) != 3:
         if cur_kind(tk, n, pi, err) != 0:
-          bk_check_expr(src, tk, ts, te, n, pi, err, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
+          bk_check_expr(src, tk, ts, te, n, pi, err, bo, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
     return 1
   if k == 22:
     pi[0] = pi[0] + 1
-    bk_check_expr(src, tk, ts, te, n, pi, err, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
+    bk_check_expr(src, tk, ts, te, n, pi, err, bo, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
     expect_k(tk, n, pi, err, 56)
     skip_newlines(tk, n, pi, err)
-    bk_check_block(src, tk, ts, te, n, pi, err, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_ib, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
+    bk_check_block(src, tk, ts, te, n, pi, err, bo, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_ib, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
     var tail_done: int = 0
     while tail_done == 0:
       skip_newlines(tk, n, pi, err)
       if cur_kind(tk, n, pi, err) == 24:
         pi[0] = pi[0] + 1
-        bk_check_expr(src, tk, ts, te, n, pi, err, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
+        bk_check_expr(src, tk, ts, te, n, pi, err, bo, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
         expect_k(tk, n, pi, err, 56)
         skip_newlines(tk, n, pi, err)
-        bk_check_block(src, tk, ts, te, n, pi, err, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_ib, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
+        bk_check_block(src, tk, ts, te, n, pi, err, bo, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_ib, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
       else:
         if cur_kind(tk, n, pi, err) == 23:
           pi[0] = pi[0] + 1
           expect_k(tk, n, pi, err, 56)
           skip_newlines(tk, n, pi, err)
-          bk_check_block(src, tk, ts, te, n, pi, err, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_ib, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
+          bk_check_block(src, tk, ts, te, n, pi, err, bo, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_ib, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
           tail_done = 1
         else:
           tail_done = 1
     return 1
-  if k == 25 or k == 26 or k == 27 or k == 28 or k == 76:
+  if k == 25:
+    pi[0] = pi[0] + 1
+    bk_check_expr(src, tk, ts, te, n, pi, err, bo, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
+    if cur_kind(tk, n, pi, err) == 56:
+      pi[0] = pi[0] + 1
+    skip_newlines(tk, n, pi, err)
+    # A loop body runs the requires-clause check (C++'s typecheck descends into
+    # while bodies) but not the move/borrow bookkeeping: C++'s borrowck only
+    # walks if/else bodies, so loop bodies stay opaque to it.
+    bk_check_block(src, tk, ts, te, n, pi, err, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_ib, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
+    return 1
+  if k == 26 or k == 27 or k == 28 or k == 76:
     parse_stmt(src, tk, ts, te, n, pi, err, 0)
     return 1
   if k == 4:
@@ -4597,13 +4619,13 @@ def bk_check_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144
     ok = parse_postfix(src, tk, ts, te, n, pi, err, 0)
   if ok == 1:
     if accept_k(tk, n, pi, err, 58) == 1:
-      bk_check_expr(src, tk, ts, te, n, pi, err, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
+      bk_check_expr(src, tk, ts, te, n, pi, err, bo, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
       return 1
   pi[0] = save
-  bk_check_expr(src, tk, ts, te, n, pi, err, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
+  bk_check_expr(src, tk, ts, te, n, pi, err, bo, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
   return 1
 
-def bk_check_block(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_ib: var array[256, int], ls_n: var array[1, int], rq_proc: var array[256, int], rq_pi: var array[256, int], rq_op: var array[256, int], rq_lit: var array[256, int], rq_left: var array[256, int], rq_n: var array[1, int]) -> int
+def bk_check_block(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bo: int, bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_ib: var array[256, int], ls_n: var array[1, int], rq_proc: var array[256, int], rq_pi: var array[256, int], rq_op: var array[256, int], rq_lit: var array[256, int], rq_left: var array[256, int], rq_n: var array[1, int]) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -4618,7 +4640,7 @@ def bk_check_block(src: var ptr, tk: var array[262144, int], ts: var array[26214
     if cur_kind(tk, n, pi, err) == 0:
       break
     var before: int = pi[0]
-    bk_check_stmt(src, tk, ts, te, n, pi, err, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_ib, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
+    bk_check_stmt(src, tk, ts, te, n, pi, err, bo, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_ib, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
     if pi[0] == before:
       break
     skip_newlines(tk, n, pi, err)
@@ -5034,7 +5056,7 @@ def borrow_check(src: var ptr, tk: var array[262144, int], ts: var array[262144,
         if accept_k(tk, n, pi, err, 58) == 1:
           skip_newlines(tk, n, pi, err)
           if cur_kind(tk, n, pi, err) == 2:
-            bk_check_block(src, tk, ts, te, n, pi, err, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_ib, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
+            bk_check_block(src, tk, ts, te, n, pi, err, 1, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_ib, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
       skip_newlines(tk, n, pi, err)
       continue
     err[0] = 1
