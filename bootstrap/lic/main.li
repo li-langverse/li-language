@@ -1849,17 +1849,22 @@ def parse_decorator_list(src: var ptr, tk: var array[262144, int], ts: var array
     skip_newlines(tk, n, pi, err)
   return 1
 
-def parse_for(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
+# Consumes the tail of a `for` header — `<ident> in <int> ..< <int> [':']` —
+# taken right after the `for` keyword. res[0]=iterator token, res[1]=start,
+# res[2]=end. Shared by parse_for, parse_parallel_for and the check passes so
+# their token consumption cannot drift.
+def for_tail(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], res: var array[3, int]) -> int
   requires true
   ensures result == 1
   decreases 0
 =
-  pi[0] = pi[0] + 1
-  var iter_t: int = 0
+  res[0] = 0
+  res[1] = 0
+  res[2] = 0
   if cur_kind(tk, n, pi, err) != 4:
     err[0] = 1
   else:
-    iter_t = pi[0]
+    res[0] = pi[0]
     pi[0] = pi[0] + 1
   if cur_kind(tk, n, pi, err) != 4:
     err[0] = 1
@@ -1868,22 +1873,30 @@ def parse_for(src: var ptr, tk: var array[262144, int], ts: var array[262144, in
       err[0] = 1
     else:
       pi[0] = pi[0] + 1
-  var st: int = 0
-  var en: int = 0
   if cur_kind(tk, n, pi, err) == 5:
-    st = int_text_value(src, ts, te, pi[0])
+    res[1] = int_text_value(src, ts, te, pi[0])
     pi[0] = pi[0] + 1
   if cur_kind(tk, n, pi, err) == 73:
     pi[0] = pi[0] + 1
   else:
     err[0] = 1
   if cur_kind(tk, n, pi, err) == 5:
-    en = int_text_value(src, ts, te, pi[0])
+    res[2] = int_text_value(src, ts, te, pi[0])
     pi[0] = pi[0] + 1
   if cur_kind(tk, n, pi, err) == 56:
     pi[0] = pi[0] + 1
+  return 1
+
+def parse_for(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  pi[0] = pi[0] + 1
+  var fh: array[3, int]
+  for_tail(src, tk, ts, te, n, pi, err, fh)
   if d == 1:
-    a_line_text_ii(d, src, 43, peek_tk(ts, iter_t + 0), peek_tk(te, iter_t + 0), st, en)
+    a_line_text_ii(d, src, 43, peek_tk(ts, fh[0] + 0), peek_tk(te, fh[0] + 0), fh[1], fh[2])
   skip_newlines(tk, n, pi, err)
   parse_block(src, tk, ts, te, n, pi, err, d)
   return 1
@@ -1896,51 +1909,16 @@ def parse_parallel_for(src: var ptr, tk: var array[262144, int], ts: var array[2
   pi[0] = pi[0] + 1
   if consume_for_kw(src, tk, ts, te, n, pi, err) == 0:
     err[0] = 1
-  var iter_t: int = 0
-  if cur_kind(tk, n, pi, err) != 4:
-    err[0] = 1
-  else:
-    iter_t = pi[0]
-    pi[0] = pi[0] + 1
-  if cur_kind(tk, n, pi, err) != 4:
-    err[0] = 1
-  else:
-    if tok_is(src, ts, te, pi[0], "in") == 0:
-      err[0] = 1
-    else:
-      pi[0] = pi[0] + 1
-  var st: int = 0
-  var en: int = 0
-  if cur_kind(tk, n, pi, err) == 5:
-    st = int_text_value(src, ts, te, pi[0])
-    pi[0] = pi[0] + 1
-  if cur_kind(tk, n, pi, err) == 73:
-    pi[0] = pi[0] + 1
-  else:
-    err[0] = 1
-  if cur_kind(tk, n, pi, err) == 5:
-    en = int_text_value(src, ts, te, pi[0])
-    pi[0] = pi[0] + 1
+  var fh: array[3, int]
+  for_tail(src, tk, ts, te, n, pi, err, fh)
   if d == 1:
-    a_line_text_ii(d, src, 44, peek_tk(ts, iter_t + 0), peek_tk(te, iter_t + 0), st, en)
+    a_line_text_ii(d, src, 44, peek_tk(ts, fh[0] + 0), peek_tk(te, fh[0] + 0), fh[1], fh[2])
   skip_newlines(tk, n, pi, err)
   if accept_k(tk, n, pi, err, 2) == 1:
     skip_newlines(tk, n, pi, err)
     while 1 == 1:
       var ck: int = cur_kind(tk, n, pi, err)
-      if ck == 41:
-        parse_contract(src, tk, ts, te, n, pi, err, d)
-        continue
-      if ck == 42:
-        parse_contract(src, tk, ts, te, n, pi, err, d)
-        continue
-      if ck == 43:
-        parse_contract(src, tk, ts, te, n, pi, err, d)
-        continue
-      if ck == 44:
-        parse_contract(src, tk, ts, te, n, pi, err, d)
-        continue
-      if ck == 45:
+      if ck == 41 or ck == 42 or ck == 43 or ck == 44 or ck == 45:
         parse_contract(src, tk, ts, te, n, pi, err, d)
         continue
       break
@@ -3314,9 +3292,15 @@ def tc_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144, int]
     skip_newlines(tk, n, pi, err)
     tc_block(src, tk, ts, te, n, pi, err, cur_ret, sym_s, sym_kind, sym_ty, sym_aux, sym_n)
     return 1
+  if k == 76:
+    parse_decorator_list(src, tk, ts, te, n, pi, err, 0)
+    skip_newlines(tk, n, pi, err)
+    tc_stmt(src, tk, ts, te, n, pi, err, cur_ret, sym_s, sym_kind, sym_ty, sym_aux, sym_n)
+    return 1
   if k == 26:
     pi[0] = pi[0] + 1
-    tc_expr(src, tk, ts, te, n, pi, err, 0, sym_s, sym_kind, sym_ty, sym_aux, sym_n)
+    var fh: array[3, int]
+    for_tail(src, tk, ts, te, n, pi, err, fh)
     skip_newlines(tk, n, pi, err)
     tc_block(src, tk, ts, te, n, pi, err, cur_ret, sym_s, sym_kind, sym_ty, sym_aux, sym_n)
     return 1
@@ -4055,9 +4039,15 @@ def fx_scan_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144,
     skip_newlines(tk, n, pi, err)
     fx_scan_block(src, tk, ts, te, n, pi, err, pn, peff, pext, pcnt, used, await_seen)
     return 1
+  if k == 76:
+    parse_decorator_list(src, tk, ts, te, n, pi, err, 0)
+    skip_newlines(tk, n, pi, err)
+    fx_scan_stmt(src, tk, ts, te, n, pi, err, pn, peff, pext, pcnt, used, await_seen)
+    return 1
   if k == 26:
     pi[0] = pi[0] + 1
-    fx_scan_expr(src, tk, ts, te, n, pi, err, pn, peff, pext, pcnt, used, await_seen)
+    var fh: array[3, int]
+    for_tail(src, tk, ts, te, n, pi, err, fh)
     skip_newlines(tk, n, pi, err)
     fx_scan_block(src, tk, ts, te, n, pi, err, pn, peff, pext, pcnt, used, await_seen)
     return 1
@@ -4606,7 +4596,21 @@ def bk_check_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144
     # walks if/else bodies, so loop bodies stay opaque to it.
     bk_check_block(src, tk, ts, te, n, pi, err, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_ib, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
     return 1
-  if k == 26 or k == 27 or k == 28 or k == 76:
+  if k == 26:
+    pi[0] = pi[0] + 1
+    var fh: array[3, int]
+    for_tail(src, tk, ts, te, n, pi, err, fh)
+    skip_newlines(tk, n, pi, err)
+    # Loop bodies run the requires-clause check but not the move/borrow
+    # bookkeeping: C++'s borrowck only walks if/else bodies.
+    bk_check_block(src, tk, ts, te, n, pi, err, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_ib, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
+    return 1
+  if k == 76:
+    parse_decorator_list(src, tk, ts, te, n, pi, err, 0)
+    skip_newlines(tk, n, pi, err)
+    bk_check_stmt(src, tk, ts, te, n, pi, err, bo, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_ib, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
+    return 1
+  if k == 27 or k == 28:
     parse_stmt(src, tk, ts, te, n, pi, err, 0)
     return 1
   if k == 4:

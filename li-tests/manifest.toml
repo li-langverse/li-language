@@ -88,6 +88,18 @@ suite = "contracts_verify"
 file = "contracts_verify/index_refinement.li"
 outcome = "verify_ok"
 
+[[tests]]
+suite = "contracts_verify"
+file = "contracts_verify/loop_requires_while_fail.li"
+outcome = "compile_fail"
+expected_substr = "requires"
+
+[[tests]]
+suite = "contracts_verify"
+file = "contracts_verify/loop_requires_for_fail.li"
+outcome = "compile_fail"
+expected_substr = "requires"
+
 # --- borrow ---
 
 [[tests]]
@@ -106,6 +118,11 @@ expected_substr = "move"
 suite = "borrow"
 file = "borrow/borrow_ok.li"
 outcome = "verify_ok"
+
+[[tests]]
+suite = "borrow"
+file = "borrow/loop_move_ok.li"
+outcome = "compile_ok"
 
 # --- effects ---
 

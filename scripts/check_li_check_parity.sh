@@ -53,6 +53,12 @@ CORPUS_OK=(
   "li-tests/encapsulation/private_method_lib.li"
   "li-tests/contracts_verify/method_call_requires_ok.li"
   "li-tests/contracts_verify/method_call_requires_fail.li"
+  # Loop coverage: `for` bodies are parsed and traversed, and loop bodies stay
+  # opaque to the move checker (see loop_move_ok.li).
+  "li-tests/math_syntax/for_range_sum.li"
+  "li-tests/decorators/vectorized_for_parse_ok.li"
+  "li-tests/decorators/vectorized_for_scope_ok.li"
+  "li-tests/borrow/loop_move_ok.li"
   "li-tests/contracts_verify/method_ensures_return_ok.li"
   "li-tests/advisory/check_deny_warn.li"
   "li-tests/advisory/check_ok.li"
@@ -163,6 +169,8 @@ CORPUS_FAIL=(
   "li-tests/bytes/reader_writer_smoke.li:-"
   "li-tests/compile_ok/volatile_sink_no_io.li:-"
   "li-tests/contracts_verify/caller_requires_fail.li:E0304"
+  "li-tests/contracts_verify/loop_requires_while_fail.li:E0304"
+  "li-tests/contracts_verify/loop_requires_for_fail.li:E0304"
   "li-tests/math_linalg/elementwise_len_mismatch.li:-"
   "li-tests/modules/import_cycle_b.li:-"
   "li-tests/encapsulation/extern_proc_syntax_rejected.li:-"

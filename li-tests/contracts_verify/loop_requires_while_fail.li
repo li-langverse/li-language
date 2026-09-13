@@ -1,0 +1,19 @@
+# E0304 must fire for a requires-violating call inside a while body: C++'s
+# typecheck descends into loop bodies, so the walker's requires hook must too.
+def callee(x: int) -> int
+  requires x >= 0
+  ensures result == x
+  decreases 0
+=
+  return x
+
+def caller_while_bad() -> int
+  requires true
+  ensures result == 5
+  decreases 0
+=
+  var i: int = 0
+  while i < 3:
+    callee(-1)
+    i = i + 1
+  return 5
