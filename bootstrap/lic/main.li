@@ -4570,16 +4570,16 @@ def bk_check_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144
       skip_newlines(tk, n, pi, err)
       if cur_kind(tk, n, pi, err) == 24:
         pi[0] = pi[0] + 1
-        parse_expr(src, tk, ts, te, n, pi, err, 0, 0)
+        bk_check_expr(src, tk, ts, te, n, pi, err, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
         expect_k(tk, n, pi, err, 56)
         skip_newlines(tk, n, pi, err)
-        parse_block(src, tk, ts, te, n, pi, err, 0)
+        bk_check_block(src, tk, ts, te, n, pi, err, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_ib, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
       else:
         if cur_kind(tk, n, pi, err) == 23:
           pi[0] = pi[0] + 1
           expect_k(tk, n, pi, err, 56)
           skip_newlines(tk, n, pi, err)
-          parse_block(src, tk, ts, te, n, pi, err, 0)
+          bk_check_block(src, tk, ts, te, n, pi, err, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_ib, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
           tail_done = 1
         else:
           tail_done = 1
