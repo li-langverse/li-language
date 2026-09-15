@@ -1,0 +1,5 @@
+pr p() -> int
+  ures true
+  decreases 5
+cpu=
+  return 0
