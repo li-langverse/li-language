@@ -18,6 +18,10 @@ TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 LI="${LI_CHECK_BIN:-$TMP/lic-from-li}"
 
+# The walker's four seal name lists copy tables the reference owns; drift there
+# changes which programs the two sides accept, so fail before building.
+"$ROOT/scripts/check-seal-name-sync.sh"
+
 # Build the Li check binary from bootstrap/lic/main.li with the C++ host
 # (the self-host milestone gate), unless an external binary is supplied.
 if [[ -z "${LI_CHECK_BIN:-}" ]]; then
