@@ -657,6 +657,11 @@ outcome = "verify_ok"
 
 [[tests]]
 suite = "objects"
+file = "objects/nested_field_copyback_ok.li"
+outcome = "verify_ok"
+
+[[tests]]
+suite = "objects"
 file = "objects/nested_index_read.li"
 outcome = "verify_ok"
 

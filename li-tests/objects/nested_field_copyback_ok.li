@@ -1,0 +1,47 @@
+# The supported way to mutate a nested object field. A multi-hop field-path
+# store (`o.t.a = v`) is rejected at the MIR stage by both compilers (see
+# nested_field_write.li), so the nested object is copied out, mutated on the
+# copy, and assigned back whole — one-hop stores (`o.t = v` whole object,
+# `o.a = v` scalar leaf) plus nested array-element writes
+# (`o.t.arr[0] = v`, see nested_index_write.li) stay supported. This fixture
+# pins that the copy-back shape compiles, runs, and actually carries the
+# mutated values (and the untouched sibling field) through the copy.
+type Tier = object
+  public tier_id: int
+  public fps_target: float
+
+type Draw = object
+  public tier: Tier
+  public frame_count: int
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var d: Draw
+  d.frame_count = 3
+  var tier_t: Tier = d.tier
+  tier_t.tier_id = 7
+  tier_t.fps_target = 250.0
+  d.tier = tier_t
+  if d.tier.tier_id != 7:
+    return 1
+  if d.tier.fps_target != 250.0:
+    return 2
+  if d.frame_count != 3:
+    return 3
+  # A second copy-back cycle writes every field explicitly: reading values out
+  # of a nested field into a local (`var t: Tier = d.tier`) does not carry the
+  # leaves in the C++ backend, so the shape that works is set-all-then-assign.
+  var frame: Tier
+  frame.tier_id = 8
+  frame.fps_target = 260.0
+  d.tier = frame
+  if d.tier.tier_id != 8:
+    return 4
+  if d.tier.fps_target != 260.0:
+    return 5
+  if d.frame_count != 3:
+    return 6
+  return 0

@@ -147,6 +147,7 @@ CORPUS_OK=(
   "li-tests/objects/nested_field_write.li"
   "li-tests/objects/nested_index_write.li"
   "li-tests/objects/nested_index_read.li"
+  "li-tests/objects/nested_field_copyback_ok.li"
   # Stdlib seal: a module may not shadow a prelude/std name, and `ok_control`
   # is the control proving the seal does not over-reject (see the
   # compiler/types/prelude.cpp name sets).

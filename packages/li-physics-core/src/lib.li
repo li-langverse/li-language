@@ -146,19 +146,27 @@ def profile_for_tier(tier: int) -> PhysicsProfile
   if tier == physics_tier_arcade():
     p.dt = 1.0 / 60.0
     p.substeps = 1
-    p.targets.max_energy_drift = 0.05
+    var arcade_targets: NumericalTargets = p.targets
+    arcade_targets.max_energy_drift = 0.05
+    p.targets = arcade_targets
   if tier == physics_tier_simulation():
     p.dt = 1.0 / 120.0
     p.substeps = 2
-    p.targets.max_energy_drift = 0.001
+    var sim_targets: NumericalTargets = p.targets
+    sim_targets.max_energy_drift = 0.001
+    p.targets = sim_targets
   if tier == physics_tier_scientific():
     p.dt = 0.001
     p.substeps = 4
-    p.targets.max_energy_drift = 0.0001
+    var sci_targets: NumericalTargets = p.targets
+    sci_targets.max_energy_drift = 0.0001
+    p.targets = sci_targets
   if tier == physics_tier_research():
     p.dt = 0.0001
     p.substeps = 8
-    p.targets.max_energy_drift = 0.00001
+    var research_targets: NumericalTargets = p.targets
+    research_targets.max_energy_drift = 0.00001
+    p.targets = research_targets
   return p
 def select_integrator_order(profile: PhysicsProfile) -> int
   requires true
