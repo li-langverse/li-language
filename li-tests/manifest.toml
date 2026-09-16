@@ -491,12 +491,12 @@ outcome = "verify_ok"
 [[tests]]
 suite = "stdlib_seal"
 file = "stdlib_seal/shadow_print.li"
-outcome = "verify_ok"
+outcome = "compile_fail"
 
 [[tests]]
 suite = "stdlib_seal"
 file = "stdlib_seal/shadow_print_dep.li"
-outcome = "verify_ok"
+outcome = "compile_fail"
 
 [[tests]]
 suite = "stdlib_seal"

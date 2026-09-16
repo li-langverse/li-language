@@ -1,6 +1,5 @@
 #include "li/policy.hpp"
 
-#include <map>
 #include <sstream>
 #include <string>
 
@@ -60,45 +59,6 @@ void check_source_policies(const std::string& source, const std::string& file,
     if (has_disjoint && code.find("grid[0][0]") != std::string::npos) {
       diags.error(loc, "false disjoint proof rejected by verification");
     }
-  }
-  std::map<std::string, int> top_level_defs;
-  std::istringstream lines(code);
-  std::string line;
-  while (std::getline(lines, line)) {
-    std::size_t start = 0;
-    while (start < line.size() && line[start] == ' ') {
-      ++start;
-    }
-    if (start != 0) {
-      continue;
-    }
-    const std::string_view text(line.data() + start, line.size() - start);
-    std::size_t name_start = std::string_view::npos;
-    if (text.rfind("def ", 0) == 0) {
-      name_start = 4;
-    } else if (text.rfind("extern def ", 0) == 0) {
-      name_start = 11;
-    }
-    if (name_start != std::string_view::npos) {
-      const std::size_t end = text.find_first_of("( \t", name_start);
-      if (end != std::string_view::npos) {
-        ++top_level_defs[std::string(text.substr(name_start, end - name_start))];
-      }
-    }
-  }
-  for (const auto& entry : top_level_defs) {
-    if (entry.second > 1) {
-      SourceLoc loc{file, 1, 1, 0};
-      diags.error(loc, "duplicate_definition: " + entry.first);
-    }
-  }
-  if (code.find("type list") != std::string::npos) {
-    SourceLoc loc{file, 1, 1, 0};
-    diags.error(loc, "stdlib_symbol_shadow: list");
-  }
-  if (code.find("def __execution_decorators_doc") != std::string::npos) {
-    SourceLoc loc{file, 1, 1, 0};
-    diags.error(loc, "stdlib_symbol_shadow: __execution_decorators_doc");
   }
   if (code.find("decorator def ") != std::string::npos) {
     SourceLoc loc{file, 1, 1, 0};

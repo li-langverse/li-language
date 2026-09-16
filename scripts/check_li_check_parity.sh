@@ -143,6 +143,10 @@ CORPUS_OK=(
   "li-tests/objects/nested_field_write.li"
   "li-tests/objects/nested_index_write.li"
   "li-tests/objects/nested_index_read.li"
+  # Stdlib seal: a module may not shadow a prelude/std name, and `ok_control`
+  # is the control proving the seal does not over-reject (see the
+  # compiler/types/prelude.cpp name sets).
+  "li-tests/stdlib_seal/ok_control.li"
 )
 
 # Corpus: files both sides must reject. Entries are `file:EXXXX` when a
@@ -188,6 +192,15 @@ CORPUS_FAIL=(
   "li-tests/physics/game_runtime_smoke.li:-"
   "li-tests/race_shared_memory/false_disjoint_requires_true.li:-"
   "li-tests/stdlib_coverage/build_std_csv.li:-"
+  # Stdlib seal: `duplicate_definition` and `stdlib_symbol_shadow` name no
+  # shared code string on both sides yet (the C++ reference prints the prose
+  # form `(stdlib_symbol_shadow: NAME)`, the walker the numeric `E0330`), so
+  # these assert the reject verdict; li-tests/manifest.toml asserts the text.
+  "li-tests/stdlib_seal/duplicate_proc.li:-"
+  "li-tests/stdlib_seal/shadow_list_type.li:-"
+  "li-tests/stdlib_seal/shadow_print.li:-"
+  "li-tests/stdlib_seal/shadow_print_dep.li:-"
+  "li-tests/stdlib_seal/shadow_std_symbol.li:-"
 )
 
 checked=0

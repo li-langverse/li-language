@@ -3578,6 +3578,191 @@ def tc_record_param(src: var ptr, tk: var array[262144, int], ts: var array[2621
   return 1
 
 # ---- top-level: collect types + procs, then check each proc ----
+# ---- stdlib seal + duplicate top-level definitions (compiler/types/prelude.cpp) ----
+# The prelude and the std/ tree own a fixed set of names; a module may not
+# redefine them (docs/language/stdlib.md), and a module may not define the same
+# top-level name twice. Mirrors the C++ `check_stdlib_seal` /
+# `check_duplicate_definitions`: the prelude-type half applies to type aliases
+# and procs alike, the std-symbol half is skipped for files under std/, and
+# theorem/axiom/lemma share the proc namespace for duplicate detection.
+
+# True when the name token matches one of four spellings; unused slots pass ""
+# (no token has empty text).
+def seal_any4(src: var ptr, ts: var array[262144, int], te: var array[262144, int], i: int, a: ptr, b: ptr, c: ptr, d: ptr) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  if tok_is(src, ts, te, i, a) == 1:
+    return 1
+  if tok_is(src, ts, te, i, b) == 1:
+    return 1
+  if tok_is(src, ts, te, i, c) == 1:
+    return 1
+  if tok_is(src, ts, te, i, d) == 1:
+    return 1
+  return 0
+
+# Numeric scalar aliases (compiler/types/numeric_types.cpp `table()`).
+def seal_numeric_scalar(src: var ptr, ts: var array[262144, int], te: var array[262144, int], i: int) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  if seal_any4(src, ts, te, i, "int4", "Int4", "i4", "int8") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "Int8", "i8", "int16", "Int16") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "i16", "int32", "Int32", "i32") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "int64", "Int64", "i64", "int") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "long", "int128", "Int128", "i128") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "int256", "Int256", "i256", "int512") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "Int512", "i512", "", "") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "uint4", "UInt4", "u4", "uint8") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "UInt8", "u8", "uint16", "UInt16") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "u16", "uint32", "UInt32", "u32") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "uint64", "UInt64", "u64", "uint") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "usize", "uint128", "UInt128", "u128") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "uint256", "UInt256", "u256", "uint512") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "UInt512", "u512", "", "") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "float4", "Float4", "f4", "float8") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "Float8", "f8", "float16", "Float16") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "f16", "float32", "Float32", "f32") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "float64", "Float64", "f64", "float") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "float128", "Float128", "f128", "float256") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "Float256", "f256", "float512", "Float512") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "f512", "", "", "") == 1:
+    return 1
+  return 0
+
+# is_prelude_type_name: the numeric aliases plus the core prelude type names.
+def seal_prelude_type(src: var ptr, ts: var array[262144, int], te: var array[262144, int], i: int) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  if seal_any4(src, ts, te, i, "bool", "str", "binary", "Binary") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "unit", "list", "dict", "tuple") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "Option", "simd", "bytes", "stringview") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "ptr", "", "", "") == 1:
+    return 1
+  return seal_numeric_scalar(src, ts, te, i)
+
+# is_prelude_proc_name
+def seal_prelude_proc(src: var ptr, ts: var array[262144, int], te: var array[262144, int], i: int) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  if seal_any4(src, ts, te, i, "print", "sum", "dot", "norm") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "axpy", "disjoint_elem", "disjoint_row", "disjoint_slice") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "row_ok", "", "", "") == 1:
+    return 1
+  return 0
+
+# is_std_module_symbol (generated from std/**/*.li by scripts/gen-stdlib-manifest.sh)
+def seal_std_symbol(src: var ptr, ts: var array[262144, int], te: var array[262144, int], i: int) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  if seal_any4(src, ts, te, i, "__execution_decorators_doc", "Bytes", "StringView", "Reader") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "Writer", "bytes_len", "bytes_slice", "bytes_append") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "bytes_byte_at", "bytes_push_byte", "stringview_len", "stringview_byte_at") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "reader_new", "reader_remaining", "reader_read_byte", "reader_read_chunk") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "writer_new", "writer_push_byte", "writer_len", "") == 1:
+    return 1
+  return 0
+
+# Reports E0330 for a name reserved by the prelude or the std/ tree. The
+# prelude-type half applies to type aliases and procs alike (ns 0 = type alias,
+# 1 = proc); the prelude-proc half applies to procs only, and dstd exempts
+# files under std/ from the std-export half, as `check_stdlib_seal` does.
+def seal_check_reserved(src: var ptr, ts: var array[262144, int], te: var array[262144, int], i: int, ns: int, dstd: int, err: var array[1, int]) -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  var bad: int = 0
+  if seal_prelude_type(src, ts, te, i) == 1:
+    bad = 1
+  if ns == 1:
+    if seal_prelude_proc(src, ts, te, i) == 1:
+      bad = 1
+  if bad == 0:
+    if dstd == 0:
+      if seal_std_symbol(src, ts, te, i) == 1:
+        bad = 1
+  if bad == 1:
+    err[0] = 1
+    li_rt_emit_err(330)
+  return 1
+
+# `duplicate_definition` carries no error code in the C++ reference, so the
+# walker reports it through the 900/lic.error slot. The name is recorded either
+# way, matching the reference's set-insert semantics.
+def seal_check_dup(src: var ptr, ts: var array[262144, int], te: var array[262144, int], i: int, names: var array[256, int], nn: var array[1, int], err: var array[1, int]) -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  var k: int = 0
+  var seen: int = 0
+  while k < nn[0]:
+    if tok_eq(src, ts, te, names[k], i) == 1:
+      seen = 1
+    k = k + 1
+  if seen == 1:
+    err[0] = 1
+    li_rt_emit_err(900)
+  if nn[0] < 256:
+    names[nn[0]] = i
+    nn[0] = nn[0] + 1
+  return 1
+
+# One entry point for a top-level definition name: ns 0 = type alias,
+# ns 1 = proc / extern def / async def. Theorem/axiom/lemma declarations are
+# outside the module model the C++ reference checks (Module carries types and
+# procs only), so they are outside the seal as well.
+def seal_def_check(src: var ptr, ts: var array[262144, int], te: var array[262144, int], i: int, ns: int, dstd: int, tnames: var array[256, int], tn: var array[1, int], pnames: var array[256, int], pn: var array[1, int], err: var array[1, int]) -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  seal_check_reserved(src, ts, te, i, ns, dstd, err)
+  if ns == 0:
+    seal_check_dup(src, ts, te, i, tnames, tn, err)
+  else:
+    seal_check_dup(src, ts, te, i, pnames, pn, err)
+  return 1
+
 def check_source(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
@@ -3589,7 +3774,18 @@ def check_source(src: var ptr, tk: var array[262144, int], ts: var array[262144,
   var sym_aux: array[256, int]
   var sym_n: array[1, int]
   var cur_ret: array[1, int]
+  var seal_tn: array[256, int]
+  var seal_tc: array[1, int]
+  var seal_pn: array[256, int]
+  var seal_pc: array[1, int]
+  var seal_std: int = 0
   sym_n[0] = 0
+  seal_tc[0] = 0
+  seal_pc[0] = 0
+  if li_rt_str_prefix(li_rt_argv(2), "std/") == 1:
+    seal_std = 1
+  if li_rt_str_contains(li_rt_argv(2), "/std/") == 1:
+    seal_std = 1
   skip_newlines(tk, n, pi, err)
   while cur_kind(tk, n, pi, err) != 0:
     var k: int = cur_kind(tk, n, pi, err)
@@ -3599,6 +3795,7 @@ def check_source(src: var ptr, tk: var array[262144, int], ts: var array[262144,
         err[0] = 1
         return 1
       var tn: int = pi[0]
+      seal_def_check(src, ts, te, tn, 0, seal_std, seal_tn, seal_tc, seal_pn, seal_pc, err)
       pi[0] = pi[0] + 1
       tc_record_type_params(tk, n, pi, err, sym_s, sym_kind, sym_ty, sym_n)
       expect_k(tk, n, pi, err, 58)
@@ -3613,6 +3810,7 @@ def check_source(src: var ptr, tk: var array[262144, int], ts: var array[262144,
       continue
     if k == 10:
       pi[0] = pi[0] + 1
+      seal_def_check(src, ts, te, pi[0], 1, seal_std, seal_tn, seal_tc, seal_pn, seal_pc, err)
       tc_record_proc(src, tk, ts, te, n, pi, err, 0, sym_s, sym_kind, sym_ty, sym_aux, sym_n)
       tc_skip_proc_tail(src, tk, ts, te, n, pi, err, 0)
       skip_newlines(tk, n, pi, err)
@@ -3621,6 +3819,7 @@ def check_source(src: var ptr, tk: var array[262144, int], ts: var array[262144,
       pi[0] = pi[0] + 1
       if cur_kind(tk, n, pi, err) == 10:
         pi[0] = pi[0] + 1
+        seal_def_check(src, ts, te, pi[0], 1, seal_std, seal_tn, seal_tc, seal_pn, seal_pc, err)
         tc_record_proc(src, tk, ts, te, n, pi, err, 1, sym_s, sym_kind, sym_ty, sym_aux, sym_n)
       tc_skip_proc_tail(src, tk, ts, te, n, pi, err, 1)
       skip_newlines(tk, n, pi, err)
@@ -3629,6 +3828,7 @@ def check_source(src: var ptr, tk: var array[262144, int], ts: var array[262144,
       pi[0] = pi[0] + 1
       if cur_kind(tk, n, pi, err) == 10:
         pi[0] = pi[0] + 1
+        seal_def_check(src, ts, te, pi[0], 1, seal_std, seal_tn, seal_tc, seal_pn, seal_pc, err)
       tc_record_proc(src, tk, ts, te, n, pi, err, 0, sym_s, sym_kind, sym_ty, sym_aux, sym_n)
       tc_skip_proc_tail(src, tk, ts, te, n, pi, err, 0)
       skip_newlines(tk, n, pi, err)

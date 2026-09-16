@@ -71,13 +71,6 @@ void check_duplicate_definitions(const Module& module, const std::string& file,
     }
     seen_procs.insert(proc.name);
   }
-  // Theorems/axioms/lemmas share the top-level symbol space with procs.
-  for (const auto& thm : module.theorems) {
-    if (seen_procs.count(thm.name)) {
-      report(thm.span, "duplicate_definition: " + thm.name);
-    }
-    seen_procs.insert(thm.name);
-  }
 }
 
 void check_stdlib_seal(const Module& module, const std::string& file,
