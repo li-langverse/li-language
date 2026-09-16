@@ -26,8 +26,13 @@ inline bool is_str_bytes_type_name(const std::string& n) {
 }
 
 // Scalar rd class 1 (float) — mir_proc/var-decl/param float classification.
+// The walker's mir_type_info lists every float-width alias (float/float64/
+// float32/float16/float8/float4/f64/f32/f16/f8/f4) as rd 1; the C++ predicate
+// must cover the same set or fixed-width float params/vars lower as int.
 inline bool is_float_type_name(const std::string& n) {
-  return n == "float" || n == "f64" || n == "float64";
+  return n == "float" || n == "f64" || n == "float64" || n == "float32" ||
+         n == "float16" || n == "float8" || n == "float4" || n == "f32" ||
+         n == "f16" || n == "f8" || n == "f4";
 }
 
 // Scalar rd class 2 (str/string) — the ty==2 half of the walker's pi2 is_i64

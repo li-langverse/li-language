@@ -1,0 +1,24 @@
+# Nested object-path assignment targets (`o.t.a = v` through a multi-hop
+# field path) are rejected at the MIR stage by both compilers: the li
+# walker's lowerer errors on the store and the C++ host rejects with a real
+# diagnostic, so neither side silently miscompiles. One-hop targets
+# (`o.t = v` whole-object, `o.a = v` scalar leaf) and nested array-element
+# writes (`o.t.arr[0] = v`) remain supported.
+type Tier = object
+  public tier_id: int
+  public fps_target: float
+
+type Draw = object
+  public tier: Tier
+  public frame_count: int
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var d: Draw
+  d.tier.tier_id = 7
+  d.tier.fps_target = 250.0
+  d.frame_count = 3
+  return 0

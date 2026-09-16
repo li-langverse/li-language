@@ -323,10 +323,67 @@ std::string obj_field_slot_chain(const Expr& e) {
   return "";
 }
 
+// Deep-copy an expression tree (used to re-shape a MethodCall into the
+// equivalent plain Call so the shared call lowering applies unchanged).
+std::unique_ptr<Expr> clone_expr(const Expr& e) {
+  auto out = std::make_unique<Expr>();
+  out->kind = e.kind;
+  out->span = e.span;
+  out->int_value = e.int_value;
+  out->float_value = e.float_value;
+  out->is_binary = e.is_binary;
+  out->ident = e.ident;
+  out->str_value = e.str_value;
+  out->bin_op = e.bin_op;
+  if (e.lhs) {
+    out->lhs = clone_expr(*e.lhs);
+  }
+  if (e.rhs) {
+    out->rhs = clone_expr(*e.rhs);
+  }
+  if (e.operand) {
+    out->operand = clone_expr(*e.operand);
+  }
+  if (e.base) {
+    out->base = clone_expr(*e.base);
+  }
+  if (e.index) {
+    out->index = clone_expr(*e.index);
+  }
+  for (const auto& a : e.args) {
+    if (a) {
+      out->args.push_back(clone_expr(*a));
+    } else {
+      out->args.push_back(nullptr);
+    }
+  }
+  return out;
+}
+
 std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirInsn>& out,
                           std::unordered_set<std::string>& float_names,
                           std::unordered_set<std::string>& float_arrays) {
   switch (e.kind) {
+    case Expr::Kind::MethodCall: {
+      // `obj.method(args)` lowers as a call to the name-mangled
+      // `<Type>_method` proc with the receiver as the first argument
+      // (walker mir_method_pid). The shared Call lowering then applies the
+      // same var-object first-arg wb write-back recipe as for plain calls.
+      if (e.base && e.base->kind == Expr::Kind::Ident) {
+        const auto vit = g_object_vars.find(e.base->ident);
+        if (vit != g_object_vars.end()) {
+          Expr call;
+          call.kind = Expr::Kind::Call;
+          call.ident = vit->second + "_" + e.ident;
+          call.args.push_back(clone_expr(*e.base));
+          for (const auto& a : e.args) {
+            call.args.push_back(clone_expr(*a));
+          }
+          return lower_expr_to(call, module, out, float_names, float_arrays);
+        }
+      }
+      return "";
+    }
     case Expr::Kind::IntLit: {
       const std::string dest = fresh_temp();
       MirInsn ins;
@@ -889,12 +946,30 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
           }
           MirArg ma;
           // Whole-object by-value args that are not object vars (field
-          // accesses like `d.tier`, nested object-returning calls, ...) lower
-          // to the walker's collapsed base name; record the object's leaf
-          // layout so emit expands the ARG back into per-leaf values.
+          // accesses like `d.tier`, nested object-returning calls, ...).
+          // When the arg is a field-access chain rooted at an object var,
+          // the walker resolves the callee's param type and emits one ARG
+          // per leaf field (mir_arg_obj_line); otherwise it collapses to the
+          // base name and we record the leaf layout so emit expands the ARG
+          // back into per-leaf values.
           if (ai < callee->params.size() &&
               callee->params[ai].type.kind == TypeKind::Named &&
               g_object_types.count(callee->params[ai].type.name) > 0) {
+            const std::string chain = obj_field_slot_chain(arg);
+            if (!chain.empty()) {
+              const bool by_ref =
+                  ai > 0 && callee->params[ai].type.is_var;
+              for (const auto& field : g_object_types[callee->params[ai].type.name]) {
+                MirArg field_arg;
+                field_arg.ident = "__li_o_" + chain + "_" + field.name;
+                if (field.array_elems > 0 || is_array_ident(field_arg.ident)) {
+                  field_arg.is_array_ident = true;
+                }
+                field_arg.is_var_ref = by_ref;
+                ins.args.push_back(std::move(field_arg));
+              }
+              continue;
+            }
             for (const auto& field : g_object_types[callee->params[ai].type.name]) {
               MirParam lp;
               lp.name = field.name;
@@ -1091,22 +1166,26 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
           return fresh_temp();
         }
       }
-      if (e.base && e.base->kind == Expr::Kind::Field && e.index &&
-          e.base->base && e.base->base->kind == Expr::Kind::Ident &&
-          e.base->index && e.base->index->kind == Expr::Kind::Ident) {
-        const std::string base = e.base->base->ident;
-        const std::string field = e.base->index->ident;
-        const auto owner = g_object_vars.find(base);
-        if (owner != g_object_vars.end()) {
-          const auto fields = g_object_types.find(owner->second);
-          if (fields != g_object_types.end()) {
-            for (const auto& f : fields->second) {
-              if (f.name != field || f.array_elems <= 0) {
-                continue;
-              }
-              MirInsn load;
-              load.op = f.is_float ? MirOp::ArrayLoadFloat : MirOp::ArrayLoadInt;
-              load.ident = "__li_o_" + base + "_" + field;
+      if (e.base && e.base->kind == Expr::Kind::Field && e.index) {
+        // Nested object field-array loads (d.tier.vals[i]) use the flattened
+        // chain-mangled slot, like the store side; the chain minus its root
+        // names the leaf in the flattened g_object_types entry.
+        const std::string chain = obj_field_slot_chain(*e.base);
+        const std::size_t dot = chain.find('_');
+        if (!chain.empty() && dot != std::string::npos) {
+          const std::string root = chain.substr(0, dot);
+          const std::string leaf = chain.substr(dot + 1);
+          const auto owner = g_object_vars.find(root);
+          if (owner != g_object_vars.end()) {
+            const auto fields = g_object_types.find(owner->second);
+            if (fields != g_object_types.end()) {
+              for (const auto& f : fields->second) {
+                if (f.name != leaf || f.array_elems <= 0) {
+                  continue;
+                }
+                MirInsn load;
+                load.op = f.is_float ? MirOp::ArrayLoadFloat : MirOp::ArrayLoadInt;
+                load.ident = "__li_o_" + chain;
               if (e.index->kind == Expr::Kind::IntLit) {
                 load.index_is_literal = true;
                 load.int_value = e.index->int_value;
@@ -1124,6 +1203,7 @@ std::string lower_expr_to(const Expr& e, const Module& module, std::vector<MirIn
               return dest;
             }
           }
+        }
         }
       }
       if (e.base && e.base->kind == Expr::Kind::Ident && e.index) {
@@ -1534,24 +1614,30 @@ void lower_stmt(const Stmt& stmt, const Module& module, bool returns_float, bool
       break;
     }
     case Stmt::Kind::Assign:
-      // `o.field[i] = value` uses the flattened array field slot.
+      // `o.field[i] = value` (and nested `o.sub.field[i] = value`) uses the
+      // flattened array-field slot __li_o_<chain> (walker mir_assign
+      // field-array store). g_object_types flattens nested object fields into
+      // compound leaf names (tier_vals), so the chain minus its root names the
+      // leaf; chains root at an object var, call-result bases are rejected by
+      // find_nested_field_assign.
       if (stmt.init && stmt.init->kind == Expr::Kind::Index && stmt.init->base &&
-          stmt.init->base->kind == Expr::Kind::Field && stmt.expr &&
-          stmt.init->base->base && stmt.init->base->base->kind == Expr::Kind::Ident &&
-          stmt.init->base->index && stmt.init->base->index->kind == Expr::Kind::Ident) {
-        const std::string base = stmt.init->base->base->ident;
-        const std::string field = stmt.init->base->index->ident;
-        const auto owner = g_object_vars.find(base);
-        if (owner != g_object_vars.end()) {
-          const auto fields = g_object_types.find(owner->second);
-          if (fields != g_object_types.end()) {
-            for (const auto& f : fields->second) {
-              if (f.name != field || f.array_elems <= 0) {
-                continue;
-              }
-              MirInsn ins;
-              ins.op = f.is_float ? MirOp::ArrayStoreFloat : MirOp::ArrayStoreInt;
-              ins.ident = "__li_o_" + base + "_" + field;
+          stmt.init->base->kind == Expr::Kind::Field && stmt.expr) {
+        const std::string chain = obj_field_slot_chain(*stmt.init->base);
+        const std::size_t dot = chain.find('_');
+        if (!chain.empty() && dot != std::string::npos) {
+          const std::string root = chain.substr(0, dot);
+          const std::string leaf = chain.substr(dot + 1);
+          const auto owner = g_object_vars.find(root);
+          if (owner != g_object_vars.end()) {
+            const auto fields = g_object_types.find(owner->second);
+            if (fields != g_object_types.end()) {
+              for (const auto& f : fields->second) {
+                if (f.name != leaf || f.array_elems <= 0) {
+                  continue;
+                }
+                MirInsn ins;
+                ins.op = f.is_float ? MirOp::ArrayStoreFloat : MirOp::ArrayStoreInt;
+                ins.ident = "__li_o_" + chain;
               if (stmt.init->index->kind == Expr::Kind::IntLit) {
                 ins.index_is_literal = true;
                 ins.int_value = stmt.init->index->int_value;
@@ -1581,6 +1667,7 @@ void lower_stmt(const Stmt& stmt, const Module& module, bool returns_float, bool
               break;
             }
           }
+        }
         }
         break;
       }
@@ -2209,7 +2296,73 @@ void scan_runtime_flags(const Module& module, MirModule& mir) {
   }
 }
 
-MirModule lower_to_mir(const Module& module) {
+// The walker's MIR rejects assignments whose LHS is a field through a
+// multi-hop object path (base is itself a Field — `d.tier.tier_id = 7`,
+// `o.s.t = t`, `make().fps = 2.0`): its lowerer errors on the store. The
+// C++ host used to accept these and silently drop the store (a wrong binary
+// with no diagnostic). Reject at the same lowering stage with a real message.
+// Index-base targets whose field chain roots at an object var (`o.t.a[0] = 1`,
+// `o.a[0] = 1`) are supported on both sides and stay accepted; Index targets
+// rooted in a call result (`make().a[0] = 1`) have no live leaf slot on
+// either side and are rejected too.
+// Deepest component of a Field chain: an Ident when the access roots at a
+// var, anything else (Call result, ...) otherwise. Shape-only, so the check
+// below works before g_object_vars is seeded.
+static const Expr* field_chain_root(const Expr* e) {
+  if (!e) {
+    return nullptr;
+  }
+  if (e->kind == Expr::Kind::Field && e->base) {
+    return field_chain_root(e->base.get());
+  }
+  return e;
+}
+
+static bool find_nested_field_assign(const std::vector<Stmt>& stmts) {
+  for (const auto& s : stmts) {
+    if (s.kind == Stmt::Kind::Assign && s.init && s.expr) {
+      if (s.init->kind == Expr::Kind::Field && s.init->base &&
+          s.init->base->kind != Expr::Kind::Ident) {
+        return true;
+      }
+      if (s.init->kind == Expr::Kind::Index && s.init->base &&
+          s.init->base->kind == Expr::Kind::Field) {
+        const Expr* root = field_chain_root(s.init->base.get());
+        if (!root || root->kind != Expr::Kind::Ident) {
+          return true;
+        }
+      }
+    }
+    switch (s.kind) {
+      case Stmt::Kind::If:
+        if (find_nested_field_assign(s.then_body) ||
+            (s.else_body && find_nested_field_assign(*s.else_body))) {
+          return true;
+        }
+        break;
+      case Stmt::Kind::While:
+        if (find_nested_field_assign(s.while_body)) {
+          return true;
+        }
+        break;
+      case Stmt::Kind::For:
+        if (find_nested_field_assign(s.for_body)) {
+          return true;
+        }
+        break;
+      case Stmt::Kind::ParallelFor:
+        if (find_nested_field_assign(s.par_body)) {
+          return true;
+        }
+        break;
+      default:
+        break;
+    }
+  }
+  return false;
+}
+
+MirModule lower_to_mir(const Module& module, std::string* err) {
   temp_counter = 0;
   g_par_counter = 0;
   g_uses_openmp = false;
@@ -2231,11 +2384,38 @@ MirModule lower_to_mir(const Module& module) {
     }
   }
   std::function<void(const TypeAlias&, const std::string&, std::vector<std::string>&,
-                     std::vector<ObjectField>&)>
+                     std::vector<ObjectField>&, const std::vector<std::string>*)>
       flatten_alias = [&](const TypeAlias& alias, const std::string& prefix,
-                          std::vector<std::string>& path,
-                          std::vector<ObjectField>& out) {
+                          std::vector<std::string>& path, std::vector<ObjectField>& out,
+                          const std::vector<std::string>* shadow) {
+        // `object of Base`: the derived object's leaf layout includes the
+        // base's leaves first (walker ec field_base chains the base's
+        // fields), so a Dog exposes Animal's legs before its own barks. A
+        // field the derived re-declares shadows the base's (the walker keeps
+        // only the derived declaration, e.g. `legs: float` on a `legs: int`
+        // base yields one float leaf).
+        if (!alias.base.empty()) {
+          const auto base = obj_aliases.find(alias.base);
+          if (base != obj_aliases.end() &&
+              std::find(path.begin(), path.end(), alias.base) == path.end()) {
+            // A base field is shadowed by the derived chain's declarations:
+            // this alias's own names join the shadow set going up.
+            std::vector<std::string> up = shadow ? *shadow : std::vector<std::string>{};
+            for (const auto& f : alias.fields) {
+              up.push_back(f.name);
+            }
+            path.push_back(alias.base);
+            flatten_alias(*base->second, prefix, path, out, &up);
+            path.pop_back();
+          }
+        }
         for (const auto& f : alias.fields) {
+          // Skip a field shadowed by a derived re-declaration (checked at
+          // the base level; the derived's own pass emits its declaration).
+          if (shadow != nullptr &&
+              std::find(shadow->begin(), shadow->end(), f.name) != shadow->end()) {
+            continue;
+          }
           if (f.type && f.type->kind == TypeKind::Named) {
             const auto sub = obj_aliases.find(f.type->name);
             if (sub != obj_aliases.end() &&
@@ -2243,7 +2423,7 @@ MirModule lower_to_mir(const Module& module) {
               const std::string next =
                   prefix.empty() ? f.name : prefix + "_" + f.name;
               path.push_back(f.type->name);
-              flatten_alias(*sub->second, next, path, out);
+              flatten_alias(*sub->second, next, path, out, shadow);
               path.pop_back();
               continue;
             }
@@ -2265,12 +2445,21 @@ MirModule lower_to_mir(const Module& module) {
     if (alias.alias_kind == AliasKind::Object) {
       std::vector<ObjectField> fields;
       std::vector<std::string> path{alias.name};
-      flatten_alias(alias, "", path, fields);
+      // Top-level: nothing shadows the object's own declarations; the base
+      // recursion (inside flatten_alias) carries the derived chain's names.
+      flatten_alias(alias, "", path, fields, nullptr);
       g_object_types[alias.name] = std::move(fields);
     }
   }
   scan_runtime_flags(module, mir);
   for (const auto& proc : module.procs) {
+    if (find_nested_field_assign(proc.body)) {
+      if (err) {
+        *err = "nested object-path assignment target in '" + proc.name +
+               "' (e.g. `o.a.b = v`): the li walker's MIR rejects this shape";
+      }
+      return MirModule{};
+    }
     MirFn fn;
     fn.name = proc.name;
     fn.is_extern = proc.is_extern;

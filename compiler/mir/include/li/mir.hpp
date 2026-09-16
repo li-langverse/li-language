@@ -189,6 +189,6 @@ struct MirModule {
   bool fp_numerically_stable = false;
 };
 
-MirModule lower_to_mir(const Module& module);
+MirModule lower_to_mir(const Module& module, std::string* err = nullptr);
 
 }  // namespace li

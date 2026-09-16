@@ -1,0 +1,25 @@
+# Nested object-path array-element stores (`d.tier.vals[i] = v`, `d.tier.fs[i] = f`)
+# lower to per-leaf stores on the chain-mangled slot __li_o_<root>_<field>_<leaf>,
+# byte-identical between the li walker and the C++ host. One-hop stores
+# (`d.frame_count = 3`) and the scalar read-back stay supported too.
+type Tier = object
+  public vals: array[4, int]
+  public fs: array[4, float]
+
+type Draw = object
+  public tier: Tier
+  public frame_count: int
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var d: Draw
+  d.tier.vals[0] = 7
+  d.tier.vals[1] = 9
+  d.tier.fs[0] = 2.5
+  d.frame_count = 3
+  if d.frame_count != 3:
+    return 1
+  return 0

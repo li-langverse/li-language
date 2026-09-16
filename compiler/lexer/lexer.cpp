@@ -214,6 +214,31 @@ bool Lexer::lex_number(Token& out, bool is_float_start) {
   const std::size_t start = pos_;
   const std::size_t sl = line_;
   const std::size_t sc = column_;
+  // Binary literal `0b[01]+` (walker token code 7): the span covers the full
+  // `0b...` literal, the token text is the bits only (matching the walker's
+  // emit from s+2), and the value is the binary interpretation of the bits.
+  if (peek() == '0' && pos_ + 1 < source_.size() && source_[pos_ + 1] == 'b') {
+    std::size_t p = pos_ + 2;
+    std::int64_t bits = 0;
+    bool any = false;
+    while (p < source_.size() && (source_[p] == '0' || source_[p] == '1')) {
+      bits = bits * 2 + (source_[p] - '0');
+      ++p;
+      any = true;
+    }
+    if (any) {
+      out.start = start;
+      out.end = p;
+      out.line = sl;
+      out.column = sc;
+      out.kind = TokenKind::BinaryLit;
+      out.text = std::string_view(source_).substr(start + 2, p - (start + 2));
+      out.int_value = bits;
+      pos_ = p;
+      return true;
+    }
+    // No bits after `0b`: fall through and lex `0` as a plain decimal literal.
+  }
   std::int64_t int_value = 0;
   bool is_float = is_float_start;
   while (!at_end() && std::isdigit(static_cast<unsigned char>(peek()))) {

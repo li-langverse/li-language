@@ -1,0 +1,34 @@
+# Nested object-path array-element reads (`d.tier.vals[i]` in expressions)
+# lower to a chain-mangled INS 11/13 load into a temp, byte-identical between
+# the li walker and the C++ host — for literal, ident, and computed indices.
+# Paired with the stores from nested_index_write.li, the value written through
+# the nested path reads back correctly.
+type Tier = object
+  public vals: array[4, int]
+  public fs: array[4, float]
+
+type Draw = object
+  public tier: Tier
+  public frame_count: int
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var d: Draw
+  var i: int
+  d.tier.vals[0] = 5
+  d.tier.vals[1] = 3
+  d.tier.vals[3] = 3
+  d.tier.fs[0] = 2.5
+  i = d.tier.vals[1]
+  if d.tier.vals[0] != 5:
+    return 1
+  if d.tier.vals[i] != 3:
+    return 2
+  if d.tier.fs[0] != 2.5:
+    return 3
+  if d.tier.vals[d.tier.vals[0] - 5] != 5:
+    return 4
+  return 0

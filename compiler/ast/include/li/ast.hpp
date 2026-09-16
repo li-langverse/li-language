@@ -60,11 +60,12 @@ enum class BinOp {
 };
 
 struct Expr {
-  enum class Kind { IntLit, FloatLit, StringLit, Ident, BinOp, Call, UnaryNot, UnaryMinus, Index, Await, Field };
+  enum class Kind { IntLit, FloatLit, StringLit, Ident, BinOp, Call, UnaryNot, UnaryMinus, Index, Await, Field, MethodCall };
   Kind kind = Kind::IntLit;
   Span span;
   std::int64_t int_value = 0;
   double float_value = 0.0;
+  bool is_binary = false;
   std::string ident;
   std::string str_value;
   BinOp bin_op = BinOp::Add;
@@ -139,6 +140,9 @@ struct ProcDecl {
   /** `async def` keyword (bare form): sets the FN async bit but, unlike the
    *  @async decorator, emits no DEC line. */
   bool is_async = false;
+  /** `private def` — the proc is invisible to importing modules (the walker
+   *  records it with ep_priv and excludes private procs from import scope). */
+  bool is_private = false;
 };
 
 struct TypeAlias {
@@ -149,6 +153,8 @@ struct TypeAlias {
   TypeExpr definition;
   std::vector<TypeField> fields;
   std::vector<std::string> enum_variants;
+  /** `object of Base` parent object name (empty for plain `object`). */
+  std::string base;
 };
 
 struct ImportDecl {

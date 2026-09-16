@@ -14,7 +14,7 @@ namespace {
 
 enum class TyKind {
   Int, Int64, Ptr, Float, Bool, Str, Array, Simd, List, Dict, Tuple, TypedDict, Enum,
-  Named, TypeVar, Protocol, Callable
+  Named, TypeVar, Protocol, Callable, Int32, UInt8, Float32, Float8, Binary
 };
 
 struct Ty;
@@ -42,6 +42,22 @@ TyPtr make_bool() { return std::make_shared<Ty>(Ty{TyKind::Bool}); }
 TyPtr make_str() { return std::make_shared<Ty>(Ty{TyKind::Str}); }
 TyPtr make_i64() { return std::make_shared<Ty>(Ty{TyKind::Int64}); }
 TyPtr make_ptr() { return std::make_shared<Ty>(Ty{TyKind::Ptr}); }
+TyPtr make_int32() { return std::make_shared<Ty>(Ty{TyKind::Int32}); }
+TyPtr make_uint8() { return std::make_shared<Ty>(Ty{TyKind::UInt8}); }
+TyPtr make_float32() { return std::make_shared<Ty>(Ty{TyKind::Float32}); }
+TyPtr make_float8() { return std::make_shared<Ty>(Ty{TyKind::Float8}); }
+TyPtr make_binary() { return std::make_shared<Ty>(Ty{TyKind::Binary}); }
+
+// Numeric families, mirroring the walker's tc_is_int / tc_is_float
+// (bootstrap/lic/main.li): int-family is int/int64/int32/uint8, float-family
+// is float/float32/float8; `binary` is not numeric.
+bool is_int_family(TyKind k) {
+  return k == TyKind::Int || k == TyKind::Int64 || k == TyKind::Int32 || k == TyKind::UInt8;
+}
+
+bool is_float_family(TyKind k) {
+  return k == TyKind::Float || k == TyKind::Float32 || k == TyKind::Float8;
+}
 
 TyPtr make_simd(std::int64_t lanes) {
   auto t = std::make_shared<Ty>();
@@ -77,18 +93,52 @@ bool is_unit_type(const TypeExpr& type) {
   return type.kind == TypeKind::Named && type.name == "unit";
 }
 
-const Expr* direct_return_expr(const ProcDecl& proc) {
-  const Expr* result = nullptr;
-  for (const auto& stmt : proc.body) {
-    if (stmt.kind != Stmt::Kind::Return || !stmt.expr) {
-      continue;
+// Count return statements reachable anywhere in the proc body (including
+// inside if/while/for bodies). The literal-return postcondition check is only
+// sound when the proc has exactly one return, so any second return anywhere
+// disables it: with control flow the postcondition cannot be judged against a
+// single literal return (e.g. `if c: return 0\nreturn 1` under
+// `ensures result == 0` is fine when the second return is dead on every path
+// the checker can see, as in li-tests/compile_ok/int_ne_literal.li).
+static std::size_t count_returns(const std::vector<Stmt>& body) {
+  std::size_t n = 0;
+  for (const auto& stmt : body) {
+    switch (stmt.kind) {
+      case Stmt::Kind::Return:
+        ++n;
+        break;
+      case Stmt::Kind::If:
+        n += count_returns(stmt.then_body);
+        if (stmt.else_body) {
+          n += count_returns(*stmt.else_body);
+        }
+        break;
+      case Stmt::Kind::While:
+        n += count_returns(stmt.while_body);
+        break;
+      case Stmt::Kind::For:
+        n += count_returns(stmt.for_body);
+        break;
+      case Stmt::Kind::ParallelFor:
+        n += count_returns(stmt.par_body);
+        break;
+      default:
+        break;
     }
-    if (result != nullptr) {
-      return nullptr;
-    }
-    result = stmt.expr.get();
   }
-  return result;
+  return n;
+}
+
+const Expr* direct_return_expr(const ProcDecl& proc) {
+  if (count_returns(proc.body) != 1) {
+    return nullptr;
+  }
+  for (const auto& stmt : proc.body) {
+    if (stmt.kind == Stmt::Kind::Return && stmt.expr) {
+      return stmt.expr.get();
+    }
+  }
+  return nullptr;
 }
 
 std::optional<long double> literal_number(const Expr& e) {
@@ -192,6 +242,7 @@ struct AliasEntry {
   const std::vector<TypeField>* fields = nullptr;
   const std::vector<std::string>* enum_variants = nullptr;
   bool is_protocol = false;
+  const std::string* base_name = nullptr;
 };
 
 struct Ctx {
@@ -343,6 +394,30 @@ struct Ctx {
     auto t = std::make_shared<Ty>();
     t->kind = TyKind::TypedDict;
     t->name = name;
+    // `object of Base` (walker ec field_base): the derived object exposes the
+    // base's fields first, then its own — structural subtype for
+    // assignability. A field the derived re-declares shadows the base's (the
+    // walker keeps only the derived declaration, e.g. `legs: float` on a
+    // `legs: int` base yields one float leaf).
+    const auto bit = aliases.find(name);
+    if (bit != aliases.end() && bit->second.base_name &&
+        bit->second.base_name->empty() == false) {
+      const auto base = aliases.find(*bit->second.base_name);
+      if (base != aliases.end() && base->second.fields) {
+        for (const auto& field : *base->second.fields) {
+          if (!field.type) {
+            continue;
+          }
+          const bool shadowed = std::any_of(
+              fields.begin(), fields.end(),
+              [&](const TypeField& own) { return own.name == field.name; });
+          if (shadowed) {
+            continue;
+          }
+          t->fields.emplace_back(field.name, resolve_type_expr(*field.type));
+        }
+      }
+    }
     for (const auto& field : fields) {
       if (!field.type) {
         continue;
@@ -390,6 +465,36 @@ struct Ctx {
     }
     if ((value->kind == TyKind::Ptr && expected->kind == TyKind::Int64) ||
         (value->kind == TyKind::Int64 && expected->kind == TyKind::Ptr)) {
+      return true;
+    }
+    // Fixed-width scalars are interchangeable within their numeric family,
+    // mirroring the walker's check layer (it records the declared type
+    // without comparing init-expression type codes). `binary` is not numeric.
+    if (is_int_family(value->kind) && is_int_family(expected->kind)) {
+      return true;
+    }
+    if (is_float_family(value->kind) && is_float_family(expected->kind)) {
+      return true;
+    }
+    // Structural object subtype (object-of inheritance): a value whose
+    // object exposes every expected field with a matching type satisfies the
+    // expected object, mirroring the walker's ec field lookup on the base.
+    if (value->kind == TyKind::TypedDict && expected->kind == TyKind::TypedDict) {
+      for (const auto& ef : expected->fields) {
+        bool found = false;
+        for (const auto& vf : value->fields) {
+          if (vf.first == ef.first) {
+            found = true;
+            if (!same_kind(vf.second, ef.second)) {
+              return false;
+            }
+            break;
+          }
+        }
+        if (!found) {
+          return false;
+        }
+      }
       return true;
     }
     return same_kind(value, expected);
@@ -537,6 +642,23 @@ struct Ctx {
       if (te.name == "int64" || te.name == "i64" || te.name == "long") {
         return make_i64();
       }
+      // Fixed-width scalars (walker codes 15-18 and 4): accepted by the Li
+      // walker's tc_prim_type but unknown to the C++ typechecker.
+      if (te.name == "int32" || te.name == "i32") {
+        return make_int32();
+      }
+      if (te.name == "uint8" || te.name == "u8") {
+        return make_uint8();
+      }
+      if (te.name == "float32" || te.name == "f32") {
+        return make_float32();
+      }
+      if (te.name == "float8" || te.name == "f8") {
+        return make_float8();
+      }
+      if (te.name == "binary") {
+        return make_binary();
+      }
       if (te.name == "str") {
         auto t = std::make_shared<Ty>();
         t->kind = TyKind::Str;
@@ -562,7 +684,8 @@ struct Ctx {
   TyPtr type_of(const Expr& e) {
     switch (e.kind) {
       case Expr::Kind::IntLit:
-        return make_int();
+        // `0b10110100` literals are the binary type (walker tc_primary k==7).
+        return e.is_binary ? make_binary() : make_int();
       case Expr::Kind::FloatLit:
         return make_float();
       case Expr::Kind::StringLit:
@@ -581,11 +704,20 @@ struct Ctx {
         if (e.bin_op == BinOp::Add || e.bin_op == BinOp::Sub || e.bin_op == BinOp::Mul ||
             e.bin_op == BinOp::Div || e.bin_op == BinOp::Mod || e.bin_op == BinOp::FloorDiv ||
             e.bin_op == BinOp::Pow) {
-          if (l->kind == TyKind::Int && r->kind == TyKind::Int) {
+          // Same-kind arithmetic preserves the operand kind (int, int32,
+          // float, float32, ...) mirroring the walker's tc_binop_type;
+          // mixing widths within a numeric family is an error there too.
+          if (l->kind == r->kind &&
+              (is_int_family(l->kind) || is_float_family(l->kind))) {
+            return l;
+          }
+          if (is_int_family(l->kind) && is_int_family(r->kind)) {
+            diags.error(loc(e.span), "cannot mix int widths without explicit cast");
             return make_int();
           }
-          if (l->kind == TyKind::Float && r->kind == TyKind::Float) {
-            return make_float();
+          if (is_float_family(l->kind) && is_float_family(r->kind)) {
+            diags.error(loc(e.span), "cannot mix float widths without explicit cast");
+            return make_int();
           }
           // Elementwise array binop: `a + b` / `a * b` on same-shape float or
           // int arrays lowers to ArrayBinOpF64/I64; size is max for broadcast
@@ -696,6 +828,14 @@ struct Ctx {
           }
           return make_float();
         }
+        // `print` is a walker special case (tc_primary accepts it before the
+        // proc table lookup), so any arg list is legal here too.
+        if (e.ident == "print") {
+          for (const auto& arg : e.args) {
+            (void)type_of(*arg);
+          }
+          return make_int();
+        }
         const auto pit = procs.find(e.ident);
         if (pit != procs.end()) {
           const ProcDecl& callee = *pit->second;
@@ -714,6 +854,9 @@ struct Ctx {
         for (const auto& arg : e.args) {
           (void)type_of(*arg);
         }
+        // Unknown proc: E0202 in the walker (a call to a name outside the
+        // symbol table, incl. private procs that imports never surface).
+        diags.error(loc(e.span), "unknown proc '" + e.ident + "'");
         return make_int();
       }
       case Expr::Kind::UnaryNot:
@@ -765,6 +908,30 @@ struct Ctx {
           }
         }
         diags.error(loc(e.span), "unknown field '" + fname + "'");
+        return make_int();
+      }
+      case Expr::Kind::MethodCall: {
+        if (e.base) {
+          (void)type_of(*e.base);
+        }
+        for (const auto& a : e.args) {
+          (void)type_of(*a);
+        }
+        // `obj.method(args)` resolves to the name-mangled `<Type>_<method>`
+        // proc (walker pl_obj_has_method). On a known object type a missing
+        // method is E0202; on non-object/unknown receivers the walker is lax.
+        const TyPtr base = e.base ? type_of(*e.base) : make_int();
+        if (base->kind == TyKind::TypedDict && !base->name.empty()) {
+          const std::string mangled = base->name + "_" + e.ident;
+          const auto pit = procs.find(mangled);
+          if (pit == procs.end()) {
+            diags.error(loc(e.span), "unknown method '" + e.ident + "'");
+            return make_int();
+          }
+          if (pit->second->ret_type) {
+            return resolve_type_expr(*pit->second->ret_type);
+          }
+        }
         return make_int();
       }
     }
@@ -982,6 +1149,9 @@ TypecheckResult typecheck_module(const Module& module, std::size_t main_proc_cou
     entry.is_protocol =
         alias.alias_kind == AliasKind::Type && alias.definition.kind == TypeKind::Named &&
         alias.definition.name == "Protocol";
+    if (!alias.base.empty()) {
+      entry.base_name = &alias.base;
+    }
     ctx.aliases[alias.name] = std::move(entry);
   }
   // Only the main module's own proc bodies are checked. Imported procs are

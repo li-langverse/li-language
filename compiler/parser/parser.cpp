@@ -203,6 +203,18 @@ struct Parser {
         proc.is_async = true;
         out.procs.push_back(std::move(proc));
         skip_newlines();
+      } else if (at(TokenKind::KwEcho) &&
+                 (std::string(cur().text) == "private" ||
+                  std::string(cur().text) == "public") &&
+                 peek(1).kind == TokenKind::KwProc) {
+        // `private def` / `public def` — the walker records the visibility
+        // (ep_priv) at top level; private procs are invisible to importers.
+        const bool priv = std::string(cur().text) == "private";
+        i++;
+        auto proc = parse_proc(false);
+        proc.is_private = priv;
+        out.procs.push_back(std::move(proc));
+        skip_newlines();
       } else if (at(TokenKind::KwProc)) {
         out.procs.push_back(parse_proc(false));
         skip_newlines();
@@ -293,12 +305,13 @@ std::unique_ptr<Expr> Parser::parse_primary() {
     }
     return parse_postfix(std::move(e));
   }
-  if (t.kind == TokenKind::IntLit) {
+  if (t.kind == TokenKind::IntLit || t.kind == TokenKind::BinaryLit) {
     i++;
     auto e = std::make_unique<Expr>();
     e->kind = Expr::Kind::IntLit;
     e->span = {t.start, t.end};
     e->int_value = t.int_value;
+    e->is_binary = t.kind == TokenKind::BinaryLit;
     return parse_postfix(std::move(e));
   }
   if (t.kind == TokenKind::FloatLit) {
@@ -363,13 +376,38 @@ std::unique_ptr<Expr> Parser::parse_postfix(std::unique_ptr<Expr> base) {
       node->index = std::move(idx);
       base = std::move(node);
     } else if (accept(TokenKind::Dot)) {
-      // Object field access: `expr.field`. The field name is an Ident.
+      // Object member access: `expr.ident`. A following `(` makes it a
+      // method call (walker EXPR_METHOD_CALL node 70: base, 70 method, args;
+      // empty arg lists allowed); otherwise it is a field access (69).
       if (!at(TokenKind::Ident)) {
         diags.error(loc(cur()), "expected field name after '.'");
         return nullptr;
       }
       const Token fld = cur();
       i++;
+      if (at(TokenKind::LParen)) {
+        auto node = std::make_unique<Expr>();
+        node->kind = Expr::Kind::MethodCall;
+        node->span = {base->span.start, fld.end};
+        node->base = std::move(base);
+        node->ident = std::string(fld.text);
+        i++;  // '(' 
+        brace_depth_++;
+        if (!at(TokenKind::RParen)) {
+          do {
+            skip_newlines();
+            node->args.push_back(parse_expr());
+          } while (accept(TokenKind::Comma));
+          skip_newlines();
+        }
+        brace_depth_--;
+        if (!expect(TokenKind::RParen, "')'")) {
+          return nullptr;
+        }
+        node->span.end = tokens[i - 1].end;
+        base = std::move(node);
+        continue;
+      }
       auto node = std::make_unique<Expr>();
       node->kind = Expr::Kind::Field;
       node->span = {base->span.start, fld.end};
@@ -1215,10 +1253,16 @@ TypeAlias Parser::parse_type_alias() {
         diags.error(loc(cur()), "expected base object name after 'of'");
         return alias;
       }
+      alias.base = std::string(cur().text);
       i++;
       skip_newlines();
     }
     while (at(TokenKind::Ident) || at(TokenKind::KwEcho)) {
+      // Stop at a top-level declaration: a visibility keyword not followed
+      // by a field name (`private def` / `public def`) ends the object body.
+      if (at(TokenKind::KwEcho) && peek(1).kind != TokenKind::Ident) {
+        break;
+      }
       TypeField field;
       field.public_field = true;
       if (at(TokenKind::KwEcho) && (std::string(cur().text) == "public" || std::string(cur().text) == "private") &&

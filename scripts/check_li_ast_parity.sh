@@ -69,7 +69,6 @@ known_gap() {
     "li-tests/encapsulation/inheritance_layout.li") echo "'object of' base type not retained";;
     "li-tests/prob/collision_oracle.li") echo "prob given/samples blocks not retained";;
     "li-tests/lexer_parser/decorators_parse.li") echo "decorator args not retained";;
-    "li-tests/typecheck/binary_literal_ok.li") echo "0b binary literal not tokenized";;
     *) echo "";;
   esac
 }

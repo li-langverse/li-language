@@ -1,0 +1,29 @@
+# Locks the typecheck/borrowck scope split: C++'s borrowck walks if/else bodies
+# but not loop bodies, so a repeated move inside a loop is accepted on both
+# sides even though the same shape outside a loop is E0311 (use_after_move.li).
+def consume(b: array[4, int]) -> unit
+  requires true
+  ensures true
+  decreases 0
+=
+  discard b
+
+def move_in_while() -> unit
+  requires true
+  ensures true
+  decreases 0
+=
+  var a: array[4, int]
+  var i: int = 0
+  while i < 2:
+    consume(a)
+    i = i + 1
+
+def move_in_for() -> unit
+  requires true
+  ensures true
+  decreases 0
+=
+  var b: array[4, int]
+  for i in 0..<2
+    consume(b)

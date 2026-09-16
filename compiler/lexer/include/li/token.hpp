@@ -14,6 +14,7 @@ enum class TokenKind {
   Ident,
   IntLit,
   FloatLit,
+  BinaryLit,
   StringLit,
   KwProc,
   KwType,
