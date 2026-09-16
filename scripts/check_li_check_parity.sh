@@ -203,9 +203,27 @@ CORPUS_FAIL=(
   "li-tests/stdlib_seal/shadow_std_symbol.li:-"
 )
 
+# Corpus: files where the two sides are known to disagree. Each entry records
+# the *observed* disagreement as `file:cpp_rc:li_rc`; the gate reports it as a
+# known divergence and fails if either verdict moves, so the mismatch can be
+# neither silently hidden nor silently widened.
+#
+# shadow_print_via_import.li: the reference accepts it, because the import-path
+# seal in compiler/types/import_resolve.cpp is outside the build and so the
+# reference never seals an imported module; the walker rejects it, because its
+# effects pass reads the imported `print` as the builtin IO sink and therefore
+# refuses `def main() -> int` without `raises IO`. Both sides are short of the
+# intended rule (seal the shadowing definition on import), which is why the
+# fixture's stale .exp — a `stdlib_symbol_shadow` diagnostic no live code path
+# can emit — is gone rather than left asserting a verdict no runner reads.
+CORPUS_KNOWN_DIVERGENCE=(
+  "li-tests/stdlib_seal/shadow_print_via_import.li:0:1"
+)
+
 checked=0
 pass=0
 fail=0
+diverged=0
 
 for f in "${CORPUS_OK[@]}"; do
   fp="$ROOT/$f"
@@ -255,8 +273,30 @@ for entry in "${CORPUS_FAIL[@]}"; do
   fi
 done
 
+for entry in "${CORPUS_KNOWN_DIVERGENCE[@]}"; do
+  f="${entry%%:*}"
+  rest="${entry#*:}"
+  want_cpp="${rest%%:*}"
+  want_li="${rest##*:}"
+  fp="$ROOT/$f"
+  if [[ ! -f "$fp" ]]; then
+    echo "  SKIP  $f (not found)"
+    continue
+  fi
+  cpp_rc=0; li_rc=0
+  "$LIC" check "$fp" >/dev/null 2>&1 || cpp_rc=$?
+  "$LI" check "$fp" >/dev/null 2>&1 || li_rc=$?
+  if [[ "$cpp_rc" == "$want_cpp" && "$li_rc" == "$want_li" ]]; then
+    diverged=$((diverged + 1))
+    echo "  KNOWN-DIVERGENCE  $f  cpp=$cpp_rc li=$li_rc (as recorded)"
+  else
+    fail=$((fail + 1))
+    echo "  FAIL  $f  recorded cpp=$want_cpp/li=$want_li, observed cpp=$cpp_rc/li=$li_rc — update CORPUS_KNOWN_DIVERGENCE"
+  fi
+done
+
 echo ""
-echo "check_li_check_parity: $pass/$checked passed, $fail failed"
+echo "check_li_check_parity: $pass/$checked passed, $fail failed, $diverged known divergence(s)"
 if [[ "$fail" -gt 0 ]]; then
   exit 1
 fi

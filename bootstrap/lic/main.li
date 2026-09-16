@@ -3782,9 +3782,14 @@ def check_source(src: var ptr, tk: var array[262144, int], ts: var array[262144,
   sym_n[0] = 0
   seal_tc[0] = 0
   seal_pc[0] = 0
+  # `defining_std`: a file under std/ may define std exports. The three path
+  # shapes are the C++ reference's (prelude.cpp `check_stdlib_seal`): a `std/`
+  # prefix, or `/std/` or `\std\` anywhere in the path.
   if li_rt_str_prefix(li_rt_argv(2), "std/") == 1:
     seal_std = 1
   if li_rt_str_contains(li_rt_argv(2), "/std/") == 1:
+    seal_std = 1
+  if li_rt_str_contains(li_rt_argv(2), "\std\") == 1:
     seal_std = 1
   skip_newlines(tk, n, pi, err)
   while cur_kind(tk, n, pi, err) != 0:
