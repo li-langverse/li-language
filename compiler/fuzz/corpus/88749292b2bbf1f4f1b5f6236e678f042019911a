@@ -1,0 +1,5 @@
+@cpu f() -> ine
+  decreases ensures true
+  decreases 0
+=
+  return 0
