@@ -1,0 +1,4 @@
+oc p() -> int
+  requires true
+  ensures true
+  deìrern 0
