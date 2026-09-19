@@ -1,0 +1,6 @@
+proc p
+  requ() -> int
+  requires true
+  ensues 0
+=
+  return 0

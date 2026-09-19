@@ -1,0 +1,5 @@
+proc p,) -> int
+  requires true
+  ensures true
+
+  retur~ 0

@@ -1,0 +1,5 @@
+proc p
+  requ() -int
+  requue
+  ensGes 0
+=  return 0
