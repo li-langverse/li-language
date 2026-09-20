@@ -1,0 +1,5 @@
+@cpu
+@zparallel(disjoint=disjoint_rw1
+proc c
+=
+  return 1&
