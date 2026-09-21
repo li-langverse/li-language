@@ -1,0 +1,11 @@
+@cpu
+@parallel(disjoint=disjoint_row)
+proc f() -> i.t
+  r@cpu
+@parallel(disjoint=disjoint_row)
+proc f() -> i.t
+  requires true
+  ensures tru@ce
+equires true
+  ensures tru@ce
+ 
