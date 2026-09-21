@@ -6743,7 +6743,7 @@ def d_alloc(darena: var array[65536, int],  dasp: var array[1, int],  kind: int,
 
 # Emit INS with a mangled name like __li_o_<base>_<field>
 # format: INS op iv 0 <mangled_name>      0 0 0 1  0 <flags> ...
-def mir_ins_mangled(src: var ptr, op: int, iv: int, base_s: int, base_e: int, fld_s: int, fld_e: int, flag1: int, flag2: int, val: int, lastop: var array[1, int], rhs_s: int, rhs_e: int, rhs_t: int, rhs_p_s: int, rhs_p_e: int, rhs_f_s: int, rhs_f_e: int, fld_src_fallback: int, arr_flt: int) raises IO -> int
+def mir_ins_mangled(src: var ptr, op: int, iv: int, base_s: int, base_e: int, fld_s: int, fld_e: int, flag1: int, flag2: int, val: int, lastop: var array[1, int], rhs_s: int, rhs_e: int, rhs_t: int, rhs_p_s: int, rhs_p_e: int, rhs_f_s: int, rhs_f_e: int, arr_flt: int) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -6759,22 +6759,12 @@ def mir_ins_mangled(src: var ptr, op: int, iv: int, base_s: int, base_e: int, fl
   li_rt_mir_str("__li_o_")
   li_rt_mir_esc(src, base_s, base_e)
   li_rt_mir_str("_")
-  # Field name slices: the alloc/copy paths read type-declared field positions
-  # that are relative to the type's defining file, which the caller stored in
-  # the -1 type-source slot. But user-written field access/stores (out.detail,
-  # fld_src_fallback != 0) carry offsets relative to this caller's src buffer,
-  # regardless of where the object type is declared - so they must read from src.
-  # Reading them from -1 picks up whatever unrelated type was last registered,
-  # which for an imported-typed local object is the wrong buffer (NUL/garbage,
-  # and it shifts across runs). Honor the caller's src for the fallback flag.
-  if fld_src_fallback == 1:
-    li_rt_mir_esc(src, fld_s, fld_e)
-  else:
-    var fs2: ptr = li_rt_type_src_get(-1)
-    if fs2 == 0:
-      li_rt_mir_esc(src, fld_s, fld_e)
-    else:
-      li_rt_mir_esc(fs2, fld_s, fld_e)
+  # Field name offsets for user-written field access/stores are relative to
+  # this caller's src buffer, regardless of where the object type is declared,
+  # so they always read from src. Type-declared positions go through the
+  # objname/fieldpath registries instead, which resolve each segment against
+  # the file that declares it.
+  li_rt_mir_esc(src, fld_s, fld_e)
   # empty name cells: str_value, callee, lhs_ident (each needs its own
   # separator space, so 4 spaces land before rhs_ident like C++ mir_dump)
   li_rt_ast_space()
@@ -6855,10 +6845,12 @@ def mir_ins_mangled(src: var ptr, op: int, iv: int, base_s: int, base_e: int, fl
   lastop[0] = op
   return 0
 
-# Emit INS with a nested-object mangled name __li_o_<base>_<p>_<fld>
-# (e.g. `s.swapchain.backend_id` -> __li_o_s_swapchain_backend_id). Same
-# field layout as mir_ins_mangled; p_s/p_e is the parent object field.
-def mir_ins_mangled_nested(src: var ptr, op: int, iv: int, base_s: int, base_e: int, p_s: int, p_e: int, fld_s: int, fld_e: int, flag1: int, flag2: int, val: int, lastop: var array[1, int], arr_flt: int) raises IO -> int
+# Emit INS with an object leaf name held in the objname registry. The entry
+# carries the full accumulated field path (__li_o_<base>[_<parent>...]_<leaf>),
+# so a 3-level chain keeps every segment, and each segment was rendered
+# against the type that declares it when its prefix was registered. Same cell
+# layout as mir_ins_mangled.
+def mir_ins_mangled_oi(op: int, iv: int, oi: int, flag1: int, flag2: int, val: int, lastop: var array[1, int], arr_flt: int) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -6871,18 +6863,7 @@ def mir_ins_mangled_nested(src: var ptr, op: int, iv: int, base_s: int, base_e: 
   li_rt_ast_space()
   li_rt_ast_int(0)
   li_rt_ast_space()
-  li_rt_mir_str("__li_o_")
-  li_rt_mir_esc(src, base_s, base_e)
-  li_rt_mir_str("_")
-  # Field positions are type-source-relative (captured by mir_obj_reg_field
-  # against the type's defining file), so read p_s/p_e and fld_s/fld_e from
-  # the type source stored during allocation, not the caller's src buffer.
-  var nsrc2: ptr = li_rt_type_src_get(-1)
-  if nsrc2 == 0:
-    nsrc2 = src
-  li_rt_mir_esc(nsrc2, p_s, p_e)
-  li_rt_mir_str("_")
-  li_rt_mir_esc(nsrc2, fld_s, fld_e)
+  li_rt_mir_objname_out(oi)
   # empty name cells: str_value, callee, lhs_ident (4 spaces before rhs)
   li_rt_ast_space()
   li_rt_ast_space()
@@ -6932,9 +6913,11 @@ def mir_ins_mangled_nested(src: var ptr, op: int, iv: int, base_s: int, base_e: 
   return 0
 
 # Recursively emit LocalAlloc (INS 24/35/9) for every leaf field of an object
-# type, flattening nested object fields into compound mangled slots. p_s/p_e
-# is the enclosing object field name (-1 at the top level).
-def mir_obj_alloc_fields(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], itmp: var array[4096, int],  base_s: int,  base_e: int,  type_idx: int,  p_s: int,  p_e: int, lastop: var array[1, int]) raises IO -> int
+# type. Every leaf takes a registered compound prefix name, so nested object
+# fields flatten to their full path and each path segment is read from the type
+# that declares it. prefix_oi is the accumulated objname index (-1 at the top
+# level, where base_s/base_e name the object var).
+def mir_obj_alloc_fields(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], itmp: var array[4096, int],  base_s: int,  base_e: int,  type_idx: int,  prefix_oi: int, lastop: var array[1, int]) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -6949,33 +6932,29 @@ def mir_obj_alloc_fields(src: var ptr,  ts: var array[262144, int],  te: var arr
   var fa_a: array[2, int]
   while i_a < nf_a:
     mir_obj_field_name(itmp, type_idx, i_a, fa_a)
+    var oi_a: int = 0
+    if prefix_oi < 0:
+      oi_a = li_rt_mir_objname_reg_prefix(src, base_s, base_e, fa_a[0], fa_a[1], 0, 0, tsrc)
+    else:
+      oi_a = li_rt_mir_objname_add_nested(prefix_oi, tsrc, fa_a[0], fa_a[1])
     var sub_a: int = mir_obj_field_obj_type(src, ts, te, itmp, type_idx, i_a)
     if sub_a >= 0:
-      mir_obj_alloc_fields(src, ts, te, itmp, base_s, base_e, sub_a, fa_a[0], fa_a[1], lastop)
+      mir_obj_alloc_fields(src, ts, te, itmp, base_s, base_e, sub_a, oi_a, lastop)
     else:
       var elems_a: int = mir_obj_field_elems(itmp, type_idx, i_a)
       if elems_a > 0:
-        if p_s >= 0:
-          mir_ins_mangled_nested(src, 9, elems_a, base_s, base_e, p_s, p_e, fa_a[0], fa_a[1], 0, 1, 0, lastop, mir_obj_field_float(itmp, type_idx, i_a))
-        else:
-          mir_ins_mangled(src, 9, elems_a, base_s, base_e, fa_a[0], fa_a[1], 0, 1, 0, lastop, -1, -1, -1, -1, -1, -1, -1, 0, mir_obj_field_float(itmp, type_idx, i_a))
+        mir_ins_mangled_oi(9, elems_a, oi_a, 0, 1, 0, lastop, mir_obj_field_float(itmp, type_idx, i_a))
       else:
         if mir_obj_field_float(itmp, type_idx, i_a) == 1:
-          if p_s >= 0:
-            mir_ins_mangled_nested(src, 35, 0, base_s, base_e, p_s, p_e, fa_a[0], fa_a[1], 0, 1, 0, lastop, 0)
-          else:
-            mir_ins_mangled(src, 35, 0, base_s, base_e, fa_a[0], fa_a[1], 0, 1, 0, lastop, -1, -1, -1, -1, -1, -1, -1, 0, 0)
+          mir_ins_mangled_oi(35, 0, oi_a, 0, 1, 0, lastop, 0)
         else:
-          if p_s >= 0:
-            mir_ins_mangled_nested(src, 24, 0, base_s, base_e, p_s, p_e, fa_a[0], fa_a[1], 0, 1, 0, lastop, 0)
-          else:
-            mir_ins_mangled(src, 24, 0, base_s, base_e, fa_a[0], fa_a[1], 0, 1, 0, lastop, -1, -1, -1, -1, -1, -1, -1, 0, 0)
+          mir_ins_mangled_oi(24, 0, oi_a, 0, 1, 0, lastop, 0)
     i_a = i_a + 1
   return 0
 
 # Recursively emit LocalAlloc for a return-object cr<N> temp, flattening
 # nested object fields: __li_o___cr<N>[_<parent>_]<leaf>.
-def mir_cr_alloc_fields(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], itmp: var array[4096, int],  crid: int,  type_idx: int,  p_s: int,  p_e: int) raises IO -> int
+def mir_cr_alloc_fields(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], itmp: var array[4096, int],  crid: int,  type_idx: int,  prefix_oi: int) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -6989,9 +6968,14 @@ def mir_cr_alloc_fields(src: var ptr,  ts: var array[262144, int],  te: var arra
   var fa_c: array[2, int]
   while i_c < nf_c:
     mir_obj_field_name(itmp, type_idx, i_c, fa_c)
+    var oi_c: int = 0
+    if prefix_oi < 0:
+      oi_c = li_rt_mir_objname_reg_prefix(src, 0, 0, fa_c[0], fa_c[1], 1, crid, tsrc)
+    else:
+      oi_c = li_rt_mir_objname_add_nested(prefix_oi, tsrc, fa_c[0], fa_c[1])
     var sub_c: int = mir_obj_field_obj_type(src, ts, te, itmp, type_idx, i_c)
     if sub_c >= 0:
-      mir_cr_alloc_fields(src,  ts,  te,  itmp,  crid,  sub_c,  fa_c[0],  fa_c[1])
+      mir_cr_alloc_fields(src,  ts,  te,  itmp,  crid,  sub_c,  oi_c)
     else:
       var cop_c: int = 24
       var iv_c: int = 0
@@ -7012,13 +6996,7 @@ def mir_cr_alloc_fields(src: var ptr,  ts: var array[262144, int],  te: var arra
       li_rt_ast_space()
       li_rt_ast_int(0)
       li_rt_ast_space()
-      li_rt_mir_str("__li_o___cr")
-      li_rt_ast_int(crid)
-      li_rt_mir_str("_")
-      if p_s >= 0:
-        li_rt_mir_esc(tsrc, p_s, p_e)
-        li_rt_mir_str("_")
-      li_rt_mir_esc(tsrc, fa_c[0], fa_c[1])
+      li_rt_mir_objname_out(oi_c)
       # 5 empty name cells
       li_rt_ast_space()
       li_rt_ast_space()
@@ -7133,7 +7111,7 @@ def mir_cr_call_line(src: var ptr,  ts: var array[262144, int],  te: var array[2
 
 # Recursively emit LocalAlloc for a method-call write-back temp wb<N>,
 # flattening nested object fields: __li_o_wb<N>[_<parent>_]<leaf>.
-def mir_wb_alloc_fields(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], itmp: var array[4096, int],  crid: int,  type_idx: int,  p_s: int,  p_e: int) raises IO -> int
+def mir_wb_alloc_fields(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], itmp: var array[4096, int],  crid: int,  type_idx: int,  prefix_oi: int) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -7147,9 +7125,14 @@ def mir_wb_alloc_fields(src: var ptr,  ts: var array[262144, int],  te: var arra
   var i_w: int = 0
   while i_w < nf_w:
     mir_obj_field_name(itmp, type_idx, i_w, fa_w)
+    var oi_w: int = 0
+    if prefix_oi < 0:
+      oi_w = li_rt_mir_objname_reg_prefix(src, 0, 0, fa_w[0], fa_w[1], 3, crid, tsrc)
+    else:
+      oi_w = li_rt_mir_objname_add_nested(prefix_oi, tsrc, fa_w[0], fa_w[1])
     var sub_w: int = mir_obj_field_obj_type(src, ts, te, itmp, type_idx, i_w)
     if sub_w >= 0:
-      mir_wb_alloc_fields(src,  ts,  te,  itmp,  crid,  sub_w,  fa_w[0],  fa_w[1])
+      mir_wb_alloc_fields(src,  ts,  te,  itmp,  crid,  sub_w,  oi_w)
     else:
       var cop_w: int = 24
       var iv_w: int = 0
@@ -7167,13 +7150,7 @@ def mir_wb_alloc_fields(src: var ptr,  ts: var array[262144, int],  te: var arra
       li_rt_ast_space()
       li_rt_ast_int(0)
       li_rt_ast_space()
-      li_rt_mir_str("__li_o_wb")
-      li_rt_ast_int(crid)
-      li_rt_mir_str("_")
-      if p_s >= 0:
-        li_rt_mir_esc(tsrc, p_s, p_e)
-        li_rt_mir_str("_")
-      li_rt_mir_esc(tsrc, fa_w[0], fa_w[1])
+      li_rt_mir_objname_out(oi_w)
       # 5 empty name cells
       li_rt_ast_space()
       li_rt_ast_space()
@@ -9413,7 +9390,7 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
           var wbid: int = tc[0]
           tc[0] = wbid + 1
           # 1) wb slot allocs (INS 35 float / 24 int / 9 array), nested flattened
-          mir_wb_alloc_fields(src,  ts,  te,  itmp,  wbid,  rv_ti,  -1,  -1)
+          mir_wb_alloc_fields(src,  ts,  te,  itmp,  wbid,  rv_ti,  -1)
           # 2) copy-in: wb slots <- receiver slots
           fi_m = 0
           while fi_m < nf_m:
@@ -9891,6 +9868,37 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
     var aobj: array[128, int]
     var nab: var array[1, int]
     nab[0] = 0
+    # var-Object first-arg write-back. C++ materializes the __li_o_wb<N> leaf
+    # slots and copies the object's leaves in BEFORE lowering the remaining
+    # arguments (lower.cpp first_var_obj), so the wb id consumes a temp
+    # counter ahead of any arg temps. Detect it here from the first argument
+    # descriptor so the walker consumes the counter in that same order. C++'s
+    # trigger is a `var Object` first param plus a whole object var ident as
+    # the first arg, so an object-FIELD arg (`world.body`) takes the plain
+    # path and passes its leaves with is_var_ref=0.
+    var cp_wbid: int = -1
+    var cp_ti: int = -1
+    var cp_nf: int = 0
+    var cp_s: int = 0
+    var cp_e: int = 0
+    if is_callproc == 1:
+      if peek65536(darena, rec + 4) >= 1:
+        var arec0: int = peek65536(darena, peek65536(darena, rec + 5))
+        if peek65536(darena, arec0 + 0) == 3:
+          if mir_method_first_var(src, ts, te, pid, pp0, pvar) == 1:
+            cp_s = peek65536(darena, arec0 + 1)
+            cp_e = peek65536(darena, arec0 + 2)
+            var ca_ti0: int = mir_obj_find_var(src, ts, te, itmp, cp_s, cp_e)
+            if ca_ti0 >= 0:
+              cp_ti = ca_ti0
+              cp_wbid = tc[0]
+              tc[0] = cp_wbid + 1
+              cp_nf = mir_obj_field_count(itmp, cp_ti)
+              mir_wb_alloc_fields(src,  ts,  te,  itmp,  cp_wbid,  cp_ti,  -1)
+              var cfi0: int = 0
+              while cfi0 < cp_nf:
+                mir_obj_emit_copy(src,  ts,  te,  itmp,  cp_ti,  cfi0,  0,  0,  cp_s,  cp_e,  2,  cp_wbid,  tc)
+                cfi0 = cfi0 + 1
     # Records pushed for the first argument. The wb write-back replay resumes
     # after exactly those records, so it needs their real count: a var-Object
     # first arg is collected as ONE kind-3 record, while a resolved param
@@ -10048,39 +10056,10 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
       if ai == 0:
         fst_recs[0] = (nab[0] - nab_a0[0]) / 4
       ai = ai + 1
-    # Declare wb variables outside the if block so they're always
-    # initialized (Li allocates stack slots at function scope but only
-    # runs initializers inside the branch — garbage in the else path
-    # causes an infinite ARG emission loop).
-    var cp_wbid: int = -1
-    var cp_ti: int = -1
-    var cp_nf: int = 0
     var cr_obj_id: int = -1
     var cr_obj_ti: int = -1
     var cr_args_emitted: int = 0
     if is_callproc == 1:
-      # Detect var-Object first-arg write-back: if the callee's first param
-      # is `var Object` and the caller's first arg is an Object ident,
-      # emit wb allocs + copy-in before INS 8, wb ARG lines (is_var_ref=1)
-      # instead of the first arg, and copy-back after all args.
-      if nab[0] >= 4 and (peek128(abuf, 0) == 0 or peek128(abuf, 0) == 3 or peek128(abuf, 0) == 5):
-        if mir_method_first_var(src, ts, te, pid, pp0, pvar) == 1:
-          var ca_s: int = peek128(abuf, 2)
-          var ca_e: int = peek128(abuf, 3)
-          if peek128(abuf, 0) == 3 or peek128(abuf, 0) == 5:
-            ca_s = peek128(abuf, 1)
-            ca_e = peek128(abuf, 2)
-          var ca_ti: int = mir_obj_find_var(src, ts, te, itmp, ca_s, ca_e)
-          if ca_ti >= 0:
-            cp_ti = ca_ti
-            cp_wbid = tc[0]
-            tc[0] = cp_wbid + 1
-            cp_nf = mir_obj_field_count(itmp, cp_ti)
-            mir_wb_alloc_fields(src,  ts,  te,  itmp,  cp_wbid,  cp_ti,  -1,  -1)
-            var cfi: int = 0
-            while cfi < cp_nf:
-              mir_obj_emit_copy(src,  ts,  te,  itmp,  cp_ti,  cfi,  0,  0,  ca_s,  ca_e,  2,  cp_wbid,  tc)
-              cfi = cfi + 1
       var f8b: array[44, int]
       mir_fdef(f8b)
       f8b[6] = peek65536(darena, rec + 1)
@@ -10109,7 +10088,7 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
             pp4 = pp4 + 1
           var crid2: int = tc[0]
           tc[0] = crid2 + 1
-          mir_cr_alloc_fields(src,  ts,  te,  itmp,  crid2,  robj_ti,  -1,  -1)
+          mir_cr_alloc_fields(src,  ts,  te,  itmp,  crid2,  robj_ti,  -1)
           mir_cr_call_line(src,  ts,  te,  itmp,  crid2,  peek65536(darena, rec + 1),  peek65536(darena, rec + 2),  robj_ti,  lastop)
           cr_obj_id = crid2
           cr_obj_ti = robj_ti
@@ -10275,13 +10254,8 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
     # copy-back: arg object slots <- wb slots (write-back case only)
     if cp_wbid >= 0:
       var cbi: int = 0
-      var cbi_s: int = peek128(abuf, 2)
-      var cbi_e: int = peek128(abuf, 3)
-      if peek128(abuf, 0) == 3 or peek128(abuf, 0) == 5:
-        cbi_s = peek128(abuf, 1)
-        cbi_e = peek128(abuf, 2)
       while cbi < cp_nf:
-        mir_obj_emit_copy(src,  ts,  te,  itmp,  cp_ti,  cbi,  cbi_s,  cbi_e,  0,  0,  3,  cp_wbid,  tc)
+        mir_obj_emit_copy(src,  ts,  te,  itmp,  cp_ti,  cbi,  cp_s,  cp_e,  0,  0,  3,  cp_wbid,  tc)
         cbi = cbi + 1
     return 0
   err[0] = 1
@@ -10604,7 +10578,7 @@ def mir_stmt(darena: var array[65536, int],  dasp: var array[1, int], src: var p
                 # caller-source-backed, so fld_src_fallback = 1.
                 var rfp5: int = peek65536(darena, arg0 + 1)
                 if peek65536(darena, rfp5 + 0) == 3:
-                  mir_ins_mangled(src, 5, 0, peek65536(darena, rfp5 + 1), peek65536(darena, rfp5 + 2), peek65536(darena, arg0 + 2), peek65536(darena, arg0 + 3), 0, 1, 0, lastop, -1, -1, -1, -1, -1, -1, -1, 1, 0)
+                  mir_ins_mangled(src, 5, 0, peek65536(darena, rfp5 + 1), peek65536(darena, rfp5 + 2), peek65536(darena, arg0 + 2), peek65536(darena, arg0 + 3), 0, 1, 0, lastop, -1, -1, -1, -1, -1, -1, -1, 0)
                 else:
                   if mir_lower_expr(darena,  dasp,  arg0,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
                     return 1
@@ -11125,7 +11099,7 @@ def mir_return(darena: var array[65536, int],  dasp: var array[1, int], src: var
                 var rfs: int = peek65536(darena, rec + 2)
                 var rfe: int = peek65536(darena, rec + 3)
                 if peek65536(darena, rfb + 0) == 3:
-                  mir_ins_mangled(src, 3, 0, peek65536(darena, rfb + 1), peek65536(darena, rfb + 2), rfs, rfe, 0, 1, 0, lastop, -1, -1, -1, -1, -1, -1, -1, 1, 0)
+                  mir_ins_mangled(src, 3, 0, peek65536(darena, rfb + 1), peek65536(darena, rfb + 2), rfs, rfe, 0, 1, 0, lastop, -1, -1, -1, -1, -1, -1, -1, 0)
                 else:
                   var f5f: array[44, int]
                   mir_fdef(f5f)
@@ -11254,7 +11228,7 @@ def mir_var_decl(darena: var array[65536, int],  dasp: var array[1, int], src: v
       # __li_o_<var>_<parent>_<leaf> like the C++ layout).
       var nfld: int = mir_obj_field_count(itmp, obj_ti)
       var ff_arr: array[2, int]
-      mir_obj_alloc_fields(src,  ts,  te,  itmp,  peek_tk(ts, vn + 0),  peek_tk(te, vn + 0),  obj_ti,  -1,  -1, lastop)
+      mir_obj_alloc_fields(src,  ts,  te,  itmp,  peek_tk(ts, vn + 0),  peek_tk(te, vn + 0),  obj_ti,  -1, lastop)
       # Call init returning object: `var u: T = f()` lowers to cr<N> slots,
       # CallProc with OBJ layout, then field copies into the var slots.
       # Write-back state for a var-Object first arg (e.g. layout_region_rect
@@ -11284,7 +11258,7 @@ def mir_var_decl(darena: var array[65536, int],  dasp: var array[1, int], src: v
                   vd_pe = peek65536(darena, fst_a + 2)
                   vd_wb = tc[0]
                   tc[0] = vd_wb + 1
-                  mir_wb_alloc_fields(src, ts, te, itmp, vd_wb, vd_ti, -1, -1)
+                  mir_wb_alloc_fields(src, ts, te, itmp, vd_wb, vd_ti, -1)
                   var vwfi: int = 0
                   while vwfi < vd_nf:
                     mir_obj_emit_copy(src, ts, te, itmp, vd_ti, vwfi, 0, 0, vd_ps, vd_pe, 2, vd_wb, tc)
@@ -11300,7 +11274,7 @@ def mir_var_decl(darena: var array[65536, int],  dasp: var array[1, int], src: v
             ap4 = ap4 + 1
           var crid: int = tc[0]
           tc[0] = crid + 1
-          mir_cr_alloc_fields(src,  ts,  te,  itmp,  crid,  obj_ti,  -1,  -1)
+          mir_cr_alloc_fields(src,  ts,  te,  itmp,  crid,  obj_ti,  -1)
           # INS 8 CallProc with mangled base dest + callee + OBJ layout
           li_rt_mir_str("INS")
           li_rt_ast_space()
@@ -11494,11 +11468,17 @@ def mir_var_decl(darena: var array[65536, int],  dasp: var array[1, int], src: v
               li_rt_mir_str("__li_o_")
               li_rt_mir_esc(src, peek65536(darena, rfbase + 1), peek65536(darena, rfbase + 2))
               li_rt_mir_str("_")
-              var fs28: ptr = li_rt_type_src_get(-1)
+              # The field name spans belong to the base object's type, so read
+              # them from the file that declares that type. The last registered
+              # type source can be an unrelated imported module, which renders
+              # the offsets against the wrong buffer.
+              var ft28: int = mir_obj_find_var(src,  ts,  te,  itmp,  peek65536(darena, rfbase + 1),  peek65536(darena, rfbase + 2))
+              var fs28: ptr = src
+              if ft28 >= 0:
+                fs28 = li_rt_type_src_get(ft28)
               if fs28 == 0:
-                li_rt_mir_esc(src, peek65536(darena, rec + 2), peek65536(darena, rec + 3))
-              else:
-                li_rt_mir_esc(fs28, peek65536(darena, rec + 2), peek65536(darena, rec + 3))
+                fs28 = src
+              li_rt_mir_esc(fs28, peek65536(darena, rec + 2), peek65536(darena, rec + 3))
               # label, f18..f21
               li_rt_ast_space()
               li_rt_ast_space()
@@ -11605,11 +11585,13 @@ def mir_var_decl(darena: var array[65536, int],  dasp: var array[1, int], src: v
                   li_rt_mir_str("__li_o_")
                   li_rt_mir_esc(src, peek65536(darena, rfb27 + 1), peek65536(darena, rfb27 + 2))
                   li_rt_mir_str("_")
-                  var fs27: ptr = li_rt_type_src_get(-1)
+                  var ft27: int = mir_obj_find_var(src,  ts,  te,  itmp,  peek65536(darena, rfb27 + 1),  peek65536(darena, rfb27 + 2))
+                  var fs27: ptr = src
+                  if ft27 >= 0:
+                    fs27 = li_rt_type_src_get(ft27)
                   if fs27 == 0:
-                    li_rt_mir_esc(src, peek65536(darena, rec + 2), peek65536(darena, rec + 3))
-                  else:
-                    li_rt_mir_esc(fs27, peek65536(darena, rec + 2), peek65536(darena, rec + 3))
+                    fs27 = src
+                  li_rt_mir_esc(fs27, peek65536(darena, rec + 2), peek65536(darena, rec + 3))
                   li_rt_ast_space()
                   li_rt_ast_space()
                   li_rt_ast_space()
@@ -11882,11 +11864,13 @@ def mir_var_decl(darena: var array[65536, int],  dasp: var array[1, int], src: v
                   li_rt_mir_str("__li_o_")
                   li_rt_mir_esc(src, peek65536(darena, rf26 + 1), peek65536(darena, rf26 + 2))
                   li_rt_mir_str("_")
-                  var fs26: ptr = li_rt_type_src_get(-1)
+                  var ft26: int = mir_obj_find_var(src,  ts,  te,  itmp,  peek65536(darena, rf26 + 1),  peek65536(darena, rf26 + 2))
+                  var fs26: ptr = src
+                  if ft26 >= 0:
+                    fs26 = li_rt_type_src_get(ft26)
                   if fs26 == 0:
-                    li_rt_mir_esc(src, peek65536(darena, rec + 2), peek65536(darena, rec + 3))
-                  else:
-                    li_rt_mir_esc(fs26, peek65536(darena, rec + 2), peek65536(darena, rec + 3))
+                    fs26 = src
+                  li_rt_mir_esc(fs26, peek65536(darena, rec + 2), peek65536(darena, rec + 3))
                   # label (empty): int copies carry one empty cell here (i64
                   # copies carry three - see the ty 2/3/4 emitter)
                   li_rt_ast_space()
@@ -12159,7 +12143,7 @@ def mir_assign(darena: var array[65536, int],  dasp: var array[1, int],  lrec: i
                   sf_rhs_p_e = peek65536(darena, rfb_i + 3)
                   sf_rhs_f_s = peek65536(darena, rrec + 2)
                   sf_rhs_f_e = peek65536(darena, rrec + 3)
-        mir_ins_mangled(src, 26, 0, base_s_a, base_e_a, fld_s_a, fld_e_a, 0, sf_lit, sf_val, lastop, sf_rhs_s, sf_rhs_e, sf_rhs_t, sf_rhs_p_s, sf_rhs_p_e, sf_rhs_f_s, sf_rhs_f_e, 1, 0)
+        mir_ins_mangled(src, 26, 0, base_s_a, base_e_a, fld_s_a, fld_e_a, 0, sf_lit, sf_val, lastop, sf_rhs_s, sf_rhs_e, sf_rhs_t, sf_rhs_p_s, sf_rhs_p_e, sf_rhs_f_s, sf_rhs_f_e, 0)
         return 0
   if peek65536(darena, lrec + 0) == 5:
     var base: int = peek65536(darena, lrec + 1)
@@ -12248,7 +12232,7 @@ def mir_assign(darena: var array[65536, int],  dasp: var array[1, int],  lrec: i
                   li_rt_ast_nl()
                   return 0
               if peek65536(darena, rrec + 0) == 0:
-                mir_ins_mangled(src, 10, iv9, peek65536(darena, fb9 + 1), peek65536(darena, fb9 + 2), fs9, fe9, 0, 1, peek65536(darena, rrec + 1), lastop, -1, -1, -1, -1, -1, -1, -1, 1, 0)
+                mir_ins_mangled(src, 10, iv9, peek65536(darena, fb9 + 1), peek65536(darena, fb9 + 2), fs9, fe9, 0, 1, peek65536(darena, rrec + 1), lastop, -1, -1, -1, -1, -1, -1, -1, 0)
                 return 0
               if peek65536(darena, rrec + 0) == 3:
                 var isrc9: int = mir_obj_find_var(src,  ts,  te,  itmp,  peek65536(darena, rrec + 1),  peek65536(darena, rrec + 2))
@@ -12256,7 +12240,7 @@ def mir_assign(darena: var array[65536, int],  dasp: var array[1, int],  lrec: i
                   # a.xs[i] = b.ys[j] is uncommon; fall through to generic (temp) path
                   iv9 = -3
               if iv9 >= 0:
-                mir_ins_mangled(src, 10, iv9, peek65536(darena, fb9 + 1), peek65536(darena, fb9 + 2), fs9, fe9, 0, 1, peek65536(darena, rrec + 1), lastop, -1, -1, -1, -1, -1, -1, -1, 1, 0)
+                mir_ins_mangled(src, 10, iv9, peek65536(darena, fb9 + 1), peek65536(darena, fb9 + 2), fs9, fe9, 0, 1, peek65536(darena, rrec + 1), lastop, -1, -1, -1, -1, -1, -1, -1, 0)
                 return 0
       if peek65536(darena, fb9 + 0) == 9:
         # Nested object array-field store: d.tier.vals[i] = v. Field-access
@@ -12856,21 +12840,18 @@ def mir_fn_line(src: var ptr,  ts: var array[262144, int],  te: var array[262144
   li_rt_ast_nl()
   return 0
 
-def mir_retparam_line(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], itmp: var array[4096, int],  type_idx: int,  field_idx: int) raises IO -> int
+# One RETPARAM line for a leaf field, named by its accumulated field path
+# (path == 0 prints nothing, so callers always register at least one segment).
+def mir_retparam_line(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], itmp: var array[4096, int],  type_idx: int,  field_idx: int,  path: int) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
 =
-  var fa: array[2, int]
-  mir_obj_field_name(itmp, type_idx, field_idx, fa)
   var fflt: int = mir_obj_field_float(itmp, type_idx, field_idx)
   var felems_r: int = mir_obj_field_elems(itmp, type_idx, field_idx)
-  var tsrc: ptr = li_rt_type_src_get(type_idx)
-  if tsrc == 0:
-    tsrc = src
   li_rt_mir_str("RETPARAM")
   li_rt_ast_space()
-  li_rt_ast_text(tsrc,  fa[0],  fa[1])
+  li_rt_mir_fieldpath_out(path)
   li_rt_ast_space()
   li_rt_ast_int(fflt)
   li_rt_ast_space()
@@ -12892,47 +12873,11 @@ def mir_retparam_line(src: var ptr,  ts: var array[262144, int],  te: var array[
   li_rt_ast_nl()
   return 0
 
-def mir_retparam_line_nested(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], itmp: var array[4096, int],  type_idx: int,  field_idx: int,  p_s: int,  p_e: int) raises IO -> int
-  requires true
-  ensures result == 0
-  decreases 0
-=
-  var fa2: array[2, int]
-  mir_obj_field_name(itmp, type_idx, field_idx, fa2)
-  var fflt2: int = mir_obj_field_float(itmp, type_idx, field_idx)
-  var felems_r2: int = mir_obj_field_elems(itmp, type_idx, field_idx)
-  var tsrc2: ptr = li_rt_type_src_get(type_idx)
-  if tsrc2 == 0:
-    tsrc2 = src
-  li_rt_mir_str("RETPARAM")
-  li_rt_ast_space()
-  li_rt_ast_text(tsrc2,  p_s,  p_e)
-  li_rt_mir_str("_")
-  li_rt_ast_text(tsrc2,  fa2[0],  fa2[1])
-  li_rt_ast_space()
-  li_rt_ast_int(fflt2)
-  li_rt_ast_space()
-  li_rt_ast_int(0)
-  li_rt_ast_space()
-  li_rt_ast_int(0)
-  li_rt_ast_space()
-  li_rt_ast_int(0)
-  li_rt_ast_space()
-  li_rt_ast_int(0)
-  li_rt_ast_space()
-  li_rt_ast_int(felems_r2)
-  li_rt_ast_space()
-  li_rt_ast_int(0)
-  li_rt_ast_space()
-  li_rt_ast_int(0)
-  li_rt_ast_space()
-  li_rt_ast_int(0)
-  li_rt_ast_nl()
-  return 0
-
 # Recursively emit RETPARAM lines for a return object, flattening nested
-# object fields into compound names (swapchain_viewport_w etc.).
-def mir_obj_retparams(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], itmp: var array[4096, int],  type_idx: int,  p_s: int,  p_e: int) raises IO -> int
+# object fields into their full compound path (swapchain_viewport_w etc.). path
+# is the accumulated field path (0 at the top level); each segment is registered
+# against the type that declares it.
+def mir_obj_retparams(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], itmp: var array[4096, int],  type_idx: int,  path: int) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -12940,16 +12885,17 @@ def mir_obj_retparams(src: var ptr,  ts: var array[262144, int],  te: var array[
   var nf_r: int = mir_obj_field_count(itmp, type_idx)
   var i_r: int = 0
   var fa_r: array[2, int]
+  var tsrc_r: ptr = li_rt_type_src_get(type_idx)
+  if tsrc_r == 0:
+    tsrc_r = src
   while i_r < nf_r:
     mir_obj_field_name(itmp, type_idx, i_r, fa_r)
+    var path_r: int = li_rt_mir_fieldpath_add(path, tsrc_r, fa_r[0], fa_r[1])
     var sub_r: int = mir_obj_field_obj_type(src, ts, te, itmp, type_idx, i_r)
     if sub_r >= 0:
-      mir_obj_retparams(src,  ts,  te,  itmp,  sub_r,  fa_r[0],  fa_r[1])
+      mir_obj_retparams(src,  ts,  te,  itmp,  sub_r,  path_r)
     else:
-      if p_s >= 0:
-        mir_retparam_line_nested(src,  ts,  te,  itmp,  type_idx,  i_r,  p_s,  p_e)
-      else:
-        mir_retparam_line(src,  ts,  te,  itmp,  type_idx,  i_r)
+      mir_retparam_line(src,  ts,  te,  itmp,  type_idx,  i_r,  path_r)
     i_r = i_r + 1
   return 0
 
@@ -13460,7 +13406,7 @@ def mir_proc(src: var ptr,  tk: var array[262144, int],  ts: var array[262144, i
             set512(fatok, 63, pnia + 1)
     j = j + 1
   if ret_obj_ti >= 0:
-    mir_obj_retparams(src,  ts,  te,  itmp,  ret_obj_ti,  -1,  -1)
+    mir_obj_retparams(src,  ts,  te,  itmp,  ret_obj_ti,  0)
   lastop[0] = -1
   if is_extern == 1:
     skip_newlines(tk,  n,  pi,  err)
