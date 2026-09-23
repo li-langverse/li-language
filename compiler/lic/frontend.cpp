@@ -2,6 +2,7 @@
 
 #include "li/parser.hpp"
 #include "li/policy.hpp"
+#include "li/prelude.hpp"
 #include "li/typecheck.hpp"
 
 #include <filesystem>
@@ -79,6 +80,12 @@ void merge_imported(Module& to, Module&& from) {
     to.types.push_back(std::move(t));
   }
   for (auto& p : from.procs) {
+    // `private def` procs are invisible to importing modules (the walker
+    // records ep_priv and never surfaces them in import scope), so calls to
+    // them from an importer fail with an unknown-proc verdict.
+    if (p.is_private) {
+      continue;
+    }
     to.procs.push_back(std::move(p));
   }
 }
@@ -283,6 +290,15 @@ bool frontend(const char* path, const std::string& source, Module& out,
   // parse diagnostics; reject on any parse error so `lic check`/`lic mir`/
   // `lic build` reject malformed input exactly where the Li walker does.
   if (!parsed.module || !parsed.diagnostics.empty()) {
+    return false;
+  }
+  // Module-level name rules (docs/language/stdlib.md): the prelude and the
+  // std/ tree own a fixed set of names, and a module may not define the same
+  // top-level name twice. This is the AST-based form of the two rules the
+  // source-policy scan used to approximate with substring searches.
+  check_duplicate_definitions(*parsed.module, path, diags);
+  check_stdlib_seal(*parsed.module, path, diags);
+  if (!diags.empty()) {
     return false;
   }
   // Merge imported types and proc signatures before typecheck so annotations

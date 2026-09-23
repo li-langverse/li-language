@@ -1849,17 +1849,22 @@ def parse_decorator_list(src: var ptr, tk: var array[262144, int], ts: var array
     skip_newlines(tk, n, pi, err)
   return 1
 
-def parse_for(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
+# Consumes the tail of a `for` header — `<ident> in <int> ..< <int> [':']` —
+# taken right after the `for` keyword. res[0]=iterator token, res[1]=start,
+# res[2]=end. Shared by parse_for, parse_parallel_for and the check passes so
+# their token consumption cannot drift.
+def for_tail(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], res: var array[3, int]) -> int
   requires true
   ensures result == 1
   decreases 0
 =
-  pi[0] = pi[0] + 1
-  var iter_t: int = 0
+  res[0] = 0
+  res[1] = 0
+  res[2] = 0
   if cur_kind(tk, n, pi, err) != 4:
     err[0] = 1
   else:
-    iter_t = pi[0]
+    res[0] = pi[0]
     pi[0] = pi[0] + 1
   if cur_kind(tk, n, pi, err) != 4:
     err[0] = 1
@@ -1868,22 +1873,30 @@ def parse_for(src: var ptr, tk: var array[262144, int], ts: var array[262144, in
       err[0] = 1
     else:
       pi[0] = pi[0] + 1
-  var st: int = 0
-  var en: int = 0
   if cur_kind(tk, n, pi, err) == 5:
-    st = int_text_value(src, ts, te, pi[0])
+    res[1] = int_text_value(src, ts, te, pi[0])
     pi[0] = pi[0] + 1
   if cur_kind(tk, n, pi, err) == 73:
     pi[0] = pi[0] + 1
   else:
     err[0] = 1
   if cur_kind(tk, n, pi, err) == 5:
-    en = int_text_value(src, ts, te, pi[0])
+    res[2] = int_text_value(src, ts, te, pi[0])
     pi[0] = pi[0] + 1
   if cur_kind(tk, n, pi, err) == 56:
     pi[0] = pi[0] + 1
+  return 1
+
+def parse_for(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], d: int) -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  pi[0] = pi[0] + 1
+  var fh: array[3, int]
+  for_tail(src, tk, ts, te, n, pi, err, fh)
   if d == 1:
-    a_line_text_ii(d, src, 43, peek_tk(ts, iter_t + 0), peek_tk(te, iter_t + 0), st, en)
+    a_line_text_ii(d, src, 43, peek_tk(ts, fh[0] + 0), peek_tk(te, fh[0] + 0), fh[1], fh[2])
   skip_newlines(tk, n, pi, err)
   parse_block(src, tk, ts, te, n, pi, err, d)
   return 1
@@ -1896,51 +1909,16 @@ def parse_parallel_for(src: var ptr, tk: var array[262144, int], ts: var array[2
   pi[0] = pi[0] + 1
   if consume_for_kw(src, tk, ts, te, n, pi, err) == 0:
     err[0] = 1
-  var iter_t: int = 0
-  if cur_kind(tk, n, pi, err) != 4:
-    err[0] = 1
-  else:
-    iter_t = pi[0]
-    pi[0] = pi[0] + 1
-  if cur_kind(tk, n, pi, err) != 4:
-    err[0] = 1
-  else:
-    if tok_is(src, ts, te, pi[0], "in") == 0:
-      err[0] = 1
-    else:
-      pi[0] = pi[0] + 1
-  var st: int = 0
-  var en: int = 0
-  if cur_kind(tk, n, pi, err) == 5:
-    st = int_text_value(src, ts, te, pi[0])
-    pi[0] = pi[0] + 1
-  if cur_kind(tk, n, pi, err) == 73:
-    pi[0] = pi[0] + 1
-  else:
-    err[0] = 1
-  if cur_kind(tk, n, pi, err) == 5:
-    en = int_text_value(src, ts, te, pi[0])
-    pi[0] = pi[0] + 1
+  var fh: array[3, int]
+  for_tail(src, tk, ts, te, n, pi, err, fh)
   if d == 1:
-    a_line_text_ii(d, src, 44, peek_tk(ts, iter_t + 0), peek_tk(te, iter_t + 0), st, en)
+    a_line_text_ii(d, src, 44, peek_tk(ts, fh[0] + 0), peek_tk(te, fh[0] + 0), fh[1], fh[2])
   skip_newlines(tk, n, pi, err)
   if accept_k(tk, n, pi, err, 2) == 1:
     skip_newlines(tk, n, pi, err)
     while 1 == 1:
       var ck: int = cur_kind(tk, n, pi, err)
-      if ck == 41:
-        parse_contract(src, tk, ts, te, n, pi, err, d)
-        continue
-      if ck == 42:
-        parse_contract(src, tk, ts, te, n, pi, err, d)
-        continue
-      if ck == 43:
-        parse_contract(src, tk, ts, te, n, pi, err, d)
-        continue
-      if ck == 44:
-        parse_contract(src, tk, ts, te, n, pi, err, d)
-        continue
-      if ck == 45:
+      if ck == 41 or ck == 42 or ck == 43 or ck == 44 or ck == 45:
         parse_contract(src, tk, ts, te, n, pi, err, d)
         continue
       break
@@ -3082,6 +3060,18 @@ def tc_binop_type(l: int, opk: int, r: int, err: var array[1, int]) -> int
   # Comparisons and equality yield bool.
   if opk == 66 or opk == 67 or opk == 68 or opk == 69 or opk == 70 or opk == 71:
     return 3
+  # Elementwise array arithmetic: `a + b` / `a * b` on sized arrays yields
+  # an array of max size (broadcast for array[1] operands), mirroring the
+  # C++ type_of BinOp (ArrayBinOpF64/I64, size = max). The caller checks
+  # that the result fits the declared var/return array size. `@` (matmul)
+  # is excluded: it yields a scalar and stays on the untyped fallthrough.
+  if opk == 59 or opk == 60 or opk == 61 or opk == 62 or opk == 63 or opk == 64 or opk == 65:
+    if l >= 1000 and r >= 1000:
+      var lsz: int = l - 1000
+      var rsz: int = r - 1000
+      if rsz > lsz:
+        return 1000 + rsz
+      return 1000 + lsz
   if tc_is_int(l) == 1:
     if tc_is_int(r) == 1:
       if tc_is_unsigned(l) != tc_is_unsigned(r):
@@ -3249,6 +3239,15 @@ def tc_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144, int]
           if it < 1000:
             err[0] = 1
             li_rt_emit_err(900)
+      # Sized-array var-decl init: the init expression must produce an array
+      # of the declared size (elementwise binops propagate size = max). A
+      # size mismatch (e.g. array[4] init from array[4] * array[8]) rejects
+      # like the C++ typechecker's variable type mismatch.
+      if vt >= 1000:
+        if it >= 1000:
+          if vt != it:
+            err[0] = 1
+            li_rt_emit_err(900)
     return 1
   if k == 30:
     pi[0] = pi[0] + 1
@@ -3293,9 +3292,15 @@ def tc_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144, int]
     skip_newlines(tk, n, pi, err)
     tc_block(src, tk, ts, te, n, pi, err, cur_ret, sym_s, sym_kind, sym_ty, sym_aux, sym_n)
     return 1
+  if k == 76:
+    parse_decorator_list(src, tk, ts, te, n, pi, err, 0)
+    skip_newlines(tk, n, pi, err)
+    tc_stmt(src, tk, ts, te, n, pi, err, cur_ret, sym_s, sym_kind, sym_ty, sym_aux, sym_n)
+    return 1
   if k == 26:
     pi[0] = pi[0] + 1
-    tc_expr(src, tk, ts, te, n, pi, err, 0, sym_s, sym_kind, sym_ty, sym_aux, sym_n)
+    var fh: array[3, int]
+    for_tail(src, tk, ts, te, n, pi, err, fh)
     skip_newlines(tk, n, pi, err)
     tc_block(src, tk, ts, te, n, pi, err, cur_ret, sym_s, sym_kind, sym_ty, sym_aux, sym_n)
     return 1
@@ -3573,6 +3578,191 @@ def tc_record_param(src: var ptr, tk: var array[262144, int], ts: var array[2621
   return 1
 
 # ---- top-level: collect types + procs, then check each proc ----
+# ---- stdlib seal + duplicate top-level definitions (compiler/types/prelude.cpp) ----
+# The prelude and the std/ tree own a fixed set of names; a module may not
+# redefine them (docs/language/stdlib.md), and a module may not define the same
+# top-level name twice. Mirrors the C++ `check_stdlib_seal` /
+# `check_duplicate_definitions`: the prelude-type half applies to type aliases
+# and procs alike, the std-symbol half is skipped for files under std/, and
+# theorem/axiom/lemma share the proc namespace for duplicate detection.
+
+# True when the name token matches one of four spellings; unused slots pass ""
+# (no token has empty text).
+def seal_any4(src: var ptr, ts: var array[262144, int], te: var array[262144, int], i: int, a: ptr, b: ptr, c: ptr, d: ptr) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  if tok_is(src, ts, te, i, a) == 1:
+    return 1
+  if tok_is(src, ts, te, i, b) == 1:
+    return 1
+  if tok_is(src, ts, te, i, c) == 1:
+    return 1
+  if tok_is(src, ts, te, i, d) == 1:
+    return 1
+  return 0
+
+# Numeric scalar aliases (compiler/types/numeric_types.cpp `table()`).
+def seal_numeric_scalar(src: var ptr, ts: var array[262144, int], te: var array[262144, int], i: int) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  if seal_any4(src, ts, te, i, "int4", "Int4", "i4", "int8") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "Int8", "i8", "int16", "Int16") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "i16", "int32", "Int32", "i32") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "int64", "Int64", "i64", "int") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "long", "int128", "Int128", "i128") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "int256", "Int256", "i256", "int512") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "Int512", "i512", "", "") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "uint4", "UInt4", "u4", "uint8") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "UInt8", "u8", "uint16", "UInt16") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "u16", "uint32", "UInt32", "u32") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "uint64", "UInt64", "u64", "uint") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "usize", "uint128", "UInt128", "u128") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "uint256", "UInt256", "u256", "uint512") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "UInt512", "u512", "", "") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "float4", "Float4", "f4", "float8") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "Float8", "f8", "float16", "Float16") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "f16", "float32", "Float32", "f32") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "float64", "Float64", "f64", "float") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "float128", "Float128", "f128", "float256") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "Float256", "f256", "float512", "Float512") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "f512", "", "", "") == 1:
+    return 1
+  return 0
+
+# is_prelude_type_name: the numeric aliases plus the core prelude type names.
+def seal_prelude_type(src: var ptr, ts: var array[262144, int], te: var array[262144, int], i: int) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  if seal_any4(src, ts, te, i, "bool", "str", "binary", "Binary") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "unit", "list", "dict", "tuple") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "Option", "simd", "bytes", "stringview") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "ptr", "", "", "") == 1:
+    return 1
+  return seal_numeric_scalar(src, ts, te, i)
+
+# is_prelude_proc_name
+def seal_prelude_proc(src: var ptr, ts: var array[262144, int], te: var array[262144, int], i: int) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  if seal_any4(src, ts, te, i, "print", "sum", "dot", "norm") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "axpy", "disjoint_elem", "disjoint_row", "disjoint_slice") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "row_ok", "", "", "") == 1:
+    return 1
+  return 0
+
+# is_std_module_symbol (generated from std/**/*.li by scripts/gen-stdlib-manifest.sh)
+def seal_std_symbol(src: var ptr, ts: var array[262144, int], te: var array[262144, int], i: int) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  if seal_any4(src, ts, te, i, "__execution_decorators_doc", "Bytes", "StringView", "Reader") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "Writer", "bytes_len", "bytes_slice", "bytes_append") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "bytes_byte_at", "bytes_push_byte", "stringview_len", "stringview_byte_at") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "reader_new", "reader_remaining", "reader_read_byte", "reader_read_chunk") == 1:
+    return 1
+  if seal_any4(src, ts, te, i, "writer_new", "writer_push_byte", "writer_len", "") == 1:
+    return 1
+  return 0
+
+# Reports E0330 for a name reserved by the prelude or the std/ tree. The
+# prelude-type half applies to type aliases and procs alike (ns 0 = type alias,
+# 1 = proc); the prelude-proc half applies to procs only, and dstd exempts
+# files under std/ from the std-export half, as `check_stdlib_seal` does.
+def seal_check_reserved(src: var ptr, ts: var array[262144, int], te: var array[262144, int], i: int, ns: int, dstd: int, err: var array[1, int]) -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  var bad: int = 0
+  if seal_prelude_type(src, ts, te, i) == 1:
+    bad = 1
+  if ns == 1:
+    if seal_prelude_proc(src, ts, te, i) == 1:
+      bad = 1
+  if bad == 0:
+    if dstd == 0:
+      if seal_std_symbol(src, ts, te, i) == 1:
+        bad = 1
+  if bad == 1:
+    err[0] = 1
+    li_rt_emit_err(330)
+  return 1
+
+# `duplicate_definition` carries no error code in the C++ reference, so the
+# walker reports it through the 900/lic.error slot. The name is recorded either
+# way, matching the reference's set-insert semantics.
+def seal_check_dup(src: var ptr, ts: var array[262144, int], te: var array[262144, int], i: int, names: var array[256, int], nn: var array[1, int], err: var array[1, int]) -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  var k: int = 0
+  var seen: int = 0
+  while k < nn[0]:
+    if tok_eq(src, ts, te, names[k], i) == 1:
+      seen = 1
+    k = k + 1
+  if seen == 1:
+    err[0] = 1
+    li_rt_emit_err(900)
+  if nn[0] < 256:
+    names[nn[0]] = i
+    nn[0] = nn[0] + 1
+  return 1
+
+# One entry point for a top-level definition name: ns 0 = type alias,
+# ns 1 = proc / extern def / async def. Theorem/axiom/lemma declarations are
+# outside the module model the C++ reference checks (Module carries types and
+# procs only), so they are outside the seal as well.
+def seal_def_check(src: var ptr, ts: var array[262144, int], te: var array[262144, int], i: int, ns: int, dstd: int, tnames: var array[256, int], tn: var array[1, int], pnames: var array[256, int], pn: var array[1, int], err: var array[1, int]) -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  seal_check_reserved(src, ts, te, i, ns, dstd, err)
+  if ns == 0:
+    seal_check_dup(src, ts, te, i, tnames, tn, err)
+  else:
+    seal_check_dup(src, ts, te, i, pnames, pn, err)
+  return 1
+
 def check_source(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
@@ -3584,7 +3774,23 @@ def check_source(src: var ptr, tk: var array[262144, int], ts: var array[262144,
   var sym_aux: array[256, int]
   var sym_n: array[1, int]
   var cur_ret: array[1, int]
+  var seal_tn: array[256, int]
+  var seal_tc: array[1, int]
+  var seal_pn: array[256, int]
+  var seal_pc: array[1, int]
+  var seal_std: int = 0
   sym_n[0] = 0
+  seal_tc[0] = 0
+  seal_pc[0] = 0
+  # `defining_std`: a file under std/ may define std exports. The three path
+  # shapes are the C++ reference's (prelude.cpp `check_stdlib_seal`): a `std/`
+  # prefix, or `/std/` or `\std\` anywhere in the path.
+  if li_rt_str_prefix(li_rt_argv(2), "std/") == 1:
+    seal_std = 1
+  if li_rt_str_contains(li_rt_argv(2), "/std/") == 1:
+    seal_std = 1
+  if li_rt_str_contains(li_rt_argv(2), "\std\") == 1:
+    seal_std = 1
   skip_newlines(tk, n, pi, err)
   while cur_kind(tk, n, pi, err) != 0:
     var k: int = cur_kind(tk, n, pi, err)
@@ -3594,6 +3800,7 @@ def check_source(src: var ptr, tk: var array[262144, int], ts: var array[262144,
         err[0] = 1
         return 1
       var tn: int = pi[0]
+      seal_def_check(src, ts, te, tn, 0, seal_std, seal_tn, seal_tc, seal_pn, seal_pc, err)
       pi[0] = pi[0] + 1
       tc_record_type_params(tk, n, pi, err, sym_s, sym_kind, sym_ty, sym_n)
       expect_k(tk, n, pi, err, 58)
@@ -3608,6 +3815,7 @@ def check_source(src: var ptr, tk: var array[262144, int], ts: var array[262144,
       continue
     if k == 10:
       pi[0] = pi[0] + 1
+      seal_def_check(src, ts, te, pi[0], 1, seal_std, seal_tn, seal_tc, seal_pn, seal_pc, err)
       tc_record_proc(src, tk, ts, te, n, pi, err, 0, sym_s, sym_kind, sym_ty, sym_aux, sym_n)
       tc_skip_proc_tail(src, tk, ts, te, n, pi, err, 0)
       skip_newlines(tk, n, pi, err)
@@ -3616,6 +3824,7 @@ def check_source(src: var ptr, tk: var array[262144, int], ts: var array[262144,
       pi[0] = pi[0] + 1
       if cur_kind(tk, n, pi, err) == 10:
         pi[0] = pi[0] + 1
+        seal_def_check(src, ts, te, pi[0], 1, seal_std, seal_tn, seal_tc, seal_pn, seal_pc, err)
         tc_record_proc(src, tk, ts, te, n, pi, err, 1, sym_s, sym_kind, sym_ty, sym_aux, sym_n)
       tc_skip_proc_tail(src, tk, ts, te, n, pi, err, 1)
       skip_newlines(tk, n, pi, err)
@@ -3624,6 +3833,7 @@ def check_source(src: var ptr, tk: var array[262144, int], ts: var array[262144,
       pi[0] = pi[0] + 1
       if cur_kind(tk, n, pi, err) == 10:
         pi[0] = pi[0] + 1
+        seal_def_check(src, ts, te, pi[0], 1, seal_std, seal_tn, seal_tc, seal_pn, seal_pc, err)
       tc_record_proc(src, tk, ts, te, n, pi, err, 0, sym_s, sym_kind, sym_ty, sym_aux, sym_n)
       tc_skip_proc_tail(src, tk, ts, te, n, pi, err, 0)
       skip_newlines(tk, n, pi, err)
@@ -4034,9 +4244,15 @@ def fx_scan_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144,
     skip_newlines(tk, n, pi, err)
     fx_scan_block(src, tk, ts, te, n, pi, err, pn, peff, pext, pcnt, used, await_seen)
     return 1
+  if k == 76:
+    parse_decorator_list(src, tk, ts, te, n, pi, err, 0)
+    skip_newlines(tk, n, pi, err)
+    fx_scan_stmt(src, tk, ts, te, n, pi, err, pn, peff, pext, pcnt, used, await_seen)
+    return 1
   if k == 26:
     pi[0] = pi[0] + 1
-    fx_scan_expr(src, tk, ts, te, n, pi, err, pn, peff, pext, pcnt, used, await_seen)
+    var fh: array[3, int]
+    for_tail(src, tk, ts, te, n, pi, err, fh)
     skip_newlines(tk, n, pi, err)
     fx_scan_block(src, tk, ts, te, n, pi, err, pn, peff, pext, pcnt, used, await_seen)
     return 1
@@ -4274,7 +4490,15 @@ def bk_scalar_name(src: var ptr, ts: var array[262144, int], te: var array[26214
     return 1
   if tok_is(src, ts, te, i, "int64") == 1:
     return 1
+  if tok_is(src, ts, te, i, "long") == 1:
+    return 1
   if tok_is(src, ts, te, i, "bool") == 1:
+    return 1
+  if tok_is(src, ts, te, i, "ptr") == 1:
+    return 1
+  if tok_is(src, ts, te, i, "str") == 1:
+    return 1
+  if tok_is(src, ts, te, i, "float64") == 1:
     return 1
   if tok_is(src, ts, te, i, "f32") == 1:
     return 1
@@ -4345,17 +4569,17 @@ def bk_mark_moved(src: var ptr, ts: var array[262144, int], te: var array[262144
     k = k + 1
   return 0
 
-def bk_check_expr(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], min_prec: int, bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_n: var array[1, int]) -> int
+def bk_check_expr(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bo: int, min_prec: int, bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_n: var array[1, int], rq_proc: var array[256, int], rq_pi: var array[256, int], rq_op: var array[256, int], rq_lit: var array[256, int], rq_left: var array[256, int], rq_n: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
 =
   if cur_kind(tk, n, pi, err) == 39:
     pi[0] = pi[0] + 1
-    return bk_check_expr(src, tk, ts, te, n, pi, err, 100, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n)
+    return bk_check_expr(src, tk, ts, te, n, pi, err, bo, 100, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
   if cur_kind(tk, n, pi, err) == 60:
     pi[0] = pi[0] + 1
-  if bk_check_primary(src, tk, ts, te, n, pi, err, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n) == 0:
+  if bk_check_primary(src, tk, ts, te, n, pi, err, bo, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n) == 0:
     return 0
   while 1 == 1:
     var p: int = prec_of(cur_kind(tk, n, pi, err))
@@ -4364,11 +4588,11 @@ def bk_check_expr(src: var ptr, tk: var array[262144, int], ts: var array[262144
     if p < min_prec:
       break
     pi[0] = pi[0] + 1
-    if bk_check_expr(src, tk, ts, te, n, pi, err, p + 1, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n) == 0:
+    if bk_check_expr(src, tk, ts, te, n, pi, err, bo, p + 1, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n) == 0:
       return 0
   return 1
 
-def bk_check_primary(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_n: var array[1, int]) -> int
+def bk_check_primary(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bo: int, bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_n: var array[1, int], rq_proc: var array[256, int], rq_pi: var array[256, int], rq_op: var array[256, int], rq_lit: var array[256, int], rq_left: var array[256, int], rq_n: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -4376,28 +4600,33 @@ def bk_check_primary(src: var ptr, tk: var array[262144, int], ts: var array[262
   var k: int = cur_kind(tk, n, pi, err)
   if k == 34:
     pi[0] = pi[0] + 1
-    if bk_check_primary(src, tk, ts, te, n, pi, err, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n) == 0:
+    if bk_check_primary(src, tk, ts, te, n, pi, err, bo, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n) == 0:
       return 0
-    return bk_check_postfix(src, tk, ts, te, n, pi, err, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n)
+    return bk_check_postfix(src, tk, ts, te, n, pi, err, bo, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
   if k == 8 or k == 5 or k == 6 or k == 7:
     pi[0] = pi[0] + 1
-    return bk_check_postfix(src, tk, ts, te, n, pi, err, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n)
+    return bk_check_postfix(src, tk, ts, te, n, pi, err, bo, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
   if k == 4 or k == 46 or k == 35 or k == 36:
     var t4: int = pi[0]
     pi[0] = pi[0] + 1
     if accept_k(tk, n, pi, err, 49) == 1:
+      var arg_toks: array[16, int]
+      var argc: int = 0
       if cur_kind(tk, n, pi, err) != 50:
         var j: int = 0
         var done: int = 0
         while done == 0:
           var arg_plain: int = 0
           var arg_tok: int = pi[0]
+          if argc < 16:
+            arg_toks[argc] = arg_tok
+            argc = argc + 1
           if cur_kind(tk, n, pi, err) == 4:
             if peek_off(tk, n, pi, 1) == 55 or peek_off(tk, n, pi, 1) == 50:
               arg_plain = 1
-          if bk_check_expr(src, tk, ts, te, n, pi, err, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n) == 0:
+          if bk_check_expr(src, tk, ts, te, n, pi, err, bo, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n) == 0:
             return 0
-          if arg_plain == 1:
+          if arg_plain == 1 and bo == 1:
             var pidx: int = bk_proc_index(src, ts, te, bp_name, bp_cnt, t4)
             if pidx >= 0:
               if bk_param_moves(bp_np, bp_pv, bp_ps, pidx, j) == 1:
@@ -4408,18 +4637,20 @@ def bk_check_primary(src: var ptr, tk: var array[262144, int], ts: var array[262
           else:
             done = 1
       expect_k(tk, n, pi, err, 50)
+      rq_check_call(src, tk, ts, te, n, pi, err, t4, arg_toks, argc, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
     else:
-      bk_check_use(src, ts, te, ls_name, ls_moved, ls_mb, ls_n, t4, err)
-    return bk_check_postfix(src, tk, ts, te, n, pi, err, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n)
+      if bo == 1:
+        bk_check_use(src, ts, te, ls_name, ls_moved, ls_mb, ls_n, t4, err)
+    return bk_check_postfix(src, tk, ts, te, n, pi, err, bo, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
   if accept_k(tk, n, pi, err, 49) == 1:
-    if bk_check_expr(src, tk, ts, te, n, pi, err, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n) == 0:
+    if bk_check_expr(src, tk, ts, te, n, pi, err, bo, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n) == 0:
       return 0
     expect_k(tk, n, pi, err, 50)
-    return bk_check_postfix(src, tk, ts, te, n, pi, err, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n)
+    return bk_check_postfix(src, tk, ts, te, n, pi, err, bo, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
   err[0] = 1
   return 0
 
-def bk_check_postfix(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_n: var array[1, int]) -> int
+def bk_check_postfix(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bo: int, bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_n: var array[1, int], rq_proc: var array[256, int], rq_pi: var array[256, int], rq_op: var array[256, int], rq_lit: var array[256, int], rq_left: var array[256, int], rq_n: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -4429,28 +4660,36 @@ def bk_check_postfix(src: var ptr, tk: var array[262144, int], ts: var array[262
     if cur_kind(tk, n, pi, err) == 72:
       pi[0] = pi[0] + 1
       pi[0] = pi[0] + 1
+      var mcall: int = pi[0] - 1
       if accept_k(tk, n, pi, err, 49) == 1:
+        var arg_toks: array[16, int]
+        var argc: int = 0
         if cur_kind(tk, n, pi, err) != 50:
           var done: int = 0
           while done == 0:
-            if bk_check_expr(src, tk, ts, te, n, pi, err, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n) == 0:
+            var at2: int = pi[0]
+            if argc < 16:
+              arg_toks[argc] = at2
+              argc = argc + 1
+            if bk_check_expr(src, tk, ts, te, n, pi, err, bo, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n) == 0:
               return 0
             if accept_k(tk, n, pi, err, 55) == 1:
               done = 0
             else:
               done = 1
         expect_k(tk, n, pi, err, 50)
+        rq_check_call(src, tk, ts, te, n, pi, err, mcall, arg_toks, argc, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
       continue
     if cur_kind(tk, n, pi, err) == 51:
       pi[0] = pi[0] + 1
-      if bk_check_expr(src, tk, ts, te, n, pi, err, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n) == 0:
+      if bk_check_expr(src, tk, ts, te, n, pi, err, bo, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n) == 0:
         return 0
       expect_k(tk, n, pi, err, 52)
       continue
     loop = 0
   return 1
 
-def bk_check_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_ib: var array[256, int], ls_n: var array[1, int]) -> int
+def bk_check_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bo: int, bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_ib: var array[256, int], ls_n: var array[1, int], rq_proc: var array[256, int], rq_pi: var array[256, int], rq_op: var array[256, int], rq_lit: var array[256, int], rq_left: var array[256, int], rq_n: var array[1, int]) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -4463,12 +4702,13 @@ def bk_check_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144
     expect_k(tk, n, pi, err, 56)
     parse_type(src, tk, ts, te, n, pi, err, 0)
     if accept_k(tk, n, pi, err, 58) == 1:
-      bk_check_expr(src, tk, ts, te, n, pi, err, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n)
-    ls_name[ls_n[0]] = vn
-    ls_moved[ls_n[0]] = 0
-    ls_mb[ls_n[0]] = 0
-    ls_ib[ls_n[0]] = 0
-    ls_n[0] = ls_n[0] + 1
+      bk_check_expr(src, tk, ts, te, n, pi, err, bo, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
+    if bo == 1:
+      ls_name[ls_n[0]] = vn
+      ls_moved[ls_n[0]] = 0
+      ls_mb[ls_n[0]] = 0
+      ls_ib[ls_n[0]] = 0
+      ls_n[0] = ls_n[0] + 1
     return 1
   if k == 4:
     if tok_is(src, ts, te, pi[0], "borrow") == 1:
@@ -4491,7 +4731,7 @@ def bk_check_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144
       if parse_primary(src, tk, ts, te, n, pi, err, 0) == 0:
         return 1
       parse_postfix(src, tk, ts, te, n, pi, err, 0)
-      if src_ident == 1:
+      if src_ident == 1 and bo == 1:
         bk_check_use(src, ts, te, ls_name, ls_moved, ls_mb, ls_n, src_tok, err)
         var k2: int = 0
         while k2 < ls_n[0]:
@@ -4508,11 +4748,12 @@ def bk_check_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144
               ls_ib[k2] = ls_ib[k2] + 1
             k2 = ls_n[0]
           k2 = k2 + 1
-      ls_name[ls_n[0]] = bname
-      ls_moved[ls_n[0]] = 0
-      ls_mb[ls_n[0]] = 0
-      ls_ib[ls_n[0]] = 0
-      ls_n[0] = ls_n[0] + 1
+      if bo == 1:
+        ls_name[ls_n[0]] = bname
+        ls_moved[ls_n[0]] = 0
+        ls_mb[ls_n[0]] = 0
+        ls_ib[ls_n[0]] = 0
+        ls_n[0] = ls_n[0] + 1
       return 1
     if tok_is(src, ts, te, pi[0], "discard") == 1:
       pi[0] = pi[0] + 1
@@ -4522,34 +4763,59 @@ def bk_check_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144
     if cur_kind(tk, n, pi, err) != 1:
       if cur_kind(tk, n, pi, err) != 3:
         if cur_kind(tk, n, pi, err) != 0:
-          bk_check_expr(src, tk, ts, te, n, pi, err, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n)
+          bk_check_expr(src, tk, ts, te, n, pi, err, bo, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
     return 1
   if k == 22:
     pi[0] = pi[0] + 1
-    bk_check_expr(src, tk, ts, te, n, pi, err, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n)
+    bk_check_expr(src, tk, ts, te, n, pi, err, bo, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
     expect_k(tk, n, pi, err, 56)
     skip_newlines(tk, n, pi, err)
-    bk_check_block(src, tk, ts, te, n, pi, err, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_ib, ls_n)
+    bk_check_block(src, tk, ts, te, n, pi, err, bo, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_ib, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
     var tail_done: int = 0
     while tail_done == 0:
       skip_newlines(tk, n, pi, err)
       if cur_kind(tk, n, pi, err) == 24:
         pi[0] = pi[0] + 1
-        parse_expr(src, tk, ts, te, n, pi, err, 0, 0)
+        bk_check_expr(src, tk, ts, te, n, pi, err, bo, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
         expect_k(tk, n, pi, err, 56)
         skip_newlines(tk, n, pi, err)
-        parse_block(src, tk, ts, te, n, pi, err, 0)
+        bk_check_block(src, tk, ts, te, n, pi, err, bo, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_ib, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
       else:
         if cur_kind(tk, n, pi, err) == 23:
           pi[0] = pi[0] + 1
           expect_k(tk, n, pi, err, 56)
           skip_newlines(tk, n, pi, err)
-          parse_block(src, tk, ts, te, n, pi, err, 0)
+          bk_check_block(src, tk, ts, te, n, pi, err, bo, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_ib, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
           tail_done = 1
         else:
           tail_done = 1
     return 1
-  if k == 25 or k == 26 or k == 27 or k == 28 or k == 76:
+  if k == 25:
+    pi[0] = pi[0] + 1
+    bk_check_expr(src, tk, ts, te, n, pi, err, bo, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
+    if cur_kind(tk, n, pi, err) == 56:
+      pi[0] = pi[0] + 1
+    skip_newlines(tk, n, pi, err)
+    # A loop body runs the requires-clause check (C++'s typecheck descends into
+    # while bodies) but not the move/borrow bookkeeping: C++'s borrowck only
+    # walks if/else bodies, so loop bodies stay opaque to it.
+    bk_check_block(src, tk, ts, te, n, pi, err, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_ib, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
+    return 1
+  if k == 26:
+    pi[0] = pi[0] + 1
+    var fh: array[3, int]
+    for_tail(src, tk, ts, te, n, pi, err, fh)
+    skip_newlines(tk, n, pi, err)
+    # Loop bodies run the requires-clause check but not the move/borrow
+    # bookkeeping: C++'s borrowck only walks if/else bodies.
+    bk_check_block(src, tk, ts, te, n, pi, err, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_ib, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
+    return 1
+  if k == 76:
+    parse_decorator_list(src, tk, ts, te, n, pi, err, 0)
+    skip_newlines(tk, n, pi, err)
+    bk_check_stmt(src, tk, ts, te, n, pi, err, bo, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_ib, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
+    return 1
+  if k == 27 or k == 28:
     parse_stmt(src, tk, ts, te, n, pi, err, 0)
     return 1
   if k == 4:
@@ -4562,13 +4828,13 @@ def bk_check_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144
     ok = parse_postfix(src, tk, ts, te, n, pi, err, 0)
   if ok == 1:
     if accept_k(tk, n, pi, err, 58) == 1:
-      bk_check_expr(src, tk, ts, te, n, pi, err, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n)
+      bk_check_expr(src, tk, ts, te, n, pi, err, bo, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
       return 1
   pi[0] = save
-  bk_check_expr(src, tk, ts, te, n, pi, err, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n)
+  bk_check_expr(src, tk, ts, te, n, pi, err, bo, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
   return 1
 
-def bk_check_block(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_ib: var array[256, int], ls_n: var array[1, int]) -> int
+def bk_check_block(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bo: int, bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_ib: var array[256, int], ls_n: var array[1, int], rq_proc: var array[256, int], rq_pi: var array[256, int], rq_op: var array[256, int], rq_lit: var array[256, int], rq_left: var array[256, int], rq_n: var array[1, int]) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -4583,14 +4849,14 @@ def bk_check_block(src: var ptr, tk: var array[262144, int], ts: var array[26214
     if cur_kind(tk, n, pi, err) == 0:
       break
     var before: int = pi[0]
-    bk_check_stmt(src, tk, ts, te, n, pi, err, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_ib, ls_n)
+    bk_check_stmt(src, tk, ts, te, n, pi, err, bo, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_ib, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
     if pi[0] == before:
       break
     skip_newlines(tk, n, pi, err)
   expect_k(tk, n, pi, err, 3)
   return 1
 
-def bk_skip_params_rec(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], idx: int) -> int
+def bk_skip_params_rec(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], rp_np: var array[256, int], rp_ps: var array[4096, int], idx: int) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -4602,6 +4868,7 @@ def bk_skip_params_rec(src: var ptr, tk: var array[262144, int], ts: var array[2
     while done == 0:
       skip_param_layout(tk, n, pi, err)
       if cur_kind(tk, n, pi, err) == 4:
+        var pn: int = pi[0]
         pi[0] = pi[0] + 1
         expect_k(tk, n, pi, err, 56)
         var isv: int = 0
@@ -4617,6 +4884,8 @@ def bk_skip_params_rec(src: var ptr, tk: var array[262144, int], ts: var array[2
             bp_pv[idx * 16 + j] = isv
             bp_ps[idx * 16 + j] = sc
             bp_np[idx] = j + 1
+            rp_ps[idx * 16 + j] = pn
+            rp_np[idx] = j + 1
         j = j + 1
       skip_param_layout(tk, n, pi, err)
       if accept_k(tk, n, pi, err, 55) == 1:
@@ -4656,6 +4925,187 @@ def bk_skip_params_decl(src: var ptr, tk: var array[262144, int], ts: var array[
   expect_k(tk, n, pi, err, 50)
   return 1
 
+# ---- requires-clause call-site check (C++ E0304 parity) ----
+# borrow_check's phase 1 records each proc's `requires param op literal`
+# clauses (rq_capture_clause); its phase 2 walk hooks bk_check_primary /
+# bk_check_postfix, which flag calls whose matching argument is an int
+# literal that makes the clause false (e.g. `callee(-1)` under `requires
+# x >= 0`), via rq_check_call.
+
+def rq_lit_val(src: var ptr, ts: var array[262144, int], te: var array[262144, int], p: int) -> int
+  requires true
+  ensures result >= 0
+  decreases 0
+=
+  if peek_tk(ts, p + 0) == 60:
+    if peek_tk(ts, p + 1) == 5:
+      return 0 - int_text_value(src, ts, te, p + 1)
+    return 0
+  if peek_tk(ts, p + 0) == 5:
+    return int_text_value(src, ts, te, p + 0)
+  if peek_tk(ts, p + 0) == 7:
+    var s: int = peek_tk(ts, p + 0)
+    var e: int = peek_tk(te, p + 0)
+    var v: int = 0
+    var q: int = s + 2
+    while q < e:
+      v = v * 2
+      if li_rt_str_char_at(src, q + 0) == 49:
+        v = v + 1
+      q = q + 1
+    return v
+  return 0
+
+def rq_op_violated(opk: int, l: int, r: int) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  if opk == 70:
+    if l == r:
+      return 0
+    return 1
+  if opk == 71:
+    if l != r:
+      return 0
+    return 1
+  if opk == 66:
+    if l <= r:
+      return 0
+    return 1
+  if opk == 67:
+    if l < r:
+      return 0
+    return 1
+  if opk == 68:
+    if l >= r:
+      return 0
+    return 1
+  if opk == 69:
+    if l > r:
+      return 0
+    return 1
+  return 0
+
+def rq_skip_nl_at(tk: var array[262144, int], n: var array[1, int], q: int) -> int
+  requires true
+  ensures result >= 0
+  decreases 0
+=
+  while q < n[0]:
+    if peek_tk(tk, q + 0) == 1:
+      q = q + 1
+      continue
+    break
+  return q
+
+def rq_capture_clause(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], pidx: int, name_tok: int, rp_np: var array[256, int], rp_ps: var array[4096, int], rq_proc: var array[256, int], rq_pi: var array[256, int], rq_op: var array[256, int], rq_lit: var array[256, int], rq_left: var array[256, int], rq_n: var array[1, int]) raises IO -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  var p: int = rq_skip_nl_at(tk, n, pi[0] + 1)
+  if peek_tk(tk, p + 0) == 36:
+    if rq_n[0] < 256:
+      rq_proc[rq_n[0]] = name_tok
+      rq_pi[rq_n[0]] = -1
+      rq_op[rq_n[0]] = 0
+      rq_lit[rq_n[0]] = 0
+      rq_left[rq_n[0]] = 0
+      rq_n[0] = rq_n[0] + 1
+    return 1
+  if peek_tk(tk, p + 0) == 4:
+    var q: int = rq_skip_nl_at(tk, n, p + 1)
+    var opk: int = peek_tk(tk, q + 0)
+    if opk == 66 or opk == 67 or opk == 68 or opk == 69 or opk == 70 or opk == 71:
+      var litp: int = rq_skip_nl_at(tk, n, q + 1)
+      if peek_tk(tk, litp + 0) == 60:
+        litp = litp + 1
+      if peek_tk(tk, litp + 0) == 5 or peek_tk(tk, litp + 0) == 7:
+        var a: int = 0
+        while a < rp_np[pidx]:
+          if tok_eq(src, ts, te, peek256(rp_ps, pidx * 16 + a), p + 0) == 1:
+            if rq_n[0] < 256:
+              rq_proc[rq_n[0]] = name_tok
+              rq_pi[rq_n[0]] = a
+              rq_op[rq_n[0]] = opk
+              rq_lit[rq_n[0]] = rq_lit_val(src, ts, te, litp + 0)
+              rq_left[rq_n[0]] = 1
+              rq_n[0] = rq_n[0] + 1
+            return 1
+          a = a + 1
+  if peek_tk(tk, p + 0) == 5 or peek_tk(tk, p + 0) == 7 or peek_tk(tk, p + 0) == 60:
+    var lit2: int = p
+    if peek_tk(tk, lit2 + 0) == 60:
+      lit2 = lit2 + 1
+    if peek_tk(tk, lit2 + 0) == 5 or peek_tk(tk, lit2 + 0) == 7:
+      var q2: int = rq_skip_nl_at(tk, n, p + 1)
+      var op2: int = peek_tk(tk, q2 + 0)
+      if op2 == 66 or op2 == 67 or op2 == 68 or op2 == 69 or op2 == 70 or op2 == 71:
+        var p2: int = rq_skip_nl_at(tk, n, q2 + 1)
+        if peek_tk(tk, p2 + 0) == 4:
+          var b: int = 0
+          while b < rp_np[pidx]:
+            if tok_eq(src, ts, te, peek256(rp_ps, pidx * 16 + b), p2 + 0) == 1:
+              if rq_n[0] < 256:
+                rq_proc[rq_n[0]] = name_tok
+                rq_pi[rq_n[0]] = b
+                rq_op[rq_n[0]] = op2
+                rq_lit[rq_n[0]] = rq_lit_val(src, ts, te, lit2 + 0)
+                rq_left[rq_n[0]] = 0
+                rq_n[0] = rq_n[0] + 1
+              return 1
+            b = b + 1
+  return 1
+
+def rq_arg_lit(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], p: int, has: var array[1, int]) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  if peek_tk(tk, p + 0) == 60:
+    if peek_tk(tk, p + 1) == 5:
+      has[0] = 1
+      return 0 - int_text_value(src, ts, te, p + 1)
+    has[0] = 0
+    return 0
+  if peek_tk(tk, p + 0) == 5:
+    has[0] = 1
+    return int_text_value(src, ts, te, p + 0)
+  if peek_tk(tk, p + 0) == 7:
+    has[0] = 1
+    return rq_lit_val(src, ts, te, p + 0)
+  has[0] = 0
+  return 0
+
+def rq_check_call(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], callee: int, arg_toks: var array[16, int], argc: int, rq_proc: var array[256, int], rq_pi: var array[256, int], rq_op: var array[256, int], rq_lit: var array[256, int], rq_left: var array[256, int], rq_n: var array[1, int]) raises IO -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  var i: int = 0
+  while i < rq_n[0]:
+    if tok_eq(src, ts, te, peek256(rq_proc, i), callee) == 1:
+      var ap: int = peek256(rq_pi, i)
+      if ap < 0:
+        err[0] = 1
+        li_rt_emit_err(304)
+      else:
+        if ap < argc:
+          var has: array[1, int]
+          var av: int = rq_arg_lit(src, tk, ts, te, arg_toks[ap], has)
+          if has[0] == 1:
+            var bad: int = 0
+            if peek256(rq_left, i) == 1:
+              bad = rq_op_violated(peek256(rq_op, i), av, peek256(rq_lit, i))
+            else:
+              bad = rq_op_violated(peek256(rq_op, i), peek256(rq_lit, i), av)
+            if bad == 1:
+              err[0] = 1
+              li_rt_emit_err(304)
+    i = i + 1
+  return 1
+
 def borrow_check(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int]) -> int
   requires true
   ensures result == 0 or result == 1
@@ -4673,7 +5123,16 @@ def borrow_check(src: var ptr, tk: var array[262144, int], ts: var array[262144,
   var ls_mb: array[256, int]
   var ls_ib: array[256, int]
   var ls_n: array[1, int]
+  var rp_np: array[256, int]
+  var rp_ps: array[4096, int]
+  var rq_proc: array[256, int]
+  var rq_pi: array[256, int]
+  var rq_op: array[256, int]
+  var rq_lit: array[256, int]
+  var rq_left: array[256, int]
+  var rq_n: array[1, int]
   bp_cnt[0] = 0
+  rq_n[0] = 0
   pend[0] = 0
   pi[0] = 0
   skip_newlines(tk, n, pi, err)
@@ -4722,14 +5181,18 @@ def borrow_check(src: var ptr, tk: var array[262144, int], ts: var array[262144,
         bp_cnt[0] = bp_cnt[0] + 1
       fx_skip_typeparams(tk, n, pi, err)
       expect_k(tk, n, pi, err, 49)
-      bk_skip_params_rec(src, tk, ts, te, n, pi, err, bp_np, bp_pv, bp_ps, idx)
+      bk_skip_params_rec(src, tk, ts, te, n, pi, err, bp_np, bp_pv, bp_ps, rp_np, rp_ps, idx)
       fx_record_raises(src, tk, ts, te, n, pi, err, decl)
       if accept_k(tk, n, pi, err, 57) == 1:
         parse_type(src, tk, ts, te, n, pi, err, 0)
       fx_record_raises(src, tk, ts, te, n, pi, err, decl)
       while 1 == 1:
         var ck: int = cur_kind(tk, n, pi, err)
-        if ck == 41 or ck == 42 or ck == 43 or ck == 44 or ck == 45:
+        if ck == 41:
+          rq_capture_clause(src, tk, ts, te, n, pi, err, idx, nm, rp_np, rp_ps, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
+          parse_contract(src, tk, ts, te, n, pi, err, 0)
+          continue
+        if ck == 42 or ck == 43 or ck == 44 or ck == 45:
           parse_contract(src, tk, ts, te, n, pi, err, 0)
           continue
         break
@@ -4802,7 +5265,7 @@ def borrow_check(src: var ptr, tk: var array[262144, int], ts: var array[262144,
         if accept_k(tk, n, pi, err, 58) == 1:
           skip_newlines(tk, n, pi, err)
           if cur_kind(tk, n, pi, err) == 2:
-            bk_check_block(src, tk, ts, te, n, pi, err, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_ib, ls_n)
+            bk_check_block(src, tk, ts, te, n, pi, err, 1, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_ib, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n)
       skip_newlines(tk, n, pi, err)
       continue
     err[0] = 1
@@ -5695,6 +6158,10 @@ def encap_check(src: var ptr, tk: var array[262144, int], ts: var array[262144, 
   # object/field tables as text, so field-privacy checks see imported types.
   # The imported file is lexed into the shared arrays, collected, then the
   # main file is re-lexed back (the token stream is deterministic).
+  # Import-cycle detection mirrors the C++ resolve_module_imports loading
+  # set: when a resolved import's own imports resolve back to the current
+  # file (or to an import already being merged), the module graph is cyclic
+  # and both files reject (li-tests/modules/import_cycle_a/b).
   pi[0] = 0
   skip_newlines(tk, n, pi, err)
   while cur_kind(tk, n, pi, err) != 0:
@@ -5705,13 +6172,32 @@ def encap_check(src: var ptr, tk: var array[262144, int], ts: var array[262144, 
         pi[0] = pi[0] + 1
         var imp: ptr = li_rt_resolve_import(li_rt_argv(2), ec_tok_text(src, ts, te, mod_tok))
         if imp != 0:
+          var imp_path: ptr = li_rt_resolve_import_last_path()
+          var cyc: int = 0
           n[0] = 0
           var r1: int = lex_source(imp, tk, ts, te, n, 0)
           var pi2: array[1, int]
           pi2[0] = 0
+          skip_newlines(tk, n, pi2, err)
+          while cur_kind(tk, n, pi2, err) != 0:
+            if cur_kind(tk, n, pi2, err) == 18:
+              pi2[0] = pi2[0] + 1
+              if cur_kind(tk, n, pi2, err) == 4:
+                var nm2: int = pi2[0]
+                pi2[0] = pi2[0] + 1
+                var imp2: ptr = li_rt_resolve_import(imp_path, ec_tok_text(imp, ts, te, nm2))
+                if imp2 != 0:
+                  if li_rt_str_eq(li_rt_resolve_import_last_path(), li_rt_argv(2)) == 1:
+                    cyc = 1
+                skip_newlines(tk, n, pi2, err)
+                continue
+            pi2[0] = pi2[0] + 1
           ec_collect_import_objects(imp, tk, ts, te, n, pi2, err, im_ob, im_fd_name, im_fd_priv, im_fd_owner, im_ob_cnt, im_fd_cnt)
           n[0] = 0
           var r2: int = lex_source(src, tk, ts, te, n, 0)
+          if cyc == 1:
+            err[0] = 1
+            li_rt_emit_err(900)
       skip_newlines(tk, n, pi, err)
       continue
     pi[0] = pi[0] + 1
@@ -6257,7 +6743,7 @@ def d_alloc(darena: var array[65536, int],  dasp: var array[1, int],  kind: int,
 
 # Emit INS with a mangled name like __li_o_<base>_<field>
 # format: INS op iv 0 <mangled_name>      0 0 0 1  0 <flags> ...
-def mir_ins_mangled(src: var ptr, op: int, iv: int, base_s: int, base_e: int, fld_s: int, fld_e: int, flag1: int, flag2: int, val: int, lastop: var array[1, int], rhs_s: int, rhs_e: int, rhs_t: int, rhs_p_s: int, rhs_p_e: int, rhs_f_s: int, rhs_f_e: int, fld_src_fallback: int, arr_flt: int) raises IO -> int
+def mir_ins_mangled(src: var ptr, op: int, iv: int, base_s: int, base_e: int, fld_s: int, fld_e: int, flag1: int, flag2: int, val: int, lastop: var array[1, int], rhs_s: int, rhs_e: int, rhs_t: int, rhs_p_s: int, rhs_p_e: int, rhs_f_s: int, rhs_f_e: int, arr_flt: int) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -6273,22 +6759,12 @@ def mir_ins_mangled(src: var ptr, op: int, iv: int, base_s: int, base_e: int, fl
   li_rt_mir_str("__li_o_")
   li_rt_mir_esc(src, base_s, base_e)
   li_rt_mir_str("_")
-  # Field name slices: the alloc/copy paths read type-declared field positions
-  # that are relative to the type's defining file, which the caller stored in
-  # the -1 type-source slot. But user-written field access/stores (out.detail,
-  # fld_src_fallback != 0) carry offsets relative to this caller's src buffer,
-  # regardless of where the object type is declared - so they must read from src.
-  # Reading them from -1 picks up whatever unrelated type was last registered,
-  # which for an imported-typed local object is the wrong buffer (NUL/garbage,
-  # and it shifts across runs). Honor the caller's src for the fallback flag.
-  if fld_src_fallback == 1:
-    li_rt_mir_esc(src, fld_s, fld_e)
-  else:
-    var fs2: ptr = li_rt_type_src_get(-1)
-    if fs2 == 0:
-      li_rt_mir_esc(src, fld_s, fld_e)
-    else:
-      li_rt_mir_esc(fs2, fld_s, fld_e)
+  # Field name offsets for user-written field access/stores are relative to
+  # this caller's src buffer, regardless of where the object type is declared,
+  # so they always read from src. Type-declared positions go through the
+  # objname/fieldpath registries instead, which resolve each segment against
+  # the file that declares it.
+  li_rt_mir_esc(src, fld_s, fld_e)
   # empty name cells: str_value, callee, lhs_ident (each needs its own
   # separator space, so 4 spaces land before rhs_ident like C++ mir_dump)
   li_rt_ast_space()
@@ -6369,10 +6845,12 @@ def mir_ins_mangled(src: var ptr, op: int, iv: int, base_s: int, base_e: int, fl
   lastop[0] = op
   return 0
 
-# Emit INS with a nested-object mangled name __li_o_<base>_<p>_<fld>
-# (e.g. `s.swapchain.backend_id` -> __li_o_s_swapchain_backend_id). Same
-# field layout as mir_ins_mangled; p_s/p_e is the parent object field.
-def mir_ins_mangled_nested(src: var ptr, op: int, iv: int, base_s: int, base_e: int, p_s: int, p_e: int, fld_s: int, fld_e: int, flag1: int, flag2: int, val: int, lastop: var array[1, int], arr_flt: int) raises IO -> int
+# Emit INS with an object leaf name held in the objname registry. The entry
+# carries the full accumulated field path (__li_o_<base>[_<parent>...]_<leaf>),
+# so a 3-level chain keeps every segment, and each segment was rendered
+# against the type that declares it when its prefix was registered. Same cell
+# layout as mir_ins_mangled.
+def mir_ins_mangled_oi(op: int, iv: int, oi: int, flag1: int, flag2: int, val: int, lastop: var array[1, int], arr_flt: int) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -6385,18 +6863,7 @@ def mir_ins_mangled_nested(src: var ptr, op: int, iv: int, base_s: int, base_e: 
   li_rt_ast_space()
   li_rt_ast_int(0)
   li_rt_ast_space()
-  li_rt_mir_str("__li_o_")
-  li_rt_mir_esc(src, base_s, base_e)
-  li_rt_mir_str("_")
-  # Field positions are type-source-relative (captured by mir_obj_reg_field
-  # against the type's defining file), so read p_s/p_e and fld_s/fld_e from
-  # the type source stored during allocation, not the caller's src buffer.
-  var nsrc2: ptr = li_rt_type_src_get(-1)
-  if nsrc2 == 0:
-    nsrc2 = src
-  li_rt_mir_esc(nsrc2, p_s, p_e)
-  li_rt_mir_str("_")
-  li_rt_mir_esc(nsrc2, fld_s, fld_e)
+  li_rt_mir_objname_out(oi)
   # empty name cells: str_value, callee, lhs_ident (4 spaces before rhs)
   li_rt_ast_space()
   li_rt_ast_space()
@@ -6446,9 +6913,11 @@ def mir_ins_mangled_nested(src: var ptr, op: int, iv: int, base_s: int, base_e: 
   return 0
 
 # Recursively emit LocalAlloc (INS 24/35/9) for every leaf field of an object
-# type, flattening nested object fields into compound mangled slots. p_s/p_e
-# is the enclosing object field name (-1 at the top level).
-def mir_obj_alloc_fields(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], itmp: var array[4096, int],  base_s: int,  base_e: int,  type_idx: int,  p_s: int,  p_e: int, lastop: var array[1, int]) raises IO -> int
+# type. Every leaf takes a registered compound prefix name, so nested object
+# fields flatten to their full path and each path segment is read from the type
+# that declares it. prefix_oi is the accumulated objname index (-1 at the top
+# level, where base_s/base_e name the object var).
+def mir_obj_alloc_fields(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], itmp: var array[4096, int],  base_s: int,  base_e: int,  type_idx: int,  prefix_oi: int, lastop: var array[1, int]) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -6463,33 +6932,29 @@ def mir_obj_alloc_fields(src: var ptr,  ts: var array[262144, int],  te: var arr
   var fa_a: array[2, int]
   while i_a < nf_a:
     mir_obj_field_name(itmp, type_idx, i_a, fa_a)
+    var oi_a: int = 0
+    if prefix_oi < 0:
+      oi_a = li_rt_mir_objname_reg_prefix(src, base_s, base_e, fa_a[0], fa_a[1], 0, 0, tsrc)
+    else:
+      oi_a = li_rt_mir_objname_add_nested(prefix_oi, tsrc, fa_a[0], fa_a[1])
     var sub_a: int = mir_obj_field_obj_type(src, ts, te, itmp, type_idx, i_a)
     if sub_a >= 0:
-      mir_obj_alloc_fields(src, ts, te, itmp, base_s, base_e, sub_a, fa_a[0], fa_a[1], lastop)
+      mir_obj_alloc_fields(src, ts, te, itmp, base_s, base_e, sub_a, oi_a, lastop)
     else:
       var elems_a: int = mir_obj_field_elems(itmp, type_idx, i_a)
       if elems_a > 0:
-        if p_s >= 0:
-          mir_ins_mangled_nested(src, 9, elems_a, base_s, base_e, p_s, p_e, fa_a[0], fa_a[1], 0, 1, 0, lastop, mir_obj_field_float(itmp, type_idx, i_a))
-        else:
-          mir_ins_mangled(src, 9, elems_a, base_s, base_e, fa_a[0], fa_a[1], 0, 1, 0, lastop, -1, -1, -1, -1, -1, -1, -1, 0, mir_obj_field_float(itmp, type_idx, i_a))
+        mir_ins_mangled_oi(9, elems_a, oi_a, 0, 1, 0, lastop, mir_obj_field_float(itmp, type_idx, i_a))
       else:
         if mir_obj_field_float(itmp, type_idx, i_a) == 1:
-          if p_s >= 0:
-            mir_ins_mangled_nested(src, 35, 0, base_s, base_e, p_s, p_e, fa_a[0], fa_a[1], 0, 1, 0, lastop, 0)
-          else:
-            mir_ins_mangled(src, 35, 0, base_s, base_e, fa_a[0], fa_a[1], 0, 1, 0, lastop, -1, -1, -1, -1, -1, -1, -1, 0, 0)
+          mir_ins_mangled_oi(35, 0, oi_a, 0, 1, 0, lastop, 0)
         else:
-          if p_s >= 0:
-            mir_ins_mangled_nested(src, 24, 0, base_s, base_e, p_s, p_e, fa_a[0], fa_a[1], 0, 1, 0, lastop, 0)
-          else:
-            mir_ins_mangled(src, 24, 0, base_s, base_e, fa_a[0], fa_a[1], 0, 1, 0, lastop, -1, -1, -1, -1, -1, -1, -1, 0, 0)
+          mir_ins_mangled_oi(24, 0, oi_a, 0, 1, 0, lastop, 0)
     i_a = i_a + 1
   return 0
 
 # Recursively emit LocalAlloc for a return-object cr<N> temp, flattening
 # nested object fields: __li_o___cr<N>[_<parent>_]<leaf>.
-def mir_cr_alloc_fields(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], itmp: var array[4096, int],  crid: int,  type_idx: int,  p_s: int,  p_e: int) raises IO -> int
+def mir_cr_alloc_fields(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], itmp: var array[4096, int],  crid: int,  type_idx: int,  prefix_oi: int) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -6503,9 +6968,14 @@ def mir_cr_alloc_fields(src: var ptr,  ts: var array[262144, int],  te: var arra
   var fa_c: array[2, int]
   while i_c < nf_c:
     mir_obj_field_name(itmp, type_idx, i_c, fa_c)
+    var oi_c: int = 0
+    if prefix_oi < 0:
+      oi_c = li_rt_mir_objname_reg_prefix(src, 0, 0, fa_c[0], fa_c[1], 1, crid, tsrc)
+    else:
+      oi_c = li_rt_mir_objname_add_nested(prefix_oi, tsrc, fa_c[0], fa_c[1])
     var sub_c: int = mir_obj_field_obj_type(src, ts, te, itmp, type_idx, i_c)
     if sub_c >= 0:
-      mir_cr_alloc_fields(src,  ts,  te,  itmp,  crid,  sub_c,  fa_c[0],  fa_c[1])
+      mir_cr_alloc_fields(src,  ts,  te,  itmp,  crid,  sub_c,  oi_c)
     else:
       var cop_c: int = 24
       var iv_c: int = 0
@@ -6526,13 +6996,7 @@ def mir_cr_alloc_fields(src: var ptr,  ts: var array[262144, int],  te: var arra
       li_rt_ast_space()
       li_rt_ast_int(0)
       li_rt_ast_space()
-      li_rt_mir_str("__li_o___cr")
-      li_rt_ast_int(crid)
-      li_rt_mir_str("_")
-      if p_s >= 0:
-        li_rt_mir_esc(tsrc, p_s, p_e)
-        li_rt_mir_str("_")
-      li_rt_mir_esc(tsrc, fa_c[0], fa_c[1])
+      li_rt_mir_objname_out(oi_c)
       # 5 empty name cells
       li_rt_ast_space()
       li_rt_ast_space()
@@ -6647,7 +7111,7 @@ def mir_cr_call_line(src: var ptr,  ts: var array[262144, int],  te: var array[2
 
 # Recursively emit LocalAlloc for a method-call write-back temp wb<N>,
 # flattening nested object fields: __li_o_wb<N>[_<parent>_]<leaf>.
-def mir_wb_alloc_fields(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], itmp: var array[4096, int],  crid: int,  type_idx: int,  p_s: int,  p_e: int) raises IO -> int
+def mir_wb_alloc_fields(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], itmp: var array[4096, int],  crid: int,  type_idx: int,  prefix_oi: int) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -6661,9 +7125,14 @@ def mir_wb_alloc_fields(src: var ptr,  ts: var array[262144, int],  te: var arra
   var i_w: int = 0
   while i_w < nf_w:
     mir_obj_field_name(itmp, type_idx, i_w, fa_w)
+    var oi_w: int = 0
+    if prefix_oi < 0:
+      oi_w = li_rt_mir_objname_reg_prefix(src, 0, 0, fa_w[0], fa_w[1], 3, crid, tsrc)
+    else:
+      oi_w = li_rt_mir_objname_add_nested(prefix_oi, tsrc, fa_w[0], fa_w[1])
     var sub_w: int = mir_obj_field_obj_type(src, ts, te, itmp, type_idx, i_w)
     if sub_w >= 0:
-      mir_wb_alloc_fields(src,  ts,  te,  itmp,  crid,  sub_w,  fa_w[0],  fa_w[1])
+      mir_wb_alloc_fields(src,  ts,  te,  itmp,  crid,  sub_w,  oi_w)
     else:
       var cop_w: int = 24
       var iv_w: int = 0
@@ -6681,13 +7150,7 @@ def mir_wb_alloc_fields(src: var ptr,  ts: var array[262144, int],  te: var arra
       li_rt_ast_space()
       li_rt_ast_int(0)
       li_rt_ast_space()
-      li_rt_mir_str("__li_o_wb")
-      li_rt_ast_int(crid)
-      li_rt_mir_str("_")
-      if p_s >= 0:
-        li_rt_mir_esc(tsrc, p_s, p_e)
-        li_rt_mir_str("_")
-      li_rt_mir_esc(tsrc, fa_w[0], fa_w[1])
+      li_rt_mir_objname_out(oi_w)
       # 5 empty name cells
       li_rt_ast_space()
       li_rt_ast_space()
@@ -7992,8 +8455,23 @@ def mir_parse_primary(darena: var array[65536, int],  dasp: var array[1, int], s
     var rec2: int = d_alloc(darena,  dasp,  1,  li_rt_mir_f64(src,  peek_tk(ts, t2 + 0),  peek_tk(te, t2 + 0)), peek_tk(ts, t2 + 0),  peek_tk(te, t2 + 0))
     return mir_parse_postfix(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err,  rec2)
   if k == 7:
+    # Binary literal `0b10110100`: value is the base-2 interpretation of the
+    # bits (span covers the full literal incl. the `0b` prefix, like C++).
+    # Descriptor kind 0 (int literal) so mir_return/mir_lower_expr treat it
+    # as a literal const, not a temp name. The span cells are 0 so the
+    # StoreInt path prints the computed value (mir_ins_line f[27]) instead of
+    # re-deriving it from the source span as decimal (which would mis-read
+    # the bits, e.g. 0b10110100 -> 10110100); the return path prints rec+1
+    # directly either way.
+    var t3: int = pi[0]
     pi[0] = pi[0] + 1
-    var rec3: int = d_alloc(darena,  dasp,  10,  0,  0,  0)
+    var bv: int = 0
+    var bp: int = peek_tk(ts, t3 + 0) + 2
+    var be: int = peek_tk(te, t3 + 0)
+    while bp < be:
+      bv = bv * 2 + (li_rt_str_char_at(src, bp) - 48)
+      bp = bp + 1
+    var rec3: int = d_alloc(darena,  dasp,  0,  bv,  0,  0)
     return mir_parse_postfix(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err,  rec3)
   if k == 4 or k == 46 or k == 35 or k == 36:
     var t4: int = pi[0]
@@ -8376,6 +8854,176 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
               li_rt_ast_nl()
               mir_mk_name(darena,  rec,  1,  c9e,  0)
               return 0
+      if peek65536(darena, fb9e + 0) == 9:
+        # Nested object array-field load: d.tier.vals[i] in an expression.
+        # Same descriptor-chain walk as the store side; the generic
+        # fallthrough below reads descriptor cells as a source span and would
+        # print a corrupted ident (and C++ previously emitted no load at all).
+        var csp: array[16, int]
+        var cidx: int = 0
+        var cur: int = fb9e
+        while peek65536(darena, cur + 0) == 9 and cidx < 6:
+          csp[cidx * 2 + 2] = peek65536(darena, cur + 2)
+          csp[cidx * 2 + 3] = peek65536(darena, cur + 3)
+          cidx = cidx + 1
+          cur = peek65536(darena, cur + 1)
+        if peek65536(darena, cur + 0) == 3:
+          csp[0] = peek65536(darena, cur + 1)
+          csp[1] = peek65536(darena, cur + 2)
+          var cn: int = cidx + 2
+          csp[(cn - 1) * 2] = fs9e
+          csp[(cn - 1) * 2 + 1] = fe9e
+          var rovt: int = mir_obj_find_var(src,  ts,  te,  itmp,  csp[0],  csp[1])
+          if rovt >= 0:
+            var ok_c: int = 1
+            var ci: int = 1
+            while ci < cn - 1 and ok_c == 1:
+              var ff_c: int = mir_obj_find_field(src, itmp, rovt, csp[ci * 2], csp[ci * 2 + 1])
+              if ff_c < 0:
+                ok_c = 0
+              else:
+                rovt = mir_obj_field_obj_type(src, ts, te, itmp, rovt, ff_c)
+                if rovt < 0:
+                  ok_c = 0
+              ci = ci + 1
+            if ok_c == 1:
+              var fl_c: int = mir_obj_find_field(src, itmp, rovt, csp[(cn - 1) * 2], csp[(cn - 1) * 2 + 1])
+              var fel_c: int = 0
+              if fl_c >= 0:
+                fel_c = mir_obj_field_elems(itmp, rovt, fl_c)
+              if fel_c > 0:
+                if peek65536(darena, idx + 0) == 0:
+                  var ivc: int = peek65536(darena, idx + 1)
+                  var c9c: int = tc[0]
+                  tc[0] = c9c + 1
+                  li_rt_mir_str("INS")
+                  li_rt_ast_space()
+                  li_rt_ast_int(11)
+                  li_rt_ast_space()
+                  li_rt_ast_int(ivc)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_mir_str("__li_o_")
+                  li_rt_mir_esc(src, csp[0], csp[1])
+                  li_rt_mir_str("_")
+                  li_rt_mir_esc(src, csp[2], csp[3])
+                  li_rt_mir_str("_")
+                  li_rt_mir_esc(src, csp[(cn - 1) * 2], csp[(cn - 1) * 2 + 1])
+                  li_rt_ast_space()
+                  li_rt_ast_space()
+                  li_rt_ast_space()
+                  li_rt_mir_str("__t")
+                  li_rt_ast_int(c9c)
+                  li_rt_ast_space()
+                  li_rt_ast_space()
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(1)
+                  li_rt_ast_space()
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(1)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_space()
+                  li_rt_ast_int(0)
+                  li_rt_ast_nl()
+                  mir_mk_name(darena,  rec,  1,  c9c,  0)
+                  return 0
+                # Ident / computed index: index_is_literal=0 with the index
+                # name in the f22 cell (mirroring the generic path's layout).
+                # The computed index is lowered BEFORE the dest temp is
+                # allocated so the temp numbering matches C++.
+                var nfx: array[44, int]
+                mir_fdef(nfx)
+                if peek65536(darena, idx + 0) == 3:
+                  mir_name_cells(darena,  idx,  nfx,  22)
+                else:
+                  if mir_lower_expr(darena,  dasp,  idx,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+                    return 1
+                  mir_name_cells(darena,  idx,  nfx,  22)
+                var c9c: int = tc[0]
+                tc[0] = c9c + 1
+                li_rt_mir_str("INS")
+                li_rt_ast_space()
+                li_rt_ast_int(11)
+                li_rt_ast_space()
+                li_rt_ast_int(0)
+                li_rt_ast_space()
+                li_rt_ast_int(0)
+                li_rt_ast_space()
+                li_rt_mir_str("__li_o_")
+                li_rt_mir_esc(src, csp[0], csp[1])
+                li_rt_mir_str("_")
+                li_rt_mir_esc(src, csp[2], csp[3])
+                li_rt_mir_str("_")
+                li_rt_mir_esc(src, csp[(cn - 1) * 2], csp[(cn - 1) * 2 + 1])
+                li_rt_ast_space()
+                li_rt_ast_space()
+                li_rt_ast_space()
+                li_rt_mir_str("__t")
+                li_rt_ast_int(c9c)
+                li_rt_ast_space()
+                li_rt_ast_space()
+                li_rt_ast_space()
+                li_rt_ast_int(0)
+                li_rt_ast_space()
+                li_rt_ast_int(0)
+                li_rt_ast_space()
+                li_rt_ast_int(0)
+                li_rt_ast_space()
+                li_rt_ast_int(0)
+                mir_name_out(src, nfx, 22)
+                li_rt_ast_space()
+                li_rt_ast_int(0)
+                li_rt_ast_space()
+                li_rt_ast_int(1)
+                li_rt_ast_space()
+                li_rt_ast_int(0)
+                li_rt_ast_space()
+                li_rt_ast_int(0)
+                li_rt_ast_space()
+                li_rt_ast_int(0)
+                li_rt_ast_space()
+                li_rt_ast_int(0)
+                li_rt_ast_space()
+                li_rt_ast_int(0)
+                li_rt_ast_space()
+                li_rt_ast_int(0)
+                li_rt_ast_space()
+                li_rt_ast_int(0)
+                li_rt_ast_space()
+                li_rt_ast_int(0)
+                li_rt_ast_space()
+                li_rt_ast_int(0)
+                li_rt_ast_space()
+                li_rt_ast_int(0)
+                li_rt_ast_nl()
+                mir_mk_name(darena,  rec,  1,  c9c,  0)
+                return 0
     if peek65536(darena, base + 0) == 5:
       var mat: int = peek65536(darena, base + 1)
       if peek65536(darena, mat + 0) == 3:
@@ -8742,7 +9390,7 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
           var wbid: int = tc[0]
           tc[0] = wbid + 1
           # 1) wb slot allocs (INS 35 float / 24 int / 9 array), nested flattened
-          mir_wb_alloc_fields(src,  ts,  te,  itmp,  wbid,  rv_ti,  -1,  -1)
+          mir_wb_alloc_fields(src,  ts,  te,  itmp,  wbid,  rv_ti,  -1)
           # 2) copy-in: wb slots <- receiver slots
           fi_m = 0
           while fi_m < nf_m:
@@ -9220,6 +9868,37 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
     var aobj: array[128, int]
     var nab: var array[1, int]
     nab[0] = 0
+    # var-Object first-arg write-back. C++ materializes the __li_o_wb<N> leaf
+    # slots and copies the object's leaves in BEFORE lowering the remaining
+    # arguments (lower.cpp first_var_obj), so the wb id consumes a temp
+    # counter ahead of any arg temps. Detect it here from the first argument
+    # descriptor so the walker consumes the counter in that same order. C++'s
+    # trigger is a `var Object` first param plus a whole object var ident as
+    # the first arg, so an object-FIELD arg (`world.body`) takes the plain
+    # path and passes its leaves with is_var_ref=0.
+    var cp_wbid: int = -1
+    var cp_ti: int = -1
+    var cp_nf: int = 0
+    var cp_s: int = 0
+    var cp_e: int = 0
+    if is_callproc == 1:
+      if peek65536(darena, rec + 4) >= 1:
+        var arec0: int = peek65536(darena, peek65536(darena, rec + 5))
+        if peek65536(darena, arec0 + 0) == 3:
+          if mir_method_first_var(src, ts, te, pid, pp0, pvar) == 1:
+            cp_s = peek65536(darena, arec0 + 1)
+            cp_e = peek65536(darena, arec0 + 2)
+            var ca_ti0: int = mir_obj_find_var(src, ts, te, itmp, cp_s, cp_e)
+            if ca_ti0 >= 0:
+              cp_ti = ca_ti0
+              cp_wbid = tc[0]
+              tc[0] = cp_wbid + 1
+              cp_nf = mir_obj_field_count(itmp, cp_ti)
+              mir_wb_alloc_fields(src,  ts,  te,  itmp,  cp_wbid,  cp_ti,  -1)
+              var cfi0: int = 0
+              while cfi0 < cp_nf:
+                mir_obj_emit_copy(src,  ts,  te,  itmp,  cp_ti,  cfi0,  0,  0,  cp_s,  cp_e,  2,  cp_wbid,  tc)
+                cfi0 = cfi0 + 1
     # Records pushed for the first argument. The wb write-back replay resumes
     # after exactly those records, so it needs their real count: a var-Object
     # first arg is collected as ONE kind-3 record, while a resolved param
@@ -9377,39 +10056,10 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
       if ai == 0:
         fst_recs[0] = (nab[0] - nab_a0[0]) / 4
       ai = ai + 1
-    # Declare wb variables outside the if block so they're always
-    # initialized (Li allocates stack slots at function scope but only
-    # runs initializers inside the branch — garbage in the else path
-    # causes an infinite ARG emission loop).
-    var cp_wbid: int = -1
-    var cp_ti: int = -1
-    var cp_nf: int = 0
     var cr_obj_id: int = -1
     var cr_obj_ti: int = -1
     var cr_args_emitted: int = 0
     if is_callproc == 1:
-      # Detect var-Object first-arg write-back: if the callee's first param
-      # is `var Object` and the caller's first arg is an Object ident,
-      # emit wb allocs + copy-in before INS 8, wb ARG lines (is_var_ref=1)
-      # instead of the first arg, and copy-back after all args.
-      if nab[0] >= 4 and (peek128(abuf, 0) == 0 or peek128(abuf, 0) == 3 or peek128(abuf, 0) == 5):
-        if mir_method_first_var(src, ts, te, pid, pp0, pvar) == 1:
-          var ca_s: int = peek128(abuf, 2)
-          var ca_e: int = peek128(abuf, 3)
-          if peek128(abuf, 0) == 3 or peek128(abuf, 0) == 5:
-            ca_s = peek128(abuf, 1)
-            ca_e = peek128(abuf, 2)
-          var ca_ti: int = mir_obj_find_var(src, ts, te, itmp, ca_s, ca_e)
-          if ca_ti >= 0:
-            cp_ti = ca_ti
-            cp_wbid = tc[0]
-            tc[0] = cp_wbid + 1
-            cp_nf = mir_obj_field_count(itmp, cp_ti)
-            mir_wb_alloc_fields(src,  ts,  te,  itmp,  cp_wbid,  cp_ti,  -1,  -1)
-            var cfi: int = 0
-            while cfi < cp_nf:
-              mir_obj_emit_copy(src,  ts,  te,  itmp,  cp_ti,  cfi,  0,  0,  ca_s,  ca_e,  2,  cp_wbid,  tc)
-              cfi = cfi + 1
       var f8b: array[44, int]
       mir_fdef(f8b)
       f8b[6] = peek65536(darena, rec + 1)
@@ -9438,7 +10088,7 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
             pp4 = pp4 + 1
           var crid2: int = tc[0]
           tc[0] = crid2 + 1
-          mir_cr_alloc_fields(src,  ts,  te,  itmp,  crid2,  robj_ti,  -1,  -1)
+          mir_cr_alloc_fields(src,  ts,  te,  itmp,  crid2,  robj_ti,  -1)
           mir_cr_call_line(src,  ts,  te,  itmp,  crid2,  peek65536(darena, rec + 1),  peek65536(darena, rec + 2),  robj_ti,  lastop)
           cr_obj_id = crid2
           cr_obj_ti = robj_ti
@@ -9604,13 +10254,8 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
     # copy-back: arg object slots <- wb slots (write-back case only)
     if cp_wbid >= 0:
       var cbi: int = 0
-      var cbi_s: int = peek128(abuf, 2)
-      var cbi_e: int = peek128(abuf, 3)
-      if peek128(abuf, 0) == 3 or peek128(abuf, 0) == 5:
-        cbi_s = peek128(abuf, 1)
-        cbi_e = peek128(abuf, 2)
       while cbi < cp_nf:
-        mir_obj_emit_copy(src,  ts,  te,  itmp,  cp_ti,  cbi,  cbi_s,  cbi_e,  0,  0,  3,  cp_wbid,  tc)
+        mir_obj_emit_copy(src,  ts,  te,  itmp,  cp_ti,  cbi,  cp_s,  cp_e,  0,  0,  3,  cp_wbid,  tc)
         cbi = cbi + 1
     return 0
   err[0] = 1
@@ -9933,7 +10578,7 @@ def mir_stmt(darena: var array[65536, int],  dasp: var array[1, int], src: var p
                 # caller-source-backed, so fld_src_fallback = 1.
                 var rfp5: int = peek65536(darena, arg0 + 1)
                 if peek65536(darena, rfp5 + 0) == 3:
-                  mir_ins_mangled(src, 5, 0, peek65536(darena, rfp5 + 1), peek65536(darena, rfp5 + 2), peek65536(darena, arg0 + 2), peek65536(darena, arg0 + 3), 0, 1, 0, lastop, -1, -1, -1, -1, -1, -1, -1, 1, 0)
+                  mir_ins_mangled(src, 5, 0, peek65536(darena, rfp5 + 1), peek65536(darena, rfp5 + 2), peek65536(darena, arg0 + 2), peek65536(darena, arg0 + 3), 0, 1, 0, lastop, -1, -1, -1, -1, -1, -1, -1, 0)
                 else:
                   if mir_lower_expr(darena,  dasp,  arg0,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
                     return 1
@@ -10454,7 +11099,7 @@ def mir_return(darena: var array[65536, int],  dasp: var array[1, int], src: var
                 var rfs: int = peek65536(darena, rec + 2)
                 var rfe: int = peek65536(darena, rec + 3)
                 if peek65536(darena, rfb + 0) == 3:
-                  mir_ins_mangled(src, 3, 0, peek65536(darena, rfb + 1), peek65536(darena, rfb + 2), rfs, rfe, 0, 1, 0, lastop, -1, -1, -1, -1, -1, -1, -1, 1, 0)
+                  mir_ins_mangled(src, 3, 0, peek65536(darena, rfb + 1), peek65536(darena, rfb + 2), rfs, rfe, 0, 1, 0, lastop, -1, -1, -1, -1, -1, -1, -1, 0)
                 else:
                   var f5f: array[44, int]
                   mir_fdef(f5f)
@@ -10583,7 +11228,7 @@ def mir_var_decl(darena: var array[65536, int],  dasp: var array[1, int], src: v
       # __li_o_<var>_<parent>_<leaf> like the C++ layout).
       var nfld: int = mir_obj_field_count(itmp, obj_ti)
       var ff_arr: array[2, int]
-      mir_obj_alloc_fields(src,  ts,  te,  itmp,  peek_tk(ts, vn + 0),  peek_tk(te, vn + 0),  obj_ti,  -1,  -1, lastop)
+      mir_obj_alloc_fields(src,  ts,  te,  itmp,  peek_tk(ts, vn + 0),  peek_tk(te, vn + 0),  obj_ti,  -1, lastop)
       # Call init returning object: `var u: T = f()` lowers to cr<N> slots,
       # CallProc with OBJ layout, then field copies into the var slots.
       # Write-back state for a var-Object first arg (e.g. layout_region_rect
@@ -10613,7 +11258,7 @@ def mir_var_decl(darena: var array[65536, int],  dasp: var array[1, int], src: v
                   vd_pe = peek65536(darena, fst_a + 2)
                   vd_wb = tc[0]
                   tc[0] = vd_wb + 1
-                  mir_wb_alloc_fields(src, ts, te, itmp, vd_wb, vd_ti, -1, -1)
+                  mir_wb_alloc_fields(src, ts, te, itmp, vd_wb, vd_ti, -1)
                   var vwfi: int = 0
                   while vwfi < vd_nf:
                     mir_obj_emit_copy(src, ts, te, itmp, vd_ti, vwfi, 0, 0, vd_ps, vd_pe, 2, vd_wb, tc)
@@ -10629,7 +11274,7 @@ def mir_var_decl(darena: var array[65536, int],  dasp: var array[1, int], src: v
             ap4 = ap4 + 1
           var crid: int = tc[0]
           tc[0] = crid + 1
-          mir_cr_alloc_fields(src,  ts,  te,  itmp,  crid,  obj_ti,  -1,  -1)
+          mir_cr_alloc_fields(src,  ts,  te,  itmp,  crid,  obj_ti,  -1)
           # INS 8 CallProc with mangled base dest + callee + OBJ layout
           li_rt_mir_str("INS")
           li_rt_ast_space()
@@ -10823,11 +11468,17 @@ def mir_var_decl(darena: var array[65536, int],  dasp: var array[1, int], src: v
               li_rt_mir_str("__li_o_")
               li_rt_mir_esc(src, peek65536(darena, rfbase + 1), peek65536(darena, rfbase + 2))
               li_rt_mir_str("_")
-              var fs28: ptr = li_rt_type_src_get(-1)
+              # The field name spans belong to the base object's type, so read
+              # them from the file that declares that type. The last registered
+              # type source can be an unrelated imported module, which renders
+              # the offsets against the wrong buffer.
+              var ft28: int = mir_obj_find_var(src,  ts,  te,  itmp,  peek65536(darena, rfbase + 1),  peek65536(darena, rfbase + 2))
+              var fs28: ptr = src
+              if ft28 >= 0:
+                fs28 = li_rt_type_src_get(ft28)
               if fs28 == 0:
-                li_rt_mir_esc(src, peek65536(darena, rec + 2), peek65536(darena, rec + 3))
-              else:
-                li_rt_mir_esc(fs28, peek65536(darena, rec + 2), peek65536(darena, rec + 3))
+                fs28 = src
+              li_rt_mir_esc(fs28, peek65536(darena, rec + 2), peek65536(darena, rec + 3))
               # label, f18..f21
               li_rt_ast_space()
               li_rt_ast_space()
@@ -10934,11 +11585,13 @@ def mir_var_decl(darena: var array[65536, int],  dasp: var array[1, int], src: v
                   li_rt_mir_str("__li_o_")
                   li_rt_mir_esc(src, peek65536(darena, rfb27 + 1), peek65536(darena, rfb27 + 2))
                   li_rt_mir_str("_")
-                  var fs27: ptr = li_rt_type_src_get(-1)
+                  var ft27: int = mir_obj_find_var(src,  ts,  te,  itmp,  peek65536(darena, rfb27 + 1),  peek65536(darena, rfb27 + 2))
+                  var fs27: ptr = src
+                  if ft27 >= 0:
+                    fs27 = li_rt_type_src_get(ft27)
                   if fs27 == 0:
-                    li_rt_mir_esc(src, peek65536(darena, rec + 2), peek65536(darena, rec + 3))
-                  else:
-                    li_rt_mir_esc(fs27, peek65536(darena, rec + 2), peek65536(darena, rec + 3))
+                    fs27 = src
+                  li_rt_mir_esc(fs27, peek65536(darena, rec + 2), peek65536(darena, rec + 3))
                   li_rt_ast_space()
                   li_rt_ast_space()
                   li_rt_ast_space()
@@ -11211,11 +11864,13 @@ def mir_var_decl(darena: var array[65536, int],  dasp: var array[1, int], src: v
                   li_rt_mir_str("__li_o_")
                   li_rt_mir_esc(src, peek65536(darena, rf26 + 1), peek65536(darena, rf26 + 2))
                   li_rt_mir_str("_")
-                  var fs26: ptr = li_rt_type_src_get(-1)
+                  var ft26: int = mir_obj_find_var(src,  ts,  te,  itmp,  peek65536(darena, rf26 + 1),  peek65536(darena, rf26 + 2))
+                  var fs26: ptr = src
+                  if ft26 >= 0:
+                    fs26 = li_rt_type_src_get(ft26)
                   if fs26 == 0:
-                    li_rt_mir_esc(src, peek65536(darena, rec + 2), peek65536(darena, rec + 3))
-                  else:
-                    li_rt_mir_esc(fs26, peek65536(darena, rec + 2), peek65536(darena, rec + 3))
+                    fs26 = src
+                  li_rt_mir_esc(fs26, peek65536(darena, rec + 2), peek65536(darena, rec + 3))
                   # label (empty): int copies carry one empty cell here (i64
                   # copies carry three - see the ty 2/3/4 emitter)
                   li_rt_ast_space()
@@ -11488,7 +12143,7 @@ def mir_assign(darena: var array[65536, int],  dasp: var array[1, int],  lrec: i
                   sf_rhs_p_e = peek65536(darena, rfb_i + 3)
                   sf_rhs_f_s = peek65536(darena, rrec + 2)
                   sf_rhs_f_e = peek65536(darena, rrec + 3)
-        mir_ins_mangled(src, 26, 0, base_s_a, base_e_a, fld_s_a, fld_e_a, 0, sf_lit, sf_val, lastop, sf_rhs_s, sf_rhs_e, sf_rhs_t, sf_rhs_p_s, sf_rhs_p_e, sf_rhs_f_s, sf_rhs_f_e, 1, 0)
+        mir_ins_mangled(src, 26, 0, base_s_a, base_e_a, fld_s_a, fld_e_a, 0, sf_lit, sf_val, lastop, sf_rhs_s, sf_rhs_e, sf_rhs_t, sf_rhs_p_s, sf_rhs_p_e, sf_rhs_f_s, sf_rhs_f_e, 0)
         return 0
   if peek65536(darena, lrec + 0) == 5:
     var base: int = peek65536(darena, lrec + 1)
@@ -11577,7 +12232,7 @@ def mir_assign(darena: var array[65536, int],  dasp: var array[1, int],  lrec: i
                   li_rt_ast_nl()
                   return 0
               if peek65536(darena, rrec + 0) == 0:
-                mir_ins_mangled(src, 10, iv9, peek65536(darena, fb9 + 1), peek65536(darena, fb9 + 2), fs9, fe9, 0, 1, peek65536(darena, rrec + 1), lastop, -1, -1, -1, -1, -1, -1, -1, 1, 0)
+                mir_ins_mangled(src, 10, iv9, peek65536(darena, fb9 + 1), peek65536(darena, fb9 + 2), fs9, fe9, 0, 1, peek65536(darena, rrec + 1), lastop, -1, -1, -1, -1, -1, -1, -1, 0)
                 return 0
               if peek65536(darena, rrec + 0) == 3:
                 var isrc9: int = mir_obj_find_var(src,  ts,  te,  itmp,  peek65536(darena, rrec + 1),  peek65536(darena, rrec + 2))
@@ -11585,8 +12240,175 @@ def mir_assign(darena: var array[65536, int],  dasp: var array[1, int],  lrec: i
                   # a.xs[i] = b.ys[j] is uncommon; fall through to generic (temp) path
                   iv9 = -3
               if iv9 >= 0:
-                mir_ins_mangled(src, 10, iv9, peek65536(darena, fb9 + 1), peek65536(darena, fb9 + 2), fs9, fe9, 0, 1, peek65536(darena, rrec + 1), lastop, -1, -1, -1, -1, -1, -1, -1, 1, 0)
+                mir_ins_mangled(src, 10, iv9, peek65536(darena, fb9 + 1), peek65536(darena, fb9 + 2), fs9, fe9, 0, 1, peek65536(darena, rrec + 1), lastop, -1, -1, -1, -1, -1, -1, -1, 0)
                 return 0
+      if peek65536(darena, fb9 + 0) == 9:
+        # Nested object array-field store: d.tier.vals[i] = v. Field-access
+        # descriptors nest (kind 9 over kind 9 ... over kind 3 root); walk
+        # the chain, resolve the leaf array field, and emit the chain-mangled
+        # store the same way the single-level path does. The generic
+        # fallthrough below reads descriptor cells as a source span and would
+        # print a corrupted ident.
+        var csp: array[16, int]
+        var cidx: int = 0
+        var cur: int = fb9
+        while peek65536(darena, cur + 0) == 9 and cidx < 6:
+          csp[cidx * 2 + 2] = peek65536(darena, cur + 2)
+          csp[cidx * 2 + 3] = peek65536(darena, cur + 3)
+          cidx = cidx + 1
+          cur = peek65536(darena, cur + 1)
+        if peek65536(darena, cur + 0) == 3:
+          csp[0] = peek65536(darena, cur + 1)
+          csp[1] = peek65536(darena, cur + 2)
+          var cn: int = cidx + 2
+          # The leaf field span rides in the base descriptor (base+2/base+3).
+          csp[(cn - 1) * 2] = fs9
+          csp[(cn - 1) * 2 + 1] = fe9
+          var rovt: int = mir_obj_find_var(src,  ts,  te,  itmp,  csp[0],  csp[1])
+          if rovt >= 0:
+            var ok_c: int = 1
+            var ci: int = 1
+            while ci < cn - 1 and ok_c == 1:
+              var ff_c: int = mir_obj_find_field(src, itmp, rovt, csp[ci * 2], csp[ci * 2 + 1])
+              if ff_c < 0:
+                ok_c = 0
+              else:
+                rovt = mir_obj_field_obj_type(src, ts, te, itmp, rovt, ff_c)
+                if rovt < 0:
+                  ok_c = 0
+              ci = ci + 1
+            if ok_c == 1:
+              var fl_c: int = mir_obj_find_field(src, itmp, rovt, csp[(cn - 1) * 2], csp[(cn - 1) * 2 + 1])
+              var fel_c: int = 0
+              if fl_c >= 0:
+                fel_c = mir_obj_field_elems(itmp, rovt, fl_c)
+              if fel_c > 0:
+                var ivc: int = 0
+                if peek65536(darena, idx + 0) == 0:
+                  ivc = peek65536(darena, idx + 1)
+                else:
+                  if peek65536(darena, idx + 0) == 3:
+                    ivc = -2
+                if ivc >= 0:
+                  if peek65536(darena, rrec + 0) == 1:
+                    var fltc: int = 0
+                    if fl_c >= 0:
+                      fltc = mir_obj_field_float(itmp, rovt, fl_c)
+                    if fltc == 1:
+                      # Float: INS 12 with the float value in the header cell
+                      # (same layout as the single-level float store).
+                      li_rt_mir_str("INS")
+                      li_rt_ast_space()
+                      li_rt_ast_int(12)
+                      li_rt_ast_space()
+                      li_rt_ast_int(ivc)
+                      li_rt_ast_space()
+                      li_rt_mir_f64_fmt(peek65536(darena, rrec + 1))
+                      li_rt_ast_space()
+                      li_rt_mir_str("__li_o_")
+                      li_rt_mir_esc(src, csp[0], csp[1])
+                      li_rt_mir_str("_")
+                      li_rt_mir_esc(src, csp[2], csp[3])
+                      li_rt_mir_str("_")
+                      li_rt_mir_esc(src, csp[(cn - 1) * 2], csp[(cn - 1) * 2 + 1])
+                      li_rt_ast_space()
+                      li_rt_ast_space()
+                      li_rt_ast_space()
+                      li_rt_ast_space()
+                      li_rt_ast_space()
+                      li_rt_ast_space()
+                      li_rt_ast_int(0)
+                      li_rt_ast_space()
+                      li_rt_ast_int(0)
+                      li_rt_ast_space()
+                      li_rt_ast_int(0)
+                      li_rt_ast_space()
+                      li_rt_ast_int(1)
+                      li_rt_ast_space()
+                      li_rt_ast_space()
+                      li_rt_ast_int(0)
+                      li_rt_ast_space()
+                      li_rt_ast_int(1)
+                      li_rt_ast_space()
+                      li_rt_ast_int(0)
+                      li_rt_ast_space()
+                      li_rt_ast_int(0)
+                      li_rt_ast_space()
+                      li_rt_ast_int(0)
+                      li_rt_ast_space()
+                      li_rt_ast_int(0)
+                      li_rt_ast_space()
+                      li_rt_ast_int(0)
+                      li_rt_ast_space()
+                      li_rt_ast_int(0)
+                      li_rt_ast_space()
+                      li_rt_ast_int(0)
+                      li_rt_ast_space()
+                      li_rt_ast_int(0)
+                      li_rt_ast_space()
+                      li_rt_ast_int(0)
+                      li_rt_ast_space()
+                      li_rt_ast_int(0)
+                      li_rt_ast_nl()
+                      return 0
+                  if peek65536(darena, rrec + 0) == 0:
+                    # Int literal RHS: INS 10 with the value in the f27 cell
+                    # (same layout as mir_ins_mangled for the single-level
+                    # path).
+                    li_rt_mir_str("INS")
+                    li_rt_ast_space()
+                    li_rt_ast_int(10)
+                    li_rt_ast_space()
+                    li_rt_ast_int(ivc)
+                    li_rt_ast_space()
+                    li_rt_ast_int(0)
+                    li_rt_ast_space()
+                    li_rt_mir_str("__li_o_")
+                    li_rt_mir_esc(src, csp[0], csp[1])
+                    li_rt_mir_str("_")
+                    li_rt_mir_esc(src, csp[2], csp[3])
+                    li_rt_mir_str("_")
+                    li_rt_mir_esc(src, csp[(cn - 1) * 2], csp[(cn - 1) * 2 + 1])
+                    li_rt_ast_space()
+                    li_rt_ast_space()
+                    li_rt_ast_space()
+                    li_rt_ast_space()
+                    li_rt_ast_space()
+                    li_rt_ast_space()
+                    li_rt_ast_int(0)
+                    li_rt_ast_space()
+                    li_rt_ast_int(0)
+                    li_rt_ast_space()
+                    li_rt_ast_int(0)
+                    li_rt_ast_space()
+                    li_rt_ast_int(1)
+                    li_rt_ast_space()
+                    li_rt_ast_space()
+                    li_rt_ast_int(0)
+                    li_rt_ast_space()
+                    li_rt_ast_int(1)
+                    li_rt_ast_space()
+                    li_rt_ast_int(peek65536(darena, rrec + 1))
+                    li_rt_ast_space()
+                    li_rt_ast_int(0)
+                    li_rt_ast_space()
+                    li_rt_ast_int(0)
+                    li_rt_ast_space()
+                    li_rt_ast_int(0)
+                    li_rt_ast_space()
+                    li_rt_ast_int(0)
+                    li_rt_ast_space()
+                    li_rt_ast_int(0)
+                    li_rt_ast_space()
+                    li_rt_ast_int(0)
+                    li_rt_ast_space()
+                    li_rt_ast_int(0)
+                    li_rt_ast_space()
+                    li_rt_ast_int(0)
+                    li_rt_ast_space()
+                    li_rt_ast_int(0)
+                    li_rt_ast_nl()
+                    return 0
     if peek65536(darena, base + 0) == 5:
       var mat: int = peek65536(darena, base + 1)
       if peek65536(darena, mat + 0) == 3:
@@ -12018,21 +12840,18 @@ def mir_fn_line(src: var ptr,  ts: var array[262144, int],  te: var array[262144
   li_rt_ast_nl()
   return 0
 
-def mir_retparam_line(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], itmp: var array[4096, int],  type_idx: int,  field_idx: int) raises IO -> int
+# One RETPARAM line for a leaf field, named by its accumulated field path
+# (path == 0 prints nothing, so callers always register at least one segment).
+def mir_retparam_line(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], itmp: var array[4096, int],  type_idx: int,  field_idx: int,  path: int) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
 =
-  var fa: array[2, int]
-  mir_obj_field_name(itmp, type_idx, field_idx, fa)
   var fflt: int = mir_obj_field_float(itmp, type_idx, field_idx)
   var felems_r: int = mir_obj_field_elems(itmp, type_idx, field_idx)
-  var tsrc: ptr = li_rt_type_src_get(type_idx)
-  if tsrc == 0:
-    tsrc = src
   li_rt_mir_str("RETPARAM")
   li_rt_ast_space()
-  li_rt_ast_text(tsrc,  fa[0],  fa[1])
+  li_rt_mir_fieldpath_out(path)
   li_rt_ast_space()
   li_rt_ast_int(fflt)
   li_rt_ast_space()
@@ -12054,47 +12873,11 @@ def mir_retparam_line(src: var ptr,  ts: var array[262144, int],  te: var array[
   li_rt_ast_nl()
   return 0
 
-def mir_retparam_line_nested(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], itmp: var array[4096, int],  type_idx: int,  field_idx: int,  p_s: int,  p_e: int) raises IO -> int
-  requires true
-  ensures result == 0
-  decreases 0
-=
-  var fa2: array[2, int]
-  mir_obj_field_name(itmp, type_idx, field_idx, fa2)
-  var fflt2: int = mir_obj_field_float(itmp, type_idx, field_idx)
-  var felems_r2: int = mir_obj_field_elems(itmp, type_idx, field_idx)
-  var tsrc2: ptr = li_rt_type_src_get(type_idx)
-  if tsrc2 == 0:
-    tsrc2 = src
-  li_rt_mir_str("RETPARAM")
-  li_rt_ast_space()
-  li_rt_ast_text(tsrc2,  p_s,  p_e)
-  li_rt_mir_str("_")
-  li_rt_ast_text(tsrc2,  fa2[0],  fa2[1])
-  li_rt_ast_space()
-  li_rt_ast_int(fflt2)
-  li_rt_ast_space()
-  li_rt_ast_int(0)
-  li_rt_ast_space()
-  li_rt_ast_int(0)
-  li_rt_ast_space()
-  li_rt_ast_int(0)
-  li_rt_ast_space()
-  li_rt_ast_int(0)
-  li_rt_ast_space()
-  li_rt_ast_int(felems_r2)
-  li_rt_ast_space()
-  li_rt_ast_int(0)
-  li_rt_ast_space()
-  li_rt_ast_int(0)
-  li_rt_ast_space()
-  li_rt_ast_int(0)
-  li_rt_ast_nl()
-  return 0
-
 # Recursively emit RETPARAM lines for a return object, flattening nested
-# object fields into compound names (swapchain_viewport_w etc.).
-def mir_obj_retparams(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], itmp: var array[4096, int],  type_idx: int,  p_s: int,  p_e: int) raises IO -> int
+# object fields into their full compound path (swapchain_viewport_w etc.). path
+# is the accumulated field path (0 at the top level); each segment is registered
+# against the type that declares it.
+def mir_obj_retparams(src: var ptr,  ts: var array[262144, int],  te: var array[262144, int], itmp: var array[4096, int],  type_idx: int,  path: int) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -12102,16 +12885,17 @@ def mir_obj_retparams(src: var ptr,  ts: var array[262144, int],  te: var array[
   var nf_r: int = mir_obj_field_count(itmp, type_idx)
   var i_r: int = 0
   var fa_r: array[2, int]
+  var tsrc_r: ptr = li_rt_type_src_get(type_idx)
+  if tsrc_r == 0:
+    tsrc_r = src
   while i_r < nf_r:
     mir_obj_field_name(itmp, type_idx, i_r, fa_r)
+    var path_r: int = li_rt_mir_fieldpath_add(path, tsrc_r, fa_r[0], fa_r[1])
     var sub_r: int = mir_obj_field_obj_type(src, ts, te, itmp, type_idx, i_r)
     if sub_r >= 0:
-      mir_obj_retparams(src,  ts,  te,  itmp,  sub_r,  fa_r[0],  fa_r[1])
+      mir_obj_retparams(src,  ts,  te,  itmp,  sub_r,  path_r)
     else:
-      if p_s >= 0:
-        mir_retparam_line_nested(src,  ts,  te,  itmp,  type_idx,  i_r,  p_s,  p_e)
-      else:
-        mir_retparam_line(src,  ts,  te,  itmp,  type_idx,  i_r)
+      mir_retparam_line(src,  ts,  te,  itmp,  type_idx,  i_r,  path_r)
     i_r = i_r + 1
   return 0
 
@@ -12622,7 +13406,7 @@ def mir_proc(src: var ptr,  tk: var array[262144, int],  ts: var array[262144, i
             set512(fatok, 63, pnia + 1)
     j = j + 1
   if ret_obj_ti >= 0:
-    mir_obj_retparams(src,  ts,  te,  itmp,  ret_obj_ti,  -1,  -1)
+    mir_obj_retparams(src,  ts,  te,  itmp,  ret_obj_ti,  0)
   lastop[0] = -1
   if is_extern == 1:
     skip_newlines(tk,  n,  pi,  err)

@@ -53,7 +53,10 @@ bool compile_module(const Module& module, const std::string& output_path, bool r
       return false;
     }
   }
-  const MirModule mir = lower_to_mir(module);
+  const MirModule mir = lower_to_mir(module, error);
+  if (error && !error->empty()) {
+    return false;
+  }
   const std::string ll_path =
       (std::filesystem::temp_directory_path() /
        ("li_build_" + std::to_string(getpid()) + ".ll"))

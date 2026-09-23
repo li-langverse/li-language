@@ -38,14 +38,16 @@ def physics_world_new(tier: int) -> PhysicsWorld
   w.fluids_enabled = 0
   w.particles_enabled = 0
   w.gravity_z = -9.81
-  w.body.px = 0.0
-  w.body.py = 0.0
-  w.body.pz = 0.0
-  w.body.vx = 0.0
-  w.body.vy = 0.0
-  w.body.vz = 0.0
-  w.body.inv_mass = 1.0
-  w.body.radius = 0.5
+  var body_t: RigidBody = w.body
+  body_t.px = 0.0
+  body_t.py = 0.0
+  body_t.pz = 0.0
+  body_t.vx = 0.0
+  body_t.vy = 0.0
+  body_t.vz = 0.0
+  body_t.inv_mass = 1.0
+  body_t.radius = 0.5
+  w.body = body_t
   return w
 def physics_world_game_default() -> PhysicsWorld
   requires true

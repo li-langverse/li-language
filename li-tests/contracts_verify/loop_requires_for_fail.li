@@ -1,0 +1,17 @@
+# E0304 must fire for a requires-violating call inside a `for` body; the check
+# passes must consume the `for <ident> in <int> ..< <int>` header to reach it.
+def callee(x: int) -> int
+  requires x >= 0
+  ensures result == x
+  decreases 0
+=
+  return x
+
+def caller_for_bad() -> int
+  requires true
+  ensures result == 5
+  decreases 0
+=
+  for i in 0..<3
+    callee(-1)
+  return 5
