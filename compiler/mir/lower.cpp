@@ -1408,12 +1408,25 @@ void lower_stmt(const Stmt& stmt, const Module& module, bool returns_float, bool
             float_names.insert(field_ident);
           }
         }
+        // Whole-object copy: `var b: T = a` (plain object var) and
+        // `var u: T = o.f` / `o.f.g` (nested field path) both copy every leaf
+        // slot of the source into the new local, mirroring the walker's
+        // mir_var_decl whole-object copy init.
+        std::string copy_src;
         if (stmt.init && stmt.init->kind == Expr::Kind::Ident &&
             g_object_vars.count(stmt.init->ident) > 0) {
+          copy_src = "__li_o_" + stmt.init->ident + "_";
+        } else if (stmt.init && stmt.init->kind == Expr::Kind::Field) {
+          const std::string chain = obj_field_slot_chain(*stmt.init);
+          if (!chain.empty()) {
+            copy_src = "__li_o_" + chain + "_";
+          }
+        }
+        if (!copy_src.empty()) {
           // Whole-object copy: store each source field slot into the new one.
           for (const auto& f : fields) {
             const std::string dst = "__li_o_" + stmt.var_name + "_" + f.name;
-            const std::string src = "__li_o_" + stmt.init->ident + "_" + f.name;
+            const std::string src = copy_src + f.name;
             if (f.array_elems > 0) {
               for (std::int64_t n = 0; n < f.array_elems; ++n) {
                 MirInsn load;

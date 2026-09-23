@@ -843,8 +843,9 @@ int32_t li_rt_mir_fieldpath_add(int32_t parent, const char* text, int32_t s, int
   return idx;
 }
 
-int32_t li_rt_mir_fieldpath_out(int32_t idx) {
-  if (idx <= 0 || idx >= li_rt_fieldpath_n) return 0;
+/* Render a fieldpath chain into buf (segments joined by '_'). Returns the new
+ * offset. Shared by li_rt_mir_fieldpath_out and the objname prefix builder. */
+static int li_rt_fieldpath_render(int32_t idx, char* buf, int off, int cap) {
   int32_t chain[64];
   int32_t n = 0;
   int32_t cur = idx;
@@ -853,11 +854,40 @@ int32_t li_rt_mir_fieldpath_out(int32_t idx) {
     cur = li_rt_fieldpath_parent[cur];
   }
   for (int32_t i = n - 1; i >= 0; --i) {
-    if (i != n - 1) fputc('_', stdout);
-    li_rt_mir_esc(li_rt_fieldpath_text[chain[i]], li_rt_fieldpath_s[chain[i]],
-                  li_rt_fieldpath_e[chain[i]]);
+    if (i != n - 1 && off < cap) buf[off++] = '_';
+    const char* t = li_rt_fieldpath_text[chain[i]];
+    for (int32_t k = li_rt_fieldpath_s[chain[i]]; k < li_rt_fieldpath_e[chain[i]] && off < cap; k++) {
+      buf[off++] = t[k];
+    }
   }
+  return off;
+}
+
+int32_t li_rt_mir_fieldpath_out(int32_t idx) {
+  if (idx <= 0 || idx >= li_rt_fieldpath_n) return 0;
+  char buf[1024];
+  int off = li_rt_fieldpath_render(idx, buf, 0, (int)sizeof(buf) - 1);
+  buf[off] = '\0';
+  fputs(buf, stdout);
   return 0;
+}
+
+/* Register a synthesized objname for a fieldpath-rooted prefix:
+ * __li_o_<fieldpath>_<field>. Used by the recursive object-copy emitter when
+ * the copy source is a nested field path (`o.f` / `o.f.g`) rather than a
+ * variable or cr/wb temp. */
+int32_t li_rt_mir_objname_reg_prefix_fp(int32_t fp, int32_t fs, int32_t fe,
+                                        const char* fsrc) {
+  char buf[1024];
+  int off = 0;
+  const char* prefix = "__li_o_";
+  for (const char* p = prefix; *p; p++) buf[off++] = *p;
+  off = li_rt_fieldpath_render(fp, buf, off, (int)sizeof(buf) - 256);
+  buf[off++] = '_';
+  const char* ftext = (fsrc != NULL) ? fsrc : "";
+  for (int i = fs; i < fe && off < (int)sizeof(buf) - 1; i++) buf[off++] = ftext[i];
+  buf[off] = '\0';
+  return li_rt_mir_synth_name_add(strdup(buf));
 }
 
 

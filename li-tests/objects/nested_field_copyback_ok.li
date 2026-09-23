@@ -5,7 +5,10 @@
 # `o.a = v` scalar leaf) plus nested array-element writes
 # (`o.t.arr[0] = v`, see nested_index_write.li) stay supported. This fixture
 # pins that the copy-back shape compiles, runs, and actually carries the
-# mutated values (and the untouched sibling field) through the copy.
+# mutated values (and the untouched sibling field) through the copy, in both
+# directions: writing the copy back into the field, and reading a populated
+# nested field out into a local (including an object-valued leaf, which the
+# object-copy path has to carry too).
 type Tier = object
   public tier_id: int
   public fps_target: float
@@ -13,6 +16,17 @@ type Tier = object
 type Draw = object
   public tier: Tier
   public frame_count: int
+
+type Inner = object
+  public x: int
+  public y: float
+
+type Mid = object
+  public inner: Inner
+  public tag: int
+
+type Outer = object
+  public mid: Mid
 
 def main() -> int
   requires true
@@ -31,17 +45,45 @@ def main() -> int
     return 2
   if d.frame_count != 3:
     return 3
-  # A second copy-back cycle writes every field explicitly: reading values out
-  # of a nested field into a local (`var t: Tier = d.tier`) does not carry the
-  # leaves in the C++ backend, so the shape that works is set-all-then-assign.
+  # Copy a populated nested field OUT into a local: the leaves must come along.
+  var tier_u: Tier = d.tier
+  if tier_u.tier_id != 7:
+    return 4
+  if tier_u.fps_target != 250.0:
+    return 5
+  # A second copy-back cycle writes every field explicitly.
   var frame: Tier
   frame.tier_id = 8
   frame.fps_target = 260.0
   d.tier = frame
   if d.tier.tier_id != 8:
-    return 4
-  if d.tier.fps_target != 260.0:
-    return 5
-  if d.frame_count != 3:
     return 6
+  if d.tier.fps_target != 260.0:
+    return 7
+  if d.frame_count != 3:
+    return 8
+  # The same copy-out over a nested field whose type itself has an
+  # object-valued leaf (o.mid -> Mid{inner: Inner}), i.e. the recursive
+  # object-copy path rather than a flat leaf list.
+  var i: Inner
+  i.x = 11
+  i.y = 22.0
+  var m: Mid
+  m.tag = 5
+  m.inner = i
+  var o: Outer
+  o.mid = m
+  if o.mid.tag != 5:
+    return 9
+  if o.mid.inner.x != 11:
+    return 10
+  if o.mid.inner.y != 22.0:
+    return 11
+  var m2: Mid = o.mid
+  if m2.tag != 5:
+    return 12
+  if m2.inner.x != 11:
+    return 13
+  if m2.inner.y != 22.0:
+    return 14
   return 0
