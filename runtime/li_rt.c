@@ -1510,7 +1510,9 @@ int32_t li_rt_studio_timeline_tick_frame(void) {
   return 1;
 }
 
-float li_rt_studio_timeline_playhead_pct(void) { return g_studio_timeline_playhead_pct; }
+/* Li `float` is 64-bit (float64): externs declared `-> float` must return
+ * double, not C float (a f32 return read as f64 yields a denormal). */
+double li_rt_studio_timeline_playhead_pct(void) { return (double)g_studio_timeline_playhead_pct; }
 
 int32_t li_rt_studio_timeline_reset_mock(void) {
   g_studio_timeline_playing = 0;
@@ -1635,12 +1637,12 @@ int32_t li_rt_lig_host_present_active(void) {
   return g_lig_host_present_active;
 }
 
-float li_rt_lig_host_present_dt_ms(void) {
+double li_rt_lig_host_present_dt_ms(void) {
   li_rt_lig_refresh_host_active();
   if (g_lig_host_present_active) {
-    return g_lig_present_dt_ms;
+    return (double)g_lig_present_dt_ms;
   }
-  return 16.667f;
+  return 16.667;
 }
 
 int32_t li_rt_lig_host_native_pixels(void) {
@@ -1685,11 +1687,11 @@ int32_t li_rt_lig_wgpu_present_frame(int32_t swapchain_ok) {
 int32_t li_rt_studio_shell_input_pointer_down(void) {
   return g_studio_shell_pointer_down;
 }
-float li_rt_studio_shell_input_pointer_x(void) {
-  return g_studio_shell_pointer_x;
+double li_rt_studio_shell_input_pointer_x(void) {
+  return (double)g_studio_shell_pointer_x;
 }
-float li_rt_studio_shell_input_pointer_y(void) {
-  return g_studio_shell_pointer_y;
+double li_rt_studio_shell_input_pointer_y(void) {
+  return (double)g_studio_shell_pointer_y;
 }
 int32_t li_rt_studio_shell_input_key_escape(void) {
   return g_studio_shell_key_escape;

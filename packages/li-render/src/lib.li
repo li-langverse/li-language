@@ -211,10 +211,15 @@ def render_bench_fps_sample_frames() -> int
 
 def render_bench_fps_sample_dt_ms() -> float
   requires true
-  ensures result == 16.667
+  ensures result == 16.6666
   decreases 0
 =
-  return 16.667
+  # One target frame at 60 Hz, kept just below the exact 1000/60 ms budget so
+  # that 120 accumulated frames stay at/above 60 fps. A rounded-up 16.667 ms
+  # sample lands the simulation at ~59.9988 fps, under the 60 fps target, so
+  # render_bench_fps_counter_simulate violated its meets_target == 1 contract
+  # and the HUD fell into the 30+ bucket.
+  return 16.6666
 
 def render_bench_fps_counter_simulate() -> RenderFpsCounter
   requires true
