@@ -1,5 +1,5 @@
 # li-tests manifest — single index of all tests
-# outcome: parse_ok | parse_fail | compile_ok | compile_fail | verify_ok | verify_fail
+# outcome: parse_ok | parse_fail | compile_ok | compile_fail | verify_ok | verify_fail | run_exit
 
 [config]
 lic = "../build/compiler/lic/lic"
@@ -672,3 +672,105 @@ suite = "integration"
 file = "../bootstrap/lic/main.li"
 outcome = "verify_ok"
 note = "Li bootstrap compiler built by C++ lic"
+
+# --- composable (package integration probes) ---
+# Each probe's `main` documents its own success exit code via `ensures
+# result == N`, so run_exit builds + runs and checks that code. These cover
+# the cross-package wiring that compile-only suites cannot (runtime extern
+# ABI, simulated contracts, object field paths across imports).
+
+[[tests]]
+suite = "composable"
+file = "composable/import_http_lib.li"
+outcome = "run_exit"
+expected_exit = "1"
+
+[[tests]]
+suite = "composable"
+file = "composable/import_httpd_lib.li"
+outcome = "run_exit"
+expected_exit = "1"
+
+[[tests]]
+suite = "composable"
+file = "composable/import_lig_kernel.li"
+outcome = "run_exit"
+expected_exit = "0"
+
+[[tests]]
+suite = "composable"
+file = "composable/import_lig_chem_backend.li"
+outcome = "run_exit"
+expected_exit = "0"
+
+[[tests]]
+suite = "composable"
+file = "composable/import_log_lib.li"
+outcome = "run_exit"
+expected_exit = "0"
+
+[[tests]]
+suite = "composable"
+file = "composable/import_render_wgpu_fps.li"
+outcome = "run_exit"
+expected_exit = "0"
+
+[[tests]]
+suite = "composable"
+file = "composable/import_gui_viewport_panel_switch.li"
+outcome = "run_exit"
+expected_exit = "0"
+
+[[tests]]
+suite = "composable"
+file = "composable/import_gui_studio_keyboard.li"
+outcome = "run_exit"
+expected_exit = "0"
+
+[[tests]]
+suite = "composable"
+file = "composable/import_ui_studio_shell.li"
+outcome = "run_exit"
+expected_exit = "0"
+
+[[tests]]
+suite = "composable"
+file = "composable/import_studio_compose.li"
+outcome = "run_exit"
+expected_exit = "0"
+
+[[tests]]
+suite = "composable"
+file = "composable/import_studio_sim_profile_bridge.li"
+outcome = "run_exit"
+expected_exit = "0"
+
+[[tests]]
+suite = "composable"
+file = "composable/import_studio_sim_step_by_profile.li"
+outcome = "run_exit"
+expected_exit = "0"
+
+[[tests]]
+suite = "composable"
+file = "composable/import_studio_sim_step_stub.li"
+outcome = "run_exit"
+expected_exit = "0"
+
+[[tests]]
+suite = "composable"
+file = "composable/import_sim_scientific_run.li"
+outcome = "run_exit"
+expected_exit = "0"
+
+[[tests]]
+suite = "composable"
+file = "composable/import_physics_runtime.li"
+outcome = "run_exit"
+expected_exit = "0"
+
+[[tests]]
+suite = "composable"
+file = "composable/import_physics_relativity.li"
+outcome = "run_exit"
+expected_exit = "0"
