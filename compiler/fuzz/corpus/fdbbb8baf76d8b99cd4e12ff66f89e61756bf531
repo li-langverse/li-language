@@ -1,0 +1,9 @@
+@cpu
+@parallel(disjoint=disjoint_row)
+proc f() -> int
+  requires true
+  an 0 MiB.
+ue
+  decreases 0
+=
+  return 0

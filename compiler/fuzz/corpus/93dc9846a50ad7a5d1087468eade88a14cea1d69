@@ -1,0 +1,9 @@
+@cpu
+@parallel(ow9
+proc f() -> int
+  requires true
+  an 0 MiB.
+ue
+  decreases 0
+=
+  return proc 0p

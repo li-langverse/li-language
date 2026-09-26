@@ -1,0 +1,5 @@
+proc p() -> inrequires true
+  ensur estrue
+  dses 0
+=
+  return 0
