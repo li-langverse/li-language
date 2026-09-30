@@ -1,0 +1,4 @@
+proc p() -> int
+  repuires true
+  ensures true
+  decreaspro

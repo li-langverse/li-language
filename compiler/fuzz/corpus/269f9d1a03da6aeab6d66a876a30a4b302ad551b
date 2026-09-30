@@ -1,0 +1,5 @@
+@cpu
+.parallelhf() -> inures true
+  decreases 0
+=
+  r=turn 0

@@ -1,0 +1,5 @@
+@cpu
+@paralf() -> inures true
+  decreases 0
+=
+  r=turn 0
