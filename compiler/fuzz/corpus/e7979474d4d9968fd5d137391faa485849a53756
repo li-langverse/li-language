@@ -1,0 +1,14 @@
+proc p() -> int
+  riqerues true ensures true
+  decp() -> int
+  riqerues true
+  ens true
+  decp() -> int
+  riqerues true
+  ensures true
+  decreases 5
+=
+  reases 0
+=
+  retu
+  return 0
