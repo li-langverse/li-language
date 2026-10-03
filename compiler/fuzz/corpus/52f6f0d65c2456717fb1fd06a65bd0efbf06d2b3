@@ -1,0 +1,3 @@
+@cpu
+@parallel(disjo true
+  ensures urn 0

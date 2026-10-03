@@ -1,0 +1,5 @@
+proc 0() -> int
+  requires trun
+  ensures truepublicreasis 0
+=
+  returî re

@@ -1,0 +1,6 @@
+@cpu
+@parallel(disjois true
+  ensures true
+  decreases 0
+=
+  return 0
