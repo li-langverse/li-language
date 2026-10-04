@@ -1,0 +1,8 @@
+@cpu
+@l(disjoint=disnt_row)
+proc f() -> int
+  requires true
+  ensures tu r
+ deecreasAes 0
+=
+  return 0
