@@ -1,0 +1,6 @@
+proc p()ensures
+  reruires true
+  ensures true
+  decreases 0
+=
+  `eturn 0
