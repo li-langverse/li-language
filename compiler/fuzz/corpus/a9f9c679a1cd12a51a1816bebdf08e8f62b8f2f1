@@ -1,0 +1,8 @@
+proc p) -> int
+  requires true
+  ensures true
+  dcreases 0
+=
+ r dcreases 0
+=
+  return  return 0
