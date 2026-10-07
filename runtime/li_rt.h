@@ -86,8 +86,18 @@ void li_rt_import_paths_clear(void);
 void li_rt_import_path_store(const char* path);
 const char* li_rt_import_path_get(int idx);
 /* Per-type source pointer store: the source where each registered Object type
- * was defined, so field name positions can be read from the correct buffer. */
+ * was defined, so field name positions can be read from the correct buffer.
+ * Heap-backed and grown geometrically, so it tracks the walker's object-type
+ * registry capacity instead of pinning an arbitrary ceiling. */
 void li_rt_type_src_store(int idx, const char* src);
+/* Heap-backed cell store for the walker's MIR object registry. Offsets are
+ * absolute cells shared by the type/field/object-var regions; the buffer grows
+ * geometrically so no region can overwrite its neighbour. */
+int32_t li_rt_reg_get(int32_t idx);
+int32_t li_rt_reg_set(int32_t idx, int32_t val);
+/* Mark the registry unusable (capacity or allocation failure). */
+int32_t li_rt_reg_fail(void);
+int32_t li_rt_reg_failed(void);
 /* Global proc-count accumulator: works around a Li compiler bug where
  * var array parameters are passed by value in some code paths, causing
  * the proc-count pn[0] to not propagate across nested mir_walk calls. */

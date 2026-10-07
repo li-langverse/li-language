@@ -255,19 +255,65 @@ const char* li_rt_import_path_get(int idx) {
 }
 
 /* Per-type source pointer store: lets field name positions be read from the
- * correct source buffer even when the type was defined in a different file. */
-#define LI_RT_TYPE_SRC_MAX 30
-static const char* li_rt_type_srcs[LI_RT_TYPE_SRC_MAX];
+ * correct source buffer even when the type was defined in a different file.
+ * Heap-backed + geometric growth, matching the walker's object-type registry
+ * capacity (the previous fixed 30-entry array silently dropped the rest). */
+static const char** li_rt_type_srcs = NULL;
+static int li_rt_type_src_cap = 0;
 static const char* li_rt_type_src_fld = NULL;
 void li_rt_type_src_store(int idx, const char* src) {
   if (idx == -1) { li_rt_type_src_fld = src; return; }
-  if (idx >= 0 && idx < LI_RT_TYPE_SRC_MAX) li_rt_type_srcs[idx] = src;
+  if (idx < 0) return;
+  if (idx >= li_rt_type_src_cap) {
+    int want = li_rt_type_src_cap ? li_rt_type_src_cap : 64;
+    while (want <= idx) want *= 2;
+    const char** next = (const char**)realloc(li_rt_type_srcs, (size_t)want * sizeof(const char*));
+    if (next == NULL) return;
+    memset(next + li_rt_type_src_cap, 0,
+           ((size_t)want - (size_t)li_rt_type_src_cap) * sizeof(const char*));
+    li_rt_type_srcs = next;
+    li_rt_type_src_cap = want;
+  }
+  li_rt_type_srcs[idx] = src;
 }
 const char* li_rt_type_src_get(int idx) {
   if (idx == -1) return li_rt_type_src_fld;
-  if (idx < 0 || idx >= LI_RT_TYPE_SRC_MAX) return NULL;
+  if (idx < 0 || idx >= li_rt_type_src_cap) return NULL;
   return li_rt_type_srcs[idx];
 }
+
+/* Cell store for the walker's MIR object registry. The registry used to live
+ * in one fixed 4096-cell stack array whose hard-coded type/field/object-var
+ * regions overlapped once a closure declared ~50 fields, silently clobbering
+ * the neighbouring counters. Cells are now heap-backed and the buffer grows
+ * geometrically, so capacity no longer depends on that array and no index can
+ * reach into a neighbouring region. */
+static int32_t* li_rt_reg_cells = NULL;
+static size_t li_rt_reg_cap = 0;
+static int32_t li_rt_reg_bad = 0;
+
+int32_t li_rt_reg_get(int32_t idx) {
+  if (idx < 0 || li_rt_reg_cells == NULL || (size_t)idx >= li_rt_reg_cap) return 0;
+  return li_rt_reg_cells[idx];
+}
+
+int32_t li_rt_reg_set(int32_t idx, int32_t val) {
+  if (idx < 0) { li_rt_reg_bad = 1; return 0; }
+  if ((size_t)idx >= li_rt_reg_cap) {
+    size_t want = li_rt_reg_cap ? li_rt_reg_cap : 256;
+    while (want <= (size_t)idx) want *= 2;
+    int32_t* next = (int32_t*)realloc(li_rt_reg_cells, want * sizeof(int32_t));
+    if (next == NULL) { li_rt_reg_bad = 1; return 0; }
+    memset(next + li_rt_reg_cap, 0, (want - li_rt_reg_cap) * sizeof(int32_t));
+    li_rt_reg_cells = next;
+    li_rt_reg_cap = want;
+  }
+  li_rt_reg_cells[idx] = val;
+  return val;
+}
+
+int32_t li_rt_reg_fail(void) { li_rt_reg_bad = 1; return 0; }
+int32_t li_rt_reg_failed(void) { return li_rt_reg_bad; }
 
 /* Path ring buffer: mirrors the content ring buffer so callers can retrieve
  * the path that was successfully resolved by li_rt_resolve_import. */
@@ -825,16 +871,53 @@ int32_t li_rt_mir_objname_reg_prefix(const char* text, int32_t base_s, int32_t b
   return li_rt_mir_synth_name_add(strdup(buf));
 }
 
-#define LI_RT_FIELDPATH_MAX 1024
-static int32_t li_rt_fieldpath_parent[LI_RT_FIELDPATH_MAX];
-static const char* li_rt_fieldpath_text[LI_RT_FIELDPATH_MAX];
-static int32_t li_rt_fieldpath_s[LI_RT_FIELDPATH_MAX];
-static int32_t li_rt_fieldpath_e[LI_RT_FIELDPATH_MAX];
-static int32_t li_rt_fieldpath_n = 1;
+/* Field-path registry: one node per (parent, field) segment of a flattened
+ * object field path (`layout.viewport.w` -> layout / viewport / w). The
+ * previous fixed 1024-node array silently returned the root path once a
+ * closure registered more segments than that, so every deeper partial
+ * RETPARAM/OBJ/name row was emitted as a leaf-only name. Nodes are now
+ * heap-backed and grown geometrically; if the store cannot grow it is marked
+ * unusable (li_rt_mir_fieldpath_failed) so the walker can abort loudly
+ * instead of emitting MIR from a truncated path table. */
+static int32_t* li_rt_fieldpath_parent = NULL;
+static const char** li_rt_fieldpath_text = NULL;
+static int32_t* li_rt_fieldpath_s = NULL;
+static int32_t* li_rt_fieldpath_e = NULL;
+static int32_t li_rt_fieldpath_cap = 0;
+static int32_t li_rt_fieldpath_n = 1;  /* node 0 is the empty root path */
+static int32_t li_rt_fieldpath_bad = 0;
+
+static int li_rt_fieldpath_grow(int32_t want) {
+  if (want <= li_rt_fieldpath_cap) return 1;
+  int32_t cap = li_rt_fieldpath_cap ? li_rt_fieldpath_cap : 1024;
+  while (cap < want) cap *= 2;
+  const size_t old_span = (size_t)li_rt_fieldpath_cap;
+  const size_t new_span = (size_t)cap;
+  int32_t* np = (int32_t*)realloc(li_rt_fieldpath_parent, new_span * sizeof(int32_t));
+  if (np == NULL) { li_rt_fieldpath_bad = 1; return 0; }
+  li_rt_fieldpath_parent = np;
+  const char** nt = (const char**)realloc(li_rt_fieldpath_text, new_span * sizeof(const char*));
+  if (nt == NULL) { li_rt_fieldpath_bad = 1; return 0; }
+  li_rt_fieldpath_text = nt;
+  int32_t* ns = (int32_t*)realloc(li_rt_fieldpath_s, new_span * sizeof(int32_t));
+  if (ns == NULL) { li_rt_fieldpath_bad = 1; return 0; }
+  li_rt_fieldpath_s = ns;
+  int32_t* ne = (int32_t*)realloc(li_rt_fieldpath_e, new_span * sizeof(int32_t));
+  if (ne == NULL) { li_rt_fieldpath_bad = 1; return 0; }
+  li_rt_fieldpath_e = ne;
+  memset(li_rt_fieldpath_parent + old_span, 0, (new_span - old_span) * sizeof(int32_t));
+  memset(li_rt_fieldpath_text + old_span, 0, (new_span - old_span) * sizeof(const char*));
+  memset(li_rt_fieldpath_s + old_span, 0, (new_span - old_span) * sizeof(int32_t));
+  memset(li_rt_fieldpath_e + old_span, 0, (new_span - old_span) * sizeof(int32_t));
+  li_rt_fieldpath_cap = cap;
+  return 1;
+}
 
 int32_t li_rt_mir_fieldpath_add(int32_t parent, const char* text, int32_t s, int32_t e) {
+  /* Node 0 is the empty root path, so a malformed request degrades to "no
+   * path" as before; only a registry that cannot grow is fatal. */
   if (parent < 0 || parent >= li_rt_fieldpath_n || text == NULL || e <= s) return 0;
-  if (li_rt_fieldpath_n >= LI_RT_FIELDPATH_MAX) return 0;
+  if (!li_rt_fieldpath_grow(li_rt_fieldpath_n + 1)) return 0;
   const int32_t idx = li_rt_fieldpath_n++;
   li_rt_fieldpath_parent[idx] = parent;
   li_rt_fieldpath_text[idx] = text;
@@ -842,6 +925,8 @@ int32_t li_rt_mir_fieldpath_add(int32_t parent, const char* text, int32_t s, int
   li_rt_fieldpath_e[idx] = e;
   return idx;
 }
+
+int32_t li_rt_mir_fieldpath_failed(void) { return li_rt_fieldpath_bad; }
 
 /* Render a fieldpath chain into buf (segments joined by '_'). Returns the new
  * offset. Shared by li_rt_mir_fieldpath_out and the objname prefix builder. */
