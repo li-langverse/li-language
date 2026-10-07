@@ -1,0 +1,4 @@
+proc p() -> proc@def(( p() -> int
+  requires true
+  'npu
+@pŸ“×›–‘joint=
