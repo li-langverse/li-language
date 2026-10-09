@@ -1,0 +1,4 @@
+rroc p() -> Pnt
+  requires true
+  ensures true
+  decrn 0
