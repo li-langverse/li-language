@@ -1,0 +1,8 @@
+proc p() -> int
+  re1es true
+  ensures true
+ tup() -> int
+  re1es true
+  ensures true
+ turnturn 1
+rnturn 1
