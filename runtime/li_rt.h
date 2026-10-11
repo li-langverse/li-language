@@ -98,6 +98,11 @@ int32_t li_rt_reg_set(int32_t idx, int32_t val);
 /* Mark the registry unusable (capacity or allocation failure). */
 int32_t li_rt_reg_fail(void);
 int32_t li_rt_reg_failed(void);
+/* Failure flags for the heap-grown MIR name registries: set when a store
+ * cannot grow, so the walker can abort instead of emitting collapsed rows. */
+int32_t li_rt_mir_objname_failed(void);
+int32_t li_rt_mir_f64_failed(void);
+int32_t li_rt_mir_fieldpath_failed(void);
 /* Global proc-count accumulator: works around a Li compiler bug where
  * var array parameters are passed by value in some code paths, causing
  * the proc-count pn[0] to not propagate across nested mir_walk calls. */

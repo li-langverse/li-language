@@ -577,10 +577,29 @@ int32_t li_rt_ast_nl(void) {
 
 /* ---- Self-hosted MIR dump primitives (Layer 5) ---- */
 
-/* Float literals are parsed into a static table; the li bootstrap carries the
- * id (a small int) instead of a double, and formats at emission time. */
-static double li_mir_fvals[256];
+/* Float literals are parsed into a table; the li bootstrap carries the
+ * id (a small int) instead of a double, and formats at emission time.
+ * Heap-backed and grown geometrically: the previous fixed 256-entry table
+ * silently returned id -1 once a module held more float literals, and every
+ * such literal printed as `0` in the dump (both in ARG rows and INS value
+ * fields), diverging from the C++ emitter on any non-trivial file. */
+static double* li_mir_fvals = NULL;
 static int li_mir_fvals_n = 0;
+static int li_mir_fvals_cap = 0;
+static int li_mir_fvals_bad = 0;
+
+static int li_mir_fvals_grow(int want) {
+  if (want <= li_mir_fvals_cap) return 1;
+  int cap = li_mir_fvals_cap ? li_mir_fvals_cap : 256;
+  while (cap < want) cap *= 2;
+  double* np = (double*)realloc(li_mir_fvals, (size_t)cap * sizeof(double));
+  if (np == NULL) { li_mir_fvals_bad = 1; return 0; }
+  li_mir_fvals = np;
+  li_mir_fvals_cap = cap;
+  return 1;
+}
+
+int32_t li_rt_mir_f64_failed(void) { return li_mir_fvals_bad; }
 
 int32_t li_rt_mir_f64(const char* text, int32_t start, int32_t end) {
   if (text == NULL || start < 0 || end <= start) {
@@ -594,11 +613,11 @@ int32_t li_rt_mir_f64(const char* text, int32_t start, int32_t end) {
   memcpy(buf, text + start, n);
   buf[n] = '\0';
   const double v = strtod(buf, NULL);
-  if (li_mir_fvals_n < (int)(sizeof(li_mir_fvals) / sizeof(li_mir_fvals[0]))) {
-    li_mir_fvals[li_mir_fvals_n] = v;
-    return li_mir_fvals_n++;
+  if (!li_mir_fvals_grow(li_mir_fvals_n + 1)) {
+    return -1;
   }
-  return -1;
+  li_mir_fvals[li_mir_fvals_n] = v;
+  return li_mir_fvals_n++;
 }
 
 int32_t li_rt_mir_f64_fmt(int32_t id) {
@@ -611,20 +630,22 @@ int32_t li_rt_mir_f64_fmt(int32_t id) {
 }
 
 int32_t li_rt_mir_f64_of_int(int32_t v) {
-  if (li_mir_fvals_n < (int)(sizeof(li_mir_fvals) / sizeof(li_mir_fvals[0]))) {
-    li_mir_fvals[li_mir_fvals_n] = (double)v;
-    return li_mir_fvals_n++;
+  if (!li_mir_fvals_grow(li_mir_fvals_n + 1)) {
+    return -1;
   }
-  return -1;
+  li_mir_fvals[li_mir_fvals_n] = (double)v;
+  return li_mir_fvals_n++;
 }
 
 int32_t li_rt_mir_f64_neg(int32_t id) {
-  if (id >= 0 && id < li_mir_fvals_n &&
-      li_mir_fvals_n < (int)(sizeof(li_mir_fvals) / sizeof(li_mir_fvals[0]))) {
-    li_mir_fvals[li_mir_fvals_n] = -li_mir_fvals[id];
-    return li_mir_fvals_n++;
+  if (id < 0 || id >= li_mir_fvals_n) {
+    return -1;
   }
-  return -1;
+  if (!li_mir_fvals_grow(li_mir_fvals_n + 1)) {
+    return -1;
+  }
+  li_mir_fvals[li_mir_fvals_n] = -li_mir_fvals[id];
+  return li_mir_fvals_n++;
 }
 
 int32_t li_rt_mir_int(const char* text, int32_t start, int32_t end) {
@@ -739,14 +760,45 @@ int32_t li_rt_mir_literal(int32_t idx) {
  * prints object slots as `__li_o_<base>_<field>` directly in name cells, but
  * the self-hosted walker's name cells only carry two source positions. So the
  * walker registers the mangled name once (li_rt_mir_objname_add) and name
- * cells reference it by index (li_rt_mir_objname_out). */
-#define LI_RT_OBJNAME_MAX 8192
-static const char* li_rt_objname_text[LI_RT_OBJNAME_MAX];
-static int32_t li_rt_objname_bs[LI_RT_OBJNAME_MAX];
-static int32_t li_rt_objname_be[LI_RT_OBJNAME_MAX];
-static int32_t li_rt_objname_fs[LI_RT_OBJNAME_MAX];
-static int32_t li_rt_objname_fe[LI_RT_OBJNAME_MAX];
+ * cells reference it by index (li_rt_mir_objname_out).
+ * Heap-backed and grown geometrically: the previous fixed 8192-entry table
+ * returned index 0 for every entry past the cap, so large modules collapsed
+ * every later mangled name onto the first registered one (thousands of
+ * identical `__li_o_<first-name>` rows in copy-out/ARG/PARAM output). */
+static const char** li_rt_objname_text = NULL;
+static int32_t* li_rt_objname_bs = NULL;
+static int32_t* li_rt_objname_be = NULL;
+static int32_t* li_rt_objname_fs = NULL;
+static int32_t* li_rt_objname_fe = NULL;
 static int32_t li_rt_objname_n = 0;
+static int32_t li_rt_objname_cap = 0;
+static int32_t li_rt_objname_bad = 0;
+
+static int li_rt_objname_grow(int32_t want) {
+  if (want <= li_rt_objname_cap) return 1;
+  int32_t cap = li_rt_objname_cap ? li_rt_objname_cap : 8192;
+  while (cap < want) cap *= 2;
+  const size_t new_span = (size_t)cap;
+  const char** nt = (const char**)realloc((void*)li_rt_objname_text, new_span * sizeof(const char*));
+  if (nt == NULL) { li_rt_objname_bad = 1; return 0; }
+  li_rt_objname_text = nt;
+  int32_t* nbs = (int32_t*)realloc(li_rt_objname_bs, new_span * sizeof(int32_t));
+  if (nbs == NULL) { li_rt_objname_bad = 1; return 0; }
+  li_rt_objname_bs = nbs;
+  int32_t* nbe = (int32_t*)realloc(li_rt_objname_be, new_span * sizeof(int32_t));
+  if (nbe == NULL) { li_rt_objname_bad = 1; return 0; }
+  li_rt_objname_be = nbe;
+  int32_t* nfs = (int32_t*)realloc(li_rt_objname_fs, new_span * sizeof(int32_t));
+  if (nfs == NULL) { li_rt_objname_bad = 1; return 0; }
+  li_rt_objname_fs = nfs;
+  int32_t* nfe = (int32_t*)realloc(li_rt_objname_fe, new_span * sizeof(int32_t));
+  if (nfe == NULL) { li_rt_objname_bad = 1; return 0; }
+  li_rt_objname_fe = nfe;
+  li_rt_objname_cap = cap;
+  return 1;
+}
+
+int32_t li_rt_mir_objname_failed(void) { return li_rt_objname_bad; }
 
 int32_t li_rt_mir_objname_add(const char* text, int32_t bs, int32_t be,
                               int32_t fs, int32_t fe) {
@@ -757,7 +809,7 @@ int32_t li_rt_mir_objname_add(const char* text, int32_t bs, int32_t be,
       return i;
     }
   }
-  if (li_rt_objname_n >= LI_RT_OBJNAME_MAX) {
+  if (!li_rt_objname_grow(li_rt_objname_n + 1)) {
     return 0;
   }
   li_rt_objname_text[li_rt_objname_n] = text;

@@ -142,6 +142,9 @@ extern def li_rt_mir_f64_of_int(v: int) -> int
 extern def li_rt_mir_f64_neg(id: int) -> int
   requires true
   ensures true
+extern def li_rt_mir_f64_failed() -> int
+  requires true
+  ensures true
 extern def li_rt_mir_int(text: var ptr,  s: int,  e: int) -> int
   requires true
   ensures true
@@ -194,6 +197,9 @@ extern def li_rt_mir_fieldpath_out(idx: int) -> int
   requires true
   ensures true
 extern def li_rt_mir_fieldpath_failed() -> int
+  requires true
+  ensures true
+extern def li_rt_mir_objname_failed() -> int
   requires true
   ensures true
 extern def li_rt_mir_pname_store(pid: int,  src: var ptr,  s: int,  e: int) -> int
@@ -8172,6 +8178,53 @@ def mir_obj_field_obj_type(src: var ptr, ts: var array[262144, int], te: var arr
     oi = oi + 1
   return -1
 
+# Descend a (possibly nested) field chain from its root object var to the
+# leaf object type, resolving each hop through the field's declared type
+# identity (hash lookup, order-independent — unlike the callee param's type
+# token, which only resolves if the declaring file has already been walked).
+# chain_rec is the outermost kind-9 record; returns -1 when any hop is not an
+# object field or a segment fails to resolve.
+def mir_chain_leaf_type(darena: var array[65536, int], src: var ptr, ts: var array[262144, int], te: var array[262144, int], itmp: var array[4096, int], chain_rec: int) -> int
+  requires true
+  ensures result >= -1
+  decreases 0
+=
+  # Collect segments outermost -> innermost, then the root var rec.
+  var seg_s: array[8, int]
+  var seg_e: array[8, int]
+  var nseg: int = 0
+  var cur: int = chain_rec
+  while peek65536(darena, cur + 0) == 9:
+    if nseg >= 8:
+      return -1
+    seg_s[nseg] = peek65536(darena, cur + 2)
+    seg_e[nseg] = peek65536(darena, cur + 3)
+    nseg = nseg + 1
+    cur = peek65536(darena, cur + 1)
+  if (peek65536(darena, cur + 0) != 3 and peek65536(darena, cur + 0) != 8) or nseg < 1:
+    return -1
+  # Root descriptor: kind 3 keeps the raw spans in rec+1/rec+2; kind 8 is a
+  # lowered ident whose original token spans live in rec+2/rec+3.
+  var root_s: int = peek65536(darena, cur + 1)
+  var root_e: int = peek65536(darena, cur + 2)
+  if peek65536(darena, cur + 0) == 8:
+    root_s = peek65536(darena, cur + 2)
+    root_e = peek65536(darena, cur + 3)
+  var ti: int = mir_obj_find_var(src,  ts,  te,  itmp,  root_s,  root_e)
+  if ti < 0:
+    return -1
+  var si: int = nseg - 1
+  while si >= 0:
+    var fi: int = mir_obj_find_field(src, itmp, ti, seg_s[si], seg_e[si])
+    if fi < 0:
+      return -1
+    var nxt: int = mir_obj_field_obj_type(src, ts, te, itmp, ti, fi)
+    if nxt < 0:
+      return -1
+    ti = nxt
+    si = si - 1
+  return ti
+
 # Simpler sub-object check that doesn't require ts/te arrays.
 # Returns the sub-object type index or -1 if the field is not an object.
 def mir_field_is_subobj(itmp: var array[4096, int], type_idx: int, field_idx: int) -> int
@@ -10186,6 +10239,8 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
       if ai == 0:
         nab_a0[0] = nab[0]
       if ak == 2:
+        set128(aobj, nab[0], -1)
+        set128(aobj, nab[0] + 1, 0)
         set128(abuf, nab[0],0)
         set128(abuf, nab[0] + 1,1)
         set128(abuf, nab[0] + 2,peek65536(darena, arec + 1))
@@ -10193,6 +10248,8 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
         nab[0] = nab[0] + 4
       else:
         if ak == 0:
+          set128(aobj, nab[0], -1)
+          set128(aobj, nab[0] + 1, 0)
           set128(abuf, nab[0],1)
           set128(abuf, nab[0] + 1,peek65536(darena, arec + 1))
           nab[0] = nab[0] + 4
@@ -10210,9 +10267,13 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
               fld_f[26] = 1
               mir_ins_line(src,  fld_f,  28,  0,  peek65536(darena, arec + 1),  lastop)
               set32768(ftmp, fld_c + 0,1)
+              set128(aobj, nab[0], -1)
+              set128(aobj, nab[0] + 1, 0)
               set128(abuf, nab[0],4)
               set128(abuf, nab[0] + 1,fld_c)
             else:
+              set128(aobj, nab[0], -1)
+              set128(aobj, nab[0] + 1, 0)
               set128(abuf, nab[0],2)
               set128(abuf, nab[0] + 1,peek65536(darena, arec + 1))
             nab[0] = nab[0] + 4
@@ -10247,11 +10308,18 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
                       # Object-kind callee param: only flatten when the type
                       # name actually resolves to a known object (C++ parity:
                       # generic H / unresolved names pass plain idents).
+                      # Cross-file exception: when the param's type is not
+                      # resolvable at this walk point but the ARG ITSELF is a
+                      # registered object var (C++ registers object types for
+                      # the whole module, so `input: InputState` args expand
+                      # even when the callee sits in a not-yet-walked file),
+                      # the arg's own layout is the flatten target.
                       var soc: int = li_rt_preg_get(10, li_rt_preg_get(2, pid) + ai)
                       if soc >= 1000:
                         var stt: int = (soc - 1000) / 2
                         if mir_obj_find_type(src, ts, te, itmp, peek_tk(ts, stt + 0), peek_tk(te, stt + 0)) < 0:
-                          _skip_obj_fallback = 1
+                          if mir_obj_find_var(src, ts, te, itmp, peek65536(darena, arec + 1), peek65536(darena, arec + 2)) < 0:
+                            _skip_obj_fallback = 1
                 if _skip_obj_fallback == 0:
                   if _is_first_arg == 0 or mir_method_first_var(src, ts, te, pid, pp0, pvar) == 0:
                     var _obj_arg_vi: int = mir_obj_find_var(src, ts, te, itmp, peek65536(darena, arec + 1), peek65536(darena, arec + 2))
@@ -10282,6 +10350,8 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
                   nab[0] = nab[0] + 4
                   obj_fi_arg = obj_fi_arg + 1
               else:
+                set128(aobj, nab[0], -1)
+                set128(aobj, nab[0] + 1, 0)
                 set128(abuf, nab[0],3)
                 set128(abuf, nab[0] + 1,peek65536(darena, arec + 1))
                 set128(abuf, nab[0] + 2,peek65536(darena, arec + 2))
@@ -10298,33 +10368,86 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
                 var farg_ov: int = -1
                 if peek65536(darena, farg_base + 0) == 3:
                   farg_ov = mir_obj_find_var(src,  ts,  te,  itmp,  peek65536(darena, farg_base + 1),  peek65536(darena, farg_base + 2))
+                # Whole-object multi-hop chain arg (base is a nested field
+                # access, e.g. `out.layout.dock`): resolve the chain's leaf
+                # type BEFORE mir_lower_expr rewrites the raw kind-9 chain
+                # into a kind-12 objname reference, and carry the stash in
+                # aobj so the CR replay arm expands one ARG per callee param
+                # leaf (__li_o_<chain>_<leaf>) like C++ obj_field_slot_chain.
+                var farg_pre: int = -1
+                var farg_pre_isv: int = 0
+                if is_callproc == 1:
+                  if peek65536(darena, arec + 0) == 9:
+                    farg_pre = mir_chain_leaf_type(darena, src, ts, te, itmp, arec)
+                    if farg_pre >= 0:
+                      set65536(darena, arec + 4, farg_pre)
+                      if ai > 0:
+                        var fp_pc: int = li_rt_preg_get(2, pid) + ai
+                        if li_rt_preg_get(6, fp_pc) == 6:
+                          var fp_oiv: int = li_rt_preg_get(10, fp_pc)
+                          if fp_oiv >= 1000:
+                            if (fp_oiv - 1000) % 2 == 1:
+                              farg_pre_isv = 1
+                          if fp_oiv == 1:
+                            farg_pre_isv = 1
+                var farg_fi: int = -1
                 if farg_ov >= 0:
-                  var farg_fi: int = mir_obj_find_field(src, itmp, farg_ov, peek65536(darena, arec + 2), peek65536(darena, arec + 3))
-                  if farg_fi >= 0:
-                    set128(abuf, nab[0],5)
-                    set128(abuf, nab[0] + 1,peek65536(darena, farg_base + 1))
-                    set128(abuf, nab[0] + 2,peek65536(darena, farg_base + 2))
-                    set128(abuf, nab[0] + 3,farg_fi)
-                    set128(aobj, nab[0],farg_ov)
-                    set128(aobj, nab[0] + 1,0)
-                    nab[0] = nab[0] + 4
-                  else:
+                  farg_fi = mir_obj_find_field(src, itmp, farg_ov, peek65536(darena, arec + 2), peek65536(darena, arec + 3))
+                if farg_fi >= 0 and farg_pre < 0:
+                  # 1-hop resolved leaf: kind 5 (base spans + field idx in
+                  # abuf, root var type + callee by-ref bit in aobj); the
+                  # replay's mir_arg_obj_line expands sub-object fields.
+                  set128(abuf, nab[0],5)
+                  set128(abuf, nab[0] + 1,peek65536(darena, farg_base + 1))
+                  set128(abuf, nab[0] + 2,peek65536(darena, farg_base + 2))
+                  set128(abuf, nab[0] + 3,farg_fi)
+                  set128(aobj, nab[0],farg_ov)
+                  # C++ parity: a field-chain arg carries the callee
+                  # param's by-ref bit on every leaf
+                  # (ai > 0 && callee->params[ai].type.is_var).
+                  var farg_isvar: int = 0
+                  if is_callproc == 1:
+                    if ai > 0:
+                      var farg_pc: int = li_rt_preg_get(2, pid) + ai
+                      if li_rt_preg_get(6, farg_pc) == 6:
+                        var farg_oiv: int = li_rt_preg_get(10, farg_pc)
+                        if farg_oiv >= 1000:
+                          if (farg_oiv - 1000) % 2 == 1:
+                            farg_isvar = 1
+                        if farg_oiv == 1:
+                          farg_isvar = 1
+                  set128(aobj, nab[0] + 1,farg_isvar)
+                  nab[0] = nab[0] + 4
+                else:
+                  if farg_pre < 0:
                     if mir_lower_expr(darena,  dasp,  arec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
                       return 1
                     set128(abuf, nab[0], mir_arg_lowered_kind(darena, arec))
                     set128(abuf, nab[0] + 1, peek65536(darena, arec + 2))
-                    nab[0] = nab[0] + 4
-                else:
-                  if mir_lower_expr(darena,  dasp,  arec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
-                    return 1
-                  set128(abuf, nab[0], mir_arg_lowered_kind(darena, arec))
-                  set128(abuf, nab[0] + 1, peek65536(darena, arec + 2))
+                    set128(aobj, nab[0], -1)
+                    set128(aobj, nab[0] + 1, 0)
+                  else:
+                    # Resolved object-typed chain (any depth): lower it (this
+                    # rewrites arec into a kind-12 objname descriptor whose
+                    # rec+2 is the registered objname index), then carry
+                    # kind-6 + the resolved leaf type so the scratch replay
+                    # expands one ARG per callee param leaf
+                    # (__li_o_<chain>_<leaf>) instead of collapsing to the
+                    # nested objname slot.
+                    if mir_lower_expr(darena,  dasp,  arec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
+                      return 1
+                    set128(abuf, nab[0], 6)
+                    set128(abuf, nab[0] + 1, peek65536(darena, arec + 2))
+                    set128(aobj, nab[0], farg_pre)
+                    set128(aobj, nab[0] + 1, farg_pre_isv)
                   nab[0] = nab[0] + 4
               else:
                 if mir_lower_expr(darena,  dasp,  arec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
                   return 1
                 set128(abuf, nab[0], mir_arg_lowered_kind(darena, arec))
                 set128(abuf, nab[0] + 1, peek65536(darena, arec + 2))
+                set128(aobj, nab[0], -1)
+                set128(aobj, nab[0] + 1, 0)
                 nab[0] = nab[0] + 4
       if ai == 0:
         fst_recs[0] = (nab[0] - nab_a0[0]) / 4
@@ -10382,25 +10505,72 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
                   mir_arg_line(src, 0, 0, 0, -1, 0, 0, 0, 1, peek65536(darena, crarec + 1), peek65536(darena, crarec + 2), 0, 0)
                 else:
                   if crak == 3:
-                    # Ident arg: expand registered object vars into leaf ARG
-                    # lines (callee PARAMs are leaf-flattened), mirroring the
-                    # general CallProc arg collection.
-                    var cr_oti: int = mir_obj_find_var(src, ts, te, itmp, peek65536(darena, crarec + 1), peek65536(darena, crarec + 2))
-                    if cr_oti >= 0:
-                      var cr_nf: int = mir_obj_field_count(itmp, cr_oti)
-                      var cr_fi: int = 0
-                      while cr_fi < cr_nf:
-                        var cr_iai: int = 0
-                        if mir_obj_field_elems(itmp, cr_oti, cr_fi) > 0:
-                          cr_iai = 1
-                        mir_arg_obj_line(src, peek65536(darena, crarec + 1), peek65536(darena, crarec + 2), itmp, cr_oti, cr_fi, cr_iai, 0)
-                        cr_fi = cr_fi + 1
+                    if crai == 0 and cp_wbid >= 0:
+                      # Write-back receiver: emit wb leaf ARG lines
+                      # (is_var_ref=1), replacing the receiver's own leaves,
+                      # like the statement-call path (C++ first_var_obj).
+                      var crw: int = 0
+                      while crw < cp_nf:
+                        mir_arg_wb_line(src, itmp, cp_ti, crw, cp_wbid, 0, 1)
+                        crw = crw + 1
                     else:
-                      mir_arg_line(src, 0, 0, 0, -1, peek65536(darena, crarec + 1), peek65536(darena, crarec + 2), 1, 0, 0, 0, 0, 0)
+                      # Ident arg: expand registered object vars into leaf ARG
+                      # lines (callee PARAMs are leaf-flattened), mirroring the
+                      # general CallProc arg collection. C++ carries the
+                      # callee param's by-ref bit on every leaf
+                      # (ai > 0 && param.is_var); the first arg's var-ness is
+                      # owned by the wb path.
+                      var cr_oti: int = mir_obj_find_var(src, ts, te, itmp, peek65536(darena, crarec + 1), peek65536(darena, crarec + 2))
+                      var cr_isvar: int = 0
+                      if crai > 0:
+                        var cr_pc: int = li_rt_preg_get(2, pid) + crai
+                        if li_rt_preg_get(6, cr_pc) == 6:
+                          var cr_oiv: int = li_rt_preg_get(10, cr_pc)
+                          if cr_oiv >= 1000:
+                            if (cr_oiv - 1000) % 2 == 1:
+                              cr_isvar = 1
+                          if cr_oiv == 1:
+                            cr_isvar = 1
+                      if cr_oti >= 0:
+                        var cr_nf: int = mir_obj_field_count(itmp, cr_oti)
+                        var cr_fi: int = 0
+                        while cr_fi < cr_nf:
+                          var cr_iai: int = 0
+                          if mir_obj_field_elems(itmp, cr_oti, cr_fi) > 0:
+                            cr_iai = 1
+                          mir_arg_obj_line(src, peek65536(darena, crarec + 1), peek65536(darena, crarec + 2), itmp, cr_oti, cr_fi, cr_iai, cr_isvar)
+                          cr_fi = cr_fi + 1
+                      else:
+                        mir_arg_line(src, 0, 0, 0, -1, peek65536(darena, crarec + 1), peek65536(darena, crarec + 2), 1, 0, 0, 0, 0, 0)
                   else:
                     if crak == 8:
-                      # Lowered ident: is_tmp in rec+1, temp id in rec+2
-                      mir_arg_line(src, 0, 0, 0, -1, peek65536(darena, crarec + 2), 0, 2, 0, 0, 0, 0, 0)
+                      # Lowered ident: is_tmp in rec+1, temp id in rec+2.
+                      # is_tmp==3 marks an object-returning nested call whose
+                      # result was cr-ized: C++ passes the aggregate cr slot
+                      # (__li_o___cr1552), not the temp label.
+                      if peek65536(darena, crarec + 1) == 3:
+                        li_rt_mir_str("ARG")
+                        li_rt_ast_space()
+                        li_rt_ast_int(0)
+                        li_rt_ast_space()
+                        li_rt_ast_int(0)
+                        li_rt_ast_space()
+                        li_rt_ast_int(0)
+                        li_rt_ast_space()
+                        li_rt_ast_int(0)
+                        li_rt_ast_space()
+                        li_rt_mir_str("__li_o___cr")
+                        li_rt_ast_int(peek65536(darena, crarec + 2))
+                        li_rt_ast_space()
+                        li_rt_ast_int(0)
+                        li_rt_ast_space()
+                        li_rt_ast_space()
+                        li_rt_ast_int(0)
+                        li_rt_ast_space()
+                        li_rt_ast_int(0)
+                        li_rt_ast_nl()
+                      else:
+                        mir_arg_line(src, 0, 0, 0, -1, peek65536(darena, crarec + 2), 0, 2, 0, 0, 0, 0, 0)
                     else:
                       if crak == 9 or crak == 12:
                         # Object-field arg: C++ passes the flattened mangled
@@ -10408,8 +10578,28 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
                         # __li_o_<base>_<field> and a nested path lowers to its
                         # registered objname instead of a materialized temp.
                         var cf_oi: int = -1
+                        var cf_isvar: int = 0
+                        if crai > 0:
+                          var cf_pc: int = li_rt_preg_get(2, pid) + crai
+                          if li_rt_preg_get(6, cf_pc) == 6:
+                            var cf_oiv: int = li_rt_preg_get(10, cf_pc)
+                            if cf_oiv >= 1000:
+                              if (cf_oiv - 1000) % 2 == 1:
+                                cf_isvar = 1
+                            if cf_oiv == 1:
+                              cf_isvar = 1
                         if crak == 12:
-                          cf_oi = peek65536(darena, crarec + 2)
+                          # Whole-object chain arg (C++ obj_field_slot_chain
+                          # class): when the chain's leaf type was resolved
+                          # pre-lowering into the record's spare rec+4 cell,
+                          # C++ expands one ARG per callee param leaf
+                          # (__li_o_<chain>_<leaf>) instead of the collapsed
+                          # objname slot.
+                          var cf_pre: int = peek65536(darena, crarec + 4)
+                          if cf_pre >= 0:
+                            mir_arg_obj_line_r(src, itmp, cf_pre, peek65536(darena, crarec + 2), 0, cf_isvar)
+                          else:
+                            cf_oi = peek65536(darena, crarec + 2)
                         else:
                           var cf_base: int = peek65536(darena, crarec + 1)
                           var cf_ov: int = -1
@@ -10421,7 +10611,7 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
                               var cf_iai: int = 0
                               if mir_obj_field_elems(itmp, cf_ov, cf_fi) > 0:
                                 cf_iai = 1
-                              mir_arg_obj_line(src, peek65536(darena, cf_base + 1), peek65536(darena, cf_base + 2), itmp, cf_ov, cf_fi, cf_iai, 0)
+                              mir_arg_obj_line(src, peek65536(darena, cf_base + 1), peek65536(darena, cf_base + 2), itmp, cf_ov, cf_fi, cf_iai, cf_isvar)
                             else:
                               if mir_lower_expr(darena,  dasp,  crarec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
                                 return 1
@@ -10437,7 +10627,7 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
                             else:
                               mir_arg_line(src, 0, 0, 0, -1, peek65536(darena, crarec + 2), 0, 2, 0, 0, 0, 0, 0)
                         if cf_oi >= 0:
-                          mir_arg_objname_line(src, cf_oi, 0, 0)
+                          mir_arg_objname_line(src, cf_oi, 0, cf_isvar)
             crai = crai + 1
           cr_args_emitted = 1
           mir_mk_name(darena,  rec,  3,  crid2,  robj_ti)
@@ -10548,7 +10738,18 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
                 else:
                   if akind == 6:
                     # Object field path: C++ passes the flattened slot name.
-                    mir_arg_objname_line(src, peek128(abuf, bi + 1), 0, 0)
+                    # When the callee param is object-typed and resolved, C++
+                    # expands one ARG per leaf (__li_o_<chain>_<leaf>), so
+                    # replay the stored param layout instead of the single
+                    # objname line.
+                    var e6_ti: int = peek128(aobj, bi + 0)
+                    if e6_ti >= 0:
+                      # parent_oi is the registered chain objname
+                      # (__li_o_out_layout_dock); mir_arg_obj_line_r appends
+                      # each leaf under it.
+                      mir_arg_obj_line_r(src, itmp, e6_ti, peek128(abuf, bi + 1), 0, peek128(aobj, bi + 1))
+                    else:
+                      mir_arg_objname_line(src, peek128(abuf, bi + 1), 0, 0)
                   else:
                     mir_arg_line(src, 0, 0, 0, -1, peek128(abuf, bi + 1), 0, 2, 0, 0, 0, 0, 0)
       bi = bi + 4
@@ -11415,9 +11616,14 @@ def mir_return(darena: var array[65536, int],  dasp: var array[1, int], src: var
                 if peek65536(darena, rfb + 0) == 3:
                   mir_ins_mangled(src, 3, 0, peek65536(darena, rfb + 1), peek65536(darena, rfb + 2), rfs, rfe, 0, 1, 0, lastop, -1, -1, -1, -1, -1, -1, -1, 0)
                 else:
-                  var f5f: array[44, int]
-                  mir_fdef(f5f)
-                  mir_ins_line(src,  f5f,  0,  0,  -1,  lastop)
+                  # Nested chain root (base itself a field access): the C++
+                  # Field-return path reads e.base->ident, which is EMPTY for
+                  # a Field base, so the name collapses to
+                  # __li_o__<field> (e.g. `return compose.config.x` ->
+                  # __li_o__x). Mirror that byte-for-byte instead of falling
+                  # back to ReturnVoid. Passing base_s == fld_s emits the
+                  # empty base span, so the name renders __li_o__<field>.
+                  mir_ins_mangled(src, 3, 0, rfs, rfs, rfs, rfe, 0, 1, 0, lastop, -1, -1, -1, -1, -1, -1, -1, 0)
               else:
                 if rk == 7 or rk == 4 or rk == 5 or rk == 11:
                   if mir_lower_expr(darena,  dasp,  rec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
@@ -11671,8 +11877,22 @@ def mir_var_decl(darena: var array[65536, int],  dasp: var array[1, int], src: v
                     else:
                       # Ident arg: expand registered object vars into leaf ARG
                       # lines (callee PARAMs are leaf-flattened), mirroring the
-                      # general CallProc arg collection.
+                      # general CallProc arg collection. C++ carries the
+                      # callee param's by-ref bit on every leaf
+                      # (ai > 0 && param.is_var); the first arg's var-ness is
+                      # owned by the write-back path.
                       var ac_oti: int = mir_obj_find_var(src, ts, te, itmp, peek65536(darena, acrec + 1), peek65536(darena, acrec + 2))
+                      var ac_isvar: int = 0
+                      var ac_pid: int = peek32768(ftmp, 4090)
+                      if aci > 0:
+                        var ac_pc: int = li_rt_preg_get(2, ac_pid) + aci
+                        if li_rt_preg_get(6, ac_pc) == 6:
+                          var ac_oiv: int = li_rt_preg_get(10, ac_pc)
+                          if ac_oiv >= 1000:
+                            if (ac_oiv - 1000) % 2 == 1:
+                              ac_isvar = 1
+                          if ac_oiv == 1:
+                            ac_isvar = 1
                       if ac_oti >= 0:
                         var ac_nf: int = mir_obj_field_count(itmp, ac_oti)
                         var ac_fi: int = 0
@@ -11680,7 +11900,7 @@ def mir_var_decl(darena: var array[65536, int],  dasp: var array[1, int], src: v
                           var ac_iai: int = 0
                           if mir_obj_field_elems(itmp, ac_oti, ac_fi) > 0:
                             ac_iai = 1
-                          mir_arg_obj_line(src, peek65536(darena, acrec + 1), peek65536(darena, acrec + 2), itmp, ac_oti, ac_fi, ac_iai, 0)
+                          mir_arg_obj_line(src, peek65536(darena, acrec + 1), peek65536(darena, acrec + 2), itmp, ac_oti, ac_fi, ac_iai, ac_isvar)
                           ac_fi = ac_fi + 1
                       else:
                         mir_arg_line(src, 0, 0, 0, -1, peek65536(darena, acrec + 1), peek65536(darena, acrec + 2), 1, 0, 0, 0, 0, 0)
@@ -11694,6 +11914,17 @@ def mir_var_decl(darena: var array[65536, int],  dasp: var array[1, int], src: v
                         # __li_o_<base>_<field> and a nested path lowers to its
                         # registered objname instead of a materialized temp.
                         var af_oi: int = -1
+                        var af_isvar: int = 0
+                        var af_pid: int = peek32768(ftmp, 4090)
+                        if aci > 0:
+                          var af_pc: int = li_rt_preg_get(2, af_pid) + aci
+                          if li_rt_preg_get(6, af_pc) == 6:
+                            var af_oiv: int = li_rt_preg_get(10, af_pc)
+                            if af_oiv >= 1000:
+                              if (af_oiv - 1000) % 2 == 1:
+                                af_isvar = 1
+                            if af_oiv == 1:
+                              af_isvar = 1
                         if ack == 12:
                           af_oi = peek65536(darena, acrec + 2)
                         else:
@@ -11707,7 +11938,7 @@ def mir_var_decl(darena: var array[65536, int],  dasp: var array[1, int], src: v
                               var af_iai: int = 0
                               if mir_obj_field_elems(itmp, af_ov, af_fi) > 0:
                                 af_iai = 1
-                              mir_arg_obj_line(src, peek65536(darena, af_base + 1), peek65536(darena, af_base + 2), itmp, af_ov, af_fi, af_iai, 0)
+                              mir_arg_obj_line(src, peek65536(darena, af_base + 1), peek65536(darena, af_base + 2), itmp, af_ov, af_fi, af_iai, af_isvar)
                             else:
                               if mir_lower_expr(darena,  dasp,  acrec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
                                 return 1
@@ -11723,7 +11954,7 @@ def mir_var_decl(darena: var array[65536, int],  dasp: var array[1, int], src: v
                             else:
                               mir_arg_line(src, 0, 0, 0, -1, peek65536(darena, acrec + 2), 0, 2, 0, 0, 0, 0, 0)
                         if af_oi >= 0:
-                          mir_arg_objname_line(src, af_oi, 0, 0)
+                          mir_arg_objname_line(src, af_oi, 0, af_isvar)
             aci = aci + 1
           var fc: int = 0
           while fc < nfld:
@@ -11759,15 +11990,32 @@ def mir_var_decl(darena: var array[65536, int],  dasp: var array[1, int], src: v
               fi2 = fi2 + 1
         else:
           if peek65536(darena, rec + 0) == 9:
-            # Nested field-path init: `var u: T = o.f` (and `o.f.g`). The
-            # source leaves live at the chain-mangled slots
-            # __li_o_<fieldpath>_<field>, so build the fieldpath for the RHS
-            # and copy each leaf from there — the same leaf copies the plain
-            # object-var init emits, with a path-qualified source.
-            var rb9: int = peek65536(darena, rec + 1)
-            if peek65536(darena, rb9 + 0) == 3:
-              var fp9: int = li_rt_mir_fieldpath_add(0, src, peek65536(darena, rb9 + 1), peek65536(darena, rb9 + 2))
-              fp9 = li_rt_mir_fieldpath_add(fp9, src, peek65536(darena, rec + 2), peek65536(darena, rec + 3))
+            # Nested field-path init: `var u: T = o.f` (and `o.f.g`, ...).
+            # The source leaves live at the chain-mangled slots
+            # __li_o_<fieldpath>_<field>, so build the full fieldpath for the
+            # RHS (root var plus every chain segment, in order) and copy each
+            # leaf from there — the same leaf copies the plain object-var
+            # init emits, with a path-qualified source. C++ resolves this via
+            # obj_field_slot_chain, which recurses to arbitrary depth
+            # (lower.cpp var-decl whole-object copy).
+            var vseg_s: array[8, int]
+            var vseg_e: array[8, int]
+            var vnseg: int = 0
+            var vcur: int = rec
+            while peek65536(darena, vcur + 0) == 9:
+              if vnseg >= 8:
+                vnseg = 9
+                break
+              vseg_s[vnseg] = peek65536(darena, vcur + 2)
+              vseg_e[vnseg] = peek65536(darena, vcur + 3)
+              vnseg = vnseg + 1
+              vcur = peek65536(darena, vcur + 1)
+            if peek65536(darena, vcur + 0) == 3 and vnseg >= 1 and vnseg <= 8:
+              var fp9: int = li_rt_mir_fieldpath_add(0, src, peek65536(darena, vcur + 1), peek65536(darena, vcur + 2))
+              var vsi: int = vnseg - 1
+              while vsi >= 0:
+                fp9 = li_rt_mir_fieldpath_add(fp9, src, vseg_s[vsi], vseg_e[vsi])
+                vsi = vsi - 1
               if fp9 > 0:
                 var fi9: int = 0
                 while fi9 < nfld:
@@ -12353,7 +12601,10 @@ def mir_assign(darena: var array[65536, int],  dasp: var array[1, int],  lrec: i
                       sf_rhs_e = peek65536(darena, rfb_inner + 2)
                       sf_rhs_p_s = peek65536(darena, rfb_f + 2)
                       sf_rhs_p_e = peek65536(darena, rfb_f + 3)
-                      sf_rhs_f_s = peek65536(darena, rfb_f + 2)
+                      # The leaf segment is the OUTER field span (w), not the
+                      # middle record's field start mixed with the outer end
+                      # (which rendered `viewport.w` as one segment).
+                      sf_rhs_f_s = peek65536(darena, rrec + 2)
                   sf_rhs_f_e = peek65536(darena, rrec + 3)
               else:
                 if mir_lower_expr(darena,  dasp,  rrec,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef,  pei,  pvar) == 1:
@@ -13647,6 +13898,13 @@ def mir_proc(src: var ptr,  tk: var array[262144, int],  ts: var array[262144, i
   nmat[0] = 0
   set512(fatok, 62, 0)
   set512(fatok, 63, 0)
+  # Object-var registry is per-proc too: C++ clears g_object_vars per proc
+  # (lower.cpp), so a name reused across procs must resolve to THIS proc's
+  # object vars only. Params re-register below; locals re-register at their
+  # declarations. Without the reset, `return n` in a later proc matched an
+  # unrelated object var from an earlier proc and emitted a bogus
+  # ReturnObject + OBJ layout.
+  mir_reg_set(lr_n_var(), 0)
   if is_extern == 0:
     if cur_kind(tk,  n,  pi,  err) == 16:
       pi[0] = pi[0] + 1
@@ -13739,6 +13997,12 @@ def mir_proc(src: var ptr,  tk: var array[262144, int],  ts: var array[262144, i
       if pobj2 < 0:
         var ptype_tok2: int = li_rt_preg_get(12, pi2)
         pobj2 = mir_obj_find_type(src, ts, te, itmp, peek_tk(ts, ptype_tok2 + 0), peek_tk(te, ptype_tok2 + 0))
+        # Cross-file repair: the param's type may resolve only after the
+        # declaring file's dependency types were collected. Store it back so
+        # call-site collectors (which read preg 13 directly) see the layout
+        # instead of collapsing whole-object args to plain idents.
+        if pobj2 >= 0:
+          li_rt_preg_set(13, pi2, pobj2)
     if pobj2 >= 0:
       mir_obj_reg_var(itmp, peek_tk(ts, li_rt_preg_get(5, pi2) + 0), peek_tk(te, li_rt_preg_get(5, pi2) + 0), pobj2)
       var obj_is_var2: int = 0
@@ -14495,6 +14759,12 @@ def mir_module(src: var ptr,  file_path: ptr, tk: var array[262144, int],  ts: v
     return 1
   if li_rt_mir_fieldpath_failed() == 1:
     print("mir error: field-path registry capacity exceeded")
+    return 1
+  if li_rt_mir_objname_failed() == 1:
+    print("mir error: objname registry capacity exceeded")
+    return 1
+  if li_rt_mir_f64_failed() == 1:
+    print("mir error: float literal registry capacity exceeded")
     return 1
   return 0
 
