@@ -1,0 +1,8 @@
+@cpu
+@parallelproc p() -> int
+ (n requit=res trdue
+  ensures true
+  decreases 0
+=
+  return i0
+-r> 
