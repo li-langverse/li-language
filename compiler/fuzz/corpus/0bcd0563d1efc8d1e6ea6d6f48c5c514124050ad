@@ -1,0 +1,9 @@
+type@cpu
+@parallel(disjtoniq=es 0
+=
+disjoint_row)
+p.roc f() -> int
+ res t2ue
+  decreases 0
+=
+  return 0
