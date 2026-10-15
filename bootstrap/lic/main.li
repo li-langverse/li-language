@@ -4563,6 +4563,307 @@ def effects_check(src: var ptr, tk: var array[262144, int], ts: var array[262144
     return 1
   return 0
 
+# ---- Layer 4b: mir-mode effects port (extern-call class only) ----
+# Mirrors compiler/types/borrowck.cpp proc_mentions_extern_call exactly: only
+# the TOP-LEVEL body statements of a non-extern main-module proc count, and
+# only when the statement's root expression (compiled to C++ Stmt::expr) is a
+# direct call (parser.cpp: Expr stmt, Return expr, Assign RHS). Var-decl and
+# borrow inits land in Stmt::init in C++ and never count; conditions, nested
+# call arguments and nested blocks do not count. `echo` is excluded by name
+# (C++ special case). Flag positions match parse_stmt's own dispatch so a
+# proc calling a declared extern without `raises IO` rejects in mir mode.
+
+def fx_mir_root_call_eff(src: var ptr,  tk: var array[262144, int],  ts: var array[262144, int], te: var array[262144, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  pn: var array[256, int], pext: var array[256, int], pcnt: var array[1, int], used: var array[1, int]) -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if cur_kind(tk,  n,  pi,  err) == 4:
+    if peek_off(tk,  n,  pi, 1) == 49:
+      if tok_is(src,  ts,  te,  pi[0],  "echo") == 0:
+        if fx_proc_ext(src,  ts,  te,  pn,  pext,  pcnt,  pi[0]) == 1:
+          fx_add_eff(used, 1)
+  return 0
+
+def fx_mir_top_stmt(src: var ptr,  tk: var array[262144, int],  ts: var array[262144, int], te: var array[262144, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int],  pn: var array[256, int], pext: var array[256, int], pcnt: var array[1, int], used: var array[1, int]) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  skip_newlines(tk,  n,  pi,  err)
+  var k: int = cur_kind(tk,  n,  pi,  err)
+  if k == 3 or k == 0:
+    return 0
+  if k == 76:
+    parse_decorator_list(src,  tk,  ts,  te,  n,  pi,  err, 0)
+    skip_newlines(tk,  n,  pi,  err)
+    fx_mir_top_stmt(src,  tk,  ts,  te,  n,  pi,  err,  pn,  pext,  pcnt,  used)
+    return 1
+  if k == 30:
+    # Return: s.expr is the parsed return expr (bare return leaves it null).
+    pi[0] = pi[0] + 1
+    var rk: int = cur_kind(tk,  n,  pi,  err)
+    if rk != 1:
+      if rk != 3:
+        if rk != 0:
+          fx_mir_root_call_eff(src,  tk,  ts,  te,  n,  pi,  err,  pn,  pext,  pcnt,  used)
+          parse_expr(src,  tk,  ts,  te,  n,  pi,  err, 0, 0)
+    skip_newlines(tk,  n,  pi,  err)
+    return 1
+  if k == 20:
+    # var x: T = init — C++ puts the init in Stmt::init, never in
+    # Stmt::expr, so var-decl inits never trigger the extern rule.
+    pi[0] = pi[0] + 1
+    if cur_kind(tk,  n,  pi,  err) == 4:
+      pi[0] = pi[0] + 1
+    if accept_k(tk,  n,  pi,  err, 56) == 1:
+      parse_type(src,  tk,  ts,  te,  n,  pi,  err, 0)
+    if accept_k(tk,  n,  pi,  err, 58) == 1:
+      parse_expr(src,  tk,  ts,  te,  n,  pi,  err, 0, 0)
+    skip_newlines(tk,  n,  pi,  err)
+    return 1
+  if k == 4:
+    if tok_is(src,  ts,  te,  pi[0],  "discard") == 1:
+      pi[0] = pi[0] + 1
+      var dk: int = cur_kind(tk,  n,  pi,  err)
+      if dk != 1:
+        if dk != 3:
+          if dk != 0:
+            # discard + value is Stmt::Kind::Expr in C++ (s.expr set).
+            fx_mir_root_call_eff(src,  tk,  ts,  te,  n,  pi,  err,  pn,  pext,  pcnt,  used)
+            parse_expr(src,  tk,  ts,  te,  n,  pi,  err, 0, 0)
+      skip_newlines(tk,  n,  pi,  err)
+      return 1
+    if tok_is(src,  ts,  te,  pi[0],  "borrow") == 1:
+      parse_stmt(src,  tk,  ts,  te,  n,  pi,  err, 0)
+      skip_newlines(tk,  n,  pi,  err)
+      return 1
+    if tok_is(src,  ts,  te,  pi[0],  "parallel") == 1:
+      # parallel for: the C++ stmt is ParallelFor with no Stmt::expr; its
+      # body statements nest and never count.
+      parse_stmt(src,  tk,  ts,  te,  n,  pi,  err, 0)
+      skip_newlines(tk,  n,  pi,  err)
+      return 1
+    var save: int = pi[0]
+    if peek_off(tk,  n,  pi, 1) == 49:
+      # Bare callee-root call: Expr-stmt root call (or invalid grammar; the
+      # quiet parse still consumes it, and C++ would flag it identically).
+      fx_mir_root_call_eff(src,  tk,  ts,  te,  n,  pi,  err,  pn,  pext,  pcnt,  used)
+      parse_stmt(src,  tk,  ts,  te,  n,  pi,  err, 0)
+      skip_newlines(tk,  n,  pi,  err)
+      return 1
+    # Mirror parser.cpp: parse_primary + parse_postfix, then Assign iff Eq;
+    # the Assign's RHS is Stmt::expr; otherwise restore and treat as a
+    # plain Expr stmt (never a flag position).
+    parse_primary(src,  tk,  ts,  te,  n,  pi,  err, 0)
+    parse_postfix(src,  tk,  ts,  te,  n,  pi,  err, 0)
+    if accept_k(tk,  n,  pi,  err, 58) == 1:
+      fx_mir_root_call_eff(src,  tk,  ts,  te,  n,  pi,  err,  pn,  pext,  pcnt,  used)
+      parse_expr(src,  tk,  ts,  te,  n,  pi,  err, 0, 0)
+      skip_newlines(tk,  n,  pi,  err)
+      return 1
+    pi[0] = save
+    parse_stmt(src,  tk,  ts,  te,  n,  pi,  err, 0)
+    skip_newlines(tk,  n,  pi,  err)
+    return 1
+  parse_stmt(src,  tk,  ts,  te,  n,  pi,  err, 0)
+  skip_newlines(tk,  n,  pi,  err)
+  return 1
+
+def fx_mir_effects(src: var ptr,  tk: var array[262144, int],  ts: var array[262144, int], te: var array[262144, int],  n: var array[1, int],  pi: var array[1, int], err: var array[1, int]) -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  # Pass 1: collect proc names, extern flags and declared effects (same as
+  # effects_check's first scan; bodies skipped quietly.
+  var pn: array[256, int]
+  var peff: array[256, int]
+  var pext: array[256, int]
+  var pcnt: array[1, int]
+  var pend: array[1, int]
+  var decl: array[1, int]
+  var heap: array[1, int]
+  var used: array[1, int]
+  var found: array[1, int]
+  var await_seen: array[1, int]
+  pcnt[0] = 0
+  pend[0] = 0
+  found[0] = 0
+  pi[0] = 0
+  skip_newlines(tk,  n,  pi,  err)
+  while cur_kind(tk,  n,  pi,  err) != 0:
+    var k1: int = cur_kind(tk,  n,  pi,  err)
+    if k1 == 11:
+      fx_skip_typealias(src,  tk,  ts,  te,  n,  pi,  err)
+      continue
+    if k1 == 76:
+      fx_skip_decorators(src,  tk,  ts,  te,  n,  pi,  err,  pend)
+      continue
+    if k1 == 18:
+      parse_import(src,  tk,  ts,  te,  n,  pi,  err, 0)
+      skip_newlines(tk,  n,  pi,  err)
+      continue
+    if k1 == 13 or k1 == 12 or k1 == 14:
+      parse_theorem(src,  tk,  ts,  te,  n,  pi,  err, 0, 0, 0)
+      skip_newlines(tk,  n,  pi,  err)
+      continue
+    if k1 == 16 or k1 == 17:
+      pi[0] = pi[0] + 1
+      skip_newlines(tk,  n,  pi,  err)
+      continue
+    if k1 == 32 or k1 == 10 or k1 == 33:
+      var is_ext1: int = 0
+      var is_asy1: int = pend[0]
+      pend[0] = 0
+      if k1 == 32:
+        is_ext1 = 1
+        pi[0] = pi[0] + 1
+        if cur_kind(tk,  n,  pi,  err) == 10:
+          pi[0] = pi[0] + 1
+      if k1 == 33:
+        is_asy1 = 1
+        pi[0] = pi[0] + 1
+        if cur_kind(tk,  n,  pi,  err) == 10:
+          pi[0] = pi[0] + 1
+      if k1 == 10:
+        pi[0] = pi[0] + 1
+      if cur_kind(tk,  n,  pi,  err) != 4:
+        return found[0]
+      var nm1: int = pi[0]
+      pi[0] = pi[0] + 1
+      var idx1: int = pcnt[0]
+      if idx1 < 256:
+        pn[idx1] = nm1
+        pext[idx1] = is_ext1
+        peff[idx1] = 0
+        pcnt[0] = pcnt[0] + 1
+      fx_skip_typeparams(tk,  n,  pi,  err)
+      expect_k(tk,  n,  pi,  err, 49)
+      decl[0] = 0
+      heap[0] = 0
+      fx_skip_params(src,  tk,  ts,  te,  n,  pi,  err,  heap)
+      fx_record_raises(src,  tk,  ts,  te,  n,  pi,  err,  decl)
+      if accept_k(tk,  n,  pi,  err, 57) == 1:
+        if cur_kind(tk,  n,  pi,  err) == 4:
+          if fx_is_heap(src,  ts,  te,  pi[0]) == 1:
+            heap[0] = 1
+        parse_type(src,  tk,  ts,  te,  n,  pi,  err, 0)
+      fx_record_raises(src,  tk,  ts,  te,  n,  pi,  err,  decl)
+      if idx1 < 256:
+        peff[idx1] = decl[0]
+      while 1 == 1:
+        var ck1: int = cur_kind(tk,  n,  pi,  err)
+        if ck1 == 41 or ck1 == 42 or ck1 == 43 or ck1 == 44 or ck1 == 45:
+          parse_contract(src,  tk,  ts,  te,  n,  pi,  err, 0)
+          continue
+        break
+      if is_ext1 == 0:
+        skip_newlines(tk,  n,  pi,  err)
+        if accept_k(tk,  n,  pi,  err, 58) == 1:
+          skip_newlines(tk,  n,  pi,  err)
+          if cur_kind(tk,  n,  pi,  err) == 2:
+            parse_block(src,  tk,  ts,  te,  n,  pi,  err, 0)
+      skip_newlines(tk,  n,  pi,  err)
+      continue
+    return found[0]
+  # Pass 2: re-walk the main module's procs; for each non-extern proc, flag
+  # only top-level Stmt::expr-shaped root calls to declared externs and
+  # require the IO raise bit — the proc_mentions_extern_call rule.
+  pi[0] = 0
+  pend[0] = 0
+  skip_newlines(tk,  n,  pi,  err)
+  while cur_kind(tk,  n,  pi,  err) != 0:
+    var k2: int = cur_kind(tk,  n,  pi,  err)
+    if k2 == 11:
+      fx_skip_typealias(src,  tk,  ts,  te,  n,  pi,  err)
+      continue
+    if k2 == 76:
+      fx_skip_decorators(src,  tk,  ts,  te,  n,  pi,  err,  pend)
+      continue
+    if k2 == 18:
+      parse_import(src,  tk,  ts,  te,  n,  pi,  err, 0)
+      skip_newlines(tk,  n,  pi,  err)
+      continue
+    if k2 == 13 or k2 == 12 or k2 == 14:
+      parse_theorem(src,  tk,  ts,  te,  n,  pi,  err, 0, 0, 0)
+      skip_newlines(tk,  n,  pi,  err)
+      continue
+    if k2 == 16 or k2 == 17:
+      pi[0] = pi[0] + 1
+      skip_newlines(tk,  n,  pi,  err)
+      continue
+    if k2 == 32 or k2 == 10 or k2 == 33:
+      var is_ext2: int = 0
+      var is_asy2: int = pend[0]
+      pend[0] = 0
+      if k2 == 32:
+        is_ext2 = 1
+        pi[0] = pi[0] + 1
+        if cur_kind(tk,  n,  pi,  err) == 10:
+          pi[0] = pi[0] + 1
+      if k2 == 33:
+        is_asy2 = 1
+        pi[0] = pi[0] + 1
+        if cur_kind(tk,  n,  pi,  err) == 10:
+          pi[0] = pi[0] + 1
+      if k2 == 10:
+        pi[0] = pi[0] + 1
+      if cur_kind(tk,  n,  pi,  err) != 4:
+        return found[0]
+      pi[0] = pi[0] + 1
+      fx_skip_typeparams(tk,  n,  pi,  err)
+      expect_k(tk,  n,  pi,  err, 49)
+      decl[0] = 0
+      heap[0] = 0
+      fx_skip_params(src,  tk,  ts,  te,  n,  pi,  err,  heap)
+      fx_record_raises(src,  tk,  ts,  te,  n,  pi,  err,  decl)
+      if accept_k(tk,  n,  pi,  err, 57) == 1:
+        if cur_kind(tk,  n,  pi,  err) == 4:
+          if fx_is_heap(src,  ts,  te,  pi[0]) == 1:
+            heap[0] = 1
+        parse_type(src,  tk,  ts,  te,  n,  pi,  err, 0)
+      fx_record_raises(src,  tk,  ts,  te,  n,  pi,  err,  decl)
+      var ck2: int = 0
+      while 1 == 1:
+        ck2 = cur_kind(tk,  n,  pi,  err)
+        if ck2 == 41 or ck2 == 42 or ck2 == 43 or ck2 == 44 or ck2 == 45:
+          parse_contract(src,  tk,  ts,  te,  n,  pi,  err, 0)
+          continue
+        break
+      if is_ext2 == 0:
+        used[0] = 0
+        skip_newlines(tk,  n,  pi,  err)
+        if accept_k(tk,  n,  pi,  err, 58) == 1:
+          skip_newlines(tk,  n,  pi,  err)
+          if cur_kind(tk,  n,  pi,  err) == 2:
+            pi[0] = pi[0] + 1
+            while cur_kind(tk,  n,  pi,  err) != 3:
+              skip_newlines(tk,  n,  pi,  err)
+              if cur_kind(tk,  n,  pi,  err) == 3:
+                break
+              if cur_kind(tk,  n,  pi,  err) == 0:
+                break
+              var before2: int = pi[0]
+              fx_mir_top_stmt(src,  tk,  ts,  te,  n,  pi,  err,  pn,  pext,  pcnt,  used)
+              if pi[0] == before2:
+                # No progress: abandon the scan and let the walker's normal
+                # pipeline decide (a pure scan failure must not reject).
+                return found[0]
+            if cur_kind(tk,  n,  pi,  err) == 3:
+              pi[0] = pi[0] + 1
+        if fx_has_eff(used[0], 1) == 1:
+          if fx_has_eff(decl[0], 1) == 0:
+            found[0] = 1
+            li_rt_emit_err(900)
+            return 1
+        if found[0] == 1:
+          return 1
+      skip_newlines(tk,  n,  pi,  err)
+      continue
+    return found[0]
+  return found[0]
+
 # ---- Layer 4c: borrow checking (E0310 double-mut, E0311 use-after-move) ----
 # Mirrors compiler/types/borrowck.cpp. A plain-ident call argument moves the
 # local iff the callee parameter is non-`var` and non-scalar; reading a moved
@@ -15196,6 +15497,10 @@ def main() raises IO -> int
     var f: ptr = li_rt_read_file(li_rt_argv(2))
     var r: int = lex_source(f, tk, ts, te, n, 0)
     if r == 1:
+      print("mir error")
+      return 1
+    var fxr: int = fx_mir_effects(f, tk, ts, te, n, pi, err)
+    if fxr == 1:
       print("mir error")
       return 1
     var mr: int = mir_module(f, li_rt_argv(2), tk, ts, te, n, pi, err)
