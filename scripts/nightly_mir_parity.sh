@@ -19,7 +19,7 @@ LIC="${LIC:-$("$ROOT/scripts/resolve-lic.sh")}"
 LI="${LI_CHECK_BIN:-$ROOT/build/li-mir-walker}"
 BASELINE_FILE="${ROOT}/.mir_parity_baseline"
 TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"' END
+trap 'rm -rf "$TMP"' EXIT
 
 if [[ ! -x "$LI" ]]; then
   echo "ERROR: Li MIR walker binary not found at $LI" >&2
