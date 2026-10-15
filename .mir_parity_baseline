@@ -41,7 +41,7 @@ MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/encapsul
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/security/proof_safety/ensures_false_rejected.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/security/pathological_generics.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/security/proof_safety/conditional_expression.li
-DIFF /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/lexer_parser/parser_accept_elif.li
+MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/lexer_parser/parser_accept_elif.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-acme/src/lib.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-ml/src/lib.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/physics/profile_defaults.li
