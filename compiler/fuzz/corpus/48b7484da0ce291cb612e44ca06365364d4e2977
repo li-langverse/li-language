@@ -1,0 +1,9 @@
+proc p() allc p() ->/int
+  requires true
+  ewsures true
+  decreases quires true
+  ensures true
+  decreases 00
+=
+import
+  return 0
