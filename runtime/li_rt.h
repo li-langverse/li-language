@@ -70,6 +70,12 @@ int32_t li_rt_mir_pname_is_extern(int32_t pid);
 int32_t li_rt_mir_retname_store(int32_t pid, const char* src, int32_t s, int32_t e);
 int32_t li_rt_mir_retname_hash(int32_t pid);
 int32_t li_rt_mir_retname_len(int32_t pid);
+/* Trait/generic-type-name roster: the walker records every `type X = trait`
+ * alias so the arg collector can match the C++ host's g_object_types flatten
+ * gate — a trait/generic-named callee param keeps plain-ident args. */
+int32_t li_rt_mir_trait_add(const char* text, int32_t s, int32_t e);
+int32_t li_rt_mir_trait_has(const char* text, int32_t s, int32_t e);
+void li_rt_mir_trait_clear(void);
 /* Parallel-for synthesized function name: `__li_par_<proc>_<counter>`. */
 int32_t li_rt_mir_par_name_print(int32_t pid, int32_t counter);
 int32_t li_rt_mir_par_counter_next(void);
@@ -85,6 +91,11 @@ const char* li_rt_resolve_import_last_path(void);
 void li_rt_import_paths_clear(void);
 void li_rt_import_path_store(const char* path);
 const char* li_rt_import_path_get(int idx);
+/* Stable (malloc'd) copy of an import path: the pointer returned by
+ * li_rt_resolve_import_last_path points into the try-file ring and goes
+ * stale after TRY_FILE_RING further reads, so the self-hosted walker's
+ * DFS import queue needs a permanent copy per queued module. */
+const char* li_rt_import_path_dup(const char* path);
 /* Per-type source pointer store: the source where each registered Object type
  * was defined, so field name positions can be read from the correct buffer.
  * Heap-backed and grown geometrically, so it tracks the walker's object-type

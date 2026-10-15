@@ -241,11 +241,20 @@ void li_rt_import_path_insert(int idx, const char* path) {
   for (int i = li_rt_import_path_count; i > idx; --i) {
     li_rt_import_paths[i] = li_rt_import_paths[i - 1];
   }
+  size_t len2 = strlen(path);
+  char* dup2 = (char*)malloc(len2 + 1);
+  if (dup2) { memcpy(dup2, path, len2 + 1); }
+  li_rt_import_paths[idx] = dup2;
+  li_rt_import_path_count++;
+}
+
+/* Stable (malloc'd) copy of an import path for the walker's DFS queue. */
+const char* li_rt_import_path_dup(const char* path) {
+  if (path == NULL) return NULL;
   size_t len = strlen(path);
   char* dup = (char*)malloc(len + 1);
   if (dup) { memcpy(dup, path, len + 1); }
-  li_rt_import_paths[idx] = dup;
-  li_rt_import_path_count++;
+  return dup;
 }
 
 /* Retrieve the stored path for import index `idx`. Returns NULL if out of range. */
@@ -1027,6 +1036,58 @@ int32_t li_rt_mir_objname_reg_prefix_fp(int32_t fp, int32_t fs, int32_t fe,
   return li_rt_mir_synth_name_add(strdup(buf));
 }
 
+/* Trait/generic-type-name roster (Layer 5 MIR parity): the walker parses
+ * `type X = trait ...` aliases while collecting, and the arg collector must
+ * apply the C++ host's whole-object flatten gate — g_object_types.contains.
+ * A trait/generic-named callee param (e.g. `require_hash[H: Hash](p: H)`) is
+ * never an object layout in C++, so its concrete object-var arg stays a
+ * plain plain ident instead of expanding into per-leaf ARG lines. The walker
+ * cannot read that gate from the object-type registry (named type info covers
+ * traits and objects alike), so every `= trait` alias name lands here. */
+#define LI_RT_TRAIT_MAX 512
+static char* li_rt_trait_name[LI_RT_TRAIT_MAX];
+static int32_t li_rt_trait_n = 0;
+
+int32_t li_rt_mir_trait_add(const char* text, int32_t s, int32_t e) {
+  if (text == NULL || e <= s) return 0;
+  int32_t len = e - s;
+  for (int32_t i = 0; i < li_rt_trait_n; ++i) {
+    const char* t = li_rt_trait_name[i];
+    int32_t j = 0;
+    while (j < len && t[j] != '\0' && t[j] == text[s + j]) j = j + 1;
+    if (j == len && t[j] == '\0') return 1;
+  }
+  if (li_rt_trait_n >= LI_RT_TRAIT_MAX) return 0;
+  char* copy = (char*)malloc((size_t)(len + 1));
+  if (copy == NULL) return 0;
+  for (int32_t i = 0; i < len; ++i) copy[i] = text[s + i];
+  copy[len] = '\0';
+  li_rt_trait_name[li_rt_trait_n] = copy;
+  li_rt_trait_n += 1;
+  return 1;
+}
+
+int32_t li_rt_mir_trait_has(const char* text, int32_t s, int32_t e) {
+  if (text == NULL || e <= s) return 0;
+  int32_t len = e - s;
+  for (int32_t i = 0; i < li_rt_trait_n; ++i) {
+    const char* t = li_rt_trait_name[i];
+    int32_t j = 0;
+    while (j < len && t[j] != '\0' && t[j] == text[s + j]) j = j + 1;
+    if (j == len && t[j] == '\0') {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+void li_rt_mir_trait_clear(void) {
+  for (int32_t i = 0; i < li_rt_trait_n; ++i) {
+    free(li_rt_trait_name[i]);
+    li_rt_trait_name[i] = NULL;
+  }
+  li_rt_trait_n = 0;
+}
 
 
 
