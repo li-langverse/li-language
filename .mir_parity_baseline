@@ -131,7 +131,7 @@ SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/lexer_par
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/cve_patterns/good_bounded_index.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/parallel_codegen/three_float_arrays_32.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/httpd/reserved_wellknown_note.li
-SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/parser/multiline_decl.li
+MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/parser/multiline_decl.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/security/long_line_no_newline.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/advisory/check_mixed.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-scene/src/lib.li
@@ -214,7 +214,7 @@ MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/encapsul
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/composable/import_physics_relativity.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-prob/li-tests/smoke/builds.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/math_linalg/elementwise_mul_float.li
-SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-ui/li-tests/smoke/studio_accessibility.li
+MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-ui/li-tests/smoke/studio_accessibility.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/collections/dict_param.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-physics-chem/li-tests/smoke/builds.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/security/proof_safety/requires_false_caller.li

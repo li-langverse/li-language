@@ -96,6 +96,7 @@ const char* li_rt_import_path_get(int idx);
  * stale after TRY_FILE_RING further reads, so the self-hosted walker's
  * DFS import queue needs a permanent copy per queued module. */
 const char* li_rt_import_path_dup(const char* path);
+/* Coin (LI_DBG_MIR) replay probes. */
 /* Per-type source pointer store: the source where each registered Object type
  * was defined, so field name positions can be read from the correct buffer.
  * Heap-backed and grown geometrically, so it tracks the walker's object-type

@@ -744,6 +744,10 @@ def lex_source(src: var ptr,  tk: var array[262144,  int],  ts: var array[262144
   pending[0] = 0
   isz[0] = 1
   set64(istack,  0,  0)
+  # Paren context: brackets are not layout. While inside unclosed parens the
+  # sequence of consecutive lines continues the same logical line, so
+  # Indent/Dedent tokens must be suppressed (C++ lexer.paraphrase: same)
+  var pd: int = 0
   while pos[0] < srclen:
     if at_ls[0] == 1:
       # ---- process line begin (indentation,  comments,  `=` body marker) ----
@@ -838,7 +842,12 @@ def lex_source(src: var ptr,  tk: var array[262144,  int],  ts: var array[262144
         break
       if li_rt_str_char_at(src,  pos[0]) == 10:
         pos[0] = pos[0] + 1
-        at_ls[0] = 1
+        if pd == 0:
+          at_ls[0] = 1
+        else:
+          # Inside parens a continued line skips indentation processing,
+          # matching the C++ lexer's paren_depth_ > 0 newline handling.
+          at_ls[0] = 0
         store_token(tk,  ts,  te,  n,  src,  emit,  1,  0,  0)
         continue
     # ---- skip inline whitespace and comments ----
@@ -872,19 +881,26 @@ def lex_source(src: var ptr,  tk: var array[262144,  int],  ts: var array[262144
     pos[0] = start + 1
     if c == 10:
       store_token(tk,  ts,  te,  n,  src,  emit,  1,  0,  0)
-      at_ls[0] = 1
+      if pd == 0:
+        at_ls[0] = 1
+      else:
+        at_ls[0] = 0
       continue
     if c == 40:
       store_token(tk,  ts,  te,  n,  src,  emit,  49,  start,  pos[0])
+      pd = pd + 1
       continue
     if c == 41:
       store_token(tk,  ts,  te,  n,  src,  emit,  50,  start,  pos[0])
+      pd = pd - 1
       continue
     if c == 91:
       store_token(tk,  ts,  te,  n,  src,  emit,  51,  start,  pos[0])
+      pd = pd + 1
       continue
     if c == 93:
       store_token(tk,  ts,  te,  n,  src,  emit,  52,  start,  pos[0])
+      pd = pd - 1
       continue
     if c == 123:
       store_token(tk,  ts,  te,  n,  src,  emit,  53,  start,  pos[0])
@@ -1340,6 +1356,18 @@ def consume_for_kw(src: var ptr,  tk: var array[262144,  int],  ts: var array[26
       return 1
   return 0
 
+# Skip layout tokens that the lexer interleaves with continued lines inside
+# parenthesized argument lists: Newline (1), Indent (2), Dedent (3). The C++
+# parser's skip_newlines does the same while brace_depth_ > 0.
+def skip_arg_layout(tk: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int]) -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  while cur_kind(tk, n, pi, err) == 1 or cur_kind(tk, n, pi, err) == 2 or cur_kind(tk, n, pi, err) == 3:
+    pi[0] = pi[0] + 1
+  return 0
+
 def parse_postfix(src: var ptr,  tk: var array[262144,  int],  ts: var array[262144,  int], te: var array[262144,  int],  n: var array[1,  int], pi: var array[1,  int],  err: var array[1,  int],  d: int) -> int
   requires true
   ensures result == 0 or result == 1
@@ -1372,13 +1400,17 @@ def parse_postfix(src: var ptr,  tk: var array[262144,  int],  ts: var array[262
         pi[0] = pi[0] + 1
         if cur_kind(tk, n, pi, err) != 50:
           var done: int = 0
+          # Multi-line method-call arguments: skip layout tokens as in parse_primary.
+          skip_arg_layout(tk, n, pi, err)
           while done == 0:
+            skip_arg_layout(tk, n, pi, err)
             if parse_expr(src, tk, ts, te, n, pi, err, 0, d) == 0:
               return 0
             if accept_k(tk, n, pi, err, 55) == 1:
               done = 0
             else:
               done = 1
+        skip_arg_layout(tk, n, pi, err)
         if expect_k(tk, n, pi, err, 50) == 0:
           return 0
         continue
@@ -1443,13 +1475,18 @@ def parse_primary(src: var ptr, tk: var array[262144, int], ts: var array[262144
         a_line_text(d, src, 66, peek_tk(ts, t4 + 0), peek_tk(te, t4 + 0))
       if cur_kind(tk, n, pi, err) != 50:
         var done: int = 0
+        # Multi-line call arguments: the C++ parser skips layout tokens
+        # (newlines + indents) before each argument and before `)`.
+        skip_arg_layout(tk, n, pi, err)
         while done == 0:
+          skip_arg_layout(tk, n, pi, err)
           if parse_expr(src, tk, ts, te, n, pi, err, 0, d) == 0:
             return 0
           if accept_k(tk, n, pi, err, 55) == 1:
             done = 0
           else:
             done = 1
+        skip_arg_layout(tk, n, pi, err)
       if expect_k(tk, n, pi, err, 50) == 0:
         return 0
     else:
@@ -8857,7 +8894,11 @@ def mir_parse_primary(darena: var array[65536, int],  dasp: var array[1, int], s
       var argc: int = 0
       if cur_kind(tk,  n,  pi,  err) != 50:
         var done: int = 0
+        # Multi-line call arguments: skip continued-line layout tokens like
+        # parse_primary (newlines + indents inside the parens).
+        skip_arg_layout(tk, n, pi, err)
         while done == 0:
+          skip_arg_layout(tk, n, pi, err)
           var a: int = mir_parse_expr(darena,  dasp,  src,  tk,  ts,  te,  n,  pi,  err, 0)
           if a < 0:
             return -1
@@ -8868,6 +8909,7 @@ def mir_parse_primary(darena: var array[65536, int],  dasp: var array[1, int], s
             done = 0
           else:
             done = 1
+        skip_arg_layout(tk, n, pi, err)
       expect_k(tk,  n,  pi,  err, 50)
       var crec: int = d_alloc(darena,  dasp,  4,  peek_tk(ts, t4 + 0),  peek_tk(te, t4 + 0),  0)
       set65536(darena, crec + 4,argc)
@@ -9159,6 +9201,18 @@ def mir_lower_expr(darena: var array[65536, int],  dasp: var array[1, int],  rec
         set65536(darena, rec + 1, 0)
         set65536(darena, rec + 2, nidx2)
         set65536(darena, rec + 3, ffloat_obj2)
+      return 0
+    # Computed base (call result/temp, literal, or any non-ident flattening):
+    # the C++ host does NOT recurse here — obj_field_slot_chain roots at
+    # object vars only, and the legacy single-level fallback keeps the base
+    # EMPTY for every non-Ident base, so the slot prints as __li_o__<field>
+    # (zero-width base span) and the base itself emits no INs.
+    if fbase_k != 3:
+      var nz8: int = li_rt_mir_objname_add(src, 0, 0, fld_s, fld_e)
+      set65536(darena, rec + 0, 12)
+      set65536(darena, rec + 1, 0)
+      set65536(darena, rec + 2, nz8)
+      set65536(darena, rec + 3, 0)
       return 0
     # fallback: treat as LoadIntToIdent from the base expression
     if mir_lower_expr(darena,  dasp,  fbase,  src,  tk,  ts,  te,  n,  pi,  err,  tc,  lastop, ftok,  nft,  ftmp,  itok,  nit,  itmp,  fatok,  nfa, matok,  nmat, ptok,  pex,  pp0,  ppn,  pret,  pn,  ptok2,  pty,  pelems,  pef, pei,  pvar) == 1:
@@ -14325,6 +14379,11 @@ def mir_walk(src: var ptr,  tk: var array[262144, int],  ts: var array[262144, i
       break
     if k == 3:
       break
+    if k == 1 or k == 2:
+      # Module-level blanks/comments: the C++ host skips them while walking
+      # the module's top level (they only matter inside def bodies).
+      pi[0] = pi[0] + 1
+      continue
     if k == 18:
       parse_import(src,  tk,  ts,  te,  n,  pi,  err, 0)
       skip_newlines(tk,  n,  pi,  err)
