@@ -1,0 +1,4 @@
+proc p()res true
+  ensurms true
+  decreases 0
+ return 0
