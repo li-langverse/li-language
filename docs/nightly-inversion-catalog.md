@@ -760,3 +760,63 @@ Gates at this point: check harness 163/163, AST 25, parser 20+5, MIR
 seam_missing_net, studio_compose/palette/accessibility trio,
 kernel_matmul_parity, lig/src) plus the two use-after-move panel
 fixtures (viewport_selection, studio_agent_invoke) — next batch.
+
+## Update 2026-10-18 (batch 5: fx depth semantics + tc call-branch phantoms)
+
+Three walker-only classes closed on the check lane; the 541-file verdict
+census moves from 6 residuals to 4 (all host-only), with the walker-only
+bucket EMPTY:
+
+- **Effects pass depth semantics (re-port of the root-call class)**: the
+  C++ `proc_mentions_extern_call` walks only the TOP-LEVEL body statements
+  of a proc (borrowck.cpp loops `p.body` without descending into
+  if/while/for blocks) and ignores `s.expr` for compound statements, so an
+  extern call inside an if-arm or loop body NEVER fires the extern gate,
+  and var-decl initializers (`Stmt::init`) never fire either. The walker's
+  fx scan had been re-entering nested blocks with root semantics — probed
+  with all six call positions (bare/top-level, assign RHS, if-cond, return,
+  var-init, nested subcall): all ten fixtures (bare/cond/echoif/ifbody/
+  main/nested/ret/rhs/vardecl/varinit) now match the host verdict-for-
+  verdict. The echo/print IO rule is a typecheck-lane rule
+  (`check_expr_uses` descends) and still fires at any depth — echoif
+  (echo inside an if-arm) stays both-reject. Depth is threaded through
+  fx_scan_expr/block/stmt (`depth` param): roots (head-call peek and the
+  depth-0 `=` RHS) fire only at depth 0; nested blocks get depth+1.
+- **No arity check in the tc call branch**: the host's type_of never
+  compares `call.args.size()` against `callee.params.size()` (it only
+  type-checks each arg). The walker's `argc != carity -> E0202` phantom
+  rejected 6-arg calls to 5-param imported procs
+  (studio_compose_shell_palette) the host accepts — dropped.
+- **Call-postfix consumption**: `type_of(Expr::Call)` also leaves the
+  caller's postfix chain (`call().r`, `call()[i]`) on the stream for the
+  enclosing parse to consume; the walker's tc call branch returned bare
+  after the resolved-callee/builtin dispatch, leaving `.r` unconsumed so
+  the enclosing if-cond's `expect(':')` failed silently (this was the
+  studio_accessibility walker-only reject; minimal fire =
+  `if call().r != 0: return 1`). Both the resolved-callee return and the
+  builtin-dispatch tail now run through `tc_postfix` before returning.
+- **Repair during the port**: the builtin-dispatch rewrite initially
+  initialized the result type cell at 14 instead of the -1 sentinel, which
+  silently disabled the unknown-proc E0202 fallthrough and un-rejected
+  private_method_use (162/163). Caught by the parity gate, re-fixed; the
+  gate is back at 163/163.
+
+(no-false-reject controls: use_after_move/double_mut stay
+both-reject, io_ok/io_ext fixtures stay matched, the REJECT_CORPUS stays
+8/8 both-reject; nightly 466 checked / 360 byte-exact / 0 diff — rc=0.)
+
+Census after this batch (541 files incl. proof-db, both-`check` rc
+compare): agree=537, cpp_only=4, li_only=0. The four host-only residuals
+are next batch's targets, in suspected cost order:
+
+- packages/li-studio/.../studio_agent_invoke.li and
+  packages/li-gui/.../viewport_selection.li — use-after-move of a shared
+  object var across two imported-mover calls (the expiry-scoping class
+  deferred from the borrow-lane batch).
+- docs/language/examples/precision-physics-math.li — int/float mixing in
+  arithmetic without explicit cast (tc binop width-mix rule; the walker's
+  tc_binop_type only compares within-family widths).
+- std/bytes/bytes.li — `unknown type 'bytes'`: the file uses `bytes` in
+  annotations while the merged alias space has
+  no `bytes` row (the walker's type-space gate under-rejects on these
+  shapes).

@@ -3481,39 +3481,45 @@ def tc_primary(src: var ptr, tk: var array[262144, int], ts: var array[262144, i
       # recoverable — return the unknown type 14 (exempt in return-unify,
       # accepted everywhere the host accepts). A non-array arg returns int.
       if callee >= 0:
-        if argc != carity:
-          err[0] = 1
-          li_rt_emit_err(202)
-        return callee
+        # No arity check: the C++ check lane never compares call.args.size()
+        # against callee.params.size() (type_of only type-checks the args;
+        # per-arg type mismatch is a separate, unported class). A phantom
+        # arity fire here rejected 6-arg calls to 5-param imported procs
+        # (studio_compose_shell_palette) that the host accepts.
+        # Consume trailing postfixes before returning: the resolved-callee
+        # result feeds the caller's postfix chain (`call().r`, `call()[i]`),
+        # so a bare return left `.r` unconsumed and the enclosing expect(':')
+        # failed silently (studio_accessibility-class walker-only rejects).
+        return tc_postfix(src, tk, ts, te, n, pi, err, callee, sym_s, sym_kind, sym_ty, sym_aux, sym_buf, sym_b0, sym_b1, sym_n)
+      var bt: int = 0 - 1
       if argc == 1:
         if tok_is(src, ts, te, id0, "sum") == 1:
-          if arg0ty[0] == 7:
-            if arg0ty[0] >= 1000:
-              return 14
           if arg0ty[0] >= 1000:
-            return 14
-          return 0
-        if tok_is(src, ts, te, id0, "norm") == 1:
-          if arg0ty[0] >= 1000:
-            return 14
-          if arg0ty[0] == 7:
-            return 14
-          return 0
-        if tok_is(src, ts, te, id0, "__li_simd_splat_f64") == 1:
-          return 14
-        if tok_is(src, ts, te, id0, "__li_horiz_sum_f64") == 1:
-          return 1
-      if argc == 2:
+            bt = 14
+          else:
+            bt = 0
+        elif tok_is(src, ts, te, id0, "norm") == 1:
+          if arg0ty[0] >= 1000 or arg0ty[0] == 7:
+            bt = 14
+          else:
+            bt = 0
+        elif tok_is(src, ts, te, id0, "__li_simd_splat_f64") == 1:
+          bt = 14
+        elif tok_is(src, ts, te, id0, "__li_horiz_sum_f64") == 1:
+          bt = 1
+      elif argc == 2:
         if tok_is(src, ts, te, id0, "dot") == 1:
-          return 1
-        if tok_is(src, ts, te, id0, "__li_simd_mul_f64") == 1:
-          return 14
-      if argc == 3:
+          bt = 1
+        elif tok_is(src, ts, te, id0, "__li_simd_mul_f64") == 1:
+          bt = 14
+      elif argc == 3:
         if tok_is(src, ts, te, id0, "axpy") == 1:
-          return 0
-      err[0] = 1
-      li_rt_emit_err(202)
-      return 14
+          bt = 0
+      if bt < 0:
+        err[0] = 1
+        li_rt_emit_err(202)
+        return 14
+      return tc_postfix(src, tk, ts, te, n, pi, err, bt, sym_s, sym_kind, sym_ty, sym_aux, sym_buf, sym_b0, sym_b1, sym_n)
     var lt: int = tc_local_type(src, ts, te, sym_s, sym_kind, sym_ty, sym_buf, sym_b0, sym_b1, sym_n, id0)
     if lt < 0:
       lt = 14
@@ -4940,7 +4946,7 @@ def fx_skip_typealias(src: var ptr, tk: var array[262144, int], ts: var array[26
 =
   return parse_type_alias(src, tk, ts, te, n, pi, err, 0)
 
-def fx_scan_expr(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], isrc: var array[256, ptr], isn: var array[256, int], ise: var array[256, int], iext: var array[256, int], ieff: var array[256, int], icnt: var array[1, int], pn: var array[256, int], peff: var array[256, int], pext: var array[256, int], pcnt: var array[1, int], used: var array[1, int], await_seen: var array[1, int]) -> int
+def fx_scan_expr(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], isrc: var array[256, ptr], isn: var array[256, int], ise: var array[256, int], iext: var array[256, int], ieff: var array[256, int], icnt: var array[1, int], pn: var array[256, int], peff: var array[256, int], pext: var array[256, int], pcnt: var array[1, int], depth: int, used: var array[1, int], await_seen: var array[1, int]) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -4977,8 +4983,9 @@ def fx_scan_expr(src: var ptr, tk: var array[262144, int], ts: var array[262144,
           if pi[0] == eq_tok + 1:
             is_root = 1
         if is_root == 1:
-          if fx_proc_ext(src, ts, te, isrc, isn, ise, iext, icnt, pn, pext, pcnt, pi[0]) == 1:
-            fx_add_eff(used, 1)
+          if depth == 0:
+            if fx_proc_ext(src, ts, te, isrc, isn, ise, iext, icnt, pn, pext, pcnt, pi[0]) == 1:
+              fx_add_eff(used, 1)
         var cf: int = fx_proc_eff(src, ts, te, isrc, isn, ise, ieff, icnt, pn, peff, pcnt, pi[0])
         if cf >= 0:
           if fx_has_eff(cf, 4) == 1:
@@ -4988,7 +4995,7 @@ def fx_scan_expr(src: var ptr, tk: var array[262144, int], ts: var array[262144,
     pi[0] = pi[0] + 1
   return 1
 
-def fx_scan_block(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], isrc: var array[256, ptr], isn: var array[256, int], ise: var array[256, int], iext: var array[256, int], ieff: var array[256, int], icnt: var array[1, int], pn: var array[256, int], peff: var array[256, int], pext: var array[256, int], pcnt: var array[1, int], used: var array[1, int], await_seen: var array[1, int]) -> int
+def fx_scan_block(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], isrc: var array[256, ptr], isn: var array[256, int], ise: var array[256, int], iext: var array[256, int], ieff: var array[256, int], icnt: var array[1, int], pn: var array[256, int], peff: var array[256, int], pext: var array[256, int], pcnt: var array[1, int], depth: int, used: var array[1, int], await_seen: var array[1, int]) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -5003,14 +5010,14 @@ def fx_scan_block(src: var ptr, tk: var array[262144, int], ts: var array[262144
     if cur_kind(tk, n, pi, err) == 0:
       break
     var before: int = pi[0]
-    fx_scan_stmt(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, used, await_seen)
+    fx_scan_stmt(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, depth, used, await_seen)
     if pi[0] == before:
       break
     skip_newlines(tk, n, pi, err)
   expect_k(tk, n, pi, err, 3)
   return 1
 
-def fx_scan_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], isrc: var array[256, ptr], isn: var array[256, int], ise: var array[256, int], iext: var array[256, int], ieff: var array[256, int], icnt: var array[1, int], pn: var array[256, int], peff: var array[256, int], pext: var array[256, int], pcnt: var array[1, int], used: var array[1, int], await_seen: var array[1, int]) -> int
+def fx_scan_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], isrc: var array[256, ptr], isn: var array[256, int], ise: var array[256, int], iext: var array[256, int], ieff: var array[256, int], icnt: var array[1, int], pn: var array[256, int], peff: var array[256, int], pext: var array[256, int], pcnt: var array[1, int], depth: int, used: var array[1, int], await_seen: var array[1, int]) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -5031,47 +5038,48 @@ def fx_scan_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144,
       # Return stmt: s.expr is a root per proc_mentions_extern_call.
       if cur_kind(tk, n, pi, err) == 4:
         if peek_off(tk, n, pi, 1) == 49:
-          if fx_proc_ext(src, ts, te, isrc, isn, ise, iext, icnt, pn, pext, pcnt, pi[0]) == 1:
-            fx_add_eff(used, 1)
-      fx_scan_expr(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, used, await_seen)
+          if depth == 0:
+            if fx_proc_ext(src, ts, te, isrc, isn, ise, iext, icnt, pn, pext, pcnt, pi[0]) == 1:
+              fx_add_eff(used, 1)
+      fx_scan_expr(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, depth, used, await_seen)
     return 1
   if k == 22:
     pi[0] = pi[0] + 1
-    fx_scan_expr(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, used, await_seen)
+    fx_scan_expr(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, depth, used, await_seen)
     expect_k(tk, n, pi, err, 56)
     skip_newlines(tk, n, pi, err)
-    fx_scan_block(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, used, await_seen)
+    fx_scan_block(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, depth + 1, used, await_seen)
     while cur_kind(tk, n, pi, err) == 24:
       pi[0] = pi[0] + 1
-      fx_scan_expr(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, used, await_seen)
+      fx_scan_expr(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, depth, used, await_seen)
       expect_k(tk, n, pi, err, 56)
       skip_newlines(tk, n, pi, err)
-      fx_scan_block(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, used, await_seen)
+      fx_scan_block(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, depth + 1, used, await_seen)
     if cur_kind(tk, n, pi, err) == 23:
       pi[0] = pi[0] + 1
       expect_k(tk, n, pi, err, 56)
       skip_newlines(tk, n, pi, err)
-      fx_scan_block(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, used, await_seen)
+      fx_scan_block(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, depth + 1, used, await_seen)
     return 1
   if k == 25:
     pi[0] = pi[0] + 1
-    fx_scan_expr(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, used, await_seen)
+    fx_scan_expr(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, depth, used, await_seen)
     if cur_kind(tk, n, pi, err) == 56:
       pi[0] = pi[0] + 1
     skip_newlines(tk, n, pi, err)
-    fx_scan_block(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, used, await_seen)
+    fx_scan_block(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, depth + 1, used, await_seen)
     return 1
   if k == 76:
     parse_decorator_list(src, tk, ts, te, n, pi, err, 0)
     skip_newlines(tk, n, pi, err)
-    fx_scan_stmt(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, used, await_seen)
+    fx_scan_stmt(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, depth, used, await_seen)
     return 1
   if k == 26:
     pi[0] = pi[0] + 1
     var fh: array[3, int]
     for_tail(src, tk, ts, te, n, pi, err, fh)
     skip_newlines(tk, n, pi, err)
-    fx_scan_block(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, used, await_seen)
+    fx_scan_block(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, depth + 1, used, await_seen)
     return 1
   if k == 4:
     if tok_is(src, ts, te, pi[0], "parallel") == 1:
@@ -5099,18 +5107,19 @@ def fx_scan_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144,
       if accept_k(tk, n, pi, err, 58) == 1:
         skip_newlines(tk, n, pi, err)
         if cur_kind(tk, n, pi, err) == 2:
-          fx_scan_block(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, used, await_seen)
+          fx_scan_block(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, depth + 1, used, await_seen)
       return 1
   # Expr/Assign stmt: the head call is a root (s.expr on Expr stmts; the
   # Assign RHS-root is tracked inside fx_scan_expr via the depth-0 `=`).
   # If/while conds and var-decl inits are never roots for the extern rule.
   if cur_kind(tk, n, pi, err) == 4:
     if peek_off(tk, n, pi, 1) == 49:
-      if fx_proc_ext(src, ts, te, isrc, isn, ise, iext, icnt, pn, pext, pcnt, pi[0]) == 1:
-        fx_add_eff(used, 1)
-  fx_scan_expr(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, used, await_seen)
+      if depth == 0:
+        if fx_proc_ext(src, ts, te, isrc, isn, ise, iext, icnt, pn, pext, pcnt, pi[0]) == 1:
+          fx_add_eff(used, 1)
+  fx_scan_expr(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, depth, used, await_seen)
   if accept_k(tk, n, pi, err, 58) == 1:
-    fx_scan_expr(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, used, await_seen)
+    fx_scan_expr(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, depth, used, await_seen)
   return 1
 
 def effects_check(src: var ptr,  file_path: ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int]) raises IO -> int
@@ -5303,7 +5312,7 @@ def effects_check(src: var ptr,  file_path: ptr, tk: var array[262144, int], ts:
         skip_newlines(tk, n, pi, err)
         if accept_k(tk, n, pi, err, 58) == 1:
           skip_newlines(tk, n, pi, err)
-          fx_scan_block(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, used, await_seen)
+          fx_scan_block(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, 0, used, await_seen)
         if heap[0] == 1:
           if fx_has_eff(decl[0], 2) == 0:
             err[0] = 1
