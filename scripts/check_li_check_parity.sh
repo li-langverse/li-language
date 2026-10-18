@@ -221,8 +221,15 @@ CORPUS_FAIL=(
 # intended rule (seal the shadowing definition on import), which is why the
 # fixture's stale .exp — a `stdlib_symbol_shadow` diagnostic no live code path
 # can emit — is gone rather than left asserting a verdict no runner reads.
+#
+# FIXED 2026-10-16: the check lane's effects pass now merges every transitively
+# imported module's proc names into its lookup tables (span-capture triples in
+# bootstrap/lic/main.li fx_import_merge + fx_proc_ext/fx_proc_eff), so the
+# imported user `print` resolves in the walker's proc_map and the builtin-IO
+# exclusion (C++ proc_map.count(ident) == 0) matches the reference: both sides
+# accept. The entry below was also recorded cpp=0/li=1 — migrated from the
+# known-divergence list to the ordinary accept corpus.
 CORPUS_KNOWN_DIVERGENCE=(
-  "li-tests/stdlib_seal/shadow_print_via_import.li:0:1"
 )
 
 checked=0
@@ -278,7 +285,7 @@ for entry in "${CORPUS_FAIL[@]}"; do
   fi
 done
 
-for entry in "${CORPUS_KNOWN_DIVERGENCE[@]}"; do
+for entry in ${CORPUS_KNOWN_DIVERGENCE[@]+"${CORPUS_KNOWN_DIVERGENCE[@]}"}; do
   f="${entry%%:*}"
   rest="${entry#*:}"
   want_cpp="${rest%%:*}"

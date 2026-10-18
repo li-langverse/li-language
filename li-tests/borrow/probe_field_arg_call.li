@@ -1,0 +1,61 @@
+type Rect = object
+  public x: float
+  public h: float
+
+type Node = object
+  public depth: int
+
+type Out = object
+  public rect: Rect
+  public node0: Node
+
+def mk_rect(x: float, h: float) -> Rect
+  requires h >= 0.0
+  decreases 0
+  ensures result.x == x
+  ensures result.h == h
+=
+  var r: Rect
+  r.x = x
+  r.h = h
+  return r
+
+def mk_node(id: int, depth: int) -> Node
+  requires depth >= 0
+  decreases 0
+  ensures result.depth == depth
+=
+  var n: Node
+  n.depth = depth
+  return n
+
+def consume_rect(strip: Rect) -> unit
+  requires strip.h >= 0.0
+  decreases 0
+  ensures true
+=
+  discard strip
+
+def consume_node(node: Node) -> unit
+  requires node.depth >= 0
+  decreases 0
+  ensures true
+=
+  discard node
+
+def probe() -> unit
+  requires true
+  decreases 0
+  ensures true
+=
+  var out: Out
+  var alias: Out
+  out.rect = mk_rect(1.0, 2.0)
+  out.node0 = mk_node(1, 1)
+  # field reads as call args AND a bare use after: C++ check_call_moves
+  # skips args whose expr is not a plain Ident, so `out` stays unmoved and
+  # the close-out read is accepted on both lanes.
+  consume_node(out.node0)
+  consume_node(out.node0)
+  # bare RHS use right after: fires only if a field arg marked `out`
+  alias = out

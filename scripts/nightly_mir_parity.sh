@@ -27,6 +27,29 @@ if [[ ! -x "$LI" ]]; then
   exit 1
 fi
 
+# Preflight: a nearly-full data volume SILENTLY scrambles rc capture inside
+# census loops (small redirects under a full /tmp fail without aborting the
+# loop; the sweep keeps going and rejects that the C++ host accepts show up
+# as phantom walker-reject entries — recorded in docs after the 2026-10-17
+# census run). Abort clearly instead of producing an untrustworthy report.
+MIN_FREE_KB=$((64 * 1024))
+avail_kb="$(df -k "$ROOT" | awk 'NR==2{print $4}')"
+if (( avail_kb < MIN_FREE_KB )); then
+  echo "ERROR: volume holding $ROOT has only ${avail_kb}KB free (< ${MIN_FREE_KB}KB)." >&2
+  echo "       Free space first: with the disk this full, per-file rc capture and" >&2
+  echo "       /tmp writes fail silently and the census produces phantom entries" >&2
+  echo "       (see docs/nightly-inversion-catalog.md, 2026-10-17 note)." >&2
+  exit 1
+fi
+
+# Line-hygiene preflight: a merged-statement line (two statements on one
+# physical line) is the corruption class that hung the 2026-10-17 gate via
+# an unincremented loop counter. Fail fast before sweeping.
+if ! "$ROOT/scripts/check_li_line_hygiene.sh"; then
+  echo "ERROR: line-hygiene guard failed; fix the reported lines first." >&2
+  exit 1
+fi
+
 echo "=== Nightly MIR Parity Sweep ==="
 echo "C++ : $LIC"
 echo "Li  : $LI"

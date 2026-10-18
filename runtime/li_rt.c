@@ -12,6 +12,41 @@
 #include <unistd.h>
 #endif
 
+/* Debug-only pointer liveness probe: returns 1 when the 64-bit pointer is
+ * mapped and readable, 0 for NULL or an unmapped address (never dereferences
+ * it). Built on mach_vm_read_overwrite so a garbage pointer cannot fault.
+ * Diagnostic seam for the fx import-space name tables; safe to leave in. */
+#if defined(__APPLE__) && !defined(_WIN32)
+#include <mach/mach.h>
+#endif
+int32_t li_rt_dbg_ptr_alive(const void* s) {
+  if (s == NULL) {
+    return 0;
+  }
+#if defined(__APPLE__) && !defined(_WIN32)
+  char buf[1];
+  vm_size_t out_size = 0;
+  kern_return_t kr = vm_read_overwrite(mach_task_self(), (vm_address_t)(uintptr_t)s, 1,
+                                       (vm_address_t)buf, &out_size);
+  return kr == KERN_SUCCESS ? 1 : 0;
+#else
+  return 1;
+#endif
+}
+
+/* Debug-only printers: dump one decimal int / one hex pointer to stderr
+ * (unbuffered, crash-safe) so probe builds can report table state without
+ * touching stdout byte parity. Diagnostic seams; safe to leave in. */
+int32_t li_rt_dbg_int(int32_t v) {
+  fprintf(stderr, "dbg int %d\n", (int)v);
+  return 0;
+}
+
+int32_t li_rt_dbg_ptr(const void* p) {
+  fprintf(stderr, "dbg ptr %p\n", p);
+  return 0;
+}
+
 void li_panic(const char* msg) {
   fprintf(stderr, "li panic: %s\n", msg);
   abort();
@@ -161,15 +196,18 @@ void li_rt_pidx_set(int32_t v) { g_li_pidx = v; }
  * it back during emit.  Tables:
  *   0=ptok  1=pex  2=pp0  3=ppn  4=pret  (proc-level, 128 slots)
  *   5=ptok2 6=pty  7=pelems 8=pef 9=pei
- *   10=pvar 11=pmx 12=pmc  (param-slot-level, 512 slots) */
+ *   10=pvar 11=pmx 12=pmc  (param-slot-level, 512 slots)
+ *   23=rq-fire slot (idx 0; set by rq_check_call, read+cleared per proc
+ *   head by mir_rq_check — the mir lane's E0304 verdict channel, since the
+ *   shared err array latches benign scan misses too). */
 #define LI_RT_PREG_PMAX 512
 #define LI_RT_PREG_SMAX 512
-#define LI_RT_PREG_TABLES 14
+#define LI_RT_PREG_TABLES 24
 static int32_t g_li_preg[LI_RT_PREG_TABLES * LI_RT_PREG_SMAX];
 static int32_t g_li_preg_sizes[LI_RT_PREG_TABLES] = {
   LI_RT_PREG_PMAX, LI_RT_PREG_PMAX, LI_RT_PREG_PMAX, LI_RT_PREG_PMAX, LI_RT_PREG_PMAX,
-  LI_RT_PREG_SMAX, LI_RT_PREG_SMAX, LI_RT_PREG_SMAX, LI_RT_PREG_SMAX, LI_RT_PREG_SMAX,
-  LI_RT_PREG_SMAX, LI_RT_PREG_SMAX, LI_RT_PREG_SMAX, LI_RT_PREG_SMAX
+  LI_RT_PREG_SMAX, LI_RT_PREG_SMAX, LI_RT_PREG_SMAX, LI_RT_PREG_SMAX, LI_RT_PREG_SMAX, LI_RT_PREG_SMAX, LI_RT_PREG_SMAX, LI_RT_PREG_SMAX, LI_RT_PREG_SMAX, LI_RT_PREG_SMAX,
+  LI_RT_PREG_SMAX, LI_RT_PREG_SMAX, LI_RT_PREG_SMAX, LI_RT_PREG_SMAX, LI_RT_PREG_SMAX, LI_RT_PREG_SMAX, LI_RT_PREG_SMAX, LI_RT_PREG_SMAX, LI_RT_PREG_SMAX
 };
 
 int32_t li_rt_preg_get(int32_t table, int32_t idx) {
@@ -576,6 +614,7 @@ int32_t li_rt_emit_err(int32_t code) {
     case 401: fputs("module:1:1: warning [W0401]\n", stdout); break;
     default:  fputs("module:1:1: error [lic.error]\n", stdout); break;
   }
+  fflush(stdout);
   return 0;
 }
 
@@ -1565,6 +1604,25 @@ int32_t li_rt_str_contains(const char* s, const char* needle) {
     return 0;
   }
   return strstr(s, needle) != NULL ? 1 : 0;
+}
+
+/* Two-piece needle contains: mirrors C++ `(source.find(a + b))`, for policy
+ * rules whose needle must not appear contiguously in the walker's owns
+ * source (the C++ policy check fires on the substring's presence itself). */
+int32_t li_rt_str_contains2(const char* s, const char* a, const char* b) {
+  if (s == NULL || a == NULL || b == NULL) {
+    return 0;
+  }
+  char needle[64];
+  const size_t alen = strlen(a);
+  const size_t blen = strlen(b);
+  if (alen + blen >= sizeof(needle)) {
+    return 0;
+  }
+  memcpy(needle, a, alen);
+  memcpy(needle + alen, b, blen);
+  needle[alen + blen] = '\0';
+  return li_rt_str_contains(s, needle);
 }
 
 const char* li_rt_read_file(const char* path) {

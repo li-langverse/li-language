@@ -1,0 +1,20 @@
+# Unknown-type gate fixture (walker REJECT side; C++ rejects the param
+# annotation with `unknown type 'NoAlias8'` — typecheck.cpp resolve_type_expr,
+# check_count = main-module procs only). The alias does not exist in this
+# file, so no import/alias-space path can resolve it: both lanes must reject.
+# Paired accept fixtures: probe_alias (refinement + array aliases),
+# li-tests/generics/callable_param.li (Callable dispatch), and the imported
+# space in composable corpus files.
+def get(buf: array[4, int], i: NoAlias8) -> int
+  requires true
+  ensures result == buf[i]
+  decreases 0
+=
+  return buf[i]
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return 0

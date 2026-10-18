@@ -67,6 +67,11 @@ CORPUS=(
   "li-tests/objects/nested_index_read.li"
   "li-tests/objects/nested_field_copyback_ok.li"
   "li-tests/contracts_verify/http_parse_forward_closed.li"
+  # borrow-lane accept controls (eleventh port, call-arg move ordering only
+  # marks after the full arg list): repeated mover arg `f(a, a)` and
+  # field-read args into mover callees must stay accepted on both lanes.
+  "li-tests/borrow/probe_same_arg_call.li"
+  "li-tests/borrow/probe_field_arg_call.li"
 )
 
 fail() {
@@ -84,6 +89,25 @@ fail() {
 # miscompiles (C++ previously dropped the store).
 REJECT_CORPUS=(
   "li-tests/objects/nested_field_write.li"
+  # use-after-move across the import-space callee fallback: the merged param
+  # masks (preg 15 is-var / preg 16 scalar) must keep a mover arg move-marked
+  # exactly like C++ check_call_moves. Locks the fx_skip_params mask fix.
+  "li-tests/borrow/use_after_move.li"
+  "packages/li-studio/li-tests/smoke/studio_agent_invoke.li"
+  "packages/li-gui/li-tests/smoke/viewport_selection.li"
+  # index-safety: constant OOB + unrefined dynamic index on non-var array
+  # params (mir_index_check); the bounded positive controls
+  # (good_bounded_index, both physics packages, dot4 loops) must stay
+  # accepted on both lanes.
+  "li-tests/cve_patterns/cwe787_oob_index.li"
+  "li-tests/cve_patterns/cwe787_dyn_index.li"
+  # unknown-type type-space gate (mir_type_space_check): unknown annotation
+  # names reject on both lanes (C++ `unknown type`, typecheck.cpp). The
+  # accept-side controls (the merged alias space incl. imported heads, the
+  # collection/Callable dispatch, trait-body skip) are the byte-exact corpus
+  # itself — trait_hash_impl/trait_missing_impl lock the alias-body skip.
+  "li-tests/typecheck/unknown_type_param.li"
+  "li-tests/typecheck/unknown_type_local.li"
 )
 
 for f in "${REJECT_CORPUS[@]}"; do

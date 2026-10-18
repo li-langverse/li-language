@@ -1,0 +1,33 @@
+type Vec3 = object
+  public x: float
+  public y: float
+
+def vec3(x: float, y: float) -> Vec3
+  requires true
+  ensures result.x == x
+  decreases 0
+=
+  var v: Vec3
+  v.x = x
+  v.y = y
+  return v
+
+def vec3_add(a: Vec3, b: Vec3) -> Vec3
+  requires true
+  ensures result.x == a.x + b.x
+  decreases 0
+=
+  var r: Vec3
+  r.x = a.x + b.x
+  r.y = a.y + b.y
+  return r
+
+def probe_same_arg() -> Vec3
+  requires true
+  ensures result.x == 0.0
+  decreases 0
+=
+  var a: Vec3 = vec3(1.0, 2.0)
+  # C++ checks all arg uses before marking: f(a, a) is a single use-sequence,
+  # so the host accepts and only then marks `a` moved.
+  return vec3_add(a, a)

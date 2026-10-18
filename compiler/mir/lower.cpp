@@ -1521,6 +1521,15 @@ void lower_stmt(const Stmt& stmt, const Module& module, bool returns_float, bool
         if (is_float_type_name(stmt.var_type.elem->name)) {
           ins.array_is_float = true;
           float_arrays.insert(stmt.var_name);
+        } else if (is_i64_type_name(stmt.var_type.elem->name)) {
+          // Ptr/i64-element arrays must alloca 8 bytes per element: the MIR
+          // text carries no width bit on ArrayAlloc, so array_is_i64 (not in
+          // the dump ABI, cf. mir_dump.cpp) is the only channel that keeps
+          // the alloca element width and the GEP/store strides in sync.
+          // Without it, `array[N, ptr]` locals alias the frame's next slots
+          // (32-bit truncated stores + constant-NULL ptr loads) — the fx
+          // import-name-table segfault class.
+          ins.array_is_i64 = true;
         } else {
         }
         g_array_sizes[stmt.var_name] = stmt.var_type.array_size;

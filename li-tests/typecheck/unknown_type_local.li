@@ -1,0 +1,11 @@
+# Unknown-type gate fixture (walker REJECT side; C++ rejects the local `var`
+# annotation with `unknown type 'NoWidget'`— typecheck.cpp resolve_type_expr
+# on checked main-module proc bodies). Paired reject sibling:
+# unknown_type_param.li (def-param annotation). Both lanes must reject.
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var w: NoWidget
+  return 0

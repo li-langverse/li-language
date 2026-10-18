@@ -22,6 +22,11 @@ int32_t li_rt_ast_space(void);
 int32_t li_rt_ast_nl(void);
 /* Self-hosted typechecker diagnostic seam: emit one `error [CODE]` line. */
 int32_t li_rt_emit_err(int32_t code);
+/* Debug-only pointer liveness/value printers (never dereference s).
+ * Used by fx-span probe builds to localize the import-name-table crash. */
+int32_t li_rt_dbg_ptr_alive(const void* s);
+int32_t li_rt_dbg_int(int32_t v);
+int32_t li_rt_dbg_ptr(const void* p);
 /* Self-hosted MIR dump primitives (Layer 5: `mir <file>` parity with the
  * C++ `lic mir` dump of lower_to_mir()). li_rt_mir_f64 parses a float
  * literal slice into a static table and returns its id; li_rt_mir_f64_fmt
@@ -157,6 +162,7 @@ int32_t li_rt_str_prefix_is_get(const char* s);
 int32_t li_rt_http_parse_request_len_tag(const char* s, int32_t max_header_block, int32_t max_body);
 int32_t li_rt_str_eq(const char* a, const char* b);
 int32_t li_rt_str_prefix(const char* s, const char* prefix);
+int32_t li_rt_str_contains2(const char* s, const char* a, const char* b);
 int32_t li_rt_path_exact(const char* path, const char* want);
 int32_t li_rt_path_prefix(const char* path, const char* prefix);
 int32_t li_rt_match_route_fixture(const char* method, const char* path);
