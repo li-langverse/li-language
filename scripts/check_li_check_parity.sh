@@ -140,6 +140,13 @@ CORPUS_OK=(
   "li-tests/physics/golden_positions_sum.li"
   "li-tests/physics/profile_defaults.li"
   "li-tests/physics/three_body_mini.li"
+  # Newly agreeing classes (2026-10-18): parallel-for with real contract
+  # clauses (tc/fx lanes now consume the clauses and the policy gate runs in
+  # the check driver), `object of Base` field override (any width), and the
+  # prob_ensures given/samples tail in the contract collector.
+  "li-tests/parallel_codegen/parallel_float_zero.li"
+  "li-tests/encapsulation/inheritance_layout.li"
+  "li-tests/prob/collision_oracle.li"
   "li-tests/proof_gaps/false_ensures_still_builds.li"
   "li-tests/runtime/argv_ptr_abi.li"
   "li-tests/runtime/unary_minus.li"
@@ -193,6 +200,8 @@ CORPUS_FAIL=(
   "li-tests/math_linalg/golden_dot4_ones_twos.li:-"
   "li-tests/math_linalg/golden_tier1_dot8.li:-"
   "li-tests/math_linalg/reductions/sum_non_array.li:-"
+  "li-tests/typecheck/unknown_type_local.li:-"
+  "li-tests/typecheck/unknown_type_param.li:-"
   "li-tests/modules/import_cycle_a.li:-"
   "li-tests/physics/game_runtime_smoke.li:-"
   "li-tests/race_shared_memory/false_disjoint_requires_true.li:-"

@@ -3521,6 +3521,36 @@ def tc_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144, int]
     skip_newlines(tk, n, pi, err)
     tc_block(src, tk, ts, te, n, pi, err, cur_ret, sym_s, sym_kind, sym_ty, sym_aux, sym_buf, sym_b0, sym_b1, sym_n)
     return 1
+  if k == 4:
+    if tok_is(src, ts, te, pi[0], "parallel") == 1:
+      # parallel for: the C++ check walker (check_stmt ParallelFor) registers
+      # the loop index as a bounded int and walks the body — it never
+      # typechecks the contract clauses between the header and the `=`.
+      # Mirror exactly that consumption shape.
+      pi[0] = pi[0] + 1
+      if tok_is(src, ts, te, pi[0], "for") == 1:
+        pi[0] = pi[0] + 1
+      var fh: array[3, int]
+      for_tail(src, tk, ts, te, n, pi, err, fh)
+      if fh[0] != 0:
+        tc_record_local(src, ts, te, sym_s, sym_kind, sym_ty, sym_buf, sym_b0, sym_b1, sym_n, fh[0], 0)
+      skip_newlines(tk, n, pi, err)
+      if accept_k(tk, n, pi, err, 2) == 1:
+        skip_newlines(tk, n, pi, err)
+        var pc: int = 0
+        while pc == 0:
+          var pck: int = cur_kind(tk, n, pi, err)
+          if pck == 41 or pck == 42 or pck == 43 or pck == 44 or pck == 45:
+            parse_contract(src, tk, ts, te, n, pi, err, 0)
+            continue
+          pc = 1
+        expect_k(tk, n, pi, err, 3)
+        skip_newlines(tk, n, pi, err)
+      if accept_k(tk, n, pi, err, 58) == 1:
+        skip_newlines(tk, n, pi, err)
+        if cur_kind(tk, n, pi, err) == 2:
+          tc_block(src, tk, ts, te, n, pi, err, cur_ret, sym_s, sym_kind, sym_ty, sym_aux, sym_buf, sym_b0, sym_b1, sym_n)
+      return 1
   if k == 49:
     pi[0] = pi[0] + 1
     tc_expr(src, tk, ts, te, n, pi, err, 0, sym_s, sym_kind, sym_ty, sym_aux, sym_buf, sym_b0, sym_b1, sym_n)
@@ -3727,6 +3757,7 @@ def tc_collect_contracts(src: var ptr, tk: var array[262144, int], ts: var array
   var has_req: int = 0
   var has_ens: int = 0
   var weak_ens: int = 0
+  var has_prob: int = 0
   while 1 == 1:
     skip_newlines(tk, n, pi, err)
     var ck: int = cur_kind(tk, n, pi, err)
@@ -3743,7 +3774,40 @@ def tc_collect_contracts(src: var ptr, tk: var array[262144, int], ts: var array
           weak_ens = 1
       parse_contract_expr(src, tk, ts, te, n, pi, err, 0)
       continue
-    if ck == 43 or ck == 44 or ck == 45:
+    if ck == 43:
+      has_prob = 1
+      pi[0] = pi[0] + 1
+      parse_contract_expr(src, tk, ts, te, n, pi, err, 0)
+      # prob_ensures carries the `given <dist>` / `samples <n>` tail
+      # (parse_contract consumes it; the check re-walk must too, or the
+      # dangling tail tokens fail the contract loop iteration — walker-only
+      # rejections on the given/samples class).
+      skip_newlines(tk, n, pi, err)
+      var tg: int = 0
+      while tg == 0:
+        if cur_kind(tk, n, pi, err) == 4:
+          if tok_is(src, ts, te, pi[0], "given") == 1:
+            pi[0] = pi[0] + 1
+            if cur_kind(tk, n, pi, err) != 4:
+              err[0] = 1
+              return 1
+            pi[0] = pi[0] + 1
+            skip_newlines(tk, n, pi, err)
+            tg = 0
+          else:
+            if tok_is(src, ts, te, pi[0], "samples") == 0:
+              break
+            pi[0] = pi[0] + 1
+            if cur_kind(tk, n, pi, err) != 5:
+              err[0] = 1
+              return 1
+            pi[0] = pi[0] + 1
+            skip_newlines(tk, n, pi, err)
+            tg = 0
+        else:
+          break
+      continue
+    if ck == 44 or ck == 45:
       pi[0] = pi[0] + 1
       parse_contract_expr(src, tk, ts, te, n, pi, err, 0)
       continue
@@ -4757,6 +4821,34 @@ def fx_scan_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144,
     skip_newlines(tk, n, pi, err)
     fx_scan_block(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, used, await_seen)
     return 1
+  if k == 4:
+    if tok_is(src, ts, te, pi[0], "parallel") == 1:
+      # parallel for mirrors the tc_stmt branch: the C++ effects pass never
+      # walks the contract clauses (check_stmt ParallelFor registers only the
+      # loop index and checks the body), so this consumes the header and the
+      # contract block quietly and scans the body through fx_scan_block.
+      pi[0] = pi[0] + 1
+      if tok_is(src, ts, te, pi[0], "for") == 1:
+        pi[0] = pi[0] + 1
+      var ph: array[3, int]
+      for_tail(src, tk, ts, te, n, pi, err, ph)
+      skip_newlines(tk, n, pi, err)
+      if accept_k(tk, n, pi, err, 2) == 1:
+        skip_newlines(tk, n, pi, err)
+        var pc: int = 0
+        while pc == 0:
+          var pk: int = cur_kind(tk, n, pi, err)
+          if pk == 41 or pk == 42 or pk == 43 or pk == 44 or pk == 45:
+            parse_contract(src, tk, ts, te, n, pi, err, 0)
+            continue
+          pc = 1
+        expect_k(tk, n, pi, err, 3)
+        skip_newlines(tk, n, pi, err)
+      if accept_k(tk, n, pi, err, 58) == 1:
+        skip_newlines(tk, n, pi, err)
+        if cur_kind(tk, n, pi, err) == 2:
+          fx_scan_block(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, used, await_seen)
+      return 1
   fx_scan_expr(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, used, await_seen)
   if accept_k(tk, n, pi, err, 58) == 1:
     fx_scan_expr(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, used, await_seen)
@@ -8287,21 +8379,15 @@ def encap_check(src: var ptr, tk: var array[262144, int], ts: var array[262144, 
       continue
     err[0] = 1
     return 1
-  # Post-pass: inheritance layout + override + W0401.
+  # Post-pass: inheritance layout + override + W0401. The redeclared-field
+  # slot is a walk-only register now: the C++ typechecker accepts `object of
+  # Base` fields redeclared with any type (the last declaration wins for
+  # layout), so a differing width is NOT a parity reject.
   var o: int = 0
   while o < ob_cnt[0]:
     if ob_base[o] >= 0:
-      var bo: int = ec_find_obj(src, ts, te, ob_name, ob_cnt, ob_base[o])
-      if bo >= 0:
-        var f: int = 0
-        while f < fd_cnt[0]:
-          if fd_owner[f] == o:
-            var bf: int = ec_field_idx(src, ts, te, fd_name, fd_owner, fd_cnt, bo, fd_name[f])
-            if bf >= 0:
-              if tok_eq(src, ts, te, fd_type[f], peek256(fd_type, bf)) == 0:
-                err[0] = 1
-                li_rt_emit_err(900)
-          f = f + 1
+      var bo: int = 0
+      bo = ec_find_obj(src, ts, te, ob_name, ob_cnt, ob_base[o])
     o = o + 1
   o = 0
   while o < ep_cnt[0]:
@@ -18681,6 +18767,13 @@ def main() raises IO -> int
     err[0] = 0
     var err_any: array[1, int]
     err_any[0] = tsr2
+    # Source-policy gate (C++ check_source_policies — parallel_requires_disjoint,
+    # buf[0]/counter/borrow-mut rules, lanes=8 ceiling): same token scan the
+    # mir lane already runs, folded into the check verdict like the C++
+    # policy pass sits ahead of typecheck in `li check`.
+    var polcheck: int = mir_policy_check(f, tk, ts, te, n, err)
+    if polcheck == 1:
+      err_any[0] = 1
     var cr: int = check_source(f, tk, ts, te, n, pi, err)
     if err[0] == 1:
       err_any[0] = 1
