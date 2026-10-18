@@ -61,14 +61,11 @@ fail() {
 # validates but does not retain (so its dump omits it). Reported as known gaps,
 # not failures — the milestone tracks these via the repo-wide sweep
 # (LI_AST_FULL_SWEEP). When retention lands, the diff-line count drops to 0.
+# (2026-10-18: all six retention classes landed — theorem decls, parallel-for
+# contracts, trait methods, 'object of' base, prob given/samples, decorator
+# args — so this list is empty; any new mismatch now fails the gate.)
 known_gap() {
   case "$1" in
-    "proof-db/math/lemmas/ring_discharge.li") echo "theorem decls (code 3) not retained";;
-    "li-tests/parallel_codegen/parallel_float_zero.li") echo "parallel-for contracts not retained";;
-    "li-tests/encapsulation/trait_hash_impl.li") echo "trait impl method decls not retained";;
-    "li-tests/encapsulation/inheritance_layout.li") echo "'object of' base type not retained";;
-    "li-tests/prob/collision_oracle.li") echo "prob given/samples blocks not retained";;
-    "li-tests/lexer_parser/decorators_parse.li") echo "decorator args not retained";;
     *) echo "";;
   esac
 }

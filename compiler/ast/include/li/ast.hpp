@@ -15,6 +15,8 @@ struct Span {
 
 struct Expr;
 struct TypeExpr;
+struct Contract;
+struct Decorator;
 
 struct TypeField {
   std::string name;
@@ -81,6 +83,36 @@ struct Contract {
   ContractKind kind;
   Span span;
   std::unique_ptr<Expr> expr;
+  // `prob_ensures` tail (our lexer folds it into KwInvariant, so text must
+  // disambiguate). The walker dumps given/samples on the code-7 line for
+  // these contracts and drops the tail for plain invariants.
+  bool is_prob = false;
+  std::string prob_given;      // last `given <dist>` distribution name
+  std::int64_t prob_samples = 0;
+};
+
+/// One `def name(params) [: ret] <contracts>` inside `type X = trait`. The
+/// walker dumps these as FN lines (code 4) with no body; retention mirrors
+/// parse_trait_method's dump exactly.
+struct TraitMethod {
+  Span span;
+  int visibility = 0;  // 1 = `public`; the walker's kind-16 prefix
+  std::string name;
+  std::vector<Param> params;
+  std::optional<TypeExpr> ret_type;
+  std::vector<Contract> contracts;
+};
+
+// axiom/theorem/lemma declaration: `theorem name(params) : <proposition>`.
+// No MIR is emitted for these (the walker's parse_theorem also only dumps
+// them), so retention is AST-level only.
+struct TheoremDecl {
+  Span span;
+  std::string name;
+  std::vector<Param> params;
+  bool is_axiom = false;
+  bool is_lemma = false;
+  std::unique_ptr<Expr> statement;
 };
 
 struct Stmt {
@@ -112,11 +144,29 @@ struct Stmt {
   std::vector<Stmt> for_body;
   bool for_vectorized = false;
   std::int64_t for_lanes = 0;
+  // ParallelFor carries its own `requires/ensures/decreases/invariant`
+  // contracts (walker parse_parallel_for parses them into the code-7 stream
+  // between the 44 line and the body block). Statement-level decorators
+  // (`@parallel(...)`, `@vectorized(...)`) arrive on the while/for/parallel
+  // variants the walker's parse_stmt decorator branch accepts.
+  std::vector<struct Contract> contracts;
+  std::vector<Decorator> decorators;
+};
+
+// One `arg [= value]` inside a `@name(args)` decorator. value_kind is the
+// walker's emission form: 0 bare (the arg name re-emitted as an ident),
+// 1 ident/bool text, 2 int literal, 3 float literal, 4 binary literal,
+// 5 string literal; value_text keeps the raw lexeme for the dump.
+struct DecArg {
+  std::string name;
+  int value_kind = 0;
+  std::string value_text;
 };
 
 // One `@name` / `@name(args)` line in a decorator list attached to a def.
 struct Decorator {
   std::string name;
+  std::vector<DecArg> args;
   std::int64_t lanes = 0;
   bool vectorized = false;
   bool no_vectorize = false;
@@ -131,6 +181,9 @@ struct ProcDecl {
   std::string name;
   bool is_extern = false;
   std::vector<std::string> type_params;
+  /** Parallel to type_params: the `T: Bound` bound ident, empty when
+   *  unconstrained. The walker emits `5 <name> <bound>` for procs. */
+  std::vector<std::string> type_param_bounds;
   std::vector<Param> params;
   std::optional<TypeExpr> ret_type;
   std::vector<std::string> raises;
@@ -155,6 +208,11 @@ struct TypeAlias {
   std::vector<std::string> enum_variants;
   /** `object of Base` parent object name (empty for plain `object`). */
   std::string base;
+  /** `type X = trait` — kind 4 in the walker's alias dump. Kept as a flag
+   *  (not an AliasKind) so the typecheck alias space treats the trait name
+   *  exactly as it did before retention landed. */
+  bool is_trait = false;
+  std::vector<TraitMethod> trait_methods;
 };
 
 struct ImportDecl {
@@ -168,6 +226,8 @@ struct Module {
   std::vector<TypeAlias> types;
   std::vector<ProcDecl> procs;
   std::vector<ImportDecl> imports;
+  /// axiom/theorem/lemma declarations retained for the AST dump (no MIR).
+  std::vector<TheoremDecl> theorems;
 };
 
 std::string debug_expr(const Expr& e, int indent = 0);

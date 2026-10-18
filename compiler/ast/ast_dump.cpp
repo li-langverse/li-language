@@ -120,6 +120,37 @@ void dump_expr(const Expr& e, Dumper& d);
 void dump_type(const TypeExpr& t, Dumper& d);
 void dump_stmt(const Stmt& s, Dumper& d);
 
+// Statement/proc decorator: `8 <name>`, then per arg `9 <argname>` and the
+// value line — bare args re-emit the name as an ident (64); explicit values
+// map ident/bool->64, int->60, float->61, binary->62, string->63 (raw lexeme
+// text, exactly as the walker's parse_decorator would have printed it).
+void dump_decorator(const Decorator& dec, Dumper& d) {
+  d.line_text(8, dec.name);
+  for (const auto& a : dec.args) {
+    d.line_text(9, a.name);
+    switch (a.value_kind) {
+      case 0:
+        d.line_text(64, a.name);
+        break;
+      case 1:
+        d.line_text(64, a.value_text);
+        break;
+      case 2:
+        d.line_text(60, a.value_text);
+        break;
+      case 3:
+        d.line_text(61, a.value_text);
+        break;
+      case 4:
+        d.line_text(62, a.value_text);
+        break;
+      case 5:
+        d.line_text(63, a.value_text);
+        break;
+    }
+  }
+}
+
 // BinOp token-kind numbering: the walker (bootstrap/lic/main.li) emits the
 // raw operator token kind (opk) for each binop node (code 65), so the C++
 // dump must map BinOp back to the same token kinds.
@@ -300,11 +331,16 @@ void dump_contract(const Contract& c, Dumper& d) {
     case ContractKind::Invariant: kind = 3; break;
   }
   // The proposition is parsed before the given/samples tail, so the expr
-  // prints first and the contract line after it.
+  // prints first and the contract line after it. prob_ensures contracts
+  // carry the last `given` name and samples count (walker kind 4).
   if (c.expr) {
     dump_expr(*c.expr, d);
   }
-  d.line_i_text_i(7, kind, "", 0);
+  if (c.is_prob) {
+    d.line_i_text_i(7, 4, c.prob_given, c.prob_samples);
+  } else {
+    d.line_i_text_i(7, kind, "", 0);
+  }
 }
 
 void dump_block(const std::vector<Stmt>& body, Dumper& d) {
@@ -316,6 +352,12 @@ void dump_block(const std::vector<Stmt>& body, Dumper& d) {
 }
 
 void dump_stmt(const Stmt& s, Dumper& d) {
+  // Statement-level decorators (`@parallel(...)`, `@vectorized(...)` above
+  // a while/for/parallel-for) print their lines before the statement's own
+  // first dump line, in the order the walker emits them.
+  for (const auto& dec : s.decorators) {
+    dump_decorator(dec, d);
+  }
   switch (s.kind) {
     case Stmt::Kind::Return:
       d.line(40);
@@ -346,6 +388,12 @@ void dump_stmt(const Stmt& s, Dumper& d) {
       break;
     case Stmt::Kind::ParallelFor:
       d.line_text_ii(44, s.par_index, s.par_start, s.par_end);
+      // The contract clauses sit between the 44 line and the body block,
+      // each parsed (expr first) before its code-7 line — the walker emits
+      // them via parse_contract with d=1 in that order.
+      for (const auto& c : s.contracts) {
+        dump_contract(c, d);
+      }
       dump_block(s.par_body, d);
       break;
     case Stmt::Kind::Break:
@@ -391,12 +439,23 @@ void dump_param(const Param& p, Dumper& d) {
 }
 
 void dump_proc(const ProcDecl& proc, Dumper& d) {
-  d.line_text_iii(4, proc.name, 0, proc.is_extern ? 1 : 0, proc.is_async ? 1 : 0);
+  d.line_text_iii(4, proc.name, proc.is_private ? 1 : 0,
+                  proc.is_extern ? 1 : 0, proc.is_async ? 1 : 0);
+  // Decorators print right before the type params: the walker tops the
+  // DEC lines at the point the proc keyword was reached, between the 4
+  // line and the binder lines.
+  for (const auto& dec : proc.decorators) {
+    dump_decorator(dec, d);
+  }
   for (std::size_t i = 0; i < proc.type_params.size(); ++i) {
-    // This branch's lean parser records only the type-param names; the
-    // walker emits the bound text when a constrained param `T: Bound` is
-    // present, which the C++ parse drops. Emit name + empty bound.
-    d.line_text_text(5, proc.type_params[i], "");
+    // Constrained generic params `T: Bound` keep the bound ident (the
+    // walker's parse_type_params emits `5 <name> <bound>`); unconstrained
+    // ones keep the trailing blank field.
+    std::string bound;
+    if (i < proc.type_param_bounds.size()) {
+      bound = proc.type_param_bounds[i];
+    }
+    d.line_text_text(5, proc.type_params[i], bound);
   }
   for (const auto& p : proc.params) {
     dump_param(p, d);
@@ -415,11 +474,23 @@ void dump_proc(const ProcDecl& proc, Dumper& d) {
   }
 }
 
+void dump_trait_method(const TraitMethod& m, Dumper& d) {
+  d.line_text_iii(4, m.name, m.visibility, 0, 0);
+  for (const auto& p : m.params) {
+    dump_param(p, d);
+  }
+  if (m.ret_type) {
+    dump_type(*m.ret_type, d);
+  }
+  for (const auto& c : m.contracts) {
+    dump_contract(c, d);
+  }
+}
+
 void dump_type_alias(const TypeAlias& alias, Dumper& d) {
   // Walker kind numbers: 0 type definition, 1 typedict, 2 enum, 3 object,
-  // 4 trait. This branch's lean parser has no trait alias kind (it parses
-  // trait methods for acceptance only and records nothing), so only 0-3 can
-  // be emitted here.
+  // 4 trait. Trait aliases are flagged via is_trait (the typecheck alias
+  // space keeps their AliasKind::Type classification).
   int kind = 0;
   switch (alias.alias_kind) {
     case AliasKind::Type: kind = 0; break;
@@ -427,11 +498,21 @@ void dump_type_alias(const TypeAlias& alias, Dumper& d) {
     case AliasKind::Enum: kind = 2; break;
     case AliasKind::Object: kind = 3; break;
   }
-  // base_object: this branch's TypeAlias has no base-object field (the parser
-  // accepts `object of Base` and drops the base). Emit an empty base text.
-  d.line_text_i_text(80, alias.name, kind, "");
+  int dump_kind = alias.is_trait ? 4 : kind;
+  // base_object: `type X = object of Base` retains the parent name; other
+  // alias shapes emit the blank base field.
+  d.line_text_i_text(80, alias.name, dump_kind, alias.base);
   for (const auto& tp : alias.type_params) {
+    // Alias binder lines never carry the bound, even for constrained
+    // params — the walker's alias-side emit drops it (closest analogue:
+    // emit_tp_lines prints only the name).
     d.line_text_text(5, tp, "");
+  }
+  if (alias.is_trait) {
+    for (const auto& m : alias.trait_methods) {
+      dump_trait_method(m, d);
+    }
+    return;
   }
   switch (alias.alias_kind) {
     case AliasKind::TypedDict:
@@ -456,9 +537,22 @@ void dump_type_alias(const TypeAlias& alias, Dumper& d) {
 
 struct DeclRef {
   std::size_t start = 0;
-  int tag = 0;  // 0 import, 1 type alias, 2 proc
+  int tag = 0;  // 0 import, 1 type alias, 2 proc, 3 theorem
   std::size_t idx = 0;
 };
+
+// The walker's parse_theorem dump: `3 <name> <axiom> <lemma>`, typed params
+// (6/type), then the proposition — source order preserved by the DeclRef
+// sort.
+void dump_theorem(const TheoremDecl& th, Dumper& d) {
+  d.line_text_ii(3, th.name, th.is_axiom ? 1 : 0, th.is_lemma ? 1 : 0);
+  for (const auto& p : th.params) {
+    dump_param(p, d);
+  }
+  if (th.statement) {
+    dump_expr(*th.statement, d);
+  }
+}
 
 }  // namespace
 
@@ -474,6 +568,9 @@ std::string dump_module_ast(const Module& m, std::string_view source) {
   for (std::size_t i = 0; i < m.procs.size(); ++i) {
     decls.push_back({m.procs[i].span.start, 2, i});
   }
+  for (std::size_t i = 0; i < m.theorems.size(); ++i) {
+    decls.push_back({m.theorems[i].span.start, 3, i});
+  }
   std::stable_sort(decls.begin(), decls.end(),
                    [](const DeclRef& a, const DeclRef& b) { return a.start < b.start; });
   for (const auto& ref : decls) {
@@ -488,6 +585,9 @@ std::string dump_module_ast(const Module& m, std::string_view source) {
         break;
       case 2:
         dump_proc(m.procs[ref.idx], d);
+        break;
+      case 3:
+        dump_theorem(m.theorems[ref.idx], d);
         break;
     }
   }

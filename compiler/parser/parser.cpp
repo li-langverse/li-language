@@ -61,7 +61,8 @@ struct Parser {
   std::unique_ptr<Expr> parse_primary();
   std::unique_ptr<Expr> parse_postfix(std::unique_ptr<Expr> base);
   TypeExpr parse_type();
-  std::vector<std::string> parse_type_params();
+  std::vector<std::string> parse_type_params(
+      std::vector<std::string>* bounds = nullptr);
   std::vector<TypeField> parse_type_fields();
   Param parse_param();
   std::unique_ptr<Expr> parse_contract_expr();
@@ -93,24 +94,55 @@ struct Parser {
       i++;
       skip_newlines();
       while (!at(TokenKind::RParen) && !at(TokenKind::Eof)) {
-        if (at(TokenKind::Ident) && cur().text == "lanes") {
-          i++;
-          if (accept(TokenKind::Eq)) {
-            if (at(TokenKind::IntLit)) {
-              dec.lanes = cur().int_value;
-              i++;
-            }
-          }
-        } else if (at(TokenKind::Ident) && cur().text == "disjoint") {
+        if (!at(TokenKind::Ident)) {
+          diags.error(loc(cur()), "expected decorator argument name");
+          break;
+        }
+        DecArg arg;
+        arg.name = std::string(cur().text);
+        i++;
+        // Semantic keep-alives for the SIMD/parallel lowering (walker ftmp
+        // cells): lanes counts, disjoint marker, regardless of `=` form.
+        if (arg.name == "disjoint") {
           dec.disjoint = true;
-          i++;
-          if (accept(TokenKind::Eq)) {
-            if (at(TokenKind::Ident)) {
-              i++;
-            }
+        }
+        if (!accept(TokenKind::Eq)) {
+          // Bare arg: the walker re-emits the arg name as an ident line.
+          dec.args.push_back(std::move(arg));
+        } else if (at(TokenKind::IntLit)) {
+          arg.value_kind = 2;
+          if (arg.name == "lanes") {
+            dec.lanes = cur().int_value;
           }
-        } else {
+          arg.value_text = std::string(cur().text);
           i++;
+          dec.args.push_back(std::move(arg));
+        } else if (at(TokenKind::FloatLit)) {
+          arg.value_kind = 3;
+          arg.value_text = std::string(cur().text);
+          i++;
+          dec.args.push_back(std::move(arg));
+        } else if (at(TokenKind::BinaryLit)) {
+          arg.value_kind = 4;
+          arg.value_text = std::string(cur().text);
+          i++;
+          dec.args.push_back(std::move(arg));
+        } else if (at(TokenKind::StringLit)) {
+          arg.value_kind = 5;
+          arg.value_text = std::string(cur().text);
+          i++;
+          dec.args.push_back(std::move(arg));
+        } else if (at(TokenKind::Ident) || at(TokenKind::KwTrue) ||
+                   at(TokenKind::KwFalse)) {
+          // Ident-like values (incl. keyword lexemes like True/auto) dump
+          // as ident lines; anything else the walker rejects, so mirror the
+          // rejection rather than accepting an unrepresentable arg.
+          arg.value_kind = 1;
+          arg.value_text = std::string(cur().text);
+          i++;
+          dec.args.push_back(std::move(arg));
+        } else {
+          diags.error(loc(cur()), "expected decorator value");
         }
         accept(TokenKind::Comma);
         skip_newlines();
@@ -223,17 +255,24 @@ struct Parser {
         skip_newlines();
       } else if (at(TokenKind::KwAxiom) || at(TokenKind::KwTheorem) ||
                  at(TokenKind::KwLemma)) {
-        // axiom/theorem/lemma: proof declarations parsed and validated but
-        // emit no MIR (mirror of the walker's parse_theorem with d=0).
-        // Grammar: keyword name [ ( params ) ] : <bool expr>
+        // axiom/theorem/lemma: proof declarations; the parser validates and
+        // now RETAINS them (walker parse_theorem dumps: code-3 line with the
+        // axiom/lemma flags, typed params, then the proposition expr).
+        const Token kw = cur();
         i++;
+        TheoremDecl th;
+        th.span = {kw.start, kw.end};
+        th.is_axiom = (kw.kind == TokenKind::KwAxiom);
+        th.is_lemma = (kw.kind == TokenKind::KwLemma);
+        const Token name_tok = cur();
         if (!expect(TokenKind::Ident, "name after proof keyword")) {
           return false;
         }
+        th.name = std::string(name_tok.text);
         if (accept(TokenKind::LParen)) {
           if (!at(TokenKind::RParen)) {
             while (true) {
-              parse_param();
+              th.params.push_back(parse_param());
               if (!accept(TokenKind::Comma)) {
                 break;
               }
@@ -250,11 +289,12 @@ struct Parser {
         skip_newlines();
         const bool prev_allow = allow_implies_;
         allow_implies_ = true;
-        const bool ok = parse_expr() != nullptr;
+        th.statement = parse_expr();
         allow_implies_ = prev_allow;
-        if (!ok) {
+        if (!th.statement) {
           return false;
         }
+        out.theorems.push_back(std::move(th));
         skip_newlines();
       } else {
         diags.error(loc(cur()), "expected top-level declaration");
@@ -666,7 +706,8 @@ TypeExpr Parser::parse_type() {
   return ty;
 }
 
-std::vector<std::string> Parser::parse_type_params() {
+std::vector<std::string> Parser::parse_type_params(
+    std::vector<std::string>* bounds) {
   std::vector<std::string> params;
   if (!accept(TokenKind::LBracket)) {
     return params;
@@ -680,10 +721,22 @@ std::vector<std::string> Parser::parse_type_params() {
       }
       params.push_back(std::string(cur().text));
       i++;
-      // Constrained param `H: Hash` — the walker accepts the bound and
-      // ignores it (no generic constraint checking exists).
+      // Constrained param `H: Hash` — the walker records the bound ident on
+      // procs (dump `5 <name> <bound>`); typecheck ignores it entirely.
       if (accept(TokenKind::Colon)) {
-        (void)parse_type();
+        if (bounds) {
+          bounds->push_back(std::string());
+        }
+        if (at(TokenKind::Ident)) {
+          if (bounds) {
+            bounds->back() = std::string(cur().text);
+          }
+          (void)parse_type();
+        } else {
+          diags.error(loc(cur()), "expected type bound after ':'");
+        }
+      } else if (bounds) {
+        bounds->push_back(std::string());
       }
     } while (accept(TokenKind::Comma));
     skip_newlines();
@@ -728,8 +781,12 @@ Contract Parser::parse_contract() {
   c.expr = parse_contract_expr();
   // `prob_ensures` (walker kw 43 — our lexer folds it into KwInvariant) may
   // carry a `given <dist>` / `samples <n>` tail, optionally repeated. The
-  // walker consumes it without recording AST.
+  // walker emits the LAST given name and the LAST samples count on the
+  // contract line (`7 4 <given> <count>`, empty/count-0 when absent); the
+  // tail is consumed without AST for plain invariants. Retained now.
   if (kw.kind == TokenKind::KwInvariant) {
+    std::string kw_text(kw.text);
+    c.is_prob = (kw_text == "prob_ensures");
     for (;;) {
       skip_newlines();
       if (at(TokenKind::Ident) && cur().text == "given") {
@@ -738,6 +795,7 @@ Contract Parser::parse_contract() {
           diags.error(loc(cur()), "expected distribution name after given");
           return c;
         }
+        c.prob_given = std::string(cur().text);
         i++;
       } else if (at(TokenKind::Ident) && cur().text == "samples") {
         i++;
@@ -745,6 +803,7 @@ Contract Parser::parse_contract() {
           diags.error(loc(cur()), "expected sample count after samples");
           return c;
         }
+        c.prob_samples = cur().int_value;
         i++;
       } else {
         break;
@@ -781,12 +840,11 @@ Stmt Parser::parse_stmt() {
     s.kind = Stmt::Kind::Expr;
     s.span = {cur().start, cur().end};
     i++;  // 'discard'
-    // The walker consumes only the keyword; the following expression becomes
-    // its own side-effecting statement (e.g. `discard "<str>"` materializes a
-    // StoreI64 temp). Parse it when a value follows on this line.
-    if (!at(TokenKind::Newline) && !at(TokenKind::Dedent) && !at(TokenKind::Eof)) {
-      s.expr = parse_expr();
-    }
+    // The walker consumes only the keyword and emits the bare `47` line;
+    // the following expression becomes its own side-effecting Expr
+    // statement, picked up by the next block iteration (the token is still
+    // current when parse_block's skip_newlines lets it through). Leave it
+    // unconsumed here so both dumps see two statements.
     skip_newlines();
     return s;
   }
@@ -872,7 +930,9 @@ Stmt Parser::parse_stmt() {
       skip_newlines();
       while (at(TokenKind::KwRequires) || at(TokenKind::KwEnsures) ||
              at(TokenKind::KwDecreases) || at(TokenKind::KwInvariant)) {
-        (void)parse_contract();
+        // Contracts between the `44` line and the body block dump in that
+        // order on the walker side (expr first, then the code-7 line).
+        s.contracts.push_back(parse_contract());
       }
       expect(TokenKind::Dedent, "dedent");
       skip_newlines();
@@ -960,6 +1020,7 @@ Stmt Parser::parse_stmt() {
       if (at(TokenKind::Indent)) {
         fs.for_body = parse_block();
       }
+      fs.decorators = std::move(decs);
       return fs;
     }
     if (at(TokenKind::Ident) && cur().text == "parallel") {
@@ -995,7 +1056,7 @@ Stmt Parser::parse_stmt() {
         skip_newlines();
         while (at(TokenKind::KwRequires) || at(TokenKind::KwEnsures) ||
                at(TokenKind::KwDecreases) || at(TokenKind::KwInvariant)) {
-          (void)parse_contract();
+          ps.contracts.push_back(parse_contract());
         }
         expect(TokenKind::Dedent, "dedent");
         skip_newlines();
@@ -1006,7 +1067,15 @@ Stmt Parser::parse_stmt() {
           ps.par_body = parse_block();
         }
       }
+      ps.decorators = std::move(decs);
       return ps;
+    }
+    if (at(TokenKind::KwWhile)) {
+      // The walker's parse_stmt decorator branch also accepts a decorated
+      // `while` (decorator lines, then the usual while dump).
+      auto ws = parse_stmt();
+      ws.decorators = std::move(decs);
+      return ws;
     }
     diags.error(loc(cur()), "expected for statement after decorator");
     return s;
@@ -1118,7 +1187,7 @@ ProcDecl Parser::parse_proc(bool is_extern) {
   proc.span = {name.start, name.end};
   proc.name = std::string(name.text);
   i++;
-  proc.type_params = parse_type_params();
+  proc.type_params = parse_type_params(&proc.type_param_bounds);
   expect(TokenKind::LParen, "'('");
   brace_depth_++;
   if (!at(TokenKind::RParen)) {
@@ -1197,13 +1266,22 @@ TypeAlias Parser::parse_type_alias() {
   if (at(TokenKind::Ident) && cur().text == "trait") {
     // `type X = trait` — signature-only methods (walker parse_trait_methods:
     // each is `[private|public] def name(params) -> ret` + contracts, no '='
-    // body). Methods are dropped; only accept/reject parity matters here.
+    // body). The walker dumps trait aliases as kind 4 followed by the
+    // method signature paragraphs, so those are retained here; the
+    // typecheck alias space keeps treating the name as it always did via
+    // alias.kind == Type.
+    alias.is_trait = true;
     i++;
     skip_newlines();
     for (;;) {
       skip_newlines();
+      TraitMethod tm;
       if (at(TokenKind::KwEcho) &&
           (std::string(cur().text) == "private" || std::string(cur().text) == "public")) {
+        // The walker marks the prefix with 1 only for `private` (kind 16);
+        // `public` and the default share flag 0 in the FN visibility slot.
+        tm.visibility = (std::string(cur().text) == "private") ? 1 : 0;
+        tm.span = {cur().start, cur().end};
         i++;
       }
       if (!at(TokenKind::KwProc)) {
@@ -1214,6 +1292,10 @@ TypeAlias Parser::parse_type_alias() {
         diags.error(loc(cur()), "expected trait method name");
         return alias;
       }
+      tm.name = std::string(cur().text);
+      if (tm.span.end == 0) {
+        tm.span = {cur().start, cur().end};
+      }
       i++;
       if (!expect(TokenKind::LParen, "'('")) {
         return alias;
@@ -1222,20 +1304,21 @@ TypeAlias Parser::parse_type_alias() {
       if (!at(TokenKind::RParen)) {
         do {
           skip_newlines();
-          (void)parse_param();
+          tm.params.push_back(parse_param());
         } while (accept(TokenKind::Comma));
         skip_newlines();
       }
       brace_depth_--;
       expect(TokenKind::RParen, "')'");
       if (accept(TokenKind::Arrow)) {
-        (void)parse_type();
+        tm.ret_type = parse_type();
       }
       skip_newlines();
       while (at(TokenKind::KwRequires) || at(TokenKind::KwEnsures) ||
              at(TokenKind::KwDecreases) || at(TokenKind::KwInvariant)) {
-        (void)parse_contract();
+        tm.contracts.push_back(parse_contract());
       }
+      alias.trait_methods.push_back(std::move(tm));
     }
     skip_newlines();
     return alias;
