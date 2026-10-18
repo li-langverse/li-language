@@ -4945,12 +4945,19 @@ def fx_scan_expr(src: var ptr, tk: var array[262144, int], ts: var array[262144,
   ensures result == 1
   decreases 0
 =
+  # proc_mentions_extern_call mirror: only the statement ROOT call counts —
+  # the head position (bare expr / Return expr) or the token directly after
+  # a depth-0 `=` (Assign RHS). Nested calls never fire.
+  var p0: int = pi[0]
+  var eq_tok: int = 0 - 1
   var depth: int = 0
   while 1 == 1:
     var k: int = cur_kind(tk, n, pi, err)
     if depth == 0:
       if k == 1 or k == 3 or k == 0 or k == 56 or k == 55:
         break
+      if k == 58:
+        eq_tok = pi[0]
     if k == 49 or k == 51 or k == 53:
       depth = depth + 1
     if k == 50 or k == 52 or k == 54:
@@ -4959,14 +4966,19 @@ def fx_scan_expr(src: var ptr, tk: var array[262144, int], ts: var array[262144,
       await_seen[0] = 1
     if k == 4:
       if peek_off(tk, n, pi, 1) == 49:
-        if tok_is(src, ts, te, pi[0], "print") == 1:
+        if tok_is(src, ts, te, pi[0], "print") == 1 or tok_is(src, ts, te, pi[0], "echo") == 1:
           # C++ builtin_output rule: echo/print count as IO output builtin
           # only when no proc of that name is in the proc_map — the merged
           # import-space table supplies count>0 for imported user procs.
           if fx_proc_ext(src, ts, te, isrc, isn, ise, iext, icnt, pn, pext, pcnt, pi[0]) == 0 - 1:
             fx_add_eff(used, 1)
-        if fx_proc_ext(src, ts, te, isrc, isn, ise, iext, icnt, pn, pext, pcnt, pi[0]) == 1:
-          fx_add_eff(used, 1)
+        var is_root: int = 0
+        if eq_tok >= 0:
+          if pi[0] == eq_tok + 1:
+            is_root = 1
+        if is_root == 1:
+          if fx_proc_ext(src, ts, te, isrc, isn, ise, iext, icnt, pn, pext, pcnt, pi[0]) == 1:
+            fx_add_eff(used, 1)
         var cf: int = fx_proc_eff(src, ts, te, isrc, isn, ise, ieff, icnt, pn, peff, pcnt, pi[0])
         if cf >= 0:
           if fx_has_eff(cf, 4) == 1:
@@ -5016,6 +5028,11 @@ def fx_scan_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144,
   if k == 30:
     pi[0] = pi[0] + 1
     if cur_kind(tk, n, pi, err) != 1:
+      # Return stmt: s.expr is a root per proc_mentions_extern_call.
+      if cur_kind(tk, n, pi, err) == 4:
+        if peek_off(tk, n, pi, 1) == 49:
+          if fx_proc_ext(src, ts, te, isrc, isn, ise, iext, icnt, pn, pext, pcnt, pi[0]) == 1:
+            fx_add_eff(used, 1)
       fx_scan_expr(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, used, await_seen)
     return 1
   if k == 22:
@@ -5084,6 +5101,13 @@ def fx_scan_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144,
         if cur_kind(tk, n, pi, err) == 2:
           fx_scan_block(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, used, await_seen)
       return 1
+  # Expr/Assign stmt: the head call is a root (s.expr on Expr stmts; the
+  # Assign RHS-root is tracked inside fx_scan_expr via the depth-0 `=`).
+  # If/while conds and var-decl inits are never roots for the extern rule.
+  if cur_kind(tk, n, pi, err) == 4:
+    if peek_off(tk, n, pi, 1) == 49:
+      if fx_proc_ext(src, ts, te, isrc, isn, ise, iext, icnt, pn, pext, pcnt, pi[0]) == 1:
+        fx_add_eff(used, 1)
   fx_scan_expr(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, used, await_seen)
   if accept_k(tk, n, pi, err, 58) == 1:
     fx_scan_expr(src, tk, ts, te, n, pi, err, isrc, isn, ise, iext, ieff, icnt, pn, peff, pext, pcnt, used, await_seen)
@@ -5284,24 +5308,13 @@ def effects_check(src: var ptr,  file_path: ptr, tk: var array[262144, int], ts:
           if fx_has_eff(decl[0], 2) == 0:
             err[0] = 1
             li_rt_emit_err(900)
-        if await_seen[0] == 1:
-          if is_asy == 0:
-            err[0] = 1
-            li_rt_emit_err(900)
-        if is_asy == 1:
-          if fx_has_eff(decl[0], 8) == 0:
-            err[0] = 1
-            li_rt_emit_err(900)
+        # The host's effects lane is exactly three rules (effects_check_module,
+        # borrowck.cpp): echo/print -> raises IO, ANY extern call -> raises IO,
+        # heap mention -> raises Alloc. The raise-Kind compat checks for Net /
+        # Async / await are walker-only phantoms (the C++ propagates callee
+        # raises onto no rule of its own) — dropped to mirror the verdicts.
         if fx_has_eff(used[0], 1) == 1:
           if fx_has_eff(decl[0], 1) == 0:
-            err[0] = 1
-            li_rt_emit_err(900)
-        if fx_has_eff(used[0], 4) == 1:
-          if fx_has_eff(decl[0], 4) == 0:
-            err[0] = 1
-            li_rt_emit_err(900)
-        if fx_has_eff(used[0], 8) == 1:
-          if fx_has_eff(decl[0], 8) == 0:
             err[0] = 1
             li_rt_emit_err(900)
       skip_newlines(tk, n, pi, err)
@@ -8168,11 +8181,11 @@ def pl_check_primary(src: var ptr, tk: var array[262144, int], ts: var array[262
           if arg_ty >= 0:
             var oi: int = ec_find_obj(src, ts, te, ob_name, ob_cnt, arg_ty)
             if oi >= 0:
+              # Trait-impl conformance is NOT a check-lane rule in the host:
+              # trait_hash_impl.li and trait_missing_impl.li both pass  the
+              # C++ walk, so the lookup runs but never fires.
               var ti: int = ec_find_trait(src, ts, te, tr_name, tr_cnt, bnd)
-              if ti >= 0:
-                if ec_obj_impl_trait(src, ts, te, tm_name, tm_owner, tm_cnt, ep_name, ep_cnt, peek256(ob_name, oi), ti) == 0:
-                  err[0] = 1
-                  li_rt_emit_err(900)
+              var ti_noop: int = ti
       cur[0] = -1
       return pl_check_postfix(src, tk, ts, te, n, pi, err, cur, ob_name, ob_cnt, tr_name, tr_cnt, fd_name, fd_priv, fd_owner, fd_cnt, tm_name, tm_owner, tm_cnt, ep_name, ep_bnd, ep_cnt, im_ob, im_fd_name, im_fd_priv, im_fd_owner, im_ob_cnt, im_fd_cnt, pl_name, pl_ty, pl_n)
     cur[0] = t4
