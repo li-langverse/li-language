@@ -3023,6 +3023,14 @@ def tc_parse_type(src: var ptr, tk: var array[262144, int], ts: var array[262144
         sz = int_text_value(src, ts, te, pi[0])
         pi[0] = pi[0] + 1
       else:
+        # array-of-types or list[T]-style bracket group: named fields and
+        # variadic tokens inside the group strand tokens the same way the
+        # tuple branch did, so pre-consume them here too.
+        if cur_kind(tk, n, pi, err) == 75:
+          pi[0] = pi[0] + 1
+        if cur_kind(tk, n, pi, err) == 4:
+          if peek_off(tk, n, pi, 1) == 56:
+            pi[0] = pi[0] + 2
         tc_parse_type(src, tk, ts, te, n, pi, err, sym_s, sym_kind, sym_ty, sym_buf, sym_b0, sym_b1, sym_n)
         expect_k(tk, n, pi, err, 55)
         tc_parse_type(src, tk, ts, te, n, pi, err, sym_s, sym_kind, sym_ty, sym_buf, sym_b0, sym_b1, sym_n)
@@ -3040,11 +3048,26 @@ def tc_parse_type(src: var ptr, tk: var array[262144, int], ts: var array[262144
       if cur_kind(tk, n, pi, err) != 52:
         var done: int = 0
         while done == 0:
-          tc_parse_type(src, tk, ts, te, n, pi, err, sym_s, sym_kind, sym_ty, sym_buf, sym_b0, sym_b1, sym_n)
-          if accept_k(tk, n, pi, err, 55) == 1:
-            done = 0
-          else:
+          # tuple args may be variadic (`tuple[int, ...]`) or named fields
+          # (`tuple[x: float, y: float]`); the bare tc_parse_type call
+          # stranded the `...` / field `:` tokens and desynced the register
+          # walk (walker-only rejects on the collections corpus).
+          if cur_kind(tk, n, pi, err) == 75:
+            # `tuple[int, ...]`: the ellipsis is the last element of the
+            # group; after it only `]` may follow, so skip the element
+            # parse here and let the post-loop `]` check close the group.
+            pi[0] = pi[0] + 1
+            skip_newlines(tk, n, pi, err)
             done = 1
+          else:
+            if cur_kind(tk, n, pi, err) == 4:
+              if peek_off(tk, n, pi, 1) == 56:
+                pi[0] = pi[0] + 2
+            tc_parse_type(src, tk, ts, te, n, pi, err, sym_s, sym_kind, sym_ty, sym_buf, sym_b0, sym_b1, sym_n)
+            if accept_k(tk, n, pi, err, 55) == 1:
+              done = 0
+            else:
+              done = 1
       expect_k(tk, n, pi, err, 52)
       return 8
     return 8
@@ -3069,15 +3092,25 @@ def tc_parse_type(src: var ptr, tk: var array[262144, int], ts: var array[262144
       if m == 1:
         var rt: int = sym_ty[si]
         if accept_k(tk, n, pi, err, 51) == 1:
+          var arg0: int = -1
+          var done_arg: int = 0
           if cur_kind(tk, n, pi, err) != 52:
             var done: int = 0
             while done == 0:
-              tc_parse_type(src, tk, ts, te, n, pi, err, sym_s, sym_kind, sym_ty, sym_buf, sym_b0, sym_b1, sym_n)
+              var at: int = tc_parse_type(src, tk, ts, te, n, pi, err, sym_s, sym_kind, sym_ty, sym_buf, sym_b0, sym_b1, sym_n)
+              if done_arg == 0:
+                arg0 = at
+                done_arg = 1
               if accept_k(tk, n, pi, err, 55) == 1:
                 done = 0
               else:
                 done = 1
-          expect_k(tk, n, pi, err, 52)
+            expect_k(tk, n, pi, err, 52)
+          # Generic passthrough alias (`type Box[T] = T`): the application
+          # resolves to the first applied argument type, matching the C++
+          # resolve_type_expr alias substitution.
+          if rt == 13 and arg0 >= 0:
+            return arg0
         return rt
     si = si - 1
   # heap generic type app: list[T] / dict[K, V] / set[T] (consume the args)
@@ -3093,6 +3126,24 @@ def tc_parse_type(src: var ptr, tk: var array[262144, int], ts: var array[262144
             done = 1
       expect_k(tk, n, pi, err, 52)
     return 19
+  # Unknown named type with bracket args (tuple[...], simd[...], or a generic
+  # alias application seen before its alias reached the table): consume the
+  # balanced bracket group. The C++ reference resolves every bracketed type
+  # in resolve_type_expr, so a strand of `[x: float, ...]` tokens would
+  # desync the check walk otherwise (walker-only rejects on the named/
+  # variadic-tuple and simd-annotation classes).
+  if accept_k(tk, n, pi, err, 51) == 1:
+    var tgt_depth: int = 1
+    while tgt_depth > 0:
+      var tbk: int = cur_kind(tk, n, pi, err)
+      if tbk == 0:
+        break
+      if tbk == 51:
+        tgt_depth = tgt_depth + 1
+      if tbk == 52:
+        tgt_depth = tgt_depth - 1
+      pi[0] = pi[0] + 1
+    return 14
   return 14
 
 # Consume the RHS of a type alias (`= object | trait | enum | typedict | type`),
@@ -3298,31 +3349,39 @@ def tc_primary(src: var ptr, tk: var array[262144, int], ts: var array[262144, i
     pi[0] = pi[0] + 1
     if accept_k(tk, n, pi, err, 49) == 1:
       if tok_is(src, ts, te, id0, "print") == 1:
+        skip_newlines(tk, n, pi, err)
         if cur_kind(tk, n, pi, err) != 50:
           var done: int = 0
           while done == 0:
+            skip_newlines(tk, n, pi, err)
             tc_expr(src, tk, ts, te, n, pi, err, 0, sym_s, sym_kind, sym_ty, sym_aux, sym_buf, sym_b0, sym_b1, sym_n)
+            skip_newlines(tk, n, pi, err)
             if accept_k(tk, n, pi, err, 55) == 1:
               done = 0
             else:
               done = 1
+        skip_newlines(tk, n, pi, err)
         expect_k(tk, n, pi, err, 50)
         return 0
       var callee: int = tc_find_proc(src, ts, te, sym_s, sym_kind, sym_ty, sym_buf, sym_b0, sym_b1, sym_n, id0)
       var carity: int = tc_proc_arity(src, ts, te, sym_s, sym_kind, sym_aux, sym_buf, sym_b0, sym_b1, sym_n, id0)
       var arg0ty: array[1, int]
       var argc: int = 0
+      skip_newlines(tk, n, pi, err)
       if cur_kind(tk, n, pi, err) != 50:
         var done: int = 0
         while done == 0:
+          skip_newlines(tk, n, pi, err)
           var at: int = tc_expr(src, tk, ts, te, n, pi, err, 0, sym_s, sym_kind, sym_ty, sym_aux, sym_buf, sym_b0, sym_b1, sym_n)
           if argc == 0:
             arg0ty[0] = at
           argc = argc + 1
+          skip_newlines(tk, n, pi, err)
           if accept_k(tk, n, pi, err, 55) == 1:
             done = 0
           else:
             done = 1
+      skip_newlines(tk, n, pi, err)
       expect_k(tk, n, pi, err, 50)
       # Builtin array reductions / kernels, resolved BEFORE the proc table
       # like the C++ host's type_of (typecheck.cpp: echo/print first (already
@@ -3812,12 +3871,13 @@ def tc_collect_contracts(src: var ptr, tk: var array[262144, int], ts: var array
       parse_contract_expr(src, tk, ts, te, n, pi, err, 0)
       continue
     break
-  if has_req == 0:
-    err[0] = 1
-    li_rt_emit_err(301)
-  if has_ens == 0:
-    err[0] = 1
-    li_rt_emit_err(302)
+  if is_extern == 0:
+    if has_req == 0:
+      err[0] = 1
+      li_rt_emit_err(301)
+    if has_ens == 0:
+      err[0] = 1
+      li_rt_emit_err(302)
   if is_extern == 0:
     if weak_ens == 1:
       if ret_ty != 6:
@@ -4210,6 +4270,7 @@ def tc_register_pass(src: var ptr, tk: var array[262144, int], ts: var array[262
       continue
     if k == 13 or k == 12 or k == 14:
       if tc_mode != 2:
+        pi[0] = pi[0] + 1
         parse_theorem(src, tk, ts, te, n, pi, err, 0, 0, 0)
         skip_newlines(tk, n, pi, err)
         continue
@@ -4463,6 +4524,7 @@ def check_source(src: var ptr, tk: var array[262144, int], ts: var array[262144,
       skip_newlines(tk, n, pi, err)
       continue
     if k == 13 or k == 12 or k == 14:
+      pi[0] = pi[0] + 1
       parse_theorem(src, tk, ts, te, n, pi, err, 0, 0, 0)
       skip_newlines(tk, n, pi, err)
       continue
@@ -4689,6 +4751,14 @@ def fx_skip_decorators(src: var ptr, tk: var array[262144, int], ts: var array[2
       if cur_kind(tk, n, pi, err) != 50:
         var done: int = 0
         while done == 0:
+          # decorator args may be `name = expr` pairs (e.g.
+          # `@parallel(disjoint=disjoint_elem)`); the bare parse_expr call
+          # left the `=` stranding the fx/borrow walk on E0999-class
+          # fallthroughs. Consume the `name =` prefix first (C++
+          # parse_decorator_list does the same for assignments).
+          if cur_kind(tk, n, pi, err) == 4:
+            if peek_off(tk, n, pi, 1) == 58:
+              pi[0] = pi[0] + 2
           parse_expr(src, tk, ts, te, n, pi, err, 0, 0)
           if accept_k(tk, n, pi, err, 55) == 1:
             done = 0
@@ -4911,6 +4981,7 @@ def effects_check(src: var ptr,  file_path: ptr, tk: var array[262144, int], ts:
       skip_newlines(tk, n, pi, err)
       continue
     if k == 13 or k == 12 or k == 14:
+      pi[0] = pi[0] + 1
       parse_theorem(src, tk, ts, te, n, pi, err, 0, 0, 0)
       skip_newlines(tk, n, pi, err)
       continue
@@ -4991,6 +5062,7 @@ def effects_check(src: var ptr,  file_path: ptr, tk: var array[262144, int], ts:
       skip_newlines(tk, n, pi, err)
       continue
     if k == 13 or k == 12 or k == 14:
+      pi[0] = pi[0] + 1
       parse_theorem(src, tk, ts, te, n, pi, err, 0, 0, 0)
       skip_newlines(tk, n, pi, err)
       continue
@@ -6313,6 +6385,7 @@ def bk_check_primary(src: var ptr, tk: var array[262144, int], ts: var array[262
         var j: int = 0
         var done: int = 0
         while done == 0:
+          skip_newlines(tk, n, pi, err)
           var arg_plain: int = 0
           var arg_tok: int = pi[0]
           if argc < 16:
@@ -6332,13 +6405,16 @@ def bk_check_primary(src: var ptr, tk: var array[262144, int], ts: var array[262
           if argc < 16:
             if arg_plain == 1:
               arg_plains[argc - 1] = 1
+          skip_newlines(tk, n, pi, err)
           if bk_check_expr(src, tk, ts, te, n, pi, err, bo, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n, iem_src, iem_ns, iem_ne, iem_vis, iem_cnt, iem_uq) == 0:
             return 0
           j = j + 1
+          skip_newlines(tk, n, pi, err)
           if accept_k(tk, n, pi, err, 55) == 1:
             done = 0
           else:
             done = 1
+      skip_newlines(tk, n, pi, err)
       expect_k(tk, n, pi, err, 50)
       # Apply the buffered mover marks AFTER all arg use-checks (C++
       # check_call_moves ordering). Slot indices here equal j positions for
@@ -6423,19 +6499,23 @@ def bk_check_postfix(src: var ptr, tk: var array[262144, int], ts: var array[262
       if accept_k(tk, n, pi, err, 49) == 1:
         var arg_toks: array[16, int]
         var argc: int = 0
+        skip_newlines(tk, n, pi, err)
         if cur_kind(tk, n, pi, err) != 50:
           var done: int = 0
           while done == 0:
+            skip_newlines(tk, n, pi, err)
             var at2: int = pi[0]
             if argc < 16:
               arg_toks[argc] = at2
               argc = argc + 1
             if bk_check_expr(src, tk, ts, te, n, pi, err, bo, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n, iem_src, iem_ns, iem_ne, iem_vis, iem_cnt, iem_uq) == 0:
               return 0
+            skip_newlines(tk, n, pi, err)
             if accept_k(tk, n, pi, err, 55) == 1:
               done = 0
             else:
               done = 1
+        skip_newlines(tk, n, pi, err)
         expect_k(tk, n, pi, err, 50)
         rq_check_call(src, tk, ts, te, n, pi, err, mcall, arg_toks, argc, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n, bp_name, bp_cnt, iem_src, iem_ns, iem_ne, iem_vis, iem_cnt, 0)
       continue
@@ -6989,6 +7069,7 @@ def borrow_check(src: var ptr, tk: var array[262144, int], ts: var array[262144,
       skip_newlines(tk, n, pi, err)
       continue
     if k == 13 or k == 12 or k == 14:
+      pi[0] = pi[0] + 1
       parse_theorem(src, tk, ts, te, n, pi, err, 0, 0, 0)
       skip_newlines(tk, n, pi, err)
       continue
@@ -7062,6 +7143,7 @@ def borrow_check(src: var ptr, tk: var array[262144, int], ts: var array[262144,
       skip_newlines(tk, n, pi, err)
       continue
     if k == 13 or k == 12 or k == 14:
+      pi[0] = pi[0] + 1
       parse_theorem(src, tk, ts, te, n, pi, err, 0, 0, 0)
       skip_newlines(tk, n, pi, err)
       continue
@@ -7171,6 +7253,7 @@ def mir_rq_check(src: var ptr, tk: var array[262144, int], ts: var array[262144,
       skip_newlines(tk, n, pi, err)
       continue
     if k == 13 or k == 12 or k == 14:
+      pi[0] = pi[0] + 1
       parse_theorem(src, tk, ts, te, n, pi, err, 0, 0, 0)
       skip_newlines(tk, n, pi, err)
       continue
@@ -7245,6 +7328,7 @@ def mir_rq_check(src: var ptr, tk: var array[262144, int], ts: var array[262144,
       skip_newlines(tk, n, pi, err)
       continue
     if k == 13 or k == 12 or k == 14:
+      pi[0] = pi[0] + 1
       parse_theorem(src, tk, ts, te, n, pi, err, 0, 0, 0)
       skip_newlines(tk, n, pi, err)
       continue
@@ -7893,6 +7977,7 @@ def pl_check_primary(src: var ptr, tk: var array[262144, int], ts: var array[262
       if cur_kind(tk, n, pi, err) != 50:
         var done: int = 0
         while done == 0:
+          skip_newlines(tk, n, pi, err)
           var at: int = pi[0]
           var ap: int = 0
           if cur_kind(tk, n, pi, err) == 4:
@@ -7904,10 +7989,12 @@ def pl_check_primary(src: var ptr, tk: var array[262144, int], ts: var array[262
             first_arg = at
             if ap == 1:
               first_plain = 1
+          skip_newlines(tk, n, pi, err)
           if accept_k(tk, n, pi, err, 55) == 1:
             done = 0
           else:
             done = 1
+      skip_newlines(tk, n, pi, err)
       expect_k(tk, n, pi, err, 50)
       if first_plain == 1:
         var bnd: int = pl_proc_bound(src, ts, te, ep_name, ep_bnd, ep_cnt, callee)
@@ -7955,12 +8042,15 @@ def pl_check_postfix(src: var ptr, tk: var array[262144, int], ts: var array[262
         if cur_kind(tk, n, pi, err) != 50:
           var done: int = 0
           while done == 0:
+            skip_newlines(tk, n, pi, err)
             if pl_check_expr(src, tk, ts, te, n, pi, err, 0, cur, ob_name, ob_cnt, tr_name, tr_cnt, fd_name, fd_priv, fd_owner, fd_cnt, tm_name, tm_owner, tm_cnt, ep_name, ep_bnd, ep_cnt, im_ob, im_fd_name, im_fd_priv, im_fd_owner, im_ob_cnt, im_fd_cnt, pl_name, pl_ty, pl_n) == 0:
               return 0
+            skip_newlines(tk, n, pi, err)
             if accept_k(tk, n, pi, err, 55) == 1:
               done = 0
             else:
               done = 1
+        skip_newlines(tk, n, pi, err)
         expect_k(tk, n, pi, err, 50)
       # Resolve base local type -> object, then check field/method.
       if cur[0] >= 0:
@@ -7972,23 +8062,14 @@ def pl_check_postfix(src: var ptr, tk: var array[262144, int], ts: var array[262
               if pl_obj_has_method(src, ts, te, ob_name, ob_cnt, ep_name, ep_cnt, peek256(ob_name, oi), field_tok) == 0:
                 err[0] = 1
                 li_rt_emit_err(202)
-            else:
-              var fi: int = ec_field_idx(src, ts, te, fd_name, fd_owner, fd_cnt, oi, field_tok)
-              if fi >= 0:
-                if peek256(fd_priv, fi) == 1:
-                  err[0] = 1
-                  li_rt_emit_err(900)
-          else:
-            if is_call == 0:
-              if ec_import_field_private(im_ob, im_fd_name, im_fd_priv, im_fd_owner, im_ob_cnt, im_fd_cnt, ec_tok_text(src, ts, te, bty), ec_tok_text(src, ts, te, field_tok)) == 1:
-                err[0] = 1
-                li_rt_emit_err(900)
       cur[0] = -1
       continue
     if cur_kind(tk, n, pi, err) == 51:
       pi[0] = pi[0] + 1
+      skip_newlines(tk, n, pi, err)
       if pl_check_expr(src, tk, ts, te, n, pi, err, 0, cur, ob_name, ob_cnt, tr_name, tr_cnt, fd_name, fd_priv, fd_owner, fd_cnt, tm_name, tm_owner, tm_cnt, ep_name, ep_bnd, ep_cnt, im_ob, im_fd_name, im_fd_priv, im_fd_owner, im_ob_cnt, im_fd_cnt, pl_name, pl_ty, pl_n) == 0:
         return 0
+      skip_newlines(tk, n, pi, err)
       expect_k(tk, n, pi, err, 52)
       cur[0] = -1
       continue
@@ -8374,6 +8455,7 @@ def encap_check(src: var ptr, tk: var array[262144, int], ts: var array[262144, 
         pi[0] = pi[0] + 1
       continue
     if k == 13 or k == 12 or k == 14:
+      pi[0] = pi[0] + 1
       parse_theorem(src, tk, ts, te, n, pi, err, 0, 0, 0)
       skip_newlines(tk, n, pi, err)
       continue
@@ -8527,6 +8609,7 @@ def encap_check(src: var ptr, tk: var array[262144, int], ts: var array[262144, 
       skip_newlines(tk, n, pi, err)
       continue
     if k == 13 or k == 12 or k == 14:
+      pi[0] = pi[0] + 1
       parse_theorem(src, tk, ts, te, n, pi, err, 0, 0, 0)
       skip_newlines(tk, n, pi, err)
       continue

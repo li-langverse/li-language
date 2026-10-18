@@ -671,3 +671,58 @@ every reject fixture is corpus-locked.
 
 Note: the nightly script requires bash >= 4 (`declare -A`); on macOS run it
 with `/opt/homebrew/bin/bash` (or equivalent), the default /bin/bash is 3.2.
+
+## Update 2026-10-18 (batch 3: args-layout + tuple ellipsis + check-lane privacy)
+
+Four remaining witness inversions closed on the check lane:
+
+- **Multiline call arguments (package/loop_call class)**: the C++ host
+  skips layout tokens (newline kinds 1/2/3) inside every parenthesized
+  argument list; walker lanes dropped that tolerance unevenly. Every
+  walker lane's args loop now skip_newlines before each argument, before
+  the `,`/`)` decision and before the closing expect — tc_primary's
+  print/procall loops, pl_check_primary/pro_postfix loops, and — the
+  silently failing one — bk_check_primary/bk_check_postfix (borrow set
+  err with no diagnostic, so the probe batch showed only "check error").
+  Probe corpus: ml_params (params only) ok; ml_call/shape variants all
+  byte-exact AST + verdict parity.
+- **`tuple[int, ...]` ellipsis**: the walker's base==8 loop consumed the
+  `...` then re-entered tc_parse_type at `]` (a resync fire). The
+  ellipsis is terminal: after it, the loop ends and the closing `]`
+  is expected directly.
+
+- **Field privacy is not a check-lane rule**: same-file private reads
+  (private_field_access.li) and reads of imported sealee state
+  (leak_imported_vault.li) are accepted by the host; the walker's two
+  E900 gates were dropped (the E0202 method-existence gate stays,
+  private_method_use.li remains both-reject).
+
+Walker parity at commit time: official check harness 163/163,
+AST 25 byte-exact, parser 20+5, MIR 42 byte-exact + 8/8 reject.
+Verdict census across 465 li-files: from ~200 divergences to 14 residual.
+
+## Residual verdict divergences (465-file census, 2026-10-18)
+
+Walker-accepts / host-rejects (check-lane gates the walker has not
+ported — extern-contract, array-index refinement bound, use-after-move
+outside walker scope):
+
+- cwe125_negative_index, cwe676_extern_no_contract, cwe787_dyn_index
+- packages/li-gui/.../viewport_selection.li,
+  packages/li-studio/.../studio_agent_invoke.li (use after move of
+  `layout` across panel helpers)
+
+Walker-rejects / host-accepts (walker-only residue gates whose host
+counterpart passes silently painting "lic.error" for one lane):
+
+- li-tests/codegen/ptr_array_strings.li, effects/async_missing_raises.li,
+  effects/net_missing_raises.li, encapsulation/trait_missing_impl.li,
+  net_trusted/seam_missing_net.li,
+  packages/li-studio/.../studio_command_palette.li,
+  packages/li-ui/.../studio_accessibility.li,
+  packages/lig/li-tests/smoke/kernel_matmul_parity.li,
+  packages/lig/src/lib.li
+
+These stay as the next batch's targets (audit-source parity classes:
+exit-code gates in extern/index policy and use-after-move expiry
+scoping).

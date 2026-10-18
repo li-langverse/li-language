@@ -316,6 +316,32 @@ for entry in ${CORPUS_KNOWN_DIVERGENCE[@]+"${CORPUS_KNOWN_DIVERGENCE[@]}"}; do
   fi
 done
 
+if [[ "${LI_CHECK_FULL_SWEEP:-0}" == "1" ]]; then
+  # Repo-wide accept/reject verdict sweep (same file set the AST sweep uses):
+  # verdict parity only — no freshness inversion can hide outside the
+  # enlisted corpus. 2026-10-18: the probe pass that found the parallel-for
+  # contract/policy/override/unknown-type classes outside the corpus.
+  sweep_checked=0
+  sweep_bad=0
+  while IFS= read -r f; do
+    cpp=0; li=0
+    "$LIC" check "$f" >/dev/null 2>&1 && cpp=1
+    "$LI" check "$f" >/dev/null 2>&1 && li=1
+    if [[ "$cpp" != "$li" ]]; then
+      echo "  SWEEP-DIVERGE  $f (cpp=$cpp li=$li)" >&2
+      sweep_bad=$((sweep_bad + 1))
+    fi
+    sweep_checked=$((sweep_checked + 1))
+  done < <(find "$ROOT" -name "*.li" -type f 2>/dev/null \
+             -not -path "$ROOT/benchmarks/*" -not -path "$ROOT/docs/*" \
+             | sort)
+  echo "  full sweep: $sweep_checked files, verdict parity"
+  if [[ "$sweep_bad" -gt 0 ]]; then
+    echo "check_li_check_parity: sweep divergences on $sweep_bad files" >&2
+    exit 1
+  fi
+fi
+
 echo ""
 echo "check_li_check_parity: $pass/$checked passed, $fail failed, $diverged known divergence(s)"
 if [[ "$fail" -gt 0 ]]; then
