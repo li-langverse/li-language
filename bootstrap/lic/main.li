@@ -2902,6 +2902,8 @@ def tc_family_of(t: int) -> int
 =
   if t == 0:
     return 0
+  if t >= 20000:
+    return 0
   if t == 15:
     return 0
   if t == 16:
@@ -2920,6 +2922,8 @@ def tc_is_int(t: int) -> int
   decreases 0
 =
   if t == 0:
+    return 1
+  if t >= 20000:
     return 1
   if t == 15:
     return 1
@@ -2956,6 +2960,8 @@ def tc_bits(t: int) -> int
 =
   if t == 0:
     return 64
+  if t >= 20000:
+    return 64
   if t == 1:
     return 64
   if t == 15:
@@ -2968,6 +2974,71 @@ def tc_bits(t: int) -> int
     return 8
   return -1
 
+def tc_refine_bound(src: var ptr, ts: var array[262144, int], te: var array[262144, int], tk: var array[262144, int], n: var array[1, int], vn: int, a: int, b: int) -> int
+  requires true
+  ensures result >= -1
+  decreases 0
+=
+  # Extract the refinement's upper bound like typecheck.cpp
+  # collect_refinement_bounds: an Ident(v) `<` IntLit conjunct inside the
+  # predicate span sets the bound (last match wins, mirroring the C++
+  # conjunction walk). -1 when the predicate carries no bound.
+  var i: int = b - 3
+  var best: int = -1
+  while i >= a:
+    if peek_tk(tk, i) == 4:
+      if tok_eq(src, ts, te, i, vn) == 1:
+        if i + 2 < b:
+          if tok_is(src, ts, te, i + 1, "<") == 1:
+            if peek_tk(tk, i + 2) == 5:
+              best = int_text_value(src, ts, te, i + 2)
+    i = i - 1
+  return best
+
+def tc_local_row(src: var ptr, ts: var array[262144, int], te: var array[262144, int], sym_s: var array[8192, int], sym_kind: var array[8192, int], sym_buf: var array[8192, ptr], sym_b0: var array[8192, int], sym_b1: var array[8192, int], sym_n: var array[1, int], i: int) -> int
+  requires true
+  ensures result >= -1
+  decreases 0
+=
+  # Most-recent local/param row matching the token text (mirror of
+  # tc_local_type's scan: Kind 2 params, Kind 3 locals).
+  var k: int = sym_n[0] - 1
+  while k >= 0:
+    if sym_kind[k] == 2 or sym_kind[k] == 3:
+      var m: int = 0
+      if li_rt_str_eq(sym_buf[k], src) == 1:
+        m = tok_eq(src, ts, te, sym_s[k], i)
+      if li_rt_str_eq(sym_buf[k], src) == 0:
+        m = fx_span_eq(sym_buf[k], sym_b0[k], sym_b1[k], src, peek_tk(ts, i), peek_tk(te, i))
+      if m == 1:
+        return k
+    k = k - 1
+  return -1
+
+def tc_mark_bound_name(src: var ptr, ts: var array[262144, int], te: var array[262144, int], sym_s: var array[8192, int], sym_kind: var array[8192, int], sym_ty: var array[8192, int], sym_buf: var array[8192, ptr], sym_b0: var array[8192, int], sym_b1: var array[8192, int], sym_n: var array[1, int], name_tok: int, bound: int) -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  # Bounded-index marking for while-guards (C++: locals[v].bounded_index =
+  # true, array_size = rhs). Overwrites the row's type code with 20000+bound
+  # when the ident resolves to a param/local int row.
+  var k: int = sym_n[0] - 1
+  while k >= 0:
+    if sym_kind[k] == 2 or sym_kind[k] == 3:
+      var m: int = 0
+      if li_rt_str_eq(sym_buf[k], src) == 1:
+        m = tok_eq(src, ts, te, sym_s[k], name_tok)
+      if li_rt_str_eq(sym_buf[k], src) == 0:
+        m = fx_span_eq(sym_buf[k], sym_b0[k], sym_b1[k], src, peek_tk(ts, name_tok), peek_tk(te, name_tok))
+      if m == 1:
+        if sym_ty[k] >= 0:
+          if sym_ty[k] < 20000:
+            sym_ty[k] = 20000 + bound
+        return 0
+    k = k - 1
+  return 0
+
 # ---- type parsing (returns a type code; consumes tokens) ----
 def tc_parse_type(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], sym_s: var array[8192, int], sym_kind: var array[8192, int], sym_ty: var array[8192, int], sym_buf: var array[8192, ptr], sym_b0: var array[8192, int], sym_b1: var array[8192, int], sym_n: var array[1, int]) -> int
   requires true
@@ -2979,12 +3050,22 @@ def tc_parse_type(src: var ptr, tk: var array[262144, int], ts: var array[262144
     if cur_kind(tk, n, pi, err) != 4:
       err[0] = 1
       return 14
+    var rv: int = pi[0]
     pi[0] = pi[0] + 1
     expect_k(tk, n, pi, err, 56)
     var bt: int = tc_parse_type(src, tk, ts, te, n, pi, err, sym_s, sym_kind, sym_ty, sym_buf, sym_b0, sym_b1, sym_n)
     expect_k(tk, n, pi, err, 74)
+    # A refinement int encodes the extracted upper bound as 20000+N
+    # (bounded index, typecheck.cpp resolve_type_expr Refinement). No
+    # extractable bound keeps the plain int code (bounded_index unset —
+    # the index gate must still fire).
+    var p0: int = pi[0]
     parse_contract_expr(src, tk, ts, te, n, pi, err, 0)
     expect_k(tk, n, pi, err, 54)
+    if bt == 0:
+      var ub: int = tc_refine_bound(src, ts, te, tk, n, rv, p0, pi[0])
+      if ub >= 0:
+        return 20000 + ub
     return bt
   if cur_kind(tk, n, pi, err) == 20:
     pi[0] = pi[0] + 1
@@ -3297,6 +3378,13 @@ def tc_binop_type(l: int, opk: int, r: int, err: var array[1, int]) -> int
         err[0] = 1
         li_rt_emit_err(900)
         return 0
+      # Refinement-typed ids (20000+N) are plain ints to arithmetic, like
+      # the C++ Ty::Int base under a refinement — normalize to 0 so the
+      # return/var unifies compare the base kind.
+      if l >= 20000:
+        return 0
+      if r >= 20000:
+        return 0
       return l
   if tc_is_float(l) == 1:
     if tc_is_float(r) == 1:
@@ -3446,15 +3534,54 @@ def tc_postfix(src: var ptr, tk: var array[262144, int], ts: var array[262144, i
     if accept_k(tk, n, pi, err, 51) == 1:
       var ik: int = cur_kind(tk, n, pi, err)
       var iv: int = 0
+      # base token is two back from the index token (`[` was consumed).
+      # Non-adjacent bases (multi-line `[`) are conservatively skipped.
+      var base_tok: int = pi[0] - 2
+      if base_tok < 0:
+        base_tok = 0
+      var idx_tok: int = pi[0]
       if ik == 5:
         iv = int_text_value(src, ts, te, pi[0])
       tc_expr(src, tk, ts, te, n, pi, err, 0, sym_s, sym_kind, sym_ty, sym_aux, sym_buf, sym_b0, sym_b1, sym_n)
       expect_k(tk, n, pi, err, 52)
       if t >= 1000:
+        if t >= 29000:
+          # var-array encoding: same size semantics as the plain code for
+          # the constant-literal rule.
+          t = t - 28000
         if ik == 5:
           if iv >= t - 1000:
             err[0] = 1
             li_rt_emit_err(201)
+        if ik == 60:
+          # `buf[-1]` lexes as unary minus + positive literal (kind 60 +
+          # kind 5); the C++ parser folds it into a negative IntLit and
+          # the index rule fires "array index out of range".
+          err[0] = 1
+          li_rt_emit_err(201)
+        if ik == 4:
+          # C++ Ident-index rule: on a parameter-array base
+          # (requires_bounded_index) a LONE-IDENT index must be a bounded
+          # int — a refinement param (20000+N) or a bounded loop var.
+          # Call/blob-indexed exprs (`a[f(x)]`, `a[i+1]`) are not Idents
+          # in the host — they never fire; require the bare `ident ]`.
+          if peek_tk(tk, idx_tok + 1) == 52:
+            var br: int = tc_local_row(src, ts, te, sym_s, sym_kind, sym_buf, sym_b0, sym_b1, sym_n, base_tok)
+            if br >= 0:
+              if sym_kind[br] == 2:
+                if (sym_ty[br] >= 1000 and sym_ty[br] < 29000) or sym_ty[br] == 7:
+                  var ir: int = tc_local_row(src, ts, te, sym_s, sym_kind, sym_buf, sym_b0, sym_b1, sym_n, idx_tok)
+                  if ir >= 0:
+                    if sym_ty[ir] >= 20000:
+                      if sym_ty[ir] - 20000 > sym_ty[br] - 1000:
+                        err[0] = 1
+                        li_rt_emit_err(900)
+                    if sym_ty[ir] < 20000:
+                      err[0] = 1
+                      li_rt_emit_err(900)
+                  if ir < 0:
+                    err[0] = 1
+                    li_rt_emit_err(900)
       t = 14
       continue
     if accept_k(tk, n, pi, err, 72) == 1:
@@ -3530,14 +3657,22 @@ def tc_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144, int]
     if cur_kind(tk, n, pi, err) != 1:
       var rt: int = tc_expr(src, tk, ts, te, n, pi, err, 0, sym_s, sym_kind, sym_ty, sym_aux, sym_buf, sym_b0, sym_b1, sym_n)
       if cur_ret[0] >= 0:
-        if rt != cur_ret[0]:
-          if rt != 14:
-            if cur_ret[0] != 14:
+        # Refinement ints normalize to plain int at the unify (the C++
+        # assignability compares Ty kinds, not refinement bounds).
+        var rtx: int = rt
+        if rtx >= 20000:
+          rtx = 0
+        var ctx: int = cur_ret[0]
+        if ctx >= 20000:
+          ctx = 0
+        if rtx != ctx:
+          if rtx != 14:
+            if ctx != 14:
               err[0] = 1
-              if rt == 13:
+              if rtx == 13:
                 li_rt_emit_err(202)
               else:
-                if cur_ret[0] == 13:
+                if ctx == 13:
                   li_rt_emit_err(202)
                 else:
                   li_rt_emit_err(900)
@@ -3562,7 +3697,19 @@ def tc_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144, int]
     return 1
   if k == 25:
     pi[0] = pi[0] + 1
+    var c0: int = pi[0]
     tc_expr(src, tk, ts, te, n, pi, err, 0, sym_s, sym_kind, sym_ty, sym_aux, sym_buf, sym_b0, sym_b1, sym_n)
+    # A canonical counted-loop guard `while i < N` proves the loop index is
+    # bounded while the body executes (typecheck.cpp While case): mark the
+    # ident's sym row as a bounded int (20000+N) so the index gate accepts
+    # `arr[i]` inside the body like the host's locals mutation.
+    var ci: int = c0
+    while ci + 2 < pi[0]:
+      if peek_tk(tk, ci) == 4:
+        if tok_is(src, ts, te, ci + 1, "<") == 1:
+          if peek_tk(tk, ci + 2) == 5:
+            tc_mark_bound_name(src, ts, te, sym_s, sym_kind, sym_ty, sym_buf, sym_b0, sym_b1, sym_n, ci, int_text_value(src, ts, te, ci + 2))
+      ci = ci + 1
     if cur_kind(tk, n, pi, err) == 56:
       pi[0] = pi[0] + 1
     skip_newlines(tk, n, pi, err)
@@ -3577,6 +3724,11 @@ def tc_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144, int]
     pi[0] = pi[0] + 1
     var fh: array[3, int]
     for_tail(src, tk, ts, te, n, pi, err, fh)
+    if fh[0] != 0:
+      # Counted-loop indices are bounded indices (C++ check_stmt For:
+      # bounded local with array_size = for_end; a non-literal end keeps
+      # bound 0, accepted like the host's <=-size sentinel).
+      tc_record_local(src, ts, te, sym_s, sym_kind, sym_ty, sym_buf, sym_b0, sym_b1, sym_n, fh[0], 20000 + fh[2])
     skip_newlines(tk, n, pi, err)
     tc_block(src, tk, ts, te, n, pi, err, cur_ret, sym_s, sym_kind, sym_ty, sym_aux, sym_buf, sym_b0, sym_b1, sym_n)
     return 1
@@ -3592,7 +3744,10 @@ def tc_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144, int]
       var fh: array[3, int]
       for_tail(src, tk, ts, te, n, pi, err, fh)
       if fh[0] != 0:
-        tc_record_local(src, ts, te, sym_s, sym_kind, sym_ty, sym_buf, sym_b0, sym_b1, sym_n, fh[0], 0)
+        # parallel for: the C++ check walker (check_stmt ParallelFor)
+        # registers the loop index as a bounded int — same bound encoding
+        # as the plain for arm above.
+        tc_record_local(src, ts, te, sym_s, sym_kind, sym_ty, sym_buf, sym_b0, sym_b1, sym_n, fh[0], 20000 + fh[2])
       skip_newlines(tk, n, pi, err)
       if accept_k(tk, n, pi, err, 2) == 1:
         skip_newlines(tk, n, pi, err)
@@ -3925,7 +4080,17 @@ def tc_record_param(src: var ptr, tk: var array[262144, int], ts: var array[2621
   var pn: int = pi[0]
   pi[0] = pi[0] + 1
   expect_k(tk, n, pi, err, 56)
+  # `param: var array[..]` is a var-param: the C++ host sets
+  # requires_bounded_index only for NON-var array params. Encode var arrays
+  # into the 29000-range (size kept in the low digits) so the index gate
+  # can exempt them exactly like the host.
+  var pv: int = 0
+  if cur_kind(tk, n, pi, err) == 20:
+    pv = 1
   var pt: int = tc_parse_type(src, tk, ts, te, n, pi, err, sym_s, sym_kind, sym_ty, sym_buf, sym_b0, sym_b1, sym_n)
+  if pv == 1:
+    if pt >= 1000:
+      pt = 29000 + (pt - 1000)
   var pl: int = sym_n[0]
   if pl < 8192:
     var rpa: int = pn
@@ -18436,6 +18601,15 @@ def mir_policy_check(src: var ptr, tk: var array[262144, int], ts: var array[262
             if peek_tk(tk, i + 2) == 5:
               if tok_is(src, ts, te, i + 2, "8") == 1:
                 p_lanes8 = 1
+    # extern-def contract seam (policy.cpp): an `extern def strcpy` without
+    # requires/ensures contracts is rejected at the source-policy lane —
+    # verdict-only parity, comment-independent (token-based scan).
+    if tok_is(src, ts, te, i, "extern") == 1:
+      if i + 2 < n[0]:
+        if tok_is(src, ts, te, i + 1, "def") == 1:
+          if tok_is(src, ts, te, i + 2, "strcpy") == 1:
+            err[0] = 1
+            return 1
     i = i + 1
   if has_pslice == 1:
     if has_parallel == 1:

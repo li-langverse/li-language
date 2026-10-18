@@ -726,3 +726,37 @@ counterpart passes silently painting "lic.error" for one lane):
 These stay as the next batch's targets (audit-source parity classes:
 exit-code gates in extern/index policy and use-after-move expiry
 scoping).
+
+## Update 2026-10-18 (batch 4: check-lane index gates + extern seam + bounds)
+
+Three walker-accepts / host-rejects classes ported; census 14 -> 11 (with
+three former entries now matching and no new over-fires):
+
+- **extern-contract seam** (cwe676): the policy lane fires on an
+  `extern def strcpy` declaration without requires/ensures, mirroring
+  policy.cpp's string-keyed rule (token scan, comment-independent).
+- **Index gates** (cwe787 dyn, cwe125): ported typecheck.cpp's
+  Expr::Kind::Index walk onto tc_postfix: constant rule (literal +/- unary
+  folded negative vs the sized array code), and the Ident rule — a LONE
+  ident index on a non-var parameter-array base must be a bounded int:
+  refinement-typed params (alias rows encoding the upper bound as
+  20000+N), for/parallel-for loop vars (registered 20000+for_end), and
+  canonical while guards (`while i < <int lit>` marks the ident row).
+- **Refinement typing**: `{v: int | ... v < N ...}` resolves to 20000+N
+  (collect_refinement_bounds mirror, last conjunct match), binop results
+  normalize refinement ids to plain int like the host's Ty::Int base,
+  and the return unify compares normalized ids.
+
+Mirror-correct exemptions that keep the walker from over-firing (all
+probed): call/blob index exprs are not Idents (never fire, host Eq kind
+Call), multi-line param όλtes var-array params (`!param.type.is_var`)
+are exempt from the ident rule (encoded 29000+size), local arrays never
+require bounded indexes, and unknown-end loop bounds accept (host -1
+size sentinel).
+
+Gates at this point: check harness 163/163, AST 25, parser 20+5, MIR
+42 + 8/8. Residual 11 = the stable walker-only lic.error core
+(ptr_array_strings, async/net_missing_raises, trait_missing_impl,
+seam_missing_net, studio_compose/palette/accessibility trio,
+kernel_matmul_parity, lig/src) plus the two use-after-move panel
+fixtures (viewport_selection, studio_agent_invoke) — next batch.
