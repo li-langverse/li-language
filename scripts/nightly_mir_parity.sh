@@ -18,6 +18,42 @@ export LI_REPO_ROOT="$ROOT"
 LIC="${LIC:-$("$ROOT/scripts/resolve-lic.sh")}"
 LI="${LI_CHECK_BIN:-$ROOT/build/li-mir-walker}"
 BASELINE_FILE="${ROOT}/.mir_parity_baseline"
+# Checkpoint: per-file verdicts are written here as the sweep progresses so
+# an abort (exit 2) keeps the completed prefix instead of discarding a full
+# sweep. Per-file verdicts are atomic (probe+capture for that file either
+# finished or aborted), so --merge-checkpoint may fuse them over the
+# baseline after freeing space; the unprocessed tail keeps its previous
+# baseline entries.
+CHECKPOINT_FILE="${ROOT}/.mir_parity_checkpoint"
+
+# --merge-checkpoint: no sweep; fuse checkpoint verdicts over the baseline.
+if [[ "${1:-}" == "--merge-checkpoint" ]]; then
+  if [[ ! -s "$CHECKPOINT_FILE" ]]; then
+    echo "merge-checkpoint: no checkpoint found at $CHECKPOINT_FILE" >&2
+    exit 1
+  fi
+  declare -A fused=( )
+  if [[ -f "$BASELINE_FILE" ]]; then
+    while IFS=' ' read -r status filepath; do
+      fused["$filepath"]="$status"
+    done < "$BASELINE_FILE"
+  fi
+  while IFS=' ' read -r status filepath; do
+    fused["$filepath"]="$status"
+  done < "$CHECKPOINT_FILE"
+  match_m=0; diff_m=0; skip_m=0
+  for f in "${!fused[@]}"; do
+    echo "${fused[$f]} $f"
+    case "${fused[$f]}" in
+      MATCH) match_m=$((match_m + 1)) ;;
+      DIFF)  diff_m=$((diff_m + 1)) ;;
+      *)     skip_m=$((skip_m + 1)) ;;
+    esac
+  done | LC_ALL=C sort > "$BASELINE_FILE"
+  rm -f "$CHECKPOINT_FILE"
+  echo "merge-checkpoint: fused baseline written: $match_m MATCH / $diff_m DIFF / $skip_m SKIP"
+  exit 0
+fi
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
@@ -42,6 +78,17 @@ if (( avail_kb < MIN_FREE_KB )); then
   exit 1
 fi
 
+# df can lie on this volume: on 2026-10-19 it claimed ~100MB free while a
+# one-line redirect into TMPDIR failed with ENOSPC, killing the sweep
+# silently (set -e, no stderr). Probe an actual write instead: any failure
+# here is the honest abort signal.
+if ! dd if=/dev/zero of="$TMP/write_probe" bs=1048576 count=4 status=none 2>/dev/null; then
+  echo "ERROR: 4MiB write probe into $TMP failed while df reports ${avail_kb}KB free." >&2
+  echo "       The volume is effectively unusable — free space first." >&2
+  exit 1
+fi
+rm -f "$TMP/write_probe"
+
 # Line-hygiene preflight: a merged-statement line (two statements on one
 # physical line) is the corruption class that hung the 2026-10-17 gate via
 # an unincremented loop counter. Fail fast before sweeping.
@@ -61,6 +108,10 @@ diff_count=0
 skip=0
 new_regressions=()
 new_fixes=()
+
+# Fresh checkpoint: an earlier aborted run's file must never leak into
+# this sweep's record.
+rm -f "$CHECKPOINT_FILE"
 
 # Load previous baseline if it exists
 declare -A prev_status
@@ -83,6 +134,9 @@ abort_vol_full() {
   echo "       $1" >&2
   echo "       Free space first (df -h); a phantom verdict is worse than no" >&2
   echo "       report (see docs/nightly-inversion-catalog.md, 2026-10-17 note)." >&2
+  echo "       Completed per-file verdicts are preserved in" >&2
+  echo "       $ROOT/.mir_parity_checkpoint — fuse the prefix with" >&2
+  echo "       scripts/nightly_mir_parity.sh --merge-checkpoint after freeing space." >&2
   exit 2
 }
 
@@ -97,6 +151,12 @@ while IFS= read -r f; do
     if (( avail_now < MIN_FREE_KB )); then
       abort_vol_full "free space fell to ${avail_now}KB after $checked files"
     fi
+    # df is not trustworthy (2026-10-19: ~100MB reported, writes failing);
+    # an actual write is the signal.
+    if ! dd if=/dev/zero of="$TMP/write_probe" bs=1048576 count=4 status=none 2>/dev/null; then
+      abort_vol_full "mid-sweep write probe failed after $checked files (df reports ${avail_now}KB)"
+    fi
+    rm -f "$TMP/write_probe"
   fi
   rm -f "$TMP/probe.err"
   if "$LIC" mir "$f" >/dev/null 2>"$TMP/probe.err"; then
@@ -113,16 +173,19 @@ while IFS= read -r f; do
   if [[ "$cpp" == "0" && "$li" == "0" ]]; then
     skip=$((skip + 1))
     curr_status["$f"]="SKIP"
+    echo "SKIP $f" >> "$CHECKPOINT_FILE" || abort_vol_full "checkpoint append failed for $f"
     continue
   fi
   if [[ "$cpp" == "1" && "$li" == "0" ]]; then
     skip=$((skip + 1))
     curr_status["$f"]="SKIP"
+    echo "SKIP $f" >> "$CHECKPOINT_FILE" || abort_vol_full "checkpoint append failed for $f"
     continue
   fi
   if [[ "$cpp" == "0" && "$li" == "1" ]]; then
     skip=$((skip + 1))
     curr_status["$f"]="SKIP"
+    echo "SKIP $f" >> "$CHECKPOINT_FILE" || abort_vol_full "checkpoint append failed for $f"
     continue
   fi
 
@@ -136,14 +199,23 @@ while IFS= read -r f; do
     abort_vol_full "Li mir capture on $f failed (expected rc 0)"
   fi
 
+  # Silent-stdout-truncation guard: the 2026-10-19 sweep lost a walker
+  # dump to the full volume with exit code 0 (stdio flush errors are
+  # swallowed), producing a bogus n/0 DIFF row. Any empty capture below is
+  # an environment failure, not a datapoint.
+  cl=$(wc -l < "$TMP/cpp.txt")
+  ll=$(wc -l < "$TMP/li.txt")
+  if (( cl == 0 || ll == 0 )); then
+    abort_vol_full "empty capture for $f (cpp=$cl li=$ll lines) — silent truncation"
+  fi
   if diff -q "$TMP/cpp.txt" "$TMP/li.txt" >/dev/null 2>&1; then
     match=$((match + 1))
     curr_status["$f"]="MATCH"
+    echo "MATCH $f" >> "$CHECKPOINT_FILE" || abort_vol_full "checkpoint append failed for $f"
   else
     diff_count=$((diff_count + 1))
     curr_status["$f"]="DIFF"
-    cl=$(wc -l < "$TMP/cpp.txt")
-    ll=$(wc -l < "$TMP/li.txt")
+    echo "DIFF $f" >> "$CHECKPOINT_FILE" || abort_vol_full "checkpoint append failed for $f"
     echo "  DIFF  $cl/$ll  $f"
   fi
 done < <(find "$ROOT/bootstrap" "$ROOT/examples" "$ROOT/li-tests" "$ROOT/packages" \
@@ -189,7 +261,8 @@ fi
 # Save current results as new baseline
 for f in "${!curr_status[@]}"; do
   echo "${curr_status[$f]} $f"
-done > "$BASELINE_FILE"
+done | LC_ALL=C sort > "$BASELINE_FILE"
+rm -f "$CHECKPOINT_FILE"
 
 # Open GitHub issue if regression detected
 if [[ "${1:-}" == "--open-issue" && ${#new_regressions[@]} -gt 0 ]]; then
