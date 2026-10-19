@@ -87,6 +87,7 @@ abort_vol_full() {
 }
 
 while IFS= read -r f; do
+  cpp=0; li=0
   checked=$((checked + 1))
   # Mid-sweep free-space guard: the preflight above passes before the
   # churn (2026-10-19: 191MB free at start, ENOSPC mid-sweep) — other
