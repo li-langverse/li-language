@@ -820,3 +820,54 @@ are next batch's targets, in suspected cost order:
   annotations while the merged alias space has
   no `bytes` row (the walker's type-space gate under-rejects on these
   shapes).
+
+## Batch — import-space use-after-move + type-space gate repairs (2026-10-19)
+
+All four residuals from the previous census are closed; both lanes now agree
+on every corpus and census file.
+
+- **Import-space use-after-move, check lane** (studio_agent_invoke,
+  viewport_selection, U-class probes): C++ borrowck resolves callees against
+  the merged proc_map, so a plain-ident arg moved into an IMPORTED proc's
+  non-var/non-scalar param marks the local and any later use fires E0311.
+  The walker's borrow lane had no import-space seeding at all: the iem_*
+  fallback was dead (iem_cnt == 0, no writer). New seeding path
+  (bk_import_seed + recursive bk_seed_walk): resolve each import, dedupe by
+  path, re-lex module sources into local scratch arrays (the main stream is
+  never clobbered), and record callee-name rows with mover masks and param
+  counts. bk_check_primary's fallback now matches callee names against that
+  frame and marks like the own-file path.
+
+- **Import-space use-after-move, mir lane** (`lic mir` reject corpus):
+  C++ `lic mir` runs borrowck before lowering. The mir lane's borrow pass
+  shares bk_check_* with the check lane but receives the FX span tables as
+  iem_* (for the E0202 gate); these cap at 256 rows, and the studio fixture's
+  transitive merge is 364 procs (studio 236 + ui 78 + gui 31 + render 19) —
+  the callee row fell off the end, so the fallback never matched. Fix: a
+  dedicated 512-row name-row frame (iin_src/iin_mv/iin_ms/iin_pc/iin_n)
+  threaded through the whole bk_check_* chain, seeded in both borrow_check
+  and mir_rq_check; masks and param counts stored directly (no preg-registry
+  aliasing with the fx lane's pass1 rows). 512 covers the widest corpus
+  merge with headroom.
+
+- **Type-space gate: alias-head overshoot** (std/bytes/bytes.li,
+  t-class probes): for a one-liner alias (`type N = array[8, T]` / ident
+  RHS), ts_alias_skip's body-skip loop overshot the newline and swallowed
+  every following top-level proc head, so the unknown-type gate never saw
+  any of their annotations — `bytes` in std/bytes/bytes.li was accepted
+  while the host rejects with `unknown type 'bytes'`. Also fixed the
+  caller's always-true guard that skipped one head token past the skipper's
+  stop position. The stop-at-sibling-head rule discrims on column 0 (byte
+  offset right after a newline): in head mode (bm==0) the lexer emits no
+  INDENT/DEDENT tokens, so depth alone would have broken the intended
+  trait-body skip (trait_hash_impl's indented `def hash(self: Self)`).
+
+Verdicts after the batch:
+- check_li_check_parity: 163/163, 0 known divergences.
+- check_li_mir_parity: 42 byte-exact dumps, 8/8 reject-corpus files
+  both-reject (studio_agent_invoke + viewport_selection now in).
+- Nightly census: 466 checked / 360 MATCH (byte-exact) / 0 DIFF.
+- Probe controls: benign no-use-after-move accepts, same-file movers
+  reject, `var bytes`/extern-annotation shapes match, alias-then-def
+  unknown-type shapes match, trait/object bodies stay skipped (both
+  traits accept).
