@@ -905,3 +905,34 @@ earlier cycle probe only matched at verdict level by accident (mover probe
 fired E0311 on both lanes). The check branch now runs
 mir_import_cycle_check ahead of the type-space gate, matching C++ load
 order. Gates and the 545-file census are unchanged (all agree).
+
+## Update — faithful import-cycle DFS + census capture hardening (2026-10-19)
+
+The depth-2 import-cycle mirror (both lanes) still under-matched the host:
+it only caught root-self re-imports and root→a→b→root shapes, so a benign
+a↔b two-module cycle (no root participation beyond the seed edge) was
+accepted on the walker while the C++ host rejected it at load with
+`import_cycle`. Replaced with a faithful in-progress-set DFS
+(`mic_load` in bootstrap/lic/main.li): per-root walk, loading/loaded path
+sets threaded as wp64 rows, any re-entry of a module on the DFS stack
+fires — same termination and shape coverage as the C++
+`load_module_recursive`. Unresolvable imports stay tolerated (preg-20
+convention; the catalog's unknown-import class). Locked all four shapes in
+the check-parity corpus as bare rejects: cycle_left, cycle_right,
+import_cycle_benign (fires nothing but the cycle gate),
+import_cycle_mover (mover seed under the cycle dedupe). Gate results:
+check 170/170, mir 42/42 byte-exact + 9 rejects, nightly census 474 files:
+341 MATCH, 21 known gaps, 0 regressions.
+
+Census capture hardening in nightly_mir_parity.sh, closing the phantom
+class this doc recorded on 2026-10-17 and hit again live today (191MB
+free at start, ENOSPC mid-sweep, a silent bogus `DIFF 37989/0` row
+followed): (1) per-gate rc probes now capture stderr and any
+`No space left`/ENOSPC/I-O-error signature aborts with exit 2 instead of
+reading as a rejection; (2) the MATCH/DIFF capture aborts on rc!=0
+instead of diffing truncated files; (3) free space is re-checked every 50
+files, because the 64MiB preflight alone does not survive mid-sweep
+volume churn from other consumers. The hardened run aborted cleanly with
+exit 2 at the first capture failure — the honest behavior. Until the
+data volume stops oscillating near 100%, an aborted sweep (exit 2) means
+"no trustworthy report this night", never "parity regressed".

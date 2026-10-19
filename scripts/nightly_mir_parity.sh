@@ -73,11 +73,41 @@ fi
 # Current results
 declare -A curr_status
 
+# Abort helper: a nearly-full data volume produces PHANTOM verdicts (rc!=0
+# from ENOSPC looks identical to a genuine reject — the 2026-10-17 census
+# recorded that class, and the 2026-10-19 run aborted mid-sweep on exactly
+# the same shape). Any I/O-error signature in the probe stderr, or a failed
+# rc!=0 capture, is a hard abort with exit 2, not a datapoint.
+abort_vol_full() {
+  echo "ERROR: capture failed under a nearly-full volume — sweep aborted:" >&2
+  echo "       $1" >&2
+  echo "       Free space first (df -h); a phantom verdict is worse than no" >&2
+  echo "       report (see docs/nightly-inversion-catalog.md, 2026-10-17 note)." >&2
+  exit 2
+}
+
 while IFS= read -r f; do
-  cpp=0; li=0
-  "$LIC" mir "$f" >/dev/null 2>&1 && cpp=1
-  "$LI" mir "$f" >/dev/null 2>&1 && li=1
   checked=$((checked + 1))
+  # Mid-sweep free-space guard: the preflight above passes before the
+  # churn (2026-10-19: 191MB free at start, ENOSPC mid-sweep) — other
+  # consumers ebb and flow under us, so re-check every 50 files.
+  if (( checked % 50 == 0 )); then
+    avail_now="$(df -k "$ROOT" | awk 'NR==2{print $4}')"
+    if (( avail_now < MIN_FREE_KB )); then
+      abort_vol_full "free space fell to ${avail_now}KB after $checked files"
+    fi
+  fi
+  rm -f "$TMP/probe.err"
+  if "$LIC" mir "$f" >/dev/null 2>"$TMP/probe.err"; then
+    cpp=1
+  elif grep -qiE 'No space left|ENOSPC|I/O error' "$TMP/probe.err" 2>/dev/null; then
+    abort_vol_full "C++ mir probe on $f hit an I/O error, not a verdict"
+  fi
+  if "$LI" mir "$f" >/dev/null 2>"$TMP/probe.err"; then
+    li=1
+  elif grep -qiE 'No space left|ENOSPC|I/O error' "$TMP/probe.err" 2>/dev/null; then
+    abort_vol_full "Li mir probe on $f hit an I/O error, not a verdict"
+  fi
 
   if [[ "$cpp" == "0" && "$li" == "0" ]]; then
     skip=$((skip + 1))
@@ -95,8 +125,15 @@ while IFS= read -r f; do
     continue
   fi
 
-  "$LIC" mir "$f" > "$TMP/cpp.txt" 2>/dev/null
-  "$LI" mir "$f" > "$TMP/li.txt" 2>/dev/null
+  # Both sides accepted the file (rc 1 above), so the capture below must
+  # succeed and exit 0; anything else is an environment failure.
+  rm -f "$TMP/cpp.txt" "$TMP/li.txt"
+  if ! "$LIC" mir "$f" > "$TMP/cpp.txt" 2>/dev/null; then
+    abort_vol_full "C++ mir capture on $f failed (expected rc 0)"
+  fi
+  if ! "$LI" mir "$f" > "$TMP/li.txt" 2>/dev/null; then
+    abort_vol_full "Li mir capture on $f failed (expected rc 0)"
+  fi
 
   if diff -q "$TMP/cpp.txt" "$TMP/li.txt" >/dev/null 2>&1; then
     match=$((match + 1))
