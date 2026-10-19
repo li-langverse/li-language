@@ -1,0 +1,7 @@
+proc p(ty) @cpu
+@para-> int
+  requires true
+  ensures truue
+  decreases pe0
+=
+llel(dÍÍÍ•
