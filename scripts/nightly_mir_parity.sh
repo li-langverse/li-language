@@ -131,13 +131,16 @@ declare -A curr_status
 # the same shape). Any I/O-error signature in the probe stderr, or a failed
 # rc!=0 capture, is a hard abort with exit 2, not a datapoint.
 abort_vol_full() {
-  echo "ERROR: capture failed under a nearly-full volume — sweep aborted:" >&2
-  echo "       $1" >&2
-  echo "       Free space first (df -h); a phantom verdict is worse than no" >&2
-  echo "       report (see docs/nightly-inversion-catalog.md, 2026-10-17 note)." >&2
-  echo "       Completed per-file verdicts are preserved in" >&2
-  echo "       $ROOT/.mir_parity_checkpoint — fuse the prefix with" >&2
-  echo "       scripts/nightly_mir_parity.sh --merge-checkpoint after freeing space." >&2
+  # Every echo may fail on a full volume; under set -e that would kill the
+  # function with rc 1 BEFORE reaching exit 2 (silent death — hit live
+  # 2026-10-19 at the first abort line). || true keeps the abort honest.
+  echo "ERROR: capture failed under a nearly-full volume — sweep aborted:" >&2 || true
+  echo "       $1" >&2 || true
+  echo "       Free space first (df -h); a phantom verdict is worse than no" >&2 || true
+  echo "       report (see docs/nightly-inversion-catalog.md, 2026-10-17 note)." >&2 || true
+  echo "       Completed per-file verdicts are preserved in" >&2 || true
+  echo "       $ROOT/.mir_parity_checkpoint — fuse the prefix with" >&2 || true
+  echo "       scripts/nightly_mir_parity.sh --merge-checkpoint after freeing space." >&2 || true
   exit 2
 }
 
@@ -217,7 +220,7 @@ while IFS= read -r f; do
     diff_count=$((diff_count + 1))
     curr_status["$f"]="DIFF"
     echo "DIFF $f" >> "$CHECKPOINT_FILE" || abort_vol_full "checkpoint append failed for $f"
-    echo "  DIFF  $cl/$ll  $f"
+    echo "  DIFF  $cl/$ll  $f" || abort_vol_full "DIFF-row write failed for $f"
   fi
 done < <(find "$ROOT/bootstrap" "$ROOT/examples" "$ROOT/li-tests" "$ROOT/packages" \
            -name "*.li" -type f \
