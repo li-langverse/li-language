@@ -894,3 +894,14 @@ Edge probes for the iin_* frame, both lanes agree on every shape:
 
 Verdicts after the batch: check parity 166/166, mir parity 42 + 9/9,
 nightly census 470/362/0 — unchanged from the fixture batch.
+
+## Addendum — check-lane import-cycle gate (2026-10-19)
+
+The full-repo check census (545 files) plus a targeted cycle probe caught
+one more asymmetry: the mir lane always ran the depth-2 import-cycle gate,
+but the check lane never did. A benign two-module import cycle rejected on
+the host (`import_cycle`) while the walker's check lane accepted — the
+earlier cycle probe only matched at verdict level by accident (mover probe
+fired E0311 on both lanes). The check branch now runs
+mir_import_cycle_check ahead of the type-space gate, matching C++ load
+order. Gates and the 545-file census are unchanged (all agree).

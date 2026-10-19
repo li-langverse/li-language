@@ -19337,6 +19337,14 @@ def main() raises IO -> int
     if r == 1:
       print("check error")
       return 1
+    # Import-cycle gate (C++ load DFS in-progress set; depth-2 mirror).
+    # The mir lane has always run this; the check lane missed it entirely —
+    # a benign monthly-source cycle rejected on the host (`import_cycle`)
+    # while the walker's check lane accepted (the cycle_mover probe only
+    # matched at verdict level by accident, via E0311 on both). Runs before
+    # the type-space gate to match the load-order of resolve_imports in
+    # C++, and restores the stream like every other re-lex gate.
+    var icr: int = mir_import_cycle_check(li_rt_argv(2), f, tk, ts, te, n, err)
     # Unknown-type gate (C++ `li check` runs typecheck_module; unknown type
     # names in the main module's annotations reject). The gate re-lexes and
     # restores the token arrays, so the batteries below see the same stream.
@@ -19345,6 +19353,8 @@ def main() raises IO -> int
     err[0] = 0
     var err_any: array[1, int]
     err_any[0] = tsr2
+    if icr == 1:
+      err_any[0] = 1
     # Source-policy gate (C++ check_source_policies — parallel_requires_disjoint,
     # buf[0]/counter/borrow-mut rules, lanes=8 ceiling): same token scan the
     # mir lane already runs, folded into the check verdict like the C++
