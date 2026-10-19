@@ -1,0 +1,18 @@
+# Accept-side control for use_after_move_import.li (both lanes accept):
+# the imported mover still expires `a`, but nothing reads it afterwards, and
+# the second discard targets a fresh local. Locks the boundary of the
+# import-space move tracking — the seed must not invent rejects (`w` reads
+# after the move stay legal).
+import use_after_move_import_lib
+
+def main() -> int
+  requires true
+  ensures result >= 0
+  decreases 0
+=
+  var a: array[4, int]
+  eat(a)
+  var b: array[4, int]
+  b[0] = 0
+  discard b[0]
+  return 0

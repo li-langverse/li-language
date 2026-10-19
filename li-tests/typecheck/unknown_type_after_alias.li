@@ -1,0 +1,18 @@
+# Regression fixture (both-lane REJECT): unknown-type annotations after a
+# one-liner alias head. C++ typecheck resolves `NoAlias8` to unknown and
+# rejects; the walker's type-space gate used to lose these heads twice —
+# ts_alias_skip's body-skip loop overshot a one-liner alias and swallowed
+# every following top-level proc (std/bytes/bytes.li class), and its caller
+# skipped one more head token past the skipper's stop. Both fixed
+# (stop-at-column-0 sibling head); the unknown annotation must still fire
+# after the alias head, while the trait-body skip stays intact
+# (trait_hash_impl/trait_missing_impl remain the skip-side controls).
+type Grid = array[8, int]
+
+def probe(r: NoAlias8) -> NoAlias8
+  requires true
+  ensures result >= 0
+  decreases 0
+=
+  var q: NoAlias8
+  return 0

@@ -1,0 +1,18 @@
+# Regression fixture (both-lane REJECT): use-after-move through an imported
+# callee. C++ borrowck resolves callees against the merged proc_map, so the
+# plain-ident arg `a` moved into the imported mover `eats` non-var/non-scalar
+# param expires the local and `discard a[0]` fires `use after move` (E0311).
+# The walker answers through the import-space seeding frame
+# (bk_import_seed/bk_seed_walk; 512-row mover-mask rows shared by the check
+# and mir lanes). Companion module: use_after_move_import_lib.li.
+import use_after_move_import_lib
+
+def main() -> int
+  requires true
+  ensures result >= 0
+  decreases 0
+=
+  var a: array[4, int]
+  eat(a)
+  discard a[0]
+  return 0

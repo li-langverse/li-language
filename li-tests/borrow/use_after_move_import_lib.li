@@ -1,0 +1,12 @@
+# Companion module for use_after_move_import.li — the mover callee is an
+# IMPORTED proc (`eat`), so the move-tracking fallback must resolve it
+# against the merged import space on both lanes (C++ borrowck proc_map;
+# walker bk_import_seed rows). This module file itself stays a plain,
+# check-clean module: the reject verdict is carried by the fixture file.
+
+def eat(a: array[4, int]) -> unit
+  requires true
+  ensures true
+  decreases 0
+=
+  discard a

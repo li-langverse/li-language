@@ -93,6 +93,11 @@ REJECT_CORPUS=(
   # masks (preg 15 is-var / preg 16 scalar) must keep a mover arg move-marked
   # exactly like C++ check_call_moves. Locks the fx_skip_params mask fix.
   "li-tests/borrow/use_after_move.li"
+  # Same class via an IMPORTED callee mover: the 512-row iin_* frame
+  # (bk_import_seed) shared by both lanes must mark imported-callee mover
+  # args too (the studio-class shapes live in the packages corpus above).
+  # Sibling module: use_after_move_import_lib.li.
+  "li-tests/borrow/use_after_move_import.li"
   "packages/li-studio/li-tests/smoke/studio_agent_invoke.li"
   "packages/li-gui/li-tests/smoke/viewport_selection.li"
   # index-safety: constant OOB + unrefined dynamic index on non-var array

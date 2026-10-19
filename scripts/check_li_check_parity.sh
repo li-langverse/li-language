@@ -63,6 +63,10 @@ CORPUS_OK=(
   "li-tests/decorators/vectorized_for_parse_ok.li"
   "li-tests/decorators/vectorized_for_scope_ok.li"
   "li-tests/borrow/loop_move_ok.li"
+  # Import-space movers: the merged seed must drive the same move marks as
+  # the own-file path (reject fixture use_after_move_import.li lives in
+  # CORPUS_FAIL below; the benign side locks the no-invented-reject edge).
+  "li-tests/borrow/import_mover_benign.li"
   "li-tests/contracts_verify/method_ensures_return_ok.li"
   "li-tests/advisory/check_deny_warn.li"
   "li-tests/advisory/check_ok.li"
@@ -202,6 +206,15 @@ CORPUS_FAIL=(
   "li-tests/math_linalg/reductions/sum_non_array.li:-"
   "li-tests/typecheck/unknown_type_local.li:-"
   "li-tests/typecheck/unknown_type_param.li:-"
+  # Unknown-type gate after a one-liner alias head (ts_alias_skip stop-fix
+  # regression lock; trait_body skip controls: trait_hash_impl in CORPUS_OK
+  # read).
+  "li-tests/typecheck/unknown_type_after_alias.li:-"
+  # Use-after-move through an imported callee: the import-space seed must
+  # mark the mover arg exactly like the own-file path (E0311 not carried by
+  # the friend module, but by the fixture's second discard). Benign control
+  # in CORPUS_OK (import_mover_benign.li).
+  "li-tests/borrow/use_after_move_import.li:-"
   "li-tests/modules/import_cycle_a.li:-"
   "li-tests/physics/game_runtime_smoke.li:-"
   "li-tests/race_shared_memory/false_disjoint_requires_true.li:-"
