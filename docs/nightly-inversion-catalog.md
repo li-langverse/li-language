@@ -871,3 +871,26 @@ Verdicts after the batch:
   reject, `var bytes`/extern-annotation shapes match, alias-then-def
   unknown-type shapes match, trait/object bodies stay skipped (both
   traits accept).
+
+## Batch — import-seeding frame hardening (2026-10-19)
+
+Edge probes for the iin_* frame, both lanes agree on every shape:
+
+- **Import cycles** (a imports b imports a, mover in a): the seen-list
+  dedupe terminates the seed recursion; both lanes reject the mover's
+  use-after-move and agree on the benign side.
+- **Large modules (3,538 procs)**: two fixes. A first-cut prune
+  (`mvar != 0`) was WRONG — `(a: array[4, int])` has no is-var bit and is
+  still the fixture mover — it regressed the check lane to under-reject on
+  every import-space probe. The correct rule skips a row only when
+  `mvar + msc` covers every param slot (`2^j2 - 1`): such a callee can
+  never move a plain-ident arg. With that prune the row budget tracks
+  mover-bearing callees, not module size, and the frame dim went
+  512 -> 4096 so far-row movers resolve (probe: mover at row ~3537,
+  both lanes reject).
+- **Dotted-path imports**: none exist in the corpus; resolution is
+  host-side (import_resolve.cpp), so the walker's first-token scan is
+  never exercised. Not a risk.
+
+Verdicts after the batch: check parity 166/166, mir parity 42 + 9/9,
+nightly census 470/362/0 — unchanged from the fixture batch.

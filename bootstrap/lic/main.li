@@ -6551,7 +6551,7 @@ def bk_mark_moved(src: var ptr, ts: var array[262144, int], te: var array[262144
     k = k + 1
   return 0
 
-def bk_check_expr(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bo: int, min_prec: int, bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_n: var array[1, int], rq_proc: var array[256, int], rq_pi: var array[256, int], rq_op: var array[256, int], rq_lit: var array[256, int], rq_left: var array[256, int], rq_n: var array[1, int], iin_src: var array[512, ptr], iin_mv: var array[512, int], iin_ms: var array[512, int], iin_pc: var array[512, int], iin_n: var array[1, int], iem_src: var array[256, ptr], iem_ns: var array[256, int], iem_ne: var array[256, int], iem_vis: var array[256, int], iem_cnt: var array[1, int], iem_uq: int) -> int
+def bk_check_expr(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bo: int, min_prec: int, bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_n: var array[1, int], rq_proc: var array[256, int], rq_pi: var array[256, int], rq_op: var array[256, int], rq_lit: var array[256, int], rq_left: var array[256, int], rq_n: var array[1, int], iin_src: var array[4096, ptr], iin_mv: var array[4096, int], iin_ms: var array[4096, int], iin_pc: var array[4096, int], iin_n: var array[1, int], iem_src: var array[256, ptr], iem_ns: var array[256, int], iem_ne: var array[256, int], iem_vis: var array[256, int], iem_cnt: var array[1, int], iem_uq: int) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -6574,7 +6574,7 @@ def bk_check_expr(src: var ptr, tk: var array[262144, int], ts: var array[262144
       return 0
   return 1
 
-def bk_check_primary(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bo: int, bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_n: var array[1, int], rq_proc: var array[256, int], rq_pi: var array[256, int], rq_op: var array[256, int], rq_lit: var array[256, int], rq_left: var array[256, int], rq_n: var array[1, int], iin_src: var array[512, ptr], iin_mv: var array[512, int], iin_ms: var array[512, int], iin_pc: var array[512, int], iin_n: var array[1, int], iem_src: var array[256, ptr], iem_ns: var array[256, int], iem_ne: var array[256, int], iem_vis: var array[256, int], iem_cnt: var array[1, int], iem_uq: int) -> int
+def bk_check_primary(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bo: int, bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_n: var array[1, int], rq_proc: var array[256, int], rq_pi: var array[256, int], rq_op: var array[256, int], rq_lit: var array[256, int], rq_left: var array[256, int], rq_n: var array[1, int], iin_src: var array[4096, ptr], iin_mv: var array[4096, int], iin_ms: var array[4096, int], iin_pc: var array[4096, int], iin_n: var array[1, int], iem_src: var array[256, ptr], iem_ns: var array[256, int], iem_ne: var array[256, int], iem_vis: var array[256, int], iem_cnt: var array[1, int], iem_uq: int) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -6704,7 +6704,7 @@ def bk_check_primary(src: var ptr, tk: var array[262144, int], ts: var array[262
   err[0] = 1
   return 0
 
-def bk_check_postfix(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bo: int, bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_n: var array[1, int], rq_proc: var array[256, int], rq_pi: var array[256, int], rq_op: var array[256, int], rq_lit: var array[256, int], rq_left: var array[256, int], rq_n: var array[1, int], iin_src: var array[512, ptr], iin_mv: var array[512, int], iin_ms: var array[512, int], iin_pc: var array[512, int], iin_n: var array[1, int], iem_src: var array[256, ptr], iem_ns: var array[256, int], iem_ne: var array[256, int], iem_vis: var array[256, int], iem_cnt: var array[1, int], iem_uq: int) -> int
+def bk_check_postfix(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bo: int, bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_n: var array[1, int], rq_proc: var array[256, int], rq_pi: var array[256, int], rq_op: var array[256, int], rq_lit: var array[256, int], rq_left: var array[256, int], rq_n: var array[1, int], iin_src: var array[4096, ptr], iin_mv: var array[4096, int], iin_ms: var array[4096, int], iin_pc: var array[4096, int], iin_n: var array[1, int], iem_src: var array[256, ptr], iem_ns: var array[256, int], iem_ne: var array[256, int], iem_vis: var array[256, int], iem_cnt: var array[1, int], iem_uq: int) -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
@@ -6747,7 +6747,7 @@ def bk_check_postfix(src: var ptr, tk: var array[262144, int], ts: var array[262
     loop = 0
   return 1
 
-def bk_check_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bo: int, bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_ib: var array[256, int], ls_n: var array[1, int], rq_proc: var array[256, int], rq_pi: var array[256, int], rq_op: var array[256, int], rq_lit: var array[256, int], rq_left: var array[256, int], rq_n: var array[1, int], iin_src: var array[512, ptr], iin_mv: var array[512, int], iin_ms: var array[512, int], iin_pc: var array[512, int], iin_n: var array[1, int], iem_src: var array[256, ptr], iem_ns: var array[256, int], iem_ne: var array[256, int], iem_vis: var array[256, int], iem_cnt: var array[1, int], iem_uq: int) -> int
+def bk_check_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bo: int, bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_ib: var array[256, int], ls_n: var array[1, int], rq_proc: var array[256, int], rq_pi: var array[256, int], rq_op: var array[256, int], rq_lit: var array[256, int], rq_left: var array[256, int], rq_n: var array[1, int], iin_src: var array[4096, ptr], iin_mv: var array[4096, int], iin_ms: var array[4096, int], iin_pc: var array[4096, int], iin_n: var array[1, int], iem_src: var array[256, ptr], iem_ns: var array[256, int], iem_ne: var array[256, int], iem_vis: var array[256, int], iem_cnt: var array[1, int], iem_uq: int) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -6899,7 +6899,7 @@ def bk_check_stmt(src: var ptr, tk: var array[262144, int], ts: var array[262144
   bk_check_expr(src, tk, ts, te, n, pi, err, bo, 0, bp_name, bp_np, bp_pv, bp_ps, bp_cnt, ls_name, ls_moved, ls_mb, ls_n, rq_proc, rq_pi, rq_op, rq_lit, rq_left, rq_n, iin_src, iin_mv, iin_ms, iin_pc, iin_n, iem_src, iem_ns, iem_ne, iem_vis, iem_cnt, iem_uq)
   return 1
 
-def bk_check_block(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bo: int, bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_ib: var array[256, int], ls_n: var array[1, int], rq_proc: var array[256, int], rq_pi: var array[256, int], rq_op: var array[256, int], rq_lit: var array[256, int], rq_left: var array[256, int], rq_n: var array[1, int], iin_src: var array[512, ptr], iin_mv: var array[512, int], iin_ms: var array[512, int], iin_pc: var array[512, int], iin_n: var array[1, int], iem_src: var array[256, ptr], iem_ns: var array[256, int], iem_ne: var array[256, int], iem_vis: var array[256, int], iem_cnt: var array[1, int], iem_uq: int) -> int
+def bk_check_block(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], bo: int, bp_name: var array[256, int], bp_np: var array[256, int], bp_pv: var array[4096, int], bp_ps: var array[4096, int], bp_cnt: var array[1, int], ls_name: var array[256, int], ls_moved: var array[256, int], ls_mb: var array[256, int], ls_ib: var array[256, int], ls_n: var array[1, int], rq_proc: var array[256, int], rq_pi: var array[256, int], rq_op: var array[256, int], rq_lit: var array[256, int], rq_left: var array[256, int], rq_n: var array[1, int], iin_src: var array[4096, ptr], iin_mv: var array[4096, int], iin_ms: var array[4096, int], iin_pc: var array[4096, int], iin_n: var array[1, int], iem_src: var array[256, ptr], iem_ns: var array[256, int], iem_ne: var array[256, int], iem_vis: var array[256, int], iem_cnt: var array[1, int], iem_uq: int) -> int
   requires true
   ensures result == 1
   decreases 0
@@ -7170,7 +7170,7 @@ def rq_arg_lit(src: var ptr, tk: var array[262144, int], ts: var array[262144, i
   has[0] = 0
   return 0
 
-def rq_check_call(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], callee: int, arg_toks: var array[16, int], argc: int, rq_proc: var array[256, int], rq_pi: var array[256, int], rq_op: var array[256, int], rq_lit: var array[256, int], rq_left: var array[256, int], rq_n: var array[1, int], bp_name: var array[256, int], bp_cnt: var array[1, int], iin_src: var array[512, ptr], iin_mv: var array[512, int], iin_ms: var array[512, int], iin_pc: var array[512, int], iin_n: var array[1, int], iem_src: var array[256, ptr], iem_ns: var array[256, int], iem_ne: var array[256, int], iem_vis: var array[256, int], iem_cnt: var array[1, int], iem_uq: int) raises IO -> int
+def rq_check_call(src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], pi: var array[1, int], err: var array[1, int], callee: int, arg_toks: var array[16, int], argc: int, rq_proc: var array[256, int], rq_pi: var array[256, int], rq_op: var array[256, int], rq_lit: var array[256, int], rq_left: var array[256, int], rq_n: var array[1, int], bp_name: var array[256, int], bp_cnt: var array[1, int], iin_src: var array[4096, ptr], iin_mv: var array[4096, int], iin_ms: var array[4096, int], iin_pc: var array[4096, int], iin_n: var array[1, int], iem_src: var array[256, ptr], iem_ns: var array[256, int], iem_ne: var array[256, int], iem_vis: var array[256, int], iem_cnt: var array[1, int], iem_uq: int) raises IO -> int
   requires true
   ensures result == 1
   decreases 0
@@ -7240,13 +7240,13 @@ def rq_check_call(src: var ptr, tk: var array[262144, int], ts: var array[262144
 
 # ---- import-space mover seeding (C++ borrowck check_call_moves parity) ----
 
-def bk_seed_walk(msrc: var ptr, mtk: var array[262144, int], mts: var array[262144, int], mte: var array[262144, int], mn_t: var array[1, int], root: ptr, iin_src: var array[512, ptr], iin_mv: var array[512, int], iin_ms: var array[512, int], iin_pc: var array[512, int], icnt: var array[1, int], seen_p: var array[64, ptr], seen_n: var array[1, int]) raises IO -> int
+def bk_seed_walk(msrc: var ptr, mtk: var array[262144, int], mts: var array[262144, int], mte: var array[262144, int], mn_t: var array[1, int], root: ptr, iin_src: var array[4096, ptr], iin_mv: var array[4096, int], iin_ms: var array[4096, int], iin_pc: var array[4096, int], icnt: var array[1, int], seen_p: var array[64, ptr], seen_n: var array[1, int]) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
 =
   # Walk a scratch-lexed import module's proc heads: record each def/async
-  # callee name with its param mover masks in the dedicated 512-row
+  # callee name with its param mover masks in the dedicated 4096-row (mover-pruned)
   # name-row frame: iin_pc carries the param count; the masks live
   # directly in iin_mv (is-var) / iin_ms (scalar-typed) — a mover param
   # is one that is neither var nor scalar, identical to bk_param_moves.
@@ -7383,20 +7383,37 @@ def bk_seed_walk(msrc: var ptr, mtk: var array[262144, int], mts: var array[2621
       if is_ext == 0:
         if j2 > 0:
           if j2 <= 16:
-            if icnt[0] < 512:
-              var r: int = icnt[0]
-              iin_src[r] = bytes_slice_i(msrc, peek_tk(mts, nm), peek_tk(mte, nm) - peek_tk(mts, nm))
-              iin_mv[r] = mvar
-              iin_ms[r] = msc
-              iin_pc[r] = j2
-              icnt[0] = icnt[0] + 1
+            # Only procs with at least one MOVER slot get a row: a slot is a
+            # mover when it carries NEITHER the is-var bit (mvar) nor the
+            # scalar bit (msc), so a callee whose mvar|msc covers every slot
+            # (2^j2 - 1) can never move a plain-ident arg. A first-cut
+            # `mvar != 0` prune was wrong — `(a: array[4, int])` has mvar==0
+            # and is still the fixture mover — and it regressed the check
+            # lane to under-reject on cyc/big/studio probes.
+            var no_mover: int = 1
+            var allb: int = 1
+            var pb2: int = 0
+            while pb2 < j2:
+              allb = allb * 2
+              pb2 = pb2 + 1
+            allb = allb - 1
+            if (mvar + msc) != allb:
+              no_mover = 0
+            if no_mover == 0:
+              if icnt[0] < 4096:
+                var r: int = icnt[0]
+                iin_src[r] = bytes_slice_i(msrc, peek_tk(mts, nm), peek_tk(mte, nm) - peek_tk(mts, nm))
+                iin_mv[r] = mvar
+                iin_ms[r] = msc
+                iin_pc[r] = j2
+                icnt[0] = icnt[0] + 1
       continue
     # Unknown top-level shape in a foreign module: advance one token and
     # keep walking — the seed must never inject a borrow-lane error.
     pip[0] = pip[0] + 1
   return 0
 
-def bk_import_seed(file_path: ptr, src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], iin_src: var array[512, ptr], iin_mv: var array[512, int], iin_ms: var array[512, int], iin_pc: var array[512, int], icnt: var array[1, int]) raises IO -> int
+def bk_import_seed(file_path: ptr, src: var ptr, tk: var array[262144, int], ts: var array[262144, int], te: var array[262144, int], n: var array[1, int], iin_src: var array[4096, ptr], iin_mv: var array[4096, int], iin_ms: var array[4096, int], iin_pc: var array[4096, int], icnt: var array[1, int]) raises IO -> int
   requires true
   ensures result == 0
   decreases 0
@@ -7470,14 +7487,15 @@ def borrow_check(file_path: ptr, src: var ptr, tk: var array[262144, int], ts: v
   var iem_uq: int = 0
   iem_cnt[0] = 0
   # Import-space mover seeding (C++ borrowck check_call_moves parity):
-  # name-keyed rows for imported callees in the dedicated 512-row iin_*
+  # name-keyed rows for imported callees in the dedicated 4096-row (mover-pruned) iin_*
   # frame (mover masks and param counts stored directly; no preg-registry
   # aliasing with the fx lane's pass1 rows). 512 covers the widest
-  # transitive merge in the corpus (studio: 364 procs).
-  var iin_src: array[512, ptr]
-  var iin_mv: array[512, int]
-  var iin_ms: array[512, int]
-  var iin_pc: array[512, int]
+  # transitive merge in the corpus (studio: 364; the
+  # 3.5k-mover-prune large-module probe keeps every mover-bearing callee row under four digits).
+  var iin_src: array[4096, ptr]
+  var iin_mv: array[4096, int]
+  var iin_ms: array[4096, int]
+  var iin_pc: array[4096, int]
   var iin_n: array[1, int]
   iin_n[0] = 0
   var seeds: int = bk_import_seed(file_path, src, tk, ts, te, n, iin_src, iin_mv, iin_ms, iin_pc, iin_n)
@@ -7659,10 +7677,10 @@ def mir_rq_check(src: var ptr, tk: var array[262144, int], ts: var array[262144,
   # name-row frame the check lane uses (C++ `lic mir` runs borrowck before
   # lowering, so the mir lane's borrow walk needs the imported callee
   # masks too — the fx span rows stay in iem_* for the E0202 gate).
-  var iin_src: array[512, ptr]
-  var iin_mv: array[512, int]
-  var iin_ms: array[512, int]
-  var iin_pc: array[512, int]
+  var iin_src: array[4096, ptr]
+  var iin_mv: array[4096, int]
+  var iin_ms: array[4096, int]
+  var iin_pc: array[4096, int]
   var iin_n: array[1, int]
   iin_n[0] = 0
   var seeds: int = bk_import_seed(file_path, src, tk, ts, te, n, iin_src, iin_mv, iin_ms, iin_pc, iin_n)
