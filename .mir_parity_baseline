@@ -1,5 +1,5 @@
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-sim/li-tests/smoke/studio_profile_bridge.li
-MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/httpd/m15_tls_oracle.li
+DIFF /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/httpd/m15_tls_oracle.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/stdlib_seal/shadow_print_via_import.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/contracts_verify/linalg_norm4_int_closed.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/cve_patterns/cwe787_oob_index.li
@@ -10,7 +10,7 @@ MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/decorato
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-gui/li-tests/smoke/builds.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/security/proof_safety/ensures_true_rejected.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-studio/src/main.li
-MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/httpd/lb_mode_smoke.li
+DIFF /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/httpd/lb_mode_smoke.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/contracts_verify/index_refinement.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-crypto/src/lib.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-net/li-tests/smoke/builds.li
@@ -21,7 +21,7 @@ MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/codegen/
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/race_shared_memory/shared_mut_write.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/math_linalg/broadcast_len1_add_float4.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/borrow/use_after_move_import.li
-MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/httpd/parse_request_smoke.li
+DIFF /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/httpd/parse_request_smoke.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/lig/li-tests/smoke/lig_device_probe.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/composable/import_sim_scientific_run.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/math_syntax/for_range_sum.li
@@ -31,7 +31,7 @@ MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/decorato
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/composable/import_physics_runtime.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-studio/li-tests/smoke/studio_profile_roundtrip.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/race_shared_memory/good_disjoint_parallel.li
-MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/httpd/m15_leak_censor_oracle.li
+DIFF /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/httpd/m15_leak_censor_oracle.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/math_linalg/matmul_dim_mismatch.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/math_linalg/axpy_float4.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/decorators/cpu_only_ok.li
@@ -77,7 +77,7 @@ SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/collectio
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/compile_ok/int_ne_literal.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/prob/collision_oracle.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/advisory/check_ok.li
-MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-render/src/lib.li
+DIFF /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-render/src/lib.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-studio/li-tests/smoke/studio_mcp_tools.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/bootstrap/prover/main.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/math_linalg/golden_dot4_ones_twos.li
@@ -97,6 +97,7 @@ MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/encapsul
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/contracts_verify/linalg_mat2_float_value.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-studio/li-tests/smoke/studio_mcp_extended.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/race_shared_memory/borrow_mut_across_iters.li
+SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/modules/import_cycle_mover.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/tetris/board_oob.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/simd/simd_type_ok.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-schema/li-tests/smoke/builds.li
@@ -142,10 +143,11 @@ MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/borrow/l
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/composable/import_studio_sim_step_stub.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/typecheck/probe_ref.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-tls/src/lib.li
+SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/modules/cycle_left.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/contracts_verify/linalg_mat2_float_wrong_value.li
-MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/composable/import_gui_studio_keyboard.li
+DIFF /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/composable/import_gui_studio_keyboard.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/math_linalg/reductions/sum_non_array.li
-MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/routing/match_routes_toml.li
+DIFF /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/routing/match_routes_toml.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/typecheck/bad_array_index.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-net/src/lib.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/composable/import_ui_studio_shell.li
@@ -154,7 +156,7 @@ MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-sim-r
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/rng/iv_collision_oracle.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-studio/li-tests/smoke/studio_viewport_error.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-sim-additive/src/lib.li
-MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-gui/li-tests/smoke/viewport_panel_switch.li
+DIFF /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-gui/li-tests/smoke/viewport_panel_switch.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/typecheck/probe_alias.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-world/src/lib.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-sim/li-tests/smoke/sim_step_stub.li
@@ -182,7 +184,7 @@ MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-physi
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/typecheck/fib.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/rng/exploits/sim_rng_replay.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/borrow/borrow_ok.li
-MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/httpd/route_match_contract.li
+DIFF /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/httpd/route_match_contract.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/math_linalg/elementwise_mul_float10.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/decorators/vectorized_dot_ok.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-world/li-tests/smoke/builds.li
@@ -191,7 +193,7 @@ MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-sim-r
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/encapsulation/import_parse.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/parallel_codegen/md_mini.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/encapsulation/private_method_use.li
-MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/httpd/m3_optional_oracle.li
+DIFF /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/httpd/m3_optional_oracle.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/typecheck/unknown_type_param.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/contracts_verify/linalg_mat2_at2_float_closed.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/runtime/unary_minus.li
@@ -223,7 +225,7 @@ MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/collecti
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-physics-chem/li-tests/smoke/builds.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/security/proof_safety/requires_false_caller.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/security/proof_safety/type_mismatch_rejected.li
-MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/httpd/route_key_valid.li
+DIFF /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/httpd/route_key_valid.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-render/li-tests/smoke/viewport_fps_counter.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/lexer_parser/parser_reject_unclosed_call.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/async/reactor_selftest_link.li
@@ -251,6 +253,7 @@ MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-aimd/
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/contracts_verify/extern_call_requires_ok.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/parallel_codegen/three_float_arrays_8.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/security/proof_safety/missing_ensures_rejected.li
+SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/modules/import_cycle_benign.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-sim-automotive/li-tests/smoke/builds.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-studio/li-tests/smoke/studio_shell_demo.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/math_linalg/reductions/dot_len_mismatch.li
@@ -276,7 +279,7 @@ MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/math_lin
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-physics-fluids/li-tests/smoke/builds.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/borrow/import_mover_benign.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/decorator_exploits/single_segment_name.li
-MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/routing/match_routes.li
+DIFF /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/routing/match_routes.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/prove_reject/missing_decreases.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/lexer_parser/plus_minus_binop.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/composable/import_httpd_lib.li
@@ -297,7 +300,7 @@ SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/decorator
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/math_linalg/reductions/sum_float4.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/effects/net_forward_ok.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/codegen/neg_float_procs.li
-MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/httpd/serve_routed_once.li
+DIFF /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/httpd/serve_routed_once.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/prove_reject/bare_cast.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/security/many_tokens.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-physics-hep/src/lib.li
@@ -315,11 +318,11 @@ SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/cve_patte
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/encapsulation/extern_proc_syntax_rejected.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/stdlib_seal/shadow_list_type.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/decorators/vectorized_for_scope_ok.li
-MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-gui/li-tests/smoke/studio_keyboard.li
+DIFF /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-gui/li-tests/smoke/studio_keyboard.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/lexer_parser/parser_reject_no_body.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/contracts_verify/linalg_sum4_int_closed.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/parallel_codegen/two_arrays_one_loop.li
-MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/composable/import_http_lib.li
+DIFF /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/composable/import_http_lib.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/security/deeply_nested_calls.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-physics-rigid/li-tests/smoke/builds.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/effects/alloc_ok.li
@@ -341,7 +344,7 @@ MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/objects/
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/encapsulation/trait_hash_impl.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/contracts_verify/refinement_inline_ok.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/benchmarks/tier0_correctness/float_binop.li
-MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-gui/li-tests/smoke/studio_keyboard_input_json.li
+DIFF /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-gui/li-tests/smoke/studio_keyboard_input_json.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/contracts_verify/caller_requires_fail.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-nanoreactor/li-tests/unit/potential.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/math_linalg/broadcast_len1_mul_int4.li
@@ -371,7 +374,7 @@ MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-studi
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-nanoreactor/examples/nanoreactor_run.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-log/li-tests/smoke/builds.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/objects/object_array_field_copy.li
-MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/runtime/tcp_stub_link.li
+DIFF /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/runtime/tcp_stub_link.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/borrow/double_mut.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/objects/nested_field_write.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-gui/src/lib.li
@@ -381,7 +384,7 @@ MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/objects/
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/effects/io_fail.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/encapsulation/inheritance_subtype.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-studio/li-tests/smoke/studio_agent_chrome.li
-MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/httpd/m15_agent_oracle.li
+DIFF /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/httpd/m15_agent_oracle.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/lexer_parser/fib.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/typecheck/probe_arrret.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/security/proof_safety/string_bounds_safety.li
@@ -397,8 +400,8 @@ SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/cve_patte
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/typecheck/probe_move.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/borrow/use_after_move.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-sim/li-tests/smoke/builds.li
-MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-studio/src/lib.li
-MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/httpd/m2_tls_h2_oracle.li
+DIFF /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-studio/src/lib.li
+DIFF /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/httpd/m2_tls_h2_oracle.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/math_linalg/scale_float4.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/contracts_verify/linalg_dot4_int_closed.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-scene/li-tests/smoke/builds.li
@@ -411,6 +414,7 @@ SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/security/
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/stdlib_seal/shadow_print.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/effects/alloc_fail.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/composable/import_studio_sim_profile_bridge.li
+SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/modules/cycle_right.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/prove_reject/weak_ensures_true.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/lexer_parser/parser_reject_bad_expr.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/security/proof_safety/dishonest_ensures_open_vc.li
@@ -431,7 +435,7 @@ MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-studi
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/generics/return_mismatch.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/composable/import_lig_kernel.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/packages/li-nanoreactor/li-tests/e2e/methane.li
-MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/composable/import_gui_viewport_panel_switch.li
+DIFF /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/composable/import_gui_viewport_panel_switch.li
 MATCH /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/math_linalg/array_dot_matmul.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/security/unclosed_string.li
 SKIP /Users/julian/Documents/coding-projects/lic-gap2-proofdb/li-tests/race_shared_memory/false_disjoint_requires_true.li

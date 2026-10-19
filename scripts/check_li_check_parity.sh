@@ -193,6 +193,15 @@ CORPUS_FAIL=(
   "li-tests/contracts_verify/loop_requires_for_fail.li:E0304"
   "li-tests/math_linalg/elementwise_len_mismatch.li:-"
   "li-tests/modules/import_cycle_b.li:-"
+  # Two-module cycle fixtures (cycle_left <-> cycle_right): the standalone
+  # members, the mover-through-cycle shape (E0311 seed parity under the
+  # cycle dedupe), and the benign cycle that locks the load-order gate on
+  # its own (no mover, nothing but import_cycle can fire). All recorded as
+  # bare rejects: the lanes print no shared code string for the verdict yet
+  # (li-tests/modules/import_cycle_a.exp asserts the C++ prose form).
+  "li-tests/modules/cycle_left.li:-"
+  "li-tests/modules/import_cycle_benign.li:-"
+  "li-tests/modules/import_cycle_mover.li:-"
   "li-tests/encapsulation/extern_proc_syntax_rejected.li:-"
   "li-tests/encapsulation/proc_syntax_rejected.li:-"
   "li-tests/lexer_parser/decorators_parse.li:-"
@@ -216,6 +225,7 @@ CORPUS_FAIL=(
   # in CORPUS_OK (import_mover_benign.li).
   "li-tests/borrow/use_after_move_import.li:-"
   "li-tests/modules/import_cycle_a.li:-"
+  "li-tests/modules/cycle_right.li:-"
   "li-tests/physics/game_runtime_smoke.li:-"
   "li-tests/race_shared_memory/false_disjoint_requires_true.li:-"
   "li-tests/stdlib_coverage/build_std_csv.li:-"

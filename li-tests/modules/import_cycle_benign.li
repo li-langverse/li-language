@@ -1,0 +1,19 @@
+# Both-lane REJECT: benign two-module import cycle. The host rejects at
+# load time (`import_cycle` from the resolve_imports DFS); the walker's
+# check lane missed the gate entirely until 4d143ae6 and only matched the
+# mover-cycle probe by accident (E0311 on both). This benign shape — no
+# mover, no use-after-move — locks that gate directly: nothing but the
+# cycle detection can fire here.
+import cycle_left
+
+def main() -> int
+  requires true
+  ensures result >= 0
+  decreases 0
+=
+  var a: array[4, int]
+  eat(a)
+  var b: array[4, int]
+  b[0] = 0
+  discard b[0]
+  return 0

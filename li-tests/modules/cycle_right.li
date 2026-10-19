@@ -1,0 +1,19 @@
+import cycle_left
+
+# Right half of the cycle: scalar shapes only, so any verdict on the cycle
+# mains is attributable to the import-cycle gate or the mover seed — not to
+# cross-module type naming.
+
+def spin(b: array[2, int]) -> unit
+  requires true
+  ensures true
+  decreases 0
+=
+  discard b
+
+def helper_two(x: int) -> int
+  requires true
+  ensures result == x
+  decreases 0
+=
+  return x

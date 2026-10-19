@@ -1,0 +1,19 @@
+# Left half of a two-module import cycle (cycle_left imports cycle_right,
+# cycle_right imports cycle_left). Standalone these members reject on both
+# lanes with the load-order `import_cycle` error (C++ resolve_imports DFS
+# in-progress set; walker mir_import_cycle_check on check and mir lanes).
+import cycle_right
+
+def eat(a: array[4, int]) -> unit
+  requires true
+  ensures true
+  decreases 0
+=
+  discard a
+
+def helper_one(k: int) -> int
+  requires true
+  ensures result == k
+  decreases 0
+=
+  return k

@@ -1,0 +1,17 @@
+# Both-lane REJECT: use-after-move through a mover that sits inside a
+# two-module import cycle. Locks the import-space seeding under the cycle
+# dedupe: the seed recursion must terminate via the seen-list and still
+# record cycle member callees, so `discard a[0]` fires E0311 exactly like
+# the acyclic import_mover fixture. The load-order verdict is shared with
+# import_cycle_benign.li.
+import cycle_left
+
+def main() -> int
+  requires true
+  ensures result >= 0
+  decreases 0
+=
+  var a: array[4, int]
+  eat(a)
+  discard a[0]
+  return 0

@@ -16758,11 +16758,96 @@ def mir_collect_proc(src: var ptr,  tk: var array[262144, int],  ts: var array[2
 # Depth beyond 2 is not covered yet: the sweep corpus only contains the
 # import_cycle pair shape. Unresolved imports are skipped without
 # rejecting (resolution fail differs from a cycle).
+def mic_load(mcont: ptr, mpath: ptr, loading: var array[64, ptr], ln: var array[1, int], loaded: var array[64, ptr], ldnn: var array[1, int]) raises IO -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  # In-progress-set DFS step (C++ load_module_recursive): paths in `loading`
+  # form the DFS stack, paths in `loaded` are fully processed. Any re-entry
+  # of a loading path fires the cycle, no matter where the re-entry sits -
+  # the previous depth-2 mirror only caught root-self and root-a-b-root
+  # shapes and accepted a benign a->b->a 3-cycle the host rejects.
+  # Unresolvable or unlexable imports stay tolerated (the preg-20
+  # convention: the unknown-callee gates disable themselves instead of
+  # inventing rejects; the C++ host rejects them in resolve_imports - a
+  # catalog divergence family, not exercised by any corpus file).
+  var g1: int = 0
+  while g1 < ln[0]:
+    if li_rt_str_eq(wp64_get(loading, g1), mpath) == 1:
+      return 0
+    g1 = g1 + 1
+  var g2: int = 0
+  while g2 < ldnn[0]:
+    if li_rt_str_eq(wp64_get(loaded, g2), mpath) == 1:
+      return 1
+    g2 = g2 + 1
+  if ln[0] >= 64:
+    # DFS-stack cap: fail-open (the corpus depth is an order of magnitude
+    # below this bound).
+    return 1
+  var ln_idx: int = ln[0]
+  wp64_set(loading, ln_idx, mpath)
+  ln[0] = ln[0] + 1
+  var m2k: array[8192, int]
+  var m2s: array[8192, int]
+  var m2e: array[8192, int]
+  var m2n: array[1, int]
+  m2n[0] = 0
+  if lex_source(mcont, m2k, m2s, m2e, m2n, 0) == 1:
+    ln[0] = ln[0] - 1
+    return 1
+  var c2: int = 0
+  var sub: int = 1
+  while c2 < m2n[0] and sub == 1:
+    if peek_tk(m2k, c2) == 18:
+      var ntok2: int = c2 + 1
+      if ntok2 < m2n[0]:
+        if peek_tk(m2k, ntok2) == 4:
+          var im_end2: int = ntok2
+          var im_guard2: int = 0
+          while im_guard2 < 8:
+            if im_end2 + 2 < m2n[0]:
+              if peek_tk(m2k, im_end2 + 1) == 72:
+                if peek_tk(m2k, im_end2 + 2) == 4:
+                  im_end2 = im_end2 + 2
+                  im_guard2 = im_guard2 + 1
+                  continue
+            break
+          var mlen2: int = peek_tk(m2e, im_end2) - peek_tk(m2s, ntok2)
+          var mname2: ptr = bytes_slice_i(mcont, peek_tk(m2s, ntok2), mlen2)
+          var imp2: ptr = li_rt_resolve_import(mpath, mname2)
+          if imp2 != 0:
+            var ipath2: ptr = li_rt_import_path_dup(li_rt_resolve_import_last_path())
+            var rf: int = mic_load(imp2, ipath2, loading, ln, loaded, ldnn)
+            if rf == 0:
+              sub = 0
+    c2 = c2 + 1
+  if sub == 1:
+    if ldnn[0] < 64:
+      wp64_set(loaded, ldnn[0], mpath)
+      ldnn[0] = ldnn[0] + 1
+  ln[0] = ln[0] - 1
+  return sub
+
 def mir_import_cycle_check(root: ptr,  src: var ptr,  tk: var array[262144, int],  ts: var array[262144, int],  te: var array[262144, int],  n: var array[1, int],  err: var array[1, int]) raises IO -> int
   requires true
   ensures result == 0 or result == 1
   decreases 0
 =
+  # Load-order cycle gate (C++ resolve_imports): the root module is parsed
+  # OUTSIDE the DFS and never registered, so the wrapper seeds one DFS per
+  # root import - a module re-entering anything still on the DFS stack
+  # fires, exactly like the loading/loaded sets in load_module_recursive.
+  # The old depth-2 mirror only caught root-self and root-a-b-root shapes;
+  # a benign a->b->cycle-a 3-cycle sat accepted on the walker while the
+  # host rejected it with `import_cycle`.
+  var loading: array[64, ptr]
+  var loaded: array[64, ptr]
+  var ln: array[1, int]
+  var ldnn: array[1, int]
+  ln[0] = 0
+  ldnn[0] = 0
   var c1: int = 0
   while c1 < n[0]:
     if peek_tk(tk, c1) == 18:
@@ -16783,46 +16868,11 @@ def mir_import_cycle_check(root: ptr,  src: var ptr,  tk: var array[262144, int]
           var mname1: ptr = bytes_slice_i(src,  peek_tk(ts, ntok), mlen1)
           var imp1: ptr = li_rt_resolve_import(root,  mname1)
           if imp1 != 0:
-            var ipath1: ptr = li_rt_resolve_import_last_path()
-            if li_rt_str_eq(ipath1,  root) == 1:
+            var ipath1: ptr = li_rt_import_path_dup(li_rt_resolve_import_last_path())
+            var r1: int = mic_load(imp1, ipath1, loading, ln, loaded, ldnn)
+            if r1 == 0:
               err[0] = 1
               return 1
-            # ---- level 2: lex the import, rescan its imports ----
-            var tk2: array[8192, int]
-            var ts2: array[8192, int]
-            var te2: array[8192, int]
-            var n2: array[1, int]
-            n2[0] = 0
-            var lx2: int = lex_source(imp1,  tk2,  ts2,  te2,  n2, 0)
-            if lx2 == 0:
-              var c2: int = 0
-              while c2 < n2[0]:
-                if peek_tk(tk2, c2) == 18:
-                  var ntok2: int = c2 + 1
-                  if ntok2 < n2[0]:
-                    if peek_tk(tk2, ntok2) == 4:
-                      var im_end2: int = ntok2
-                      var im_guard2: int = 0
-                      while im_guard2 < 8:
-                        if im_end2 + 2 < n2[0]:
-                          if peek_tk(tk2, im_end2 + 1) == 72:
-                            if peek_tk(tk2, im_end2 + 2) == 4:
-                              im_end2 = im_end2 + 2
-                              im_guard2 = im_guard2 + 1
-                              continue
-                        break
-                      var mlen2: int = peek_tk(te2, im_end2) - peek_tk(ts2, ntok2)
-                      var mname2: ptr = bytes_slice_i(src,  peek_tk(ts2, ntok2), mlen2)
-                      var imp2: ptr = li_rt_resolve_import(ipath1,  mname2)
-                      if imp2 != 0:
-                        var ipath2: ptr = li_rt_resolve_import_last_path()
-                        if li_rt_str_eq(ipath2,  root) == 1:
-                          err[0] = 1
-                          return 1
-                        if li_rt_str_eq(ipath2,  ipath1) == 1:
-                          err[0] = 1
-                          return 1
-                c2 = c2 + 1
     c1 = c1 + 1
   return 0
 
