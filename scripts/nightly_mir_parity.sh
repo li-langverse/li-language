@@ -41,15 +41,16 @@ if [[ "${1:-}" == "--merge-checkpoint" ]]; then
   while IFS=' ' read -r status filepath; do
     fused["$filepath"]="$status"
   done < "$CHECKPOINT_FILE"
-  match_m=0; diff_m=0; skip_m=0
-  for f in "${!fused[@]}"; do
-    echo "${fused[$f]} $f"
-    case "${fused[$f]}" in
-      MATCH) match_m=$((match_m + 1)) ;;
-      DIFF)  diff_m=$((diff_m + 1)) ;;
-      *)     skip_m=$((skip_m + 1)) ;;
-    esac
-  done | LC_ALL=C sort > "$BASELINE_FILE"
+  {
+    for f in "${!fused[@]}"; do
+      echo "${fused[$f]} $f"
+    done
+  } | LC_ALL=C sort > "$BASELINE_FILE"
+  # Count from the written file: increments inside a pipeline subshell
+  # are discarded, so counting during the emit would report 0/0/0.
+  match_m=$(grep -c '^MATCH ' "$BASELINE_FILE")
+  diff_m=$(grep -c '^DIFF ' "$BASELINE_FILE")
+  skip_m=$(grep -c '^SKIP ' "$BASELINE_FILE")
   rm -f "$CHECKPOINT_FILE"
   echo "merge-checkpoint: fused baseline written: $match_m MATCH / $diff_m DIFF / $skip_m SKIP"
   exit 0
