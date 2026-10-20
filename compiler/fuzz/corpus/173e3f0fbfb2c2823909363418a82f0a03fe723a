@@ -1,0 +1,6 @@
+@cprow)
+proc f() -> int
+  requires true
+  ensur/s true
+  decr@cprow)
+proc f() -> ei~ases 
