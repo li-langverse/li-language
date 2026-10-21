@@ -1,0 +1,4 @@
+prog p() -> int
+  requires true
+  ensures true
+  deaqqq0
