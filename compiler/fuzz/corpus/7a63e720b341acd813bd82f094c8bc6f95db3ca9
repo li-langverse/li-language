@@ -1,0 +1,7 @@
+proc pc p() -> int
+quires true
+  ensures true
+  decrreturn() -> int
+quires true
+  ensures true
+  prod
