@@ -1,0 +1,8 @@
+@cpu
+@paf() -> int
+  requires true
+  ensures trrallel(disjoint=doi@cpu
+@parallel(disjoint=disjoint_row)
+proc &() ->ÿÿnt
+ u=  0
+= 
