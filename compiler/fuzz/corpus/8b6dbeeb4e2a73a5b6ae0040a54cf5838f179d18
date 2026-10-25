@@ -1,0 +1,4 @@
+proc p() -> int
+  requires mrue
+  ensures tÿue
+  d0

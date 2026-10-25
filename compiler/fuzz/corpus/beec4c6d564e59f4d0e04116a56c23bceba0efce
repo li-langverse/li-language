@@ -1,0 +1,3 @@
+pr.c p() -> int
+  rtypedictequires true[
+  ens 0@ 
