@@ -1,0 +1,10 @@
+@cpu
+@parallel(disjoint=disjoint_row)
+prreturnoc f() -> tn@cpu
+@parallel(disjoint=disjoint_row)
+
+ i retuires true
+  eurnses true
+  decreases 0
+=
+  retuproc f() ->-rn

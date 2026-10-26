@@ -1,0 +1,6 @@
+@cpu
+@para) -> int
+  requires true
+  ens true
+  decreases 0
+=  return 0*
