@@ -1,0 +1,3 @@
+proc p()@- ensures true
+  decrea  ensures true
+  decreases   ÿreturn 0
