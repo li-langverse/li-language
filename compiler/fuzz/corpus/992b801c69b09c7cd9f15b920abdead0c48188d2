@@ -1,0 +1,4 @@
+@cpu@cpu
+@parallel(disjoint=disjoint_row)
+proc #f() #  Patyp0
+0

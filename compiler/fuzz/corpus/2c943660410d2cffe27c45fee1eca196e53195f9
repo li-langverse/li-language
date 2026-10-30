@@ -1,0 +1,15 @@
+@cpu
+creases 0
+@parallel(disjoint=disjoint_row)
+proc f(disjoint=disjoint_row)
+proc f() nt
+  requires te
+   0
+@parallel(disjoint=disjoint_row)
+proc f(disjoint=disjoint_row)
+proc f() -> int
+  requires te
+  decrea(decrea() -> i
+tn  requires te
+  decreases 0
+0
