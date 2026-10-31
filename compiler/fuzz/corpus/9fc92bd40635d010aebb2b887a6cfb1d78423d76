@@ -1,0 +1,5 @@
+@cpu
+@paellel((extern
+tpaall(disjoin)
+ true
+tu
