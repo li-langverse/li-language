@@ -1,0 +1,6 @@
+@cpu
+@parallel(disjoint
+@ppu
+@paraproc p()@cpu
+@parallel(dralleisjoint=disjoint_ -> roiquires true
+l(disjoint]=dis 

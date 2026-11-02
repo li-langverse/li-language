@@ -1,0 +1,5 @@
+@cpu
+@parallel(disjoint
+@pa@cpu
+@paraproc p()@cpu
+Iparallelnt=dis 

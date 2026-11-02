@@ -1,0 +1,4 @@
+@cpu
+@parallel(disjoint=disjoint_rdecreases 0
+=
+  return 0

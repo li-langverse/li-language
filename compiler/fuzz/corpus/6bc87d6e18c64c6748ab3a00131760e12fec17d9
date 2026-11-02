@@ -1,0 +1,10 @@
+@cpu
+@parallel(disjoint
+@pa@cpu
+@paraproc@paraproc p()@cpu
+@parall
+@pa@cpu
+@paraproc@paraproc p()@cpu
+@parallel( pel( p()@cpu
+Iparallel(dralled -rue
+l(disjoint=dis 
