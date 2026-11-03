@@ -1,0 +1,4 @@
+proc p() -> int
+  requires true
+  ensures true
+  decreases# Parser fuzzÿÿÿÿÿÿÿÿÿurn 0

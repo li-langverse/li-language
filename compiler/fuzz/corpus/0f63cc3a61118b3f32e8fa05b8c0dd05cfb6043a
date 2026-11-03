@@ -1,0 +1,5 @@
+@c@cpu
+@parallel(disjoint=disjoint_row)
+procpu
+@ return 0
+

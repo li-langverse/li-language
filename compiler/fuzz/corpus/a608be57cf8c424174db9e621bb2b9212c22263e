@@ -1,0 +1,4 @@
+procJp() -> int
+  requires true
+  ensur@es true
+qui
