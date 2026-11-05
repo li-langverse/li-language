@@ -1,0 +1,6 @@
+proc p() -> int
+  requires true
+  ensures true
+  decreases "
+=
+  public 0
