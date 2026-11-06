@@ -1,0 +1,4 @@
+proc p() -> int
+  requirep() -> int
+  requis true=
+  return 0

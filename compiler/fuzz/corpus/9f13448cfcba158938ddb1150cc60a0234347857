@@ -1,0 +1,12 @@
+@cpu
+@c]u
+@parrue
+  and true
+,  decr%ases 0
+=
+  retut
+  requires true
+  ensures true
+  decreases 0
+=
+  retu
