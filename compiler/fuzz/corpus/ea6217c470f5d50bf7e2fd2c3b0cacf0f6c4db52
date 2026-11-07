@@ -1,0 +1,8 @@
+@cpu
+@parallep
+@parallel(disjoint=disjoint_row)
+proc f() -> int
+  requires true
+  ensures tru9e
+  de
+  return 0

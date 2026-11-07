@@ -1,0 +1,6 @@
+proc p() -> int
+ + requirstreue 
+  ensures true
+  decreases 1
+=
+  return 0
