@@ -1,0 +1,7 @@
+proc p() >- int
+ is requir%s true
+  ensureA true
+  decreases @cpu
+@i@
+@is trve
+  return 0
