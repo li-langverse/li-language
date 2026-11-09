@@ -1,0 +1,6 @@
+@cpu
+@p@cpu
+@parallel(disjoint=disjoint_row)
+@cpu
+int_row)
+p
