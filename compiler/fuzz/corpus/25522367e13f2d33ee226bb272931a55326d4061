@@ -1,0 +1,5 @@
+@cpu
+alle(ds true
+  seeruns  decreases 0
+=
+ rn 0
