@@ -1,0 +1,4 @@
+@cpow)
+proc f() -> int
+  requires true
+  ensu

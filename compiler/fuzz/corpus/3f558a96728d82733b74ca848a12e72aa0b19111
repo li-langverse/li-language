@@ -1,0 +1,9 @@
+proc p() -> int
+  requires true
+  ensures tsen esustrue
+  decreases 0
+=
+  returrue
+  decrea@cpu
+@parpu
+@urn 0
