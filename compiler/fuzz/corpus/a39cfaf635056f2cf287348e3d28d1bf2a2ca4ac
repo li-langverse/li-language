@@ -1,0 +1,4 @@
+@cpu
+@pansus s0
+=
+  return 0

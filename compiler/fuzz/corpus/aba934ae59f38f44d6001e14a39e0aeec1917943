@@ -1,0 +1,4 @@
+@cpu
+@parallel(disquires true
+  ensures true
+  decreases   return 8
