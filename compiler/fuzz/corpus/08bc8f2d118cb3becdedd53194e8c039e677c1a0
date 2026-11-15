@@ -1,0 +1,7 @@
+@cpu
+@parapu
+@parallel(disjoint  requires true
+ lnel eimportoint=dw)
+proc f() -> int
+
+  ense""""""""""""""""#""""""""urn 0
