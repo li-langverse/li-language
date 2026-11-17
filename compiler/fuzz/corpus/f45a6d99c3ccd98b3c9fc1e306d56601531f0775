@@ -1,0 +1,2 @@
+proc p() -> int
+  requires@@c@g@cp@
