@@ -1,0 +1,4 @@
+proc p() -> int
+  requires tru  decreases 0
+=v
+  return 0

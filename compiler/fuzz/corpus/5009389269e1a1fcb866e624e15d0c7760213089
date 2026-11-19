@@ -1,0 +1,6 @@
+@cpu
+@parallel(disjoint=disjoint_ro@parallel(disjoint=disjoint_row)
+proc f(true
+) -> int
+  requires true
+  enŸsures 0
