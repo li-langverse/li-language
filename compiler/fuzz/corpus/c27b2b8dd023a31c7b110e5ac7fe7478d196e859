@@ -1,0 +1,5 @@
+@cpu
+@pallel(s true
+ ase s0
+=
+  return 0
