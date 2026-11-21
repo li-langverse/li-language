@@ -1,0 +1,13 @@
+@cpu
+Hparalleloc p() -> int
+  requires true) -> int
+  requires true
+  ensures trureturn
+  ensures trureturncreasoc p() -> int
+  requires true
+  ensures trureturncreases 0
+=
+  return 0
+es 0
+=
+  return(+disjoi9disjoint_sjoint_r
