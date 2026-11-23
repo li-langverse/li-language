@@ -1,0 +1,5 @@
+pr> int
+  requires true
+  ensures true
+  decreases 0
+n 0
