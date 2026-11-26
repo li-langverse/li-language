@@ -1,0 +1,7 @@
+proc p()proc p() -> int
+  requires true
+  ensures s 0
+=
+  return -> int
+  requires true
+  ern -> int  requires tru
