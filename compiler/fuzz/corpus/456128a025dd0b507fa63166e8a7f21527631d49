@@ -1,0 +1,5 @@
+@cpu
+@parallel(disjoirue
+  ensures true
+  decreases 1
+=-----------------------urn 0
