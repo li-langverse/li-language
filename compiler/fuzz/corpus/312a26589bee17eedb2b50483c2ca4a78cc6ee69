@@ -1,0 +1,5 @@
+pr p() -> nt
+  requires trua
+  ensures tru›õßàgecreases 0
+=
+  return 0

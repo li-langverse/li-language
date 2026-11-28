@@ -1,0 +1,7 @@
+proc p() -> int
+ mrequires truE
+  ensures true
+  des def0
+=
+  return ds t
+@p d

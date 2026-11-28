@@ -1,0 +1,6 @@
+proc p( -> int
+  requires true
+  ensures true
+  dectru~
+  ensures true
+  return 0
